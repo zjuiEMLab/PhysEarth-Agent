@@ -3,7 +3,7 @@ import time
 
 from openai import OpenAI
 
-from physearth import config, harness, prompt, tools
+from physearth import budget, config, harness, prompt, tools
 
 MAX_MODEL_CALLS = 12
 MAX_TOOL_CALLS = 10
@@ -20,6 +20,7 @@ def new_state():
         "sections_read": set(),
         "model_runs": 0,
         "models_run": set(),
+        "datasets_read": set(),
         "qc_failures": 0,
         "rejected_calls": 0,
         "interventions": 0,
@@ -43,9 +44,15 @@ def run(question, history=None):
     """Run one turn. Returns (answer, events, state)."""
     state = new_state()
     events = []
+    allowed, message = budget.acquire()
+    if not allowed:
+        return message, [_event("harness_stop", rule="global_budget", reason=message)], state
     messages = [{"role": "system", "content": prompt.build(state)}]
-    for role, content in history or []:
-        messages.append({"role": role, "content": content})
+    for turn in history or []:
+        role = turn.get("role") if isinstance(turn, dict) else turn[0]
+        content = turn.get("content") if isinstance(turn, dict) else turn[1]
+        if role in ("user", "assistant") and isinstance(content, str) and content.strip():
+            messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": question})
 
     client = _client()
@@ -53,10 +60,10 @@ def run(question, history=None):
     answer = ""
 
     while True:
-        budget = harness.check_budget(state)
-        if not budget["passed"]:
-            events.append(_event("harness_stop", rule="budget", reason=budget["reason"]))
-            answer = answer or "Stopped: %s." % budget["reason"]
+        session_budget = harness.check_budget(state)
+        if not session_budget["passed"]:
+            events.append(_event("harness_stop", rule="budget", reason=session_budget["reason"]))
+            answer = answer or "Stopped: %s." % session_budget["reason"]
             break
 
         started = time.perf_counter()
@@ -127,10 +134,18 @@ def run(question, history=None):
                 state["tool_calls"] += 1
                 for key in result.get("citations", []):
                     state["sections_read"].add(key)
-                if name == "list_models" and result["status"] == "success" and result["data"].get("version"):
-                    state["models_run"].add(
-                        "%s@%s" % (result["data"]["name"], result["data"]["version"])
-                    )
+                if name == "list_models" and result["status"] == "success":
+                    data = result["data"]
+                    if data.get("version"):
+                        state["models_run"].add("%s@%s" % (data["name"], data["version"]))
+                    for row in data.get("models") or []:
+                        state["models_run"].add("%s@%s" % (row["name"], row["version"]))
+                if name == "read_reference_dataset" and result["status"] == "success":
+                    data = result["data"]
+                    if data.get("dataset"):
+                        state["datasets_read"].add(data["dataset"])
+                    for row in data.get("datasets") or []:
+                        state["datasets_read"].add(row["slug"])
                 if name == "run_model":
                     if result["status"] == "success":
                         state["model_runs"] += 1
@@ -250,4 +265,6 @@ def render_trace(events, state):
     )
     lines.append("Sections read: %s" % (", ".join(sorted(state["sections_read"])) or "none"))
     lines.append("Models cited: %s" % (", ".join(sorted(state["models_run"])) or "none"))
+    lines.append("Datasets read: %s" % (", ".join(sorted(state["datasets_read"])) or "none"))
+    lines.append("Deployment budget: %d/%d questions in the last hour." % budget.used())
     return "\n".join(lines)

@@ -41,7 +41,7 @@ def respond(question, history):
     if not question:
         return history, "", ""
     try:
-        answer, events, state = agent.run(question)
+        answer, events, state = agent.run(question, history)
         trace = agent.render_trace(events, state)
     except Exception as exc:
         answer = "The run failed: %s: %s" % (type(exc).__name__, exc)

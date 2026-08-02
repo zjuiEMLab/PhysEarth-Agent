@@ -1,3 +1,4 @@
+import concurrent.futures
 import time
 
 from physearth import knowledge, reference, validation
@@ -276,13 +277,22 @@ def run_model(model, parameters=None, **extra):
         }
 
     started = time.perf_counter()
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     try:
-        result = entry.run(spec)
+        result = executor.submit(entry.run, spec).result(timeout=MAX_RUN_SECONDS)
+    except concurrent.futures.TimeoutError:
+        return _fail(
+            "%s did not finish within the %.0f second limit. Reduce the number of sweep "
+            "points or simplify the configuration." % (model, MAX_RUN_SECONDS),
+            {"model": model, "spec": spec},
+        )
     except Exception as exc:
         return _fail(
             "%s raised %s: %s" % (model, type(exc).__name__, exc),
             {"model": model, "spec": spec},
         )
+    finally:
+        executor.shutdown(wait=False)
     elapsed = time.perf_counter() - started
 
     qc = validation.quality_control(entry.card, result)

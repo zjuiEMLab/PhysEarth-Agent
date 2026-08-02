@@ -232,3 +232,23 @@ def test_a_numeric_filter_needs_a_range():
     )
     assert result["status"] == "needs_input"
     assert "[min, max]" in result["error"]
+
+
+def test_listing_models_records_provenance_for_every_listed_model():
+    result = tools.call("list_models", {})
+    assert result["status"] == "success"
+    listed = {"%s@%s" % (row["name"], row["version"]) for row in result["data"]["models"]}
+    assert "smrt@1.5.1" in listed and "tau_omega@1.0.0" in listed
+
+
+def test_a_runaway_model_is_stopped_by_the_wall_clock_limit(monkeypatch):
+    import time as _time
+
+    from physearth.models import registry
+
+    entry = registry.get("smrt")
+    monkeypatch.setattr(tools, "MAX_RUN_SECONDS", 0.2)
+    monkeypatch.setattr(entry, "run", lambda spec: _time.sleep(5))
+    result = tools.call("run_model", {"model": "smrt", "parameters": {}})
+    assert result["status"] == "terminal_error"
+    assert "did not finish" in result["error"]

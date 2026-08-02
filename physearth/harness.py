@@ -2,7 +2,8 @@ import re
 
 CITATION_PATTERN = re.compile(r"\[([a-z0-9-]+)#(\d{1,3})\]")
 MODEL_PATTERN = re.compile(r"\[(?:model:)?([A-Za-z0-9_-]+)@([^\]\s]+)\]")
-UNCITED_ANSWER_CHARS = 220
+DATA_PATTERN = re.compile(r"\[data:([a-z0-9-]+)\]")
+UNCITED_ANSWER_CHARS = 400
 MAX_INTERVENTIONS = 3
 
 
@@ -14,14 +15,22 @@ def find_model_markers(text):
     return ["%s@%s" % (name, version) for name, version in MODEL_PATTERN.findall(text or "")]
 
 
-def check_citations(text, sections_read, models_run=()):
+def find_data_markers(text):
+    return DATA_PATTERN.findall(text or "")
+
+
+def check_citations(text, sections_read, models_run=(), datasets_read=()):
     markers = find_markers(text)
     model_markers = find_model_markers(text)
+    data_markers = find_data_markers(text)
     unresolved = sorted({m for m in markers if m not in sections_read})
     unresolved += sorted({m for m in model_markers if m not in set(models_run)})
+    unresolved += sorted({m for m in data_markers if m not in set(datasets_read)})
     return {
         "rule": "citation_integrity",
-        "markers": markers + ["model:" + m for m in model_markers],
+        "markers": markers
+        + ["model:" + m for m in model_markers]
+        + ["data:" + m for m in data_markers],
         "unresolved": unresolved,
         "passed": not unresolved,
     }
@@ -46,8 +55,10 @@ def citation_correction(result):
         "Your answer was blocked by the citation integrity check. These markers resolve to "
         "nothing you did in this conversation: %s. A marker of the form [slug#id] must name "
         "a section you opened with read_literature, and a marker of the form "
-        "[model:name@version] must name a model you actually ran with run_model. Note that "
-        "a model name is not a paper slug. Fix or drop each one and re-send the full answer."
+        "[model:name@version] must name a model you actually ran or whose declaration you read, "
+        "and a marker of the form [data:slug] must name a reference dataset you actually "
+        "queried. Note that a model name is not a paper slug. Fix or drop each one and "
+        "re-send the full answer."
         % ", ".join(result["unresolved"])
     )
 
@@ -70,8 +81,17 @@ def check_budget(state):
 
 def review_final(text, state):
     checks = [
-        check_evidence(text, state["sections_read"], state.get("model_runs", 0)),
-        check_citations(text, state["sections_read"], state.get("models_run", ())),
+        check_evidence(
+            text,
+            state["sections_read"],
+            state.get("model_runs", 0) + len(state.get("datasets_read", ())),
+        ),
+        check_citations(
+            text,
+            state["sections_read"],
+            state.get("models_run", ()),
+            state.get("datasets_read", ()),
+        ),
     ]
     for check in checks:
         if not check["passed"]:

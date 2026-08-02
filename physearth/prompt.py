@@ -27,7 +27,7 @@ declared range or the legal combination. If the corpus and the models together c
 something, say so instead of filling the gap from memory."""
 
 CITATION_RULES = """\
-Everything you assert must be traceable to something you did, through one of two markers.
+Everything you assert must be traceable to something you did, through one of three markers.
 
 Literature: [slug#section_id], for example [smrt-v1#05]. Only for sections you actually
 opened with read_literature in this conversation. Seeing a paper in the catalogue is not
@@ -39,6 +39,9 @@ list_models, such as a parameter range or a constraint. It only resolves for a m
 actually ran or whose declaration you actually read in this conversation. A model name is
 not a paper slug: the model is smrt, the paper about it is smrt-v1, so [smrt#05] resolves to
 nothing and will be rejected.
+
+Measured data: [data:slug], for example [data:tvc-backscatter]. Only for a dataset you
+actually queried with read_reference_dataset in this conversation.
 
 The system checks every marker after you write the answer and sends the answer back if one
 does not resolve. Do not invent markers and do not attach one to your own reasoning; an
