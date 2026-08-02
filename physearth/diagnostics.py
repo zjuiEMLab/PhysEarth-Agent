@@ -42,7 +42,14 @@ def package_versions():
     return out
 
 
+_BOOT_RECORD = None
+
+
 def boot_record():
+    global _BOOT_RECORD
+    if _BOOT_RECORD is not None:
+        return dict(_BOOT_RECORD, checked_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+
     path = config.state_dir() / "boot_marker.json"
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     previous = None
@@ -50,10 +57,15 @@ def boot_record():
     if path.is_file():
         try:
             previous = json.loads(path.read_text(encoding="utf-8"))
-            count = int(previous.get("count", 0))
+            count = int(previous.get("boot_count", 0))
         except (ValueError, OSError):
             previous = None
-    record = {"count": count + 1, "last_boot": now, "previous_boot": (previous or {}).get("last_boot")}
+    record = {
+        "boot_count": count + 1,
+        "this_boot": now,
+        "previous_boot": (previous or {}).get("this_boot"),
+        "pid": os.getpid(),
+    }
     try:
         path.write_text(json.dumps(record), encoding="utf-8")
         record["writable"] = True
@@ -61,7 +73,8 @@ def boot_record():
         record["writable"] = False
         record["error"] = str(exc)
     record["path"] = str(path.resolve())
-    return record
+    _BOOT_RECORD = record
+    return dict(record, checked_at=now)
 
 
 def network_probes(timeout=6.0):
@@ -157,10 +170,17 @@ def render(report):
     lines.append("| key | value |")
     lines.append("| --- | --- |")
     lines.append(_table(boot.items()))
-    if boot.get("count", 0) > 1:
-        lines.append("\nState survived at least one restart.")
+    if boot.get("boot_count", 0) > 1:
+        lines.append(
+            "\nThis process is boot number %s written to this state directory, so the directory "
+            "survived at least one process restart. The counter increments once per process; "
+            "refreshing this page does not change it." % boot["boot_count"]
+        )
     else:
-        lines.append("\nFirst recorded boot for this state directory.")
+        lines.append(
+            "\nFirst recorded boot for this state directory. Refreshing this page will not "
+            "change the counter; only a new process will."
+        )
 
     lines.append("\n## Network")
     lines.append("| target | status | elapsed s |")
