@@ -1,0 +1,9 @@
+# Abstract
+
+Abstract
+Soil microwave permittivity is a crucial parameter in passive microwave retrieval algorithms but remains a challenging variable to measure. To validate and improve satellite microwave data products, precise and reliable estimations of the relative permittivity (εr=ε/ε0=ε′-jε′′; unitless) of soils are required, particularly for frozen soils. In this study, permittivity measurements were acquired using two different instruments: the newly designed open-ended coaxial probe (OECP) and the conventional Stevens HydraProbe. Both instruments were used to characterize the permittivity of soil samples undergoing several freeze–thaw cycles in a laboratory environment. The measurements were compared to soil permittivity models. The OECP measured frozen (εfrozen′=[3.5; 6.0], εfrozen′′=[0.46; 1.2]) and thawed (εthawed′=[6.5; 22.8],
+εthawed′′=[1.43; 5.7]) soil microwave permittivity. We also demonstrate that cheaper and widespread soil permittivity probes operating at lower frequencies (i.e., Stevens HydraProbe) can be used to estimate microwave permittivity given proper calibration relative to an L-band (1–2 GHz) probe. This study also highlighted the need to improve dielectric soil models, particularly during freeze–thaw transitions. There are still important discrepancies between in situ and modeled estimates and no current model accounts for the hysteresis effect shown between freezing and thawing processes, which could have a significant impact on freeze–thaw detection from satellites.
+
+---
+
+Alex Mavrovic, Renato Pardo Lara, Aaron Berg, François Demontoux, Alain Royer, Alexandre Roy (2021). Soil dielectric characterization during freeze–thaw transitions using L-band coaxial and soil moisture probes. Hydrology and Earth System Sciences 25, 1117-1131. https://doi.org/10.5194/hess-25-1117-2021. Licensed under CC-BY-4.0.
