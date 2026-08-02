@@ -140,6 +140,14 @@ def run(question, history=None):
                         state["models_run"].add("%s@%s" % (data["name"], data["version"]))
                     for row in data.get("models") or []:
                         state["models_run"].add("%s@%s" % (row["name"], row["version"]))
+                for finding in (result.get("data") or {}).get("external_source_findings") or []:
+                    events.append(
+                        _event(
+                            "untrusted_content",
+                            rule="external_source_boundary",
+                            detail="%s: %r" % (finding["kind"], finding["excerpt"]),
+                        )
+                    )
                 if name == "read_reference_dataset" and result["status"] == "success":
                     data = result["data"]
                     if data.get("dataset"):
@@ -238,6 +246,8 @@ def render_trace(events, state):
             )
         elif kind == "harness_block":
             detail = "BLOCKED by %s: %s" % (event["rule"], event["detail"])
+        elif kind == "untrusted_content":
+            detail = "external source contains an instruction-like passage: %s" % event["detail"]
         elif kind == "harness_pass":
             detail = "%s ok, markers: %s" % (
                 event["rule"],

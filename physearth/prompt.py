@@ -1,4 +1,4 @@
-from physearth import knowledge, reference
+from physearth import knowledge, reference, untrusted
 from physearth.models import registry
 
 ROLE = """\
@@ -101,7 +101,17 @@ def status_block(state):
 
 
 def build(state=None):
-    blocks = [ROLE, models_section(), reference_section(), catalogue_section(), skills_section(), WORKFLOW, CITATION_RULES, STYLE]
+    blocks = [
+        ROLE,
+        models_section(),
+        reference_section(),
+        catalogue_section(),
+        skills_section(),
+        WORKFLOW,
+        untrusted.RULE,
+        CITATION_RULES,
+        STYLE,
+    ]
     if state:
         blocks.append(status_block(state))
     return "\n\n".join(blocks)

@@ -26,8 +26,12 @@ nothing. So the checks live in the system rather than in the prompt:
 - parameters are checked against each model's declared physical ranges and legal
   combinations **before** the model runs;
 - the result is checked against the declared output bounds **after** it runs;
-- every claim in an answer must carry a marker that resolves either to a paper section the
-  agent actually opened or to a model run it actually performed.
+- every claim in an answer must carry a marker that resolves to a paper section the agent
+  actually opened, a model it actually ran, or a dataset it actually queried;
+- text that came from outside the system arrives inside a labelled boundary and is treated
+  as evidence, never as instruction;
+- numeric arrays never enter the model's context. A run returns a handle and a bounded
+  preview, and the full result stays in the session store.
 
 None of these is a tool the agent may skip. The run trace shows each one, including the
 refusals.

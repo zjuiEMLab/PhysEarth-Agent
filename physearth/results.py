@@ -1,0 +1,77 @@
+"""Bounded store for full numeric results.
+
+A model run can produce hundreds of numbers. None of them belong in the language
+model's context: the model needs the shape of the result, not every value. So a run
+returns a handle plus a bounded preview, and the full arrays stay here for whatever
+consumes them next.
+
+Handles are unguessable and the store is capped, so nothing accumulates.
+"""
+
+import statistics
+import threading
+import uuid
+from collections import OrderedDict
+
+MAX_STORED = 200
+PREVIEW_POINTS = 12
+
+_LOCK = threading.Lock()
+_STORE = OrderedDict()
+
+
+def put(payload):
+    handle = "res_" + uuid.uuid4().hex[:12]
+    with _LOCK:
+        _STORE[handle] = payload
+        while len(_STORE) > MAX_STORED:
+            _STORE.popitem(last=False)
+    return handle
+
+
+def get(handle):
+    with _LOCK:
+        return _STORE.get(handle)
+
+
+def size():
+    with _LOCK:
+        return len(_STORE)
+
+
+def summarise_series(series, units):
+    summary = {}
+    for name, values in (series or {}).items():
+        numbers = [v for v in values if isinstance(v, (int, float))]
+        if not numbers:
+            summary[name] = {"unit": units.get(name, ""), "note": "no numeric values"}
+            continue
+        entry = {
+            "unit": units.get(name, ""),
+            "first": round(numbers[0], 4),
+            "last": round(numbers[-1], 4),
+            "min": round(min(numbers), 4),
+            "max": round(max(numbers), 4),
+        }
+        if len(numbers) > 2:
+            entry["mean"] = round(statistics.fmean(numbers), 4)
+            entry["monotonic"] = (
+                "increasing"
+                if numbers == sorted(numbers)
+                else "decreasing"
+                if numbers == sorted(numbers, reverse=True)
+                else "not monotonic"
+            )
+        summary[name] = entry
+    return summary
+
+
+def preview(points, limit=PREVIEW_POINTS):
+    """Evenly spaced points, always including the first and the last."""
+    if not points:
+        return []
+    if len(points) <= limit:
+        return points
+    step = (len(points) - 1) / (limit - 1)
+    picked = sorted({int(round(i * step)) for i in range(limit)} | {0, len(points) - 1})
+    return [points[i] for i in picked]
