@@ -1,0 +1,153 @@
+name: tau_omega
+version: "1.0.0"
+tier: demo
+entrypoint: adapter:run
+license: Apache-2.0
+citation: >-
+  Zeroth-order radiative transfer, the tau-omega model, as used in the L-band emission chain
+  described by Lv, S., Schalge, B., Saavedra Garfias, P., and Simmer, C.: Required sampling
+  density of ground-based soil moisture and brightness temperature observations, Hydrol.
+  Earth Syst. Sci., 24, 1957-1973, 2020. https://doi.org/10.5194/hess-24-1957-2020
+description: >-
+  Passive microwave emission of a vegetated soil surface. A soil dielectric mixing model
+  feeds Fresnel reflectivity with an h-Q roughness correction, and a single vegetation layer
+  attenuates and emits according to its optical depth and single scattering albedo. This is
+  the standard forward operator behind L-band soil moisture retrieval. Documented by the
+  cmem-sampling-density paper in the literature corpus.
+
+parameters:
+  frequency_ghz:
+    type: number
+    unit: GHz
+    description: Sensor frequency. The model is intended for L-band and nearby.
+    minimum: 0.5
+    maximum: 20.0
+    default: 1.41
+  angle_deg:
+    type: number
+    unit: degree
+    description: Incidence angle from nadir.
+    minimum: 0.0
+    maximum: 70.0
+    default: 40.0
+  soil_moisture:
+    type: number
+    unit: m3 m-3
+    description: Volumetric soil moisture. Bounded above by typical soil porosity.
+    minimum: 0.01
+    maximum: 0.6
+    default: 0.25
+  bulk_density_g_cm3:
+    type: number
+    unit: g cm-3
+    description: Soil dry bulk density.
+    minimum: 0.8
+    maximum: 2.0
+    default: 1.3
+  soil_temperature_k:
+    type: number
+    unit: K
+    description: Effective soil temperature. Frozen soil is outside the validity of this model.
+    minimum: 273.15
+    maximum: 320.0
+    default: 293.0
+  canopy_temperature_k:
+    type: number
+    unit: K
+    description: Effective canopy temperature.
+    minimum: 273.15
+    maximum: 320.0
+    default: 293.0
+  vegetation_optical_depth:
+    type: number
+    unit: none
+    description: Nadir vegetation optical depth, tau. Zero means bare soil.
+    minimum: 0.0
+    maximum: 2.0
+    default: 0.3
+  single_scattering_albedo:
+    type: number
+    unit: none
+    description: Vegetation single scattering albedo, omega.
+    minimum: 0.0
+    maximum: 0.3
+    default: 0.05
+  roughness_h:
+    type: number
+    unit: none
+    description: Surface roughness parameter h of the h-Q model. Zero is a smooth surface.
+    minimum: 0.0
+    maximum: 3.0
+    default: 0.3
+  cross_q:
+    type: number
+    unit: none
+    description: Polarisation mixing parameter Q of the h-Q model. Usually near zero at L-band.
+    minimum: 0.0
+    maximum: 0.5
+    default: 0.0
+  sweep_parameter:
+    type: string
+    unit: none
+    description: Numeric parameter to sweep instead of holding fixed.
+    enum: [none, frequency_ghz, angle_deg, soil_moisture, vegetation_optical_depth,
+           single_scattering_albedo, roughness_h, bulk_density_g_cm3, soil_temperature_k]
+    default: none
+    required: false
+  sweep_start:
+    type: number
+    unit: same as the swept parameter
+    description: First value of the sweep.
+    minimum: -1.0e+9
+    maximum: 1.0e+9
+    required: false
+  sweep_stop:
+    type: number
+    unit: same as the swept parameter
+    description: Last value of the sweep.
+    minimum: -1.0e+9
+    maximum: 1.0e+9
+    required: false
+  sweep_points:
+    type: integer
+    unit: count
+    description: Number of points in the sweep.
+    minimum: 2
+    maximum: 60
+    default: 10
+    required: false
+
+combinations:
+  - when: {vegetation_optical_depth: [0.0]}
+    allow: {single_scattering_albedo: [0.0]}
+    reason: >-
+      With no vegetation layer there is nothing to scatter, so a non-zero single scattering
+      albedo is meaningless. Set both to zero for a bare soil surface.
+
+outputs:
+  tb_v:
+    unit: K
+    description: Vertically polarised brightness temperature.
+    valid_min: 0.0
+    valid_max: 330.0
+  tb_h:
+    unit: K
+    description: Horizontally polarised brightness temperature.
+    valid_min: 0.0
+    valid_max: 330.0
+  emissivity_v:
+    unit: none
+    description: Rough surface emissivity at vertical polarisation.
+    valid_min: 0.0
+    valid_max: 1.0
+  emissivity_h:
+    unit: none
+    description: Rough surface emissivity at horizontal polarisation.
+    valid_min: 0.0
+    valid_max: 1.0
+
+resource_profile:
+  typical_call_seconds: 0.00005
+  needs_gpu: false
+  needs_external_data: false
+  notes: Closed-form analytical model. No compilation, no external data.

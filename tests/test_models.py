@@ -133,3 +133,54 @@ def test_a_nested_parameter_object_is_explained_not_just_refused():
     )
     assert result["status"] == "needs_input"
     assert "flat key inside the parameters object" in result["error"]
+
+
+def test_all_three_bundled_models_register_and_run():
+    for name in ("smrt", "tau_omega", "water_cloud"):
+        assert name in registry.names()
+        result = tools.call("run_model", {"model": name, "parameters": {}})
+        assert result["status"] == "success", (name, result["error"])
+        assert result["qc"]["passed"], (name, result["qc"])
+
+
+def test_tau_omega_brightness_falls_as_soil_moisture_rises():
+    result = tools.call(
+        "run_model",
+        {"model": "tau_omega", "parameters": {
+            "sweep_parameter": "soil_moisture", "sweep_start": 0.05, "sweep_stop": 0.45,
+            "sweep_points": 5}},
+    )
+    series = result["data"]["series"]["tb_v"]
+    assert series == sorted(series, reverse=True)
+
+
+def test_water_cloud_backscatter_rises_as_soil_moisture_rises():
+    result = tools.call(
+        "run_model",
+        {"model": "water_cloud", "parameters": {
+            "sweep_parameter": "soil_moisture", "sweep_start": 0.05, "sweep_stop": 0.45,
+            "sweep_points": 5}},
+    )
+    series = result["data"]["series"]["sigma0_total_db"]
+    assert series == sorted(series)
+
+
+def test_water_cloud_canopy_closes_as_vegetation_water_rises():
+    result = tools.call(
+        "run_model",
+        {"model": "water_cloud", "parameters": {
+            "sweep_parameter": "vegetation_water_kg_m2", "sweep_start": 0.0, "sweep_stop": 6.0,
+            "sweep_points": 4}},
+    )
+    gamma = result["data"]["series"]["two_way_transmissivity"]
+    assert gamma[0] == 1.0 and gamma == sorted(gamma, reverse=True)
+
+
+def test_the_comparison_method_note_is_readable_but_not_a_paper():
+    from physearth import knowledge
+
+    assert "model-comparison" in [item["slug"] for item in knowledge.skills()]
+    assert "model-comparison" not in knowledge.slugs()
+    section = tools.call("read_literature", {"slug": "model-comparison", "section_id": "00"})
+    assert section["status"] == "success"
+    assert section["citations"] == ["model-comparison#00"]

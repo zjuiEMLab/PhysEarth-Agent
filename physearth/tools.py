@@ -160,8 +160,8 @@ def read_literature(slug, section_id=None):
             {
                 "slug": slug,
                 "title": item["title"],
-                "doi": item["doi"],
-                "license": item["license"],
+                "doi": item.get("doi", ""),
+                "license": item.get("license", ""),
                 "sections": knowledge.section_index(slug),
             },
         )

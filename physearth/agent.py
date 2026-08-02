@@ -127,6 +127,10 @@ def run(question, history=None):
                 state["tool_calls"] += 1
                 for key in result.get("citations", []):
                     state["sections_read"].add(key)
+                if name == "list_models" and result["status"] == "success" and result["data"].get("version"):
+                    state["models_run"].add(
+                        "%s@%s" % (result["data"]["name"], result["data"]["version"])
+                    )
                 if name == "run_model":
                     if result["status"] == "success":
                         state["model_runs"] += 1
@@ -245,5 +249,5 @@ def render_trace(events, state):
         )
     )
     lines.append("Sections read: %s" % (", ".join(sorted(state["sections_read"])) or "none"))
-    lines.append("Models run: %s" % (", ".join(sorted(state["models_run"])) or "none"))
+    lines.append("Models cited: %s" % (", ".join(sorted(state["models_run"])) or "none"))
     return "\n".join(lines)

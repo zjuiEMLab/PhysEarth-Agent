@@ -2,7 +2,9 @@ from pathlib import Path
 
 import yaml
 
-CORPUS_DIR = Path(__file__).resolve().parent.parent / "knowledge" / "literature"
+KNOWLEDGE_DIR = Path(__file__).resolve().parent.parent / "knowledge"
+CORPUS_DIR = KNOWLEDGE_DIR / "literature"
+SKILLS_DIR = KNOWLEDGE_DIR / "skills"
 
 _CARDS = None
 
@@ -12,17 +14,20 @@ def _load():
     if _CARDS is not None:
         return _CARDS
     cards = {}
-    if CORPUS_DIR.is_dir():
-        for card_path in sorted(CORPUS_DIR.glob("*/card.yaml")):
+    for root, kind in ((CORPUS_DIR, "paper"), (SKILLS_DIR, "skill")):
+        if not root.is_dir():
+            continue
+        for card_path in sorted(root.glob("*/card.yaml")):
             card = yaml.safe_load(card_path.read_text(encoding="utf-8"))
             card["_dir"] = card_path.parent
+            card.setdefault("kind", kind)
             cards[card["slug"]] = card
     _CARDS = cards
     return _CARDS
 
 
-def slugs():
-    return list(_load())
+def slugs(kind="paper"):
+    return [s for s, c in _load().items() if kind is None or c.get("kind") == kind]
 
 
 def card(slug):
@@ -32,6 +37,8 @@ def card(slug):
 def catalogue():
     entries = []
     for slug, item in _load().items():
+        if item.get("kind") != "paper":
+            continue
         entries.append(
             {
                 "slug": slug,
@@ -105,8 +112,8 @@ def read_section(slug, section_id):
                 "section_id": section["id"],
                 "title": section["title"],
                 "text": path.read_text(encoding="utf-8"),
-                "doi": item["doi"],
-                "license": item["license"],
+                "doi": item.get("doi", ""),
+                "license": item.get("license", ""),
                 "citation_key": "%s#%s" % (slug, section["id"]),
             }
     return None
@@ -118,3 +125,18 @@ def citation_keys():
         for section in item.get("sections", []):
             keys.add("%s#%s" % (slug, section["id"]))
     return keys
+
+
+def skills():
+    return [
+        {"slug": slug, "title": item["title"], "description": " ".join(item["description"].split())}
+        for slug, item in _load().items()
+        if item.get("kind") == "skill"
+    ]
+
+
+def skills_block():
+    return "\n".join(
+        "- %s (%s)\n  %s" % (item["slug"], item["title"], item["description"])
+        for item in skills()
+    )

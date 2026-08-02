@@ -29,9 +29,12 @@ Literature: [slug#section_id], for example [smrt-v1#05]. Only for sections you a
 opened with read_literature in this conversation. Seeing a paper in the catalogue is not
 reading it.
 
-Model results: [model:name@version], for example [model:smrt@1.5.1]. Only for a model you
-actually ran with run_model. A model name is not a paper slug: the model is smrt, the paper
-about it is smrt-v1, so [smrt#05] resolves to nothing and will be rejected.
+Models: [model:name@version], for example [model:smrt@1.5.1]. Use it for a number you
+obtained from run_model and for anything you read in a model's declaration through
+list_models, such as a parameter range or a constraint. It only resolves for a model you
+actually ran or whose declaration you actually read in this conversation. A model name is
+not a paper slug: the model is smrt, the paper about it is smrt-v1, so [smrt#05] resolves to
+nothing and will be rejected.
 
 The system checks every marker after you write the answer and sends the answer back if one
 does not resolve. Do not invent markers and do not attach one to your own reasoning; an
@@ -48,6 +51,13 @@ def models_section():
         "Registered physical models. These are the only sources of numerical results; the "
         "declaration below is what the system validates your calls against.\n\n%s"
         % registry.capability_block()
+    )
+
+
+def skills_section():
+    return (
+        "Methods. These are short procedure notes, not papers. Read one with read_literature "
+        "when the situation it names comes up.\n\n%s" % knowledge.skills_block()
     )
 
 
@@ -76,7 +86,7 @@ def status_block(state):
 
 
 def build(state=None):
-    blocks = [ROLE, models_section(), catalogue_section(), WORKFLOW, CITATION_RULES, STYLE]
+    blocks = [ROLE, models_section(), catalogue_section(), skills_section(), WORKFLOW, CITATION_RULES, STYLE]
     if state:
         blocks.append(status_block(state))
     return "\n\n".join(blocks)

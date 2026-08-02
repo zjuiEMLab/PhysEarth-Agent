@@ -1,0 +1,132 @@
+name: water_cloud
+version: "1.0.0"
+tier: demo
+entrypoint: adapter:run
+license: Apache-2.0
+citation: >-
+  Water Cloud Model of Attema and Ulaby (1978), in the calibrated forward-operator form used
+  by Modanesi, S., Massari, C., Bechtold, M., et al.: Optimizing a backscatter forward
+  operator using Sentinel-1 data over irrigated land, Hydrol. Earth Syst. Sci., 25,
+  6283-6307, 2021. https://doi.org/10.5194/hess-25-6283-2021
+description: >-
+  Active microwave backscatter from a vegetated soil surface. The canopy is treated as a
+  cloud of identical water droplets that both scatters and attenuates, and the soil
+  contribution is a linear function of soil moisture in decibels. This is the active
+  counterpart of tau_omega and is what Sentinel-1 soil moisture work calibrates. Documented
+  by the backscatter-forward-operator paper in the literature corpus.
+
+parameters:
+  angle_deg:
+    type: number
+    unit: degree
+    description: Incidence angle from nadir.
+    minimum: 15.0
+    maximum: 50.0
+    default: 37.0
+  soil_moisture:
+    type: number
+    unit: m3 m-3
+    description: Volumetric soil moisture.
+    minimum: 0.01
+    maximum: 0.6
+    default: 0.25
+  vegetation_water_kg_m2:
+    type: number
+    unit: kg m-2
+    description: Vegetation water content. Zero means bare soil.
+    minimum: 0.0
+    maximum: 8.0
+    default: 1.0
+  coefficient_a:
+    type: number
+    unit: none
+    description: Vegetation scattering coefficient A of the water cloud model.
+    minimum: 0.0
+    maximum: 1.0
+    default: 0.09
+  coefficient_b:
+    type: number
+    unit: none
+    description: Vegetation attenuation coefficient B of the water cloud model.
+    minimum: 0.0
+    maximum: 1.0
+    default: 0.12
+  coefficient_c:
+    type: number
+    unit: dB
+    description: Intercept of the soil backscatter law, the dry soil level.
+    minimum: -40.0
+    maximum: 0.0
+    default: -22.0
+  coefficient_d:
+    type: number
+    unit: dB per m3 m-3
+    description: Sensitivity of soil backscatter to soil moisture.
+    minimum: 0.0
+    maximum: 60.0
+    default: 30.0
+  sweep_parameter:
+    type: string
+    unit: none
+    description: Numeric parameter to sweep instead of holding fixed.
+    enum: [none, angle_deg, soil_moisture, vegetation_water_kg_m2, coefficient_a,
+           coefficient_b, coefficient_c, coefficient_d]
+    default: none
+    required: false
+  sweep_start:
+    type: number
+    unit: same as the swept parameter
+    description: First value of the sweep.
+    minimum: -1.0e+9
+    maximum: 1.0e+9
+    required: false
+  sweep_stop:
+    type: number
+    unit: same as the swept parameter
+    description: Last value of the sweep.
+    minimum: -1.0e+9
+    maximum: 1.0e+9
+    required: false
+  sweep_points:
+    type: integer
+    unit: count
+    description: Number of points in the sweep.
+    minimum: 2
+    maximum: 60
+    default: 10
+    required: false
+
+combinations:
+  - when: {vegetation_water_kg_m2: [0.0]}
+    allow: {coefficient_a: [0.0]}
+    reason: >-
+      With no vegetation water there is no canopy to scatter, so the scattering coefficient A
+      has nothing to act on. Set A to zero for a bare soil surface.
+
+outputs:
+  sigma0_total_db:
+    unit: dB
+    description: Total backscattering coefficient, canopy plus attenuated soil.
+    valid_min: -45.0
+    valid_max: 10.0
+  sigma0_vegetation_db:
+    unit: dB
+    description: Canopy contribution alone.
+    valid_min: -60.0
+    valid_max: 10.0
+  sigma0_soil_db:
+    unit: dB
+    description: Soil contribution before canopy attenuation.
+    valid_min: -45.0
+    valid_max: 10.0
+  two_way_transmissivity:
+    unit: none
+    description: Two-way canopy transmissivity, one for a transparent canopy.
+    valid_min: 0.0
+    valid_max: 1.0
+
+resource_profile:
+  typical_call_seconds: 0.00002
+  needs_gpu: false
+  needs_external_data: false
+  notes: Closed-form analytical model. No compilation, no external data.

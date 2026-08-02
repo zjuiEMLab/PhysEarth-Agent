@@ -1,7 +1,7 @@
 import re
 
 CITATION_PATTERN = re.compile(r"\[([a-z0-9-]+)#(\d{1,3})\]")
-MODEL_PATTERN = re.compile(r"\[model:([A-Za-z0-9_-]+)@([^\]]+)\]")
+MODEL_PATTERN = re.compile(r"\[(?:model:)?([A-Za-z0-9_-]+)@([^\]\s]+)\]")
 UNCITED_ANSWER_CHARS = 220
 MAX_INTERVENTIONS = 3
 

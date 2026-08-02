@@ -25,8 +25,8 @@ def test_budget_stops_the_loop():
 
 def test_every_corpus_citation_key_is_reachable():
     keys = knowledge.citation_keys()
-    assert len(keys) == 79
-    for slug in knowledge.slugs():
+    assert len(keys) == 80
+    for slug in knowledge.slugs(kind=None):
         for section in knowledge.section_index(slug):
             assert knowledge.read_section(slug, section["id"])["text"]
 

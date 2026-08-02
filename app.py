@@ -10,9 +10,10 @@ print(diagnostics.render(_REPORT), flush=True)
 
 EXAMPLES = [
     "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes from 100 to 500 kg/m3 for a 1 m layer, and explain the trend.",
-    "Use DMRT with an exponential microstructure at 19 GHz.",
+    "How does L-band brightness temperature respond to soil moisture from 0.05 to 0.45, and how much does vegetation optical depth change that?",
+    "Compare what tau_omega and water_cloud predict as soil moisture rises. Are the two results comparable?",
     "Simulate a snowpack at 37 GHz with a density of 2000 kg/m3.",
-    "Which microstructure representations does SMRT offer, and which electromagnetic theory does each one work with?",
+    "Use DMRT with an exponential microstructure at 19 GHz.",
     "What soil roughness and permittivity values were retrieved at Trail Valley Creek, and at which bands?",
     "Do not use any tools. From your own knowledge, write a full paragraph explaining how snow density affects 37 GHz brightness temperature.",
 ]
@@ -28,7 +29,8 @@ The point is not that it can talk about physics, but that it cannot assert physi
 not read or run. Parameters are checked against each model's declared physical ranges and
 legal combinations before the model runs; the result is quality controlled against the
 declared output bounds afterwards; and every literature claim must carry a marker that
-resolves to a section actually opened in this conversation. None of these checks is a tool
+resolves to a section actually opened, or to a model run actually performed, in this
+conversation. None of these checks is a tool
 the agent may skip. The run trace on the right shows each one, including the refusals.
 """ % (len(knowledge.slugs()), len(registry.names()))
 
@@ -64,7 +66,7 @@ def models_table():
         for item in rejected:
             lines.append("- `%s`: %s" % (item["directory"], item["reason"]))
     lines.append("")
-    lines.append("See `docs/registering-a-model.md` to add your own.")
+    lines.append("See the tutorial in `README.md` to add your own.")
     return "\n".join(lines)
 
 
