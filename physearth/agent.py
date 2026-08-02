@@ -18,6 +18,9 @@ def new_state():
         "max_model_calls": MAX_MODEL_CALLS,
         "max_tool_calls": MAX_TOOL_CALLS,
         "sections_read": set(),
+        "model_runs": 0,
+        "qc_failures": 0,
+        "rejected_calls": 0,
         "interventions": 0,
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -123,16 +126,35 @@ def run(question, history=None):
                 state["tool_calls"] += 1
                 for key in result.get("citations", []):
                     state["sections_read"].add(key)
-                events.append(
-                    _event(
-                        "tool_call",
-                        name=name,
-                        arguments=arguments,
-                        status=result["status"],
-                        summary=result["summary"],
-                        elapsed_s=round(time.perf_counter() - started, 3),
+                if name == "run_model":
+                    if result["status"] == "success":
+                        state["model_runs"] += 1
+                        if result.get("qc") and not result["qc"]["passed"]:
+                            state["qc_failures"] += 1
+                    elif result["status"] == "needs_input":
+                        state["rejected_calls"] += 1
+                kind = "harness_block" if result["status"] == "needs_input" else "tool_call"
+                if kind == "harness_block":
+                    events.append(
+                        _event(
+                            "harness_block",
+                            rule="physical_domain",
+                            detail=result["error"],
+                            intervention=None,
+                        )
                     )
-                )
+                else:
+                    events.append(
+                        _event(
+                            "tool_call",
+                            name=name,
+                            arguments=arguments,
+                            status=result["status"],
+                            summary=result["summary"],
+                            qc=(result.get("qc") or {}).get("passed"),
+                            elapsed_s=round(time.perf_counter() - started, 3),
+                        )
+                    )
                 payload = {k: v for k, v in result.items() if k != "qc"}
                 messages.append(
                     {
@@ -182,10 +204,13 @@ def render_trace(events, state):
                 event["completion_tokens"],
             )
         elif kind == "tool_call":
-            detail = "%s %s -> %s (%.3fs)" % (
+            qc = event.get("qc")
+            badge = "" if qc is None else (" [QC ok]" if qc else " [QC FAILED]")
+            detail = "%s %s -> %s%s (%.3fs)" % (
                 event["name"],
                 json.dumps(event["arguments"], ensure_ascii=False),
                 event["summary"],
+                badge,
                 event["elapsed_s"],
             )
         elif kind == "harness_block":
@@ -200,12 +225,16 @@ def render_trace(events, state):
         lines.append("| %d | %s | %s |" % (index, kind, detail))
     lines.append("")
     lines.append(
-        "Model calls %d/%d, tool calls %d/%d, interventions %d, tokens %d in / %d out."
+        "LLM calls %d/%d, tool calls %d/%d, model runs %d, rejected calls %d, QC failures %d, "
+        "interventions %d, tokens %d in / %d out."
         % (
             state["model_calls"],
             state["max_model_calls"],
             state["tool_calls"],
             state["max_tool_calls"],
+            state["model_runs"],
+            state["rejected_calls"],
+            state["qc_failures"],
             state["interventions"],
             state["prompt_tokens"],
             state["completion_tokens"],

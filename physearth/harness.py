@@ -20,8 +20,8 @@ def check_citations(text, sections_read):
     }
 
 
-def check_evidence(text, sections_read):
-    if sections_read:
+def check_evidence(text, sections_read, model_runs=0):
+    if sections_read or model_runs:
         return {"rule": "evidence_gate", "passed": True, "reason": ""}
     stripped = (text or "").strip()
     if len(stripped) <= UNCITED_ANSWER_CHARS:
@@ -29,8 +29,8 @@ def check_evidence(text, sections_read):
     return {
         "rule": "evidence_gate",
         "passed": False,
-        "reason": "answer of %d characters produced without reading any literature section"
-        % len(stripped),
+        "reason": "answer of %d characters produced without reading any literature section "
+        "or running any physical model" % len(stripped),
     }
 
 
@@ -45,9 +45,9 @@ def citation_correction(result):
 
 def evidence_correction(result):
     return (
-        "Your answer was blocked by the evidence gate: %s. Call list_literature and then "
-        "read_literature on the sections you need, then answer with citation markers."
-        % result["reason"]
+        "Your answer was blocked by the evidence gate: %s. Gather evidence first: read the "
+        "sections you need with read_literature, and run the physical model with run_model "
+        "if the question asks what a model predicts. Then answer." % result["reason"]
     )
 
 
@@ -60,7 +60,10 @@ def check_budget(state):
 
 
 def review_final(text, state):
-    checks = [check_evidence(text, state["sections_read"]), check_citations(text, state["sections_read"])]
+    checks = [
+        check_evidence(text, state["sections_read"], state.get("model_runs", 0)),
+        check_citations(text, state["sections_read"]),
+    ]
     for check in checks:
         if not check["passed"]:
             correction = (

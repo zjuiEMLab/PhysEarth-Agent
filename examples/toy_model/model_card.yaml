@@ -1,0 +1,68 @@
+name: toy_rayleigh
+version: "0.1.0"
+tier: demo
+entrypoint: adapter:run
+license: Apache-2.0
+citation: >-
+  Not a research model. A deliberately trivial Rayleigh-style attenuation law, included as a
+  worked example of the PhysEarth model card.
+description: >-
+  Example model. Returns a transmissivity that falls with optical depth, to show what a
+  minimal registration looks like. Do not use it for science.
+
+parameters:
+  optical_depth:
+    type: number
+    unit: none
+    description: Optical depth of the layer.
+    minimum: 0.0
+    maximum: 20.0
+    default: 1.0
+  angle_deg:
+    type: number
+    unit: degree
+    description: Incidence angle from nadir.
+    minimum: 0.0
+    maximum: 80.0
+    default: 55.0
+  sweep_parameter:
+    type: string
+    unit: none
+    description: Numeric parameter to sweep instead of holding fixed.
+    enum: [none, optical_depth, angle_deg]
+    default: none
+    required: false
+  sweep_start:
+    type: number
+    unit: same as the swept parameter
+    description: First value of the sweep.
+    minimum: -1.0e+9
+    maximum: 1.0e+9
+    required: false
+  sweep_stop:
+    type: number
+    unit: same as the swept parameter
+    description: Last value of the sweep.
+    minimum: -1.0e+9
+    maximum: 1.0e+9
+    required: false
+  sweep_points:
+    type: integer
+    unit: count
+    description: Number of points in the sweep.
+    minimum: 2
+    maximum: 60
+    default: 10
+    required: false
+
+outputs:
+  transmissivity:
+    unit: none
+    description: Fraction of energy transmitted through the layer.
+    valid_min: 0.0
+    valid_max: 1.0
+
+resource_profile:
+  typical_call_seconds: 0.0001
+  needs_gpu: false
+  needs_external_data: false

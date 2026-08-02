@@ -1,6 +1,10 @@
-from physearth import knowledge
+import time
+
+from physearth import knowledge, validation
+from physearth.models import registry
 
 OUTPUT_BUDGET_CHARS = 16000
+MAX_RUN_SECONDS = 45.0
 
 SPECS = [
     {
@@ -53,13 +57,72 @@ SPECS = [
 ]
 
 
-def _ok(summary, data, citations=None):
+
+RUN_MODEL_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "run_model",
+        "description": (
+            "Run a registered physical Earth model. Give the model name and any parameters "
+            "you want to change; everything else takes its declared default. Set "
+            "sweep_parameter together with sweep_start and sweep_stop to vary one parameter "
+            "instead of holding it fixed. Parameters are checked against the model's declared "
+            "physical ranges and legal combinations before the model runs, and the result is "
+            "quality controlled afterwards."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "model": {
+                    "type": "string",
+                    "description": "Registered model name. Use list_models to see them.",
+                },
+                "parameters": {
+                    "type": "object",
+                    "description": (
+                        "Parameter values keyed by the names the model declares. All of them "
+                        "go inside this object, including sweep_parameter, sweep_start, "
+                        "sweep_stop and sweep_points. Example: {\"model\": \"smrt\", "
+                        "\"parameters\": {\"frequency_ghz\": 37, \"sweep_parameter\": "
+                        "\"density_kg_m3\", \"sweep_start\": 100, \"sweep_stop\": 500}}"
+                    ),
+                },
+            },
+            "required": ["model"],
+        },
+    },
+}
+
+LIST_MODELS_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "list_models",
+        "description": (
+            "List the registered physical models with their tier, outputs and one-line "
+            "description. Call with a model name to get its full parameter declaration: "
+            "every parameter, its unit, its physical range and the legal combinations."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "model": {"type": "string", "description": "Omit for the list, give a name for detail."}
+            },
+        },
+    },
+}
+
+
+SPECS.append(LIST_MODELS_SPEC)
+SPECS.append(RUN_MODEL_SPEC)
+
+
+def _ok(summary, data, citations=None, qc=None):
     return {
         "status": "success",
         "summary": summary,
         "data": data,
         "citations": citations or [],
-        "qc": None,
+        "qc": qc,
         "error": None,
     }
 
@@ -127,9 +190,102 @@ def read_literature(slug, section_id=None):
     )
 
 
+def list_models(model=None):
+    if model in (None, ""):
+        rows = registry.summary()
+        rejected = registry.rejected()
+        return _ok(
+            "%d registered model(s), %d rejected." % (len(rows), len(rejected)),
+            {"models": rows, "rejected": rejected},
+        )
+    entry = registry.get(model)
+    if entry is None:
+        return _fail(
+            "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names()) or "none")
+        )
+    card = entry.card
+    return _ok(
+        "Capability declaration for %s v%s." % (card["name"], card["version"]),
+        {
+            "name": card["name"],
+            "version": card["version"],
+            "tier": card["tier"],
+            "runnable_here": entry.runnable,
+            "citation": card["citation"],
+            "license": card["license"],
+            "parameters": card["parameters"],
+            "combinations": card.get("combinations") or [],
+            "outputs": card["outputs"],
+            "resource_profile": card.get("resource_profile") or {},
+        },
+    )
+
+
+def run_model(model, parameters=None, **extra):
+    parameters = dict(parameters or {})
+    parameters.update(extra)
+    entry = registry.get(model)
+    if entry is None:
+        return _fail(
+            "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names()) or "none")
+        )
+    if not entry.runnable:
+        return _fail(
+            "%s is registered but its tier is %r, so it cannot run in this environment. "
+            "Deploy it locally to use it." % (model, entry.tier)
+        )
+
+    spec, problems = validation.resolve(entry.card, parameters or {})
+    if problems:
+        return {
+            "status": "needs_input",
+            "summary": "The call was rejected before running %s: %d problem(s)." % (model, len(problems)),
+            "data": {"model": model, "rejected_parameters": parameters or {}, "problems": problems},
+            "citations": [],
+            "qc": None,
+            "error": "; ".join(problems),
+        }
+
+    started = time.perf_counter()
+    try:
+        result = entry.run(spec)
+    except Exception as exc:
+        return _fail(
+            "%s raised %s: %s" % (model, type(exc).__name__, exc),
+            {"model": model, "spec": spec},
+        )
+    elapsed = time.perf_counter() - started
+
+    qc = validation.quality_control(entry.card, result)
+    axis = result.get("axis")
+    summary = "%s ran in %.2fs: %d point(s)%s. Quality control %s." % (
+        model,
+        elapsed,
+        len(result.get("points") or []),
+        " over %s" % axis["name"] if axis else "",
+        "passed" if qc["passed"] else "FAILED",
+    )
+    return _ok(
+        summary,
+        {
+            "model": model,
+            "version": entry.card["version"],
+            "spec": spec,
+            "axis": axis,
+            "series": result.get("series"),
+            "points": result.get("points"),
+            "units": {name: item["unit"] for name, item in entry.card["outputs"].items()},
+            "elapsed_s": round(elapsed, 3),
+        },
+        qc=qc,
+    )
+
+
 DISPATCH = {
     "list_literature": list_literature,
     "read_literature": read_literature,
+    "list_models": list_models,
+    "run_model": run_model,
 }
 
 
