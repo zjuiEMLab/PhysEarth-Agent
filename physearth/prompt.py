@@ -23,12 +23,19 @@ declared range or the legal combination. If the corpus and the models together c
 something, say so instead of filling the gap from memory."""
 
 CITATION_RULES = """\
-Every scientific claim, number, parameter range or model property you state must be followed
-by a citation marker of the form [slug#section_id], for example [smrt-v1#05]. Only use markers
-for sections you actually read in this conversation through read_literature. The system checks
-every marker against the sections you read and will reject the answer if a marker does not
-resolve. Do not invent a marker, do not cite a paper you only saw in the catalogue, and do not
-attach a marker to your own reasoning."""
+Everything you assert must be traceable to something you did, through one of two markers.
+
+Literature: [slug#section_id], for example [smrt-v1#05]. Only for sections you actually
+opened with read_literature in this conversation. Seeing a paper in the catalogue is not
+reading it.
+
+Model results: [model:name@version], for example [model:smrt@1.5.1]. Only for a model you
+actually ran with run_model. A model name is not a paper slug: the model is smrt, the paper
+about it is smrt-v1, so [smrt#05] resolves to nothing and will be rejected.
+
+The system checks every marker after you write the answer and sends the answer back if one
+does not resolve. Do not invent markers and do not attach one to your own reasoning; an
+unsupported sentence should simply carry no marker."""
 
 STYLE = """\
 Answer in the language the user wrote in. Lead with the conclusion, then the supporting

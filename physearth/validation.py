@@ -10,6 +10,14 @@ from physearth.models import contract
 
 def _coerce(name, spec, value, problems):
     kind = spec["type"]
+    if isinstance(value, (dict, list)):
+        problems.append(
+            "%s was given a %s, but it is a single %s. Every parameter goes as a flat "
+            "key inside the parameters object, so write "
+            '{"parameters": {"%s": <value>, "sweep_parameter": "...", "sweep_start": ...}}'
+            % (name, type(value).__name__, kind, name)
+        )
+        return None
     if kind == "integer":
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             problems.append("%s must be an integer, got %r" % (name, value))

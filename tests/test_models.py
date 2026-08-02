@@ -112,3 +112,24 @@ def test_a_broken_card_is_rejected_without_breaking_startup(tmp_path, monkeypatc
     finally:
         monkeypatch.delenv(registry.EXTRA_DIRS_ENV, raising=False)
         registry.reload()
+
+
+def test_model_result_markers_resolve_only_against_models_actually_run():
+    from physearth import harness
+
+    good = harness.check_citations(
+        "Tb is 199.3 K [model:smrt@1.5.1] and IBA is used [smrt-v1#04].",
+        {"smrt-v1#04"},
+        {"smrt@1.5.1"},
+    )
+    assert good["passed"]
+    bad = harness.check_citations("Value [smrt#05] from [model:smrt@9.9].", {"smrt-v1#04"}, {"smrt@1.5.1"})
+    assert bad["unresolved"] == ["smrt#05", "smrt@9.9"]
+
+
+def test_a_nested_parameter_object_is_explained_not_just_refused():
+    result = tools.call(
+        "run_model", {"model": "smrt", "parameters": {"density_kg_m3": {"sweep_start": 100}}}
+    )
+    assert result["status"] == "needs_input"
+    assert "flat key inside the parameters object" in result["error"]

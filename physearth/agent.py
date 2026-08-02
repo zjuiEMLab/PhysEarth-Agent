@@ -19,6 +19,7 @@ def new_state():
         "max_tool_calls": MAX_TOOL_CALLS,
         "sections_read": set(),
         "model_runs": 0,
+        "models_run": set(),
         "qc_failures": 0,
         "rejected_calls": 0,
         "interventions": 0,
@@ -129,6 +130,9 @@ def run(question, history=None):
                 if name == "run_model":
                     if result["status"] == "success":
                         state["model_runs"] += 1
+                        state["models_run"].add(
+                            "%s@%s" % (result["data"]["model"], result["data"]["version"])
+                        )
                         if result.get("qc") and not result["qc"]["passed"]:
                             state["qc_failures"] += 1
                     elif result["status"] == "needs_input":
@@ -194,7 +198,7 @@ def run(question, history=None):
 
 
 def render_trace(events, state):
-    lines = ["| step | event | detail |", "| --- | --- | --- |"]
+    lines = ["| # | event | detail |", "| ---: | --- | --- |"]
     for index, event in enumerate(events, 1):
         kind = event["kind"]
         if kind == "model_call":
@@ -241,4 +245,5 @@ def render_trace(events, state):
         )
     )
     lines.append("Sections read: %s" % (", ".join(sorted(state["sections_read"])) or "none"))
+    lines.append("Models run: %s" % (", ".join(sorted(state["models_run"])) or "none"))
     return "\n".join(lines)

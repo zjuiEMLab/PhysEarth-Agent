@@ -1,6 +1,7 @@
 import re
 
 CITATION_PATTERN = re.compile(r"\[([a-z0-9-]+)#(\d{1,3})\]")
+MODEL_PATTERN = re.compile(r"\[model:([A-Za-z0-9_-]+)@([^\]]+)\]")
 UNCITED_ANSWER_CHARS = 220
 MAX_INTERVENTIONS = 3
 
@@ -9,12 +10,18 @@ def find_markers(text):
     return ["%s#%s" % (slug, sid) for slug, sid in CITATION_PATTERN.findall(text or "")]
 
 
-def check_citations(text, sections_read):
+def find_model_markers(text):
+    return ["%s@%s" % (name, version) for name, version in MODEL_PATTERN.findall(text or "")]
+
+
+def check_citations(text, sections_read, models_run=()):
     markers = find_markers(text)
+    model_markers = find_model_markers(text)
     unresolved = sorted({m for m in markers if m not in sections_read})
+    unresolved += sorted({m for m in model_markers if m not in set(models_run)})
     return {
         "rule": "citation_integrity",
-        "markers": markers,
+        "markers": markers + ["model:" + m for m in model_markers],
         "unresolved": unresolved,
         "passed": not unresolved,
     }
@@ -36,10 +43,12 @@ def check_evidence(text, sections_read, model_runs=0):
 
 def citation_correction(result):
     return (
-        "Your answer was blocked by the citation integrity check. These markers do not "
-        "resolve to any section you read in this conversation: %s. Either read the section "
-        "with read_literature and keep the marker, or remove the claim. Re-send the full "
-        "answer." % ", ".join(result["unresolved"])
+        "Your answer was blocked by the citation integrity check. These markers resolve to "
+        "nothing you did in this conversation: %s. A marker of the form [slug#id] must name "
+        "a section you opened with read_literature, and a marker of the form "
+        "[model:name@version] must name a model you actually ran with run_model. Note that "
+        "a model name is not a paper slug. Fix or drop each one and re-send the full answer."
+        % ", ".join(result["unresolved"])
     )
 
 
@@ -62,7 +71,7 @@ def check_budget(state):
 def review_final(text, state):
     checks = [
         check_evidence(text, state["sections_read"], state.get("model_runs", 0)),
-        check_citations(text, state["sections_read"]),
+        check_citations(text, state["sections_read"], state.get("models_run", ())),
     ]
     for check in checks:
         if not check["passed"]:
