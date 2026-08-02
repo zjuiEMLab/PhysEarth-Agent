@@ -184,3 +184,51 @@ def test_the_comparison_method_note_is_readable_but_not_a_paper():
     section = tools.call("read_literature", {"slug": "model-comparison", "section_id": "00"})
     assert section["status"] == "success"
     assert section["citations"] == ["model-comparison#00"]
+
+
+def test_reference_datasets_load_with_provenance():
+    from physearth import reference
+
+    assert set(reference.slugs()) == {"tvc-backscatter", "tvc-soil-roughness"}
+    for slug in reference.slugs():
+        item = reference.provenance(slug)
+        assert item["license"] == "Open Government Licence - Canada"
+        assert item["paper_doi"] == "10.5194/tc-18-3857-2024"
+        assert item["sources"]
+
+
+def test_every_reference_column_declares_a_unit_and_a_source():
+    from physearth import reference
+
+    for slug in reference.slugs():
+        for name, column in reference.card(slug)["columns"].items():
+            assert column["unit"], (slug, name)
+            assert column["source"] == "measurement", (slug, name)
+
+
+def test_reference_filters_return_a_bounded_summary_not_the_whole_table():
+    result = tools.call(
+        "read_reference_dataset",
+        {"dataset": "tvc-backscatter", "filters": {"band": "Ku", "polarisation": "co"}},
+    )
+    assert result["status"] == "success"
+    assert result["data"]["n_rows"] == 1222
+    assert len(result["data"]["sample"]) <= 20
+    assert result["data"]["summary"]["sigma0_db"]["unit"] == "dB"
+
+
+def test_an_unknown_filter_value_lists_what_is_available():
+    result = tools.call(
+        "read_reference_dataset", {"dataset": "tvc-backscatter", "filters": {"band": "S"}}
+    )
+    assert result["status"] == "needs_input"
+    assert "Available: C, Ku, X" in result["error"]
+
+
+def test_a_numeric_filter_needs_a_range():
+    result = tools.call(
+        "read_reference_dataset",
+        {"dataset": "tvc-backscatter", "filters": {"incidence_angle_deg": 35}},
+    )
+    assert result["status"] == "needs_input"
+    assert "[min, max]" in result["error"]

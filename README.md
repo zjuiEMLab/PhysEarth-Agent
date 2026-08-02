@@ -45,6 +45,14 @@ refusals.
 Eight open-access Copernicus papers, redistributed under their CC-BY licences, split into 79
 citable sections. See `NOTICE` for the per-paper attribution.
 
+## Bundled measurements
+
+Radar backscatter measured at Trail Valley Creek in 2018/19 at C, X and Ku band, 23658 rows,
+plus per-station soil roughness from airborne lidar. Published under the Open Government
+Licence - Canada. The agent can run a model at the configuration a measurement was taken at
+and compare the two. `scripts/build_reference.py` regenerates the tables from the published
+files.
+
 ## Running it
 
 ```bash

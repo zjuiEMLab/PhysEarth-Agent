@@ -1,6 +1,6 @@
 import gradio as gr
 
-from physearth import __version__, agent, config, diagnostics, knowledge
+from physearth import __version__, agent, config, diagnostics, knowledge, reference
 from physearth.models import registry
 
 config.load_dotenv()
@@ -9,6 +9,7 @@ _REPORT = diagnostics.collect()
 print(diagnostics.render(_REPORT), flush=True)
 
 EXAMPLES = [
+    "At Trail Valley Creek, what Ku-band backscatter was actually measured, and how does SMRT compare if you run it at the same incidence angle?",
     "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes from 100 to 500 kg/m3 for a 1 m layer, and explain the trend.",
     "How does L-band brightness temperature respond to soil moisture from 0.05 to 0.45, and how much does vegetation optical depth change that?",
     "Compare what tau_omega and water_cloud predict as soil moisture rises. Are the two results comparable?",
@@ -70,6 +71,22 @@ def models_table():
     return "\n".join(lines)
 
 
+def reference_table():
+    lines = ["| dataset | rows | licence | columns |", "| --- | ---: | --- | --- |"]
+    for entry in reference.catalogue():
+        indices, _ = reference.query(entry["slug"])
+        lines.append(
+            "| `%s` | %d | %s | %s |"
+            % (entry["slug"], len(indices), entry["license"], ", ".join(entry["columns"]))
+        )
+    lines.append("")
+    for entry in reference.catalogue():
+        item = reference.provenance(entry["slug"])
+        lines.append("**%s** - %s" % (entry["slug"], item["citation"]))
+        lines.append("")
+    return "\n".join(lines)
+
+
 def corpus_table():
     lines = ["| slug | year | scenarios | outputs | license |", "| --- | --- | --- | --- | --- |"]
     for entry in knowledge.catalogue():
@@ -105,6 +122,8 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
             trace = gr.Markdown("The run trace appears here.")
     with gr.Accordion("Registered models", open=False):
         gr.Markdown(models_table())
+    with gr.Accordion("Measured reference data", open=False):
+        gr.Markdown(reference_table())
     with gr.Accordion("Bundled corpus and environment", open=False):
         gr.Markdown(corpus_table())
         gr.Markdown(diagnostics.render(_REPORT))

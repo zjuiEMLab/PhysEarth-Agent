@@ -1,6 +1,6 @@
 import time
 
-from physearth import knowledge, validation
+from physearth import knowledge, reference, validation
 from physearth.models import registry
 
 OUTPUT_BUDGET_CHARS = 16000
@@ -112,8 +112,37 @@ LIST_MODELS_SPEC = {
 }
 
 
+READ_REFERENCE_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "read_reference_dataset",
+        "description": (
+            "Read measured reference data. Called with no arguments it lists the datasets. "
+            "Called with a dataset and optional filters it returns how many rows match, a "
+            "statistical summary of every column, a bounded sample of rows, and the licence "
+            "and citation. Use it to compare a model run against what was actually observed. "
+            "Filters take an exact value or a list for text columns, and [min, max] for "
+            "numeric columns."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "dataset": {"type": "string", "description": "Dataset slug. Omit to list them."},
+                "filters": {
+                    "type": "object",
+                    "description": (
+                        'Column filters, for example {"band": "Ku", "polarisation": ["hh", "vv"], '
+                        '"incidence_angle_deg": [30, 45]}'
+                    ),
+                },
+            },
+        },
+    },
+}
+
 SPECS.append(LIST_MODELS_SPEC)
 SPECS.append(RUN_MODEL_SPEC)
+SPECS.append(READ_REFERENCE_SPEC)
 
 
 def _ok(summary, data, citations=None, qc=None):
@@ -281,8 +310,48 @@ def run_model(model, parameters=None, **extra):
     )
 
 
+def read_reference_dataset(dataset=None, filters=None):
+    if dataset in (None, ""):
+        return _ok(
+            "%d reference dataset(s) available." % len(reference.slugs()),
+            {"datasets": reference.catalogue()},
+        )
+    if reference.card(dataset) is None:
+        return _fail(
+            "Unknown dataset %r. Available: %s." % (dataset, ", ".join(reference.slugs()))
+        )
+    indices, problems = reference.query(dataset, filters)
+    if problems:
+        return {
+            "status": "needs_input",
+            "summary": "The filters were rejected: %d problem(s)." % len(problems),
+            "data": {"dataset": dataset, "rejected_filters": filters or {}, "problems": problems},
+            "citations": [],
+            "qc": None,
+            "error": "; ".join(problems),
+        }
+    if not indices:
+        return _ok(
+            "No row of %s matches those filters." % dataset,
+            {"dataset": dataset, "n_rows": 0, "filters": filters or {}},
+        )
+    return _ok(
+        "%s: %d row(s) match. Every value is a measurement."
+        % (dataset, len(indices)),
+        {
+            "dataset": dataset,
+            "n_rows": len(indices),
+            "filters": filters or {},
+            "summary": reference.summarise(dataset, indices),
+            "sample": reference.sample(dataset, indices),
+            "provenance": reference.provenance(dataset),
+        },
+    )
+
+
 DISPATCH = {
     "list_literature": list_literature,
+    "read_reference_dataset": read_reference_dataset,
     "read_literature": read_literature,
     "list_models": list_models,
     "run_model": run_model,
