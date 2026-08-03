@@ -122,7 +122,7 @@ def reset(model_id):
     )
 
 
-with gr.Blocks(title="PhysEarth-Agent", head=theme.head(), fill_height=True) as demo:
+with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     turns_state = gr.State([])
 
     with gr.Column(elem_id="pe-app"):
@@ -185,4 +185,5 @@ if __name__ == "__main__":
         server_port=int(config.get("PHYSEARTH_PORT")),
         css=theme.css(),
         js=theme.js(),
+        head=theme.head(),
     )

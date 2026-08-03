@@ -167,6 +167,17 @@ footer,
   max-width: none !important;
 }
 
+/* The palette is fixed. Gradio follows the visitor's system dark preference, which would
+   otherwise put our paper-coloured cards on a dark page. */
+.dark,
+.dark body,
+.dark .gradio-container,
+.dark gradio-app {
+  color-scheme: light !important;
+  color: var(--ink) !important;
+  background: var(--paper) !important;
+}
+
 /* ---------- hero ---------- */
 
 .hero {
