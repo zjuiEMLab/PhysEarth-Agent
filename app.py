@@ -142,7 +142,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                         lines=3,
                         placeholder="Ask about snow, soil or vegetation microwave modelling",
                     )
-                    clear = gr.Button("Clear", elem_id="pe-clear")
+                    clear = gr.Button("Clear the session", elem_id="pe-clear")
                     send = gr.Button("Send", variant="primary", elem_id="pe-send")
                 gr.HTML(render.chips(), elem_classes=["pe-slot"])
 

@@ -311,14 +311,21 @@ a.tag:hover {
 
 .segment > button {
   appearance: none;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: center !important;
+  height: 28px !important;
+  min-height: 28px !important;
   border: none;
   background: transparent;
   font-family: var(--font-serif) !important;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1 !important;
   color: var(--ink-mute);
-  padding: 6px 15px;
+  padding: 0 15px !important;
+  margin: 0 !important;
   border-radius: 999px !important;
   cursor: pointer;
   white-space: nowrap;
@@ -1615,85 +1622,6 @@ body:not(.is-reasoning) .step-card--thinking {
 
 .msg-group:empty {
   display: none;
-}
-
-/* ---------- collapsible chat history ---------- */
-
-.exchange {
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
-  margin-top: 12px;
-}
-
-.exchange:first-child {
-  border-top: 0;
-  padding-top: 0;
-  margin-top: 0;
-}
-
-.exchange > summary {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  cursor: pointer;
-  list-style: none;
-  padding: 5px 8px;
-  margin: 0 -8px;
-  border-radius: var(--radius-xs);
-  font-size: 12.5px;
-  color: var(--ink-mute);
-}
-
-.exchange > summary::-webkit-details-marker {
-  display: none;
-}
-
-.exchange > summary:hover {
-  background: var(--paper-2);
-  color: var(--ink-soft);
-}
-
-.exchange > summary .turn {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--clay);
-  flex: none;
-}
-
-.exchange > summary .q {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ink-soft);
-}
-
-.exchange > summary .marks {
-  margin-left: auto;
-  flex: none;
-  display: flex;
-  gap: 5px;
-}
-
-.exchange > summary .chev {
-  flex: none;
-  width: 13px;
-  height: 13px;
-  color: var(--ink-mute);
-  transition: transform 0.18s ease;
-}
-
-.exchange[open] > summary {
-  color: var(--ink-soft);
-}
-
-.exchange[open] > summary .chev {
-  transform: rotate(90deg);
-}
-
-.exchange__body {
-  padding-top: 10px;
 }
 
 /* ---------- hero model switcher ---------- */

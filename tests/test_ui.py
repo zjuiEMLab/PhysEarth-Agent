@@ -1,6 +1,6 @@
 import re
 
-from physearth import agent, knowledge
+from physearth import agent, budget, knowledge
 from physearth.ui import render, theme
 
 
@@ -67,20 +67,16 @@ def test_every_bundled_paper_is_browsable_with_its_licence_and_doi():
     assert out.count("doi.org/10.5194") >= len(knowledge.slugs())
 
 
-def test_history_collapses_each_past_exchange():
+def test_the_session_shows_every_turn_until_it_is_cleared():
     turns = [
-        {
-            "index": 1,
-            "question": "q one",
-            "answer": "a one",
-            "events": [{"kind": "harness_block"}],
-            "state": {"model_runs": 1, "sections_read": ["smrt-v1#01"]},
-        }
+        {"index": 1, "question": "q one", "answer": "a one", "events": [], "state": {}},
+        {"index": 2, "question": "q two", "answer": "a two", "events": [], "state": {}},
     ]
     out = render.history(turns)
-    assert out.count("<details class='exchange'") == 1
-    assert "data-key='turn-1'" in out
-    assert "1 blocked" in out
+    assert out.count("msg--user") == 2
+    assert out.count("msg--agent") == 2
+    assert "q one" in out and "a two" in out
+    assert render.history([]).count("msg--") == 0
 
 
 def test_the_model_switcher_marks_the_running_model():
@@ -131,3 +127,15 @@ def test_a_spent_daily_quota_is_not_retried():
     assert agent._quota_exhausted(Spent())
     assert not agent._quota_exhausted(Busy())
     assert agent._fault(Spent()) == "rate limited (HTTP 429)"
+
+
+def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
+    import app
+
+    used_before = budget.used()
+    hero, head, history, live, trace, evidence, turns, box = app.reset(agent.default_model())
+    assert turns == [] and box == ""
+    assert "msg--" not in history and "msg--" not in live
+    assert "Nothing has run yet" in trace
+    assert "No chart yet" in evidence
+    assert "%d / %d" % used_before in trace

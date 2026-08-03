@@ -42,7 +42,6 @@ ICONS = {
     "<path d='M8 7.5h7M8 11h7'/>",
     "models": "<path d='M12 2.5l8 4.5v9l-8 4.5-8-4.5v-9z'/><path d='M12 11.5l8-4.5M12 11.5v9"
     "M12 11.5L4 7'/>",
-    "chevron": "<path d='M9 6l6 6-6 6'/>",
     "check": "<path d='M4 12.5l5.2 5.2L20 7'/>",
     "block": "<circle cx='12' cy='12' r='9'/><path d='M6 6l12 12'/>",
 }
@@ -179,41 +178,14 @@ def conversation_head(count):
     )
 
 
-def _turn_marks(turn):
-    marks = []
-    blocked = sum(1 for e in turn["events"] if e["kind"] == "harness_block")
-    if blocked:
-        marks.append("<span class='badge badge--block'>%d blocked</span>" % blocked)
-    runs = turn["state"].get("model_runs", 0)
-    if runs:
-        marks.append("<span class='badge badge--model'>%d run</span>" % runs)
-    read = len(turn["state"].get("sections_read") or ())
-    if read:
-        marks.append("<span class='badge badge--ok'>%d read</span>" % read)
-    return "".join(marks)
-
-
 def history(turns):
-    """Past exchanges, each collapsed to one line until it is opened."""
+    """The session so far. It keeps growing until the visitor clears it."""
     if not turns:
         return "<div class='msg-group'></div>"
     out = []
     for turn in turns:
-        out.append(
-            "<details class='exchange' data-key='turn-%d'><summary>"
-            "%s<span class='turn'>Q%d</span><span class='q'>%s</span>"
-            "<span class='marks'>%s</span></summary>"
-            "<div class='exchange__body'>%s%s</div></details>"
-            % (
-                turn["index"],
-                _svg("chevron", "chev"),
-                turn["index"],
-                _e(turn["question"]),
-                _turn_marks(turn),
-                _message("you", turn["question"], user=True),
-                _message("physearth", turn["answer"]),
-            )
-        )
+        out.append(_message("you", turn["question"], user=True))
+        out.append(_message("physearth", turn["answer"]))
     return "<div class='msg-group'>%s</div>" % "".join(out)
 
 
