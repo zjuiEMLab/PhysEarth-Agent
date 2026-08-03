@@ -1,139 +1,188 @@
 import gradio as gr
 
-from physearth import __version__, agent, config, diagnostics, knowledge, reference
-from physearth.models import registry
+from physearth import agent, config, diagnostics
+from physearth.ui import render, theme
 
 config.load_dotenv()
 
 _REPORT = diagnostics.collect()
 print(diagnostics.render(_REPORT), flush=True)
 
-EXAMPLES = [
-    "At Trail Valley Creek, what Ku-band backscatter was actually measured, and how does SMRT compare if you run it at the same incidence angle?",
-    "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes from 100 to 500 kg/m3 for a 1 m layer, and explain the trend.",
-    "How does L-band brightness temperature respond to soil moisture from 0.05 to 0.45, and how much does vegetation optical depth change that?",
-    "Compare what tau_omega and water_cloud predict as soil moisture rises. Are the two results comparable?",
-    "Simulate a snowpack at 37 GHz with a density of 2000 kg/m3.",
-    "Use DMRT with an exponential microstructure at 19 GHz.",
-    "What soil roughness and permittivity values were retrieved at Trail Valley Creek, and at which bands?",
-    "Do not use any tools. From your own knowledge, write a full paragraph explaining how snow density affects 37 GHz brightness temperature.",
-]
 
-INTRO = """\
-# PhysEarth-Agent
-
-An open-source GeoAI agent for physical Earth models. It reads a bundled corpus of %d
-open-access Copernicus papers and runs %d registered physical model(s) over snow, soil and
-vegetation.
-
-The point is not that it can talk about physics, but that it cannot assert physics it did
-not read or run. Parameters are checked against each model's declared physical ranges and
-legal combinations before the model runs; the result is quality controlled against the
-declared output bounds afterwards; and every literature claim must carry a marker that
-resolves to a section actually opened, or to a model run actually performed, in this
-conversation. None of these checks is a tool
-the agent may skip. The run trace on the right shows each one, including the refusals.
-""" % (len(knowledge.slugs()), len(registry.names()))
+def _accumulated(turns):
+    """Everything the session has read, run and drawn, oldest turn first."""
+    figures, sections, datasets = [], set(), set()
+    for turn in turns or []:
+        figures.extend(turn["state"].get("figures") or [])
+        sections |= set(turn["state"].get("sections_read") or ())
+        datasets |= set(turn["state"].get("datasets_read") or ())
+    return figures, sections, datasets
 
 
-def respond(question, history):
+def _archive(turn, state, events, question, answer):
+    """A turn keeps its own trace, so an old exchange can be reopened with its evidence."""
+    return {
+        "index": turn,
+        "question": question,
+        "answer": answer,
+        "events": events,
+        "state": {
+            "model_runs": state.get("model_runs", 0),
+            "sections_read": sorted(state.get("sections_read") or ()),
+            "datasets_read": sorted(state.get("datasets_read") or ()),
+            "figures": list(state.get("figures") or []),
+            "interventions": state.get("interventions", 0),
+        },
+    }
+
+
+def respond(question, turns, model_id):
     question = (question or "").strip()
+    turns = list(turns or [])
     if not question:
-        return history, "", ""
+        yield (
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            turns,
+            "",
+        )
+        return
+
+    index = len(turns) + 1
+    seen = [
+        {"role": role, "content": content}
+        for t in turns
+        for role, content in (("user", t["question"]), ("assistant", t["answer"]))
+    ]
+    figures, sections, datasets = _accumulated(turns)
+
+    yield (
+        render.hero(model_id, running=True, status="Running"),
+        render.conversation_head(index),
+        render.history(turns),
+        render.live(question, "", running=True),
+        render.trace([], agent.new_state(model_id), running=True),
+        render.evidence({}, figures, sections, datasets),
+        turns,
+        "",
+    )
+
+    answer, events, state = "", [], agent.new_state(model_id)
     try:
-        answer, events, state = agent.run(question, history)
-        trace = agent.render_trace(events, state)
+        for answer, events, state in agent.stream(question, seen, model_id):
+            running = state.get("phase") != "done"
+            yield (
+                gr.update(),
+                gr.update(),
+                gr.update(),
+                render.live(question, answer, running=running),
+                render.trace(events, state, running=running),
+                render.evidence(
+                    state,
+                    figures + list(state.get("figures") or []),
+                    sections | set(state.get("sections_read") or ()),
+                    datasets | set(state.get("datasets_read") or ()),
+                ),
+                gr.update(),
+                "",
+            )
     except Exception as exc:
         answer = "The run failed: %s: %s" % (type(exc).__name__, exc)
-        trace = "No trace: the run did not start."
-    history = (history or []) + [
-        {"role": "user", "content": question},
-        {"role": "assistant", "content": answer},
+        events = events or []
+        state = state or agent.new_state(model_id)
+
+    turns = turns + [_archive(index, state, events, question, answer)]
+    figures, sections, datasets = _accumulated(turns)
+    yield (
+        render.hero(model_id, running=False, status="Idle - %d events last run" % len(events)),
+        render.conversation_head(len(turns)),
+        render.history(turns),
+        render.live("", ""),
+        render.trace(events, state, running=False),
+        render.evidence(state, figures, sections, datasets),
+        turns,
+        "",
+    )
+
+
+def reset(model_id):
+    return (
+        render.hero(model_id, running=False, status="Idle"),
+        render.conversation_head(0),
+        render.history([]),
+        render.live("", ""),
+        render.trace([], agent.new_state(model_id), running=False),
+        render.evidence({}, [], set(), set()),
+        [],
+        "",
+    )
+
+
+with gr.Blocks(title="PhysEarth-Agent", head=theme.head(), fill_height=True) as demo:
+    turns_state = gr.State([])
+
+    with gr.Column(elem_id="pe-app"):
+        hero = gr.HTML(render.hero(), elem_classes=["pe-slot"])
+
+        with gr.Row(elem_classes=["stage"]):
+            with gr.Column(elem_classes=["pe-panel", "pe-panel--chat"]):
+                head_slot = gr.HTML(render.conversation_head(0), elem_classes=["pe-slot"])
+                with gr.Column(elem_id="pe-chat-scroll"):
+                    history_slot = gr.HTML(render.history([]), elem_classes=["pe-slot"])
+                    live_slot = gr.HTML(render.live("", ""), elem_classes=["pe-slot"])
+                with gr.Row(elem_classes=["composer__box"]):
+                    question = gr.Textbox(
+                        elem_id="pe-input",
+                        show_label=False,
+                        container=False,
+                        lines=3,
+                        placeholder="Ask about snow, soil or vegetation microwave modelling",
+                    )
+                    clear = gr.Button("Clear", elem_id="pe-clear")
+                    send = gr.Button("Send", variant="primary", elem_id="pe-send")
+                gr.HTML(render.chips(), elem_classes=["pe-slot"])
+
+            gr.HTML("<div></div>", elem_classes=["resizer", "resizer--left"])
+
+            with gr.Column(elem_classes=["pe-panel", "pe-panel--trace"]):
+                trace_slot = gr.HTML(
+                    render.trace([], agent.new_state()), elem_classes=["pe-slot"]
+                )
+
+            gr.HTML("<div></div>", elem_classes=["resizer", "resizer--right"])
+
+            with gr.Column(elem_classes=["pe-panel", "pe-panel--evid"]):
+                evidence_slot = gr.HTML(
+                    render.evidence({}, [], set(), set()), elem_classes=["pe-slot"]
+                )
+
+        model_bridge = gr.Textbox(
+            value=agent.default_model(), elem_id="pe-model-bridge", show_label=False,
+            container=False,
+        )
+
+    outputs = [
+        hero,
+        head_slot,
+        history_slot,
+        live_slot,
+        trace_slot,
+        evidence_slot,
+        turns_state,
+        question,
     ]
-    return history, "", trace
-
-
-def models_table():
-    lines = ["| model | version | tier | outputs | source |", "| --- | --- | --- | --- | --- |"]
-    for row in registry.summary():
-        lines.append(
-            "| `%s` | %s | %s | %s | %s |"
-            % (row["name"], row["version"], row["tier"], ", ".join(row["outputs"]), row["source"])
-        )
-    rejected = registry.rejected()
-    if rejected:
-        lines.append("")
-        lines.append("Rejected at registration:")
-        for item in rejected:
-            lines.append("- `%s`: %s" % (item["directory"], item["reason"]))
-    lines.append("")
-    lines.append("See the tutorial in `README.md` to add your own.")
-    return "\n".join(lines)
-
-
-def reference_table():
-    lines = ["| dataset | rows | licence | columns |", "| --- | ---: | --- | --- |"]
-    for entry in reference.catalogue():
-        indices, _ = reference.query(entry["slug"])
-        lines.append(
-            "| `%s` | %d | %s | %s |"
-            % (entry["slug"], len(indices), entry["license"], ", ".join(entry["columns"]))
-        )
-    lines.append("")
-    for entry in reference.catalogue():
-        item = reference.provenance(entry["slug"])
-        lines.append("**%s** - %s" % (entry["slug"], item["citation"]))
-        lines.append("")
-    return "\n".join(lines)
-
-
-def corpus_table():
-    lines = ["| slug | year | scenarios | outputs | license |", "| --- | --- | --- | --- | --- |"]
-    for entry in knowledge.catalogue():
-        lines.append(
-            "| %s | %s | %s | %s | %s |"
-            % (
-                entry["slug"],
-                entry["year"],
-                ", ".join(entry["scenarios"]),
-                ", ".join(entry["outputs"]),
-                entry["license"],
-            )
-        )
-    return "\n".join(lines)
-
-
-with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
-    gr.Markdown(INTRO)
-    with gr.Row():
-        with gr.Column(scale=3):
-            chat = gr.Chatbot(height=460, label="Conversation")
-            question = gr.Textbox(
-                placeholder="Ask about snow, soil or vegetation microwave modelling",
-                label="Question",
-                lines=2,
-            )
-            with gr.Row():
-                send = gr.Button("Send", variant="primary")
-                clear = gr.Button("Clear")
-            gr.Examples(examples=EXAMPLES, inputs=question, label="Try one")
-        with gr.Column(scale=2):
-            gr.Markdown("### Run trace")
-            trace = gr.Markdown("The run trace appears here.")
-    with gr.Accordion("Registered models", open=False):
-        gr.Markdown(models_table())
-    with gr.Accordion("Measured reference data", open=False):
-        gr.Markdown(reference_table())
-    with gr.Accordion("Bundled corpus and environment", open=False):
-        gr.Markdown(corpus_table())
-        gr.Markdown(diagnostics.render(_REPORT))
-
-    send.click(respond, [question, chat], [chat, question, trace])
-    question.submit(respond, [question, chat], [chat, question, trace])
-    clear.click(lambda: ([], "", "The run trace appears here."), outputs=[chat, question, trace])
+    send.click(respond, [question, turns_state, model_bridge], outputs)
+    question.submit(respond, [question, turns_state, model_bridge], outputs)
+    clear.click(reset, [model_bridge], outputs)
 
 if __name__ == "__main__":
     demo.launch(
         server_name=config.get("PHYSEARTH_HOST"),
         server_port=int(config.get("PHYSEARTH_PORT")),
+        css=theme.css(),
+        js=theme.js(),
     )

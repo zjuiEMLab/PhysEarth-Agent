@@ -132,6 +132,14 @@ def sample(slug, indices, limit=MAX_SAMPLE_ROWS):
     return [{name: columns[name][i] for name in names} for i in picked]
 
 
+def columns(slug, indices):
+    """Full column arrays for the matching rows, for the plot renderer only."""
+    table = _table(slug)
+    return {
+        name: [_column_values(table, name)[i] for i in indices] for name in table["columns"]
+    }
+
+
 def provenance(slug):
     item = _load()[slug]
     return {

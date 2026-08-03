@@ -9,21 +9,62 @@ MAX_MODEL_CALLS = 12
 MAX_TOOL_CALLS = 10
 EMPTY_RESPONSE_RETRIES = 3
 RETRY_BACKOFF_S = 1.5
+RATE_LIMIT_FACTOR = 6
+MAX_OUTPUT_TOKENS = 2048
+CONTEXT_CEILING_TOKENS = 96000
+
+CATALOGUE = [
+    {
+        "id": "Qwen/Qwen3.5-122B-A10B",
+        "label": "Qwen3.5 122B-A10B",
+        "vendor": "Qwen",
+        "note": "mixture of experts, the default",
+    },
+    {
+        "id": "deepseek-ai/DeepSeek-V4-Flash",
+        "label": "DeepSeek V4 Flash",
+        "vendor": "DeepSeek",
+        "note": "fast reasoning model",
+    },
+    {
+        "id": "ZhipuAI/GLM-4.7-Flash",
+        "label": "GLM 4.7 Flash",
+        "vendor": "ZhipuAI",
+        "note": "low latency",
+    },
+]
 
 
-def new_state():
+def default_model():
+    wanted = config.get("MODELSCOPE_MODEL")
+    known = [m["id"] for m in CATALOGUE]
+    return wanted if wanted in known else (known[0] if known else wanted)
+
+
+def resolve_model(name):
+    """Only ever run a model from the catalogue, whatever the client sent."""
+    known = [m["id"] for m in CATALOGUE]
+    return name if name in known else default_model()
+
+
+def new_state(model=None):
     return {
+        "model": model or default_model(),
+        "phase": "idle",
         "model_calls": 0,
         "tool_calls": 0,
         "max_model_calls": MAX_MODEL_CALLS,
         "max_tool_calls": MAX_TOOL_CALLS,
+        "context_ceiling": CONTEXT_CEILING_TOKENS,
         "sections_read": set(),
         "model_runs": 0,
         "models_run": set(),
         "datasets_read": set(),
+        "figures": [],
         "qc_failures": 0,
         "rejected_calls": 0,
         "interventions": 0,
+        "boundary_flags": 0,
         "prompt_tokens": 0,
         "completion_tokens": 0,
     }
@@ -40,13 +81,56 @@ def _event(kind, **fields):
     return dict(kind=kind, at=time.strftime("%H:%M:%S"), **fields)
 
 
-def run(question, history=None):
-    """Run one turn. Returns (answer, events, state)."""
-    state = new_state()
-    events = []
-    allowed, message = budget.acquire()
-    if not allowed:
-        return message, [_event("harness_stop", rule="global_budget", reason=message)], state
+class _Completion:
+    """One streamed model response, accumulated as it arrives."""
+
+    def __init__(self):
+        self.content = ""
+        self.reasoning = 0
+        self.calls = {}
+        self.prompt_tokens = None
+        self.completion_tokens = None
+
+    def feed(self, chunk):
+        usage = getattr(chunk, "usage", None)
+        if usage:
+            self.prompt_tokens = getattr(usage, "prompt_tokens", None) or self.prompt_tokens
+            self.completion_tokens = (
+                getattr(usage, "completion_tokens", None) or self.completion_tokens
+            )
+        if not chunk.choices:
+            return False
+        delta = chunk.choices[0].delta
+        if delta is None:
+            return False
+        grew = False
+        if getattr(delta, "reasoning_content", None):
+            self.reasoning += len(delta.reasoning_content)
+            grew = True
+        if getattr(delta, "content", None):
+            self.content += delta.content
+            grew = True
+        for part in getattr(delta, "tool_calls", None) or []:
+            slot = self.calls.setdefault(part.index, {"id": "", "name": "", "arguments": ""})
+            if part.id:
+                slot["id"] = part.id
+            fn = getattr(part, "function", None)
+            if fn is not None:
+                if fn.name:
+                    slot["name"] = fn.name
+                if fn.arguments:
+                    slot["arguments"] += fn.arguments
+            grew = True
+        return grew
+
+    def tool_calls(self):
+        return [self.calls[index] for index in sorted(self.calls)]
+
+    def empty(self):
+        return not self.content and not self.calls and not self.reasoning
+
+
+def _messages(question, history, state):
     messages = [{"role": "system", "content": prompt.build(state)}]
     for turn in history or []:
         role = turn.get("role") if isinstance(turn, dict) else turn[0]
@@ -54,10 +138,60 @@ def run(question, history=None):
         if role in ("user", "assistant") and isinstance(content, str) and content.strip():
             messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": question})
+    return messages
 
-    client = _client()
-    model = config.get("MODELSCOPE_MODEL")
+
+def _record_tool_result(name, result, state, events):
+    for key in result.get("citations", []):
+        state["sections_read"].add(key)
+    data = result.get("data") or {}
+    if name == "list_models" and result["status"] == "success":
+        if data.get("version"):
+            state["models_run"].add("%s@%s" % (data["name"], data["version"]))
+        for row in data.get("models") or []:
+            state["models_run"].add("%s@%s" % (row["name"], row["version"]))
+    for finding in data.get("external_source_findings") or []:
+        state["boundary_flags"] += 1
+        events.append(
+            _event(
+                "untrusted_content",
+                rule="external_source_boundary",
+                detail="%s: %s" % (finding["kind"], finding["excerpt"]),
+            )
+        )
+    if name == "read_reference_dataset" and result["status"] == "success":
+        if data.get("dataset"):
+            state["datasets_read"].add(data["dataset"])
+        for row in data.get("datasets") or []:
+            state["datasets_read"].add(row["slug"])
+    if name == "run_model":
+        if result["status"] == "success":
+            state["model_runs"] += 1
+            state["models_run"].add("%s@%s" % (data["model"], data["version"]))
+            if result.get("qc") and not result["qc"]["passed"]:
+                state["qc_failures"] += 1
+        elif result["status"] == "needs_input":
+            state["rejected_calls"] += 1
+    if name == "plot" and result["status"] == "success":
+        state["figures"].append((result.get("ui") or {})["figure"])
+
+
+def stream(question, history=None, model=None):
+    """Run one turn, yielding (answer, events, state) every time something happens."""
+    state = new_state(resolve_model(model))
+    events = []
     answer = ""
+
+    allowed, message = budget.acquire()
+    if not allowed:
+        events.append(_event("harness_stop", rule="global_budget", reason=message))
+        state["phase"] = "done"
+        yield message, events, state
+        return
+
+    messages = _messages(question, history, state)
+    client = _client()
+    model_id = state["model"]
 
     while True:
         session_budget = harness.check_budget(state)
@@ -66,112 +200,115 @@ def run(question, history=None):
             answer = answer or "Stopped: %s." % session_budget["reason"]
             break
 
-        started = time.perf_counter()
-        response = None
+        state["phase"] = "calling_model"
+        yield answer, events, state
+
+        completion = None
+        last_fault = "no choices"
         for attempt in range(1, EMPTY_RESPONSE_RETRIES + 1):
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                tools=tools.SPECS,
-                tool_choice="auto",
-                parallel_tool_calls=False,
-                max_tokens=2048,
-            )
-            if response.choices:
+            started = time.perf_counter()
+            candidate = _Completion()
+            try:
+                chunks = client.chat.completions.create(
+                    model=model_id,
+                    messages=messages,
+                    tools=tools.SPECS,
+                    tool_choice="auto",
+                    parallel_tool_calls=False,
+                    max_tokens=MAX_OUTPUT_TOKENS,
+                    stream=True,
+                    stream_options={"include_usage": True},
+                )
+                for chunk in chunks:
+                    if candidate.feed(chunk) and candidate.content:
+                        yield answer + candidate.content, events, state
+            except Exception as exc:
+                rate_limited = "RateLimit" in type(exc).__name__
+                last_fault = "rate limited" if rate_limited else type(exc).__name__
+                events.append(_event("empty_response", attempt=attempt, detail=last_fault))
+                yield answer, events, state
+                time.sleep(RETRY_BACKOFF_S * attempt * (RATE_LIMIT_FACTOR if rate_limited else 1))
+                continue
+            if not candidate.empty():
+                completion = candidate
                 break
-            events.append(_event("empty_response", attempt=attempt))
-            response = None
+            last_fault = "no choices"
+            events.append(_event("empty_response", attempt=attempt, detail=last_fault))
+            yield answer, events, state
             time.sleep(RETRY_BACKOFF_S * attempt)
-        if response is None:
-            events.append(_event("harness_stop", rule="upstream", reason="empty response from the inference endpoint"))
+
+        if completion is None:
+            events.append(_event("harness_stop", rule="upstream", reason=last_fault))
             answer = answer or (
-                "The inference endpoint returned an empty response %d times in a row. "
+                "The shared inference quota is exhausted for the moment. Wait a minute and "
+                "ask again, or run PhysEarth locally with your own token."
+                if last_fault == "rate limited"
+                else "The inference endpoint returned nothing usable %d times in a row (%s). "
                 "This is an upstream fault, not a modelling result. Please retry."
-                % EMPTY_RESPONSE_RETRIES
+                % (EMPTY_RESPONSE_RETRIES, last_fault)
             )
             break
+
         state["model_calls"] += 1
-        usage = getattr(response, "usage", None)
-        if usage:
-            state["prompt_tokens"] += usage.prompt_tokens or 0
-            state["completion_tokens"] += usage.completion_tokens or 0
+        state["prompt_tokens"] += completion.prompt_tokens or 0
+        state["completion_tokens"] += completion.completion_tokens or 0
         events.append(
             _event(
                 "model_call",
                 index=state["model_calls"],
                 elapsed_s=round(time.perf_counter() - started, 2),
-                prompt_tokens=getattr(usage, "prompt_tokens", None),
-                completion_tokens=getattr(usage, "completion_tokens", None),
+                prompt_tokens=completion.prompt_tokens,
+                completion_tokens=completion.completion_tokens,
+                reasoning_chars=completion.reasoning,
             )
         )
+        yield answer, events, state
 
-        message = response.choices[0].message
-        calls = message.tool_calls or []
-
+        calls = completion.tool_calls()
         if calls:
             messages.append(
                 {
                     "role": "assistant",
-                    "content": message.content or "",
+                    "content": completion.content or "",
                     "tool_calls": [
                         {
-                            "id": c.id,
+                            "id": c["id"],
                             "type": "function",
-                            "function": {"name": c.function.name, "arguments": c.function.arguments},
+                            "function": {"name": c["name"], "arguments": c["arguments"]},
                         }
                         for c in calls
                     ],
                 }
             )
             for call in calls:
-                name = call.function.name
+                name = call["name"]
                 try:
-                    arguments = json.loads(call.function.arguments or "{}")
+                    arguments = json.loads(call["arguments"] or "{}")
                 except ValueError:
                     arguments = {}
-                started = time.perf_counter()
+                state["phase"] = "running_tool"
+                events.append(_event("tool_start", name=name, arguments=arguments))
+                yield answer, events, state
+                events.pop()
+
+                started_tool = time.perf_counter()
                 result = tools.call(name, arguments)
                 state["tool_calls"] += 1
-                for key in result.get("citations", []):
-                    state["sections_read"].add(key)
-                if name == "list_models" and result["status"] == "success":
-                    data = result["data"]
-                    if data.get("version"):
-                        state["models_run"].add("%s@%s" % (data["name"], data["version"]))
-                    for row in data.get("models") or []:
-                        state["models_run"].add("%s@%s" % (row["name"], row["version"]))
-                for finding in (result.get("data") or {}).get("external_source_findings") or []:
-                    events.append(
-                        _event(
-                            "untrusted_content",
-                            rule="external_source_boundary",
-                            detail="%s: %r" % (finding["kind"], finding["excerpt"]),
-                        )
-                    )
-                if name == "read_reference_dataset" and result["status"] == "success":
-                    data = result["data"]
-                    if data.get("dataset"):
-                        state["datasets_read"].add(data["dataset"])
-                    for row in data.get("datasets") or []:
-                        state["datasets_read"].add(row["slug"])
-                if name == "run_model":
-                    if result["status"] == "success":
-                        state["model_runs"] += 1
-                        state["models_run"].add(
-                            "%s@%s" % (result["data"]["model"], result["data"]["version"])
-                        )
-                        if result.get("qc") and not result["qc"]["passed"]:
-                            state["qc_failures"] += 1
-                    elif result["status"] == "needs_input":
-                        state["rejected_calls"] += 1
-                kind = "harness_block" if result["status"] == "needs_input" else "tool_call"
-                if kind == "harness_block":
+                _record_tool_result(name, result, state, events)
+
+                if result["status"] == "needs_input":
+                    state["interventions"] += 1
                     events.append(
                         _event(
                             "harness_block",
                             rule="physical_domain",
+                            tool=name,
                             detail=result["error"],
-                            intervention=None,
+                            problems=(result.get("data") or {}).get("problems") or [],
+                            given=(result.get("data") or {}).get("rejected_parameters")
+                            or (result.get("data") or {}).get("rejected_filters")
+                            or {},
+                            intervention=state["interventions"],
                         )
                     )
                 else:
@@ -183,21 +320,24 @@ def run(question, history=None):
                             status=result["status"],
                             summary=result["summary"],
                             qc=(result.get("qc") or {}).get("passed"),
-                            elapsed_s=round(time.perf_counter() - started, 3),
+                            data=result.get("data") or {},
+                            elapsed_s=round(time.perf_counter() - started_tool, 3),
                         )
                     )
-                payload = {k: v for k, v in result.items() if k != "qc"}
+                yield answer, events, state
+
+                payload = {k: v for k, v in result.items() if k not in ("qc", "ui")}
                 messages.append(
                     {
                         "role": "tool",
-                        "tool_call_id": call.id,
+                        "tool_call_id": call["id"],
                         "content": json.dumps(payload, ensure_ascii=False),
                     }
                 )
             messages[0] = {"role": "system", "content": prompt.build(state)}
             continue
 
-        answer = message.content or ""
+        answer = completion.content or ""
         check, correction = harness.review_final(answer, state)
         if correction and state["interventions"] < harness.MAX_INTERVENTIONS:
             state["interventions"] += 1
@@ -205,12 +345,15 @@ def run(question, history=None):
                 _event(
                     "harness_block",
                     rule=check["rule"],
-                    detail=check.get("unresolved") or check.get("reason"),
+                    detail=check.get("reason") or "unresolved markers",
+                    unresolved=check.get("unresolved") or [],
                     intervention=state["interventions"],
                 )
             )
             messages.append({"role": "assistant", "content": answer})
             messages.append({"role": "user", "content": correction})
+            answer = ""
+            yield answer, events, state
             continue
 
         if correction:
@@ -221,60 +364,13 @@ def run(question, history=None):
             )
         break
 
-    return answer, events, state
+    state["phase"] = "done"
+    yield answer, events, state
 
 
-def render_trace(events, state):
-    lines = ["| # | event | detail |", "| ---: | --- | --- |"]
-    for index, event in enumerate(events, 1):
-        kind = event["kind"]
-        if kind == "model_call":
-            detail = "%.2fs, prompt %s, completion %s" % (
-                event["elapsed_s"],
-                event["prompt_tokens"],
-                event["completion_tokens"],
-            )
-        elif kind == "tool_call":
-            qc = event.get("qc")
-            badge = "" if qc is None else (" [QC ok]" if qc else " [QC FAILED]")
-            detail = "%s %s -> %s%s (%.3fs)" % (
-                event["name"],
-                json.dumps(event["arguments"], ensure_ascii=False),
-                event["summary"],
-                badge,
-                event["elapsed_s"],
-            )
-        elif kind == "harness_block":
-            detail = "BLOCKED by %s: %s" % (event["rule"], event["detail"])
-        elif kind == "untrusted_content":
-            detail = "external source contains an instruction-like passage: %s" % event["detail"]
-        elif kind == "harness_pass":
-            detail = "%s ok, markers: %s" % (
-                event["rule"],
-                ", ".join(event["markers"]) or "none",
-            )
-        else:
-            detail = json.dumps({k: v for k, v in event.items() if k not in ("kind", "at")}, ensure_ascii=False)
-        lines.append("| %d | %s | %s |" % (index, kind, detail))
-    lines.append("")
-    lines.append(
-        "LLM calls %d/%d, tool calls %d/%d, model runs %d, rejected calls %d, QC failures %d, "
-        "interventions %d, tokens %d in / %d out."
-        % (
-            state["model_calls"],
-            state["max_model_calls"],
-            state["tool_calls"],
-            state["max_tool_calls"],
-            state["model_runs"],
-            state["rejected_calls"],
-            state["qc_failures"],
-            state["interventions"],
-            state["prompt_tokens"],
-            state["completion_tokens"],
-        )
-    )
-    lines.append("Sections read: %s" % (", ".join(sorted(state["sections_read"])) or "none"))
-    lines.append("Models cited: %s" % (", ".join(sorted(state["models_run"])) or "none"))
-    lines.append("Datasets read: %s" % (", ".join(sorted(state["datasets_read"])) or "none"))
-    lines.append("Deployment budget: %d/%d questions in the last hour." % budget.used())
-    return "\n".join(lines)
+def run(question, history=None, model=None):
+    """Blocking form of stream. Returns (answer, events, state)."""
+    last = ("", [], new_state(resolve_model(model)))
+    for step in stream(question, history, model):
+        last = step
+    return last

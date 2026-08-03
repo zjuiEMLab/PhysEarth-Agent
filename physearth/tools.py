@@ -1,7 +1,7 @@
 import concurrent.futures
 import time
 
-from physearth import knowledge, reference, results, untrusted, validation
+from physearth import knowledge, plotting, reference, results, untrusted, validation
 from physearth.models import registry
 
 OUTPUT_BUDGET_CHARS = 16000
@@ -141,18 +141,63 @@ READ_REFERENCE_SPEC = {
     },
 }
 
+PLOT_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "plot",
+        "description": (
+            "Draw a chart from results you already produced. It takes result handles, not "
+            "numbers and not code: give the handle returned by run_model or "
+            "read_reference_dataset and name the column to put on each axis. The arrays go "
+            "from the result store straight to the renderer, so you never have to repeat them. "
+            "Put a model run and a measurement in the same chart to compare them; they are "
+            "drawn differently on purpose."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "series": {
+                    "type": "array",
+                    "description": (
+                        'One entry per curve, for example [{"handle": "res_ab12", "x": '
+                        '"density_kg_m3", "y": "tb_v", "label": "SMRT 37 GHz"}]'
+                    ),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "handle": {"type": "string"},
+                            "x": {"type": "string", "description": "Column for the x axis."},
+                            "y": {"type": "string", "description": "Column for the y axis."},
+                            "label": {"type": "string", "description": "Legend label."},
+                        },
+                        "required": ["handle", "x", "y"],
+                    },
+                },
+                "kind": {"type": "string", "enum": list(plotting.KINDS)},
+                "title": {"type": "string"},
+                "x_label": {"type": "string"},
+                "y_label": {"type": "string"},
+            },
+            "required": ["series"],
+        },
+    },
+}
+
 SPECS.append(LIST_MODELS_SPEC)
 SPECS.append(RUN_MODEL_SPEC)
 SPECS.append(READ_REFERENCE_SPEC)
+SPECS.append(PLOT_SPEC)
 
 
-def _ok(summary, data, citations=None, qc=None):
+def _ok(summary, data, citations=None, qc=None, ui=None):
+    """`ui` never reaches the language model; the agent strips it before serialising."""
     return {
         "status": "success",
         "summary": summary,
         "data": data,
         "citations": citations or [],
         "qc": qc,
+        "ui": ui,
         "error": None,
     }
 
@@ -164,6 +209,7 @@ def _fail(message, data=None):
         "data": data or {},
         "citations": [],
         "qc": None,
+        "ui": None,
         "error": message,
     }
 
@@ -276,6 +322,7 @@ def run_model(model, parameters=None, **extra):
             "data": {"model": model, "rejected_parameters": parameters or {}, "problems": problems},
             "citations": [],
             "qc": None,
+            "ui": None,
             "error": "; ".join(problems),
         }
 
@@ -362,6 +409,7 @@ def read_reference_dataset(dataset=None, filters=None):
             "data": {"dataset": dataset, "rejected_filters": filters or {}, "problems": problems},
             "citations": [],
             "qc": None,
+            "ui": None,
             "error": "; ".join(problems),
         }
     if not indices:
@@ -369,6 +417,16 @@ def read_reference_dataset(dataset=None, filters=None):
             "No row of %s matches those filters." % dataset,
             {"dataset": dataset, "n_rows": 0, "filters": filters or {}},
         )
+    card = reference.card(dataset)
+    handle = results.put(
+        {
+            "source": "measured",
+            "dataset": dataset,
+            "columns": reference.columns(dataset, indices),
+            "units": {name: spec["unit"] for name, spec in card["columns"].items()},
+            "n_rows": len(indices),
+        }
+    )
     return _ok(
         "%s: %d row(s) match. Every value is a measurement."
         % (dataset, len(indices)),
@@ -376,6 +434,7 @@ def read_reference_dataset(dataset=None, filters=None):
             "dataset": dataset,
             "n_rows": len(indices),
             "filters": filters or {},
+            "handle": handle,
             "summary": reference.summarise(dataset, indices),
             "sample": reference.sample(dataset, indices),
             "sample_note": (
@@ -387,12 +446,55 @@ def read_reference_dataset(dataset=None, filters=None):
     )
 
 
+def plot(series=None, kind="line", title=None, x_label=None, y_label=None):
+    spec = {
+        "series": series or [],
+        "kind": kind,
+        "title": title,
+        "x_label": x_label,
+        "y_label": y_label,
+    }
+    resolved, problems = plotting.resolve(spec)
+    if problems:
+        return {
+            "status": "needs_input",
+            "summary": "The chart was rejected: %d problem(s)." % len(problems),
+            "data": {"rejected_spec": spec, "problems": problems},
+            "citations": [],
+            "qc": None,
+            "ui": None,
+            "error": "; ".join(problems),
+        }
+    try:
+        figure = plotting.render(spec, resolved)
+    except Exception as exc:
+        return _fail("The chart could not be drawn: %s: %s" % (type(exc).__name__, exc))
+    return _ok(
+        "Drew a %s chart with %d series over %d point(s). It is on screen; do not restate "
+        "its values."
+        % (figure["kind"], len(resolved), sum(len(s["x"]) for s in resolved)),
+        {
+            "series": [
+                {
+                    "label": s["label"],
+                    "source": s["source"],
+                    "origin": s["origin"],
+                    "n_points": len(s["x"]),
+                }
+                for s in resolved
+            ],
+        },
+        ui={"figure": figure},
+    )
+
+
 DISPATCH = {
     "list_literature": list_literature,
     "read_reference_dataset": read_reference_dataset,
     "read_literature": read_literature,
     "list_models": list_models,
     "run_model": run_model,
+    "plot": plot,
 }
 
 

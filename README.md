@@ -31,7 +31,9 @@ nothing. So the checks live in the system rather than in the prompt:
 - text that came from outside the system arrives inside a labelled boundary and is treated
   as evidence, never as instruction;
 - numeric arrays never enter the model's context. A run returns a handle and a bounded
-  preview, and the full result stays in the session store.
+  preview, and the full result stays in the session store;
+- charts are drawn from a declarative specification naming those handles, never from code
+  the agent wrote, and a measured series is never drawn like a simulated one.
 
 None of these is a tool the agent may skip. The run trace shows each one, including the
 refusals.
@@ -64,6 +66,10 @@ uv pip install -r requirements.txt
 export MODELSCOPE_TOKEN=...        # or put it in .env
 python app.py
 ```
+
+`MODELSCOPE_MODEL` sets the language model the agent starts with. The interface offers
+three, and the choice is per session: Qwen3.5-122B-A10B, DeepSeek-V4-Flash and
+GLM-4.7-Flash, all reached through the public ModelScope API-Inference endpoint.
 
 ---
 
