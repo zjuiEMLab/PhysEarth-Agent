@@ -102,3 +102,32 @@ def test_the_stylesheet_carries_the_fonts_and_neutralises_gradio():
     assert "display: contents !important" in css
     assert "#pe-app" in css
     assert theme.js().strip().endswith("peBoot();")
+
+
+def test_the_quota_message_names_the_model_and_the_alternatives():
+    event = {
+        "kind": "harness_stop",
+        "at": "00:00:00",
+        "rule": "quota",
+        "reason": "rate limited (HTTP 429)",
+        "model": "Qwen/Qwen3.5-122B-A10B",
+        "upstream": "You have exceeded today's quota for model Qwen/Qwen3.5-122B-A10B",
+    }
+    out = render.trace([event], agent.new_state())
+    assert "what the endpoint said" in out
+    assert "exceeded today" in out
+    assert "Qwen/Qwen3.5-122B-A10B" in out
+
+
+def test_a_spent_daily_quota_is_not_retried():
+    class Spent(Exception):
+        status_code = 429
+        body = {"message": "You have exceeded today's quota for model X, try again tomorrow"}
+
+    class Busy(Exception):
+        status_code = 429
+        body = {"message": "Too many requests, slow down"}
+
+    assert agent._quota_exhausted(Spent())
+    assert not agent._quota_exhausted(Busy())
+    assert agent._fault(Spent()) == "rate limited (HTTP 429)"

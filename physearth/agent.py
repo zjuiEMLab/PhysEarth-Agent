@@ -81,6 +81,31 @@ def _event(kind, **fields):
     return dict(kind=kind, at=time.strftime("%H:%M:%S"), **fields)
 
 
+def _fault(exc):
+    """A short label for an upstream failure, carrying the HTTP status when there is one."""
+    status = getattr(exc, "status_code", None)
+    if status == 429:
+        return "rate limited (HTTP 429)"
+    if status:
+        return "HTTP %s" % status
+    return type(exc).__name__
+
+
+def _upstream_text(exc):
+    """Whatever the endpoint actually said, bounded. This is what makes a fault diagnosable."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        message = body.get("message") or (body.get("error") or {}).get("message")
+        if message:
+            return str(message)[:400]
+    return str(exc)[:400]
+
+
+def _quota_exhausted(exc):
+    """The free quota is per model and per day, so retrying it cannot help."""
+    return getattr(exc, "status_code", None) == 429 and "quota" in _upstream_text(exc).lower()
+
+
 class _Completion:
     """One streamed model response, accumulated as it arrives."""
 
@@ -205,6 +230,8 @@ def stream(question, history=None, model=None):
 
         completion = None
         last_fault = "no choices"
+        last_upstream = ""
+        quota_spent = False
         for attempt in range(1, EMPTY_RESPONSE_RETRIES + 1):
             started = time.perf_counter()
             candidate = _Completion()
@@ -223,10 +250,22 @@ def stream(question, history=None, model=None):
                     if candidate.feed(chunk) and candidate.content:
                         yield answer + candidate.content, events, state
             except Exception as exc:
-                rate_limited = "RateLimit" in type(exc).__name__
-                last_fault = "rate limited" if rate_limited else type(exc).__name__
-                events.append(_event("empty_response", attempt=attempt, detail=last_fault))
+                last_fault = _fault(exc)
+                last_upstream = _upstream_text(exc)
+                if _quota_exhausted(exc):
+                    quota_spent = True
+                    break
+                events.append(
+                    _event(
+                        "empty_response",
+                        attempt=attempt,
+                        detail=last_fault,
+                        model=model_id,
+                        upstream=last_upstream,
+                    )
+                )
                 yield answer, events, state
+                rate_limited = "RateLimit" in type(exc).__name__
                 time.sleep(RETRY_BACKOFF_S * attempt * (RATE_LIMIT_FACTOR if rate_limited else 1))
                 continue
             if not candidate.empty():
@@ -238,13 +277,23 @@ def stream(question, history=None, model=None):
             time.sleep(RETRY_BACKOFF_S * attempt)
 
         if completion is None:
-            events.append(_event("harness_stop", rule="upstream", reason=last_fault))
+            events.append(
+                _event(
+                    "harness_stop",
+                    rule="quota" if quota_spent else "upstream",
+                    reason=last_fault,
+                    model=model_id,
+                    upstream=last_upstream,
+                )
+            )
+            others = [m["label"] for m in CATALOGUE if m["id"] != model_id]
             answer = answer or (
-                "The shared inference quota is exhausted for the moment. Wait a minute and "
-                "ask again, or run PhysEarth locally with your own token."
-                if last_fault == "rate limited"
-                else "The inference endpoint returned nothing usable %d times in a row (%s). "
-                "This is an upstream fault, not a modelling result. Please retry."
+                "The free daily quota for %s is used up. That quota is per model, so pick "
+                "another one in the switcher at the top: %s. Nothing was computed, so nothing "
+                "here is a modelling result." % (model_id, " or ".join(others))
+                if quota_spent
+                else "The inference endpoint refused %d times in a row: %s. This is an upstream "
+                "fault, not a modelling result; the run trace has what the endpoint said."
                 % (EMPTY_RESPONSE_RETRIES, last_fault)
             )
             break

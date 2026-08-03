@@ -173,111 +173,6 @@ function peBoot() {
     requestAnimationFrame(tick);
   }
 
-  /* ---------- column widths: drag and collapse ---------- */
-
-  var STORE = "physearth.layout.v1";
-  var RAIL = "46px";
-  var DEFAULTS = { chat: "1.16fr", trace: "1fr", evid: "0.96fr" };
-  var layout = { chat: DEFAULTS.chat, trace: DEFAULTS.trace, evid: DEFAULTS.evid, collapsed: {} };
-
-  try {
-    var saved = JSON.parse(window.localStorage.getItem(STORE) || "null");
-    if (saved && saved.chat) layout = saved;
-  } catch (e) {
-    /* a broken entry just means default widths */
-  }
-
-  function stage() {
-    return document.querySelector(".stage");
-  }
-
-  function panelOf(key) {
-    return document.querySelector(".pe-panel--" + key);
-  }
-
-  function applyLayout() {
-    var st = stage();
-    if (!st) return;
-    ["chat", "trace", "evid"].forEach(function (key) {
-      var collapsed = !!layout.collapsed[key];
-      st.style.setProperty("--w-" + key, collapsed ? RAIL : layout[key]);
-      var panel = panelOf(key);
-      if (panel) panel.classList.toggle("is-collapsed", collapsed);
-    });
-    try {
-      window.localStorage.setItem(STORE, JSON.stringify(layout));
-    } catch (e) {
-      /* private mode; the layout just does not persist */
-    }
-  }
-
-  function mountRails() {
-    [["trace", "Run trace"], ["evid", "Evidence"], ["chat", "Conversation"]].forEach(function (pair) {
-      var panel = panelOf(pair[0]);
-      if (!panel || panel.querySelector(":scope > .panel__rail")) return;
-      var rail = document.createElement("div");
-      rail.className = "panel__rail";
-      rail.title = "Expand " + pair[1];
-      rail.innerHTML = "<span></span>";
-      rail.firstChild.textContent = pair[1];
-      rail.addEventListener("click", function () {
-        layout.collapsed[pair[0]] = false;
-        applyLayout();
-      });
-      panel.appendChild(rail);
-    });
-  }
-
-  function mountResizers() {
-    var st = stage();
-    if (!st) return;
-    var handles = st.querySelectorAll(".resizer");
-    for (var i = 0; i < handles.length; i++) {
-      if (handles[i].dataset.bound) continue;
-      handles[i].dataset.bound = "1";
-      handles[i].addEventListener("mousedown", startDrag);
-    }
-  }
-
-  function startDrag(event) {
-    var st = stage();
-    if (!st) return;
-    var edge = event.currentTarget.classList.contains("resizer--left") ? "left" : "right";
-    var panels3 = [panelOf("chat"), panelOf("trace"), panelOf("evid")];
-    if (panels3.some(function (p) { return !p; })) return;
-    var startX = event.clientX;
-    var widths = panels3.map(function (p) { return p.getBoundingClientRect().width; });
-    var total = widths[0] + widths[1] + widths[2];
-    event.preventDefault();
-    document.body.classList.add("is-resizing");
-
-    function move(e) {
-      var delta = e.clientX - startX;
-      var next = widths.slice();
-      if (edge === "left") {
-        next[0] = widths[0] + delta;
-        next[1] = widths[1] - delta;
-      } else {
-        next[1] = widths[1] + delta;
-        next[2] = widths[2] - delta;
-      }
-      if (next[0] < 320 || next[1] < 260 || next[2] < 260) return;
-      layout.chat = ((next[0] / total) * 3).toFixed(3) + "fr";
-      layout.trace = ((next[1] / total) * 3).toFixed(3) + "fr";
-      layout.evid = ((next[2] / total) * 3).toFixed(3) + "fr";
-      applyLayout();
-    }
-
-    function stop() {
-      document.body.classList.remove("is-resizing");
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", stop);
-    }
-
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", stop);
-  }
-
   /* ---------- state that must survive a Gradio re-render ---------- */
 
   var openKeys = {};
@@ -328,7 +223,7 @@ function peBoot() {
     scrollToEnd(trace);
   }
 
-  /* ---------- clicks: examples, collapse buttons, citation jumps ---------- */
+  /* ---------- clicks: examples, model choice, citation jumps ---------- */
 
   function textarea() {
     var box = document.getElementById("pe-input");
@@ -355,15 +250,6 @@ function peBoot() {
         var send = document.getElementById("pe-send");
         if (send) setTimeout(function () { send.click(); }, 30);
       }
-      return;
-    }
-
-    var toggle = event.target.closest ? event.target.closest("[data-collapse]") : null;
-    if (toggle) {
-      event.preventDefault();
-      var key = toggle.getAttribute("data-collapse");
-      layout.collapsed[key] = !layout.collapsed[key];
-      applyLayout();
       return;
     }
 
@@ -400,10 +286,6 @@ function peBoot() {
           activeTab = tabFor;
         }
       }
-      if (layout.collapsed.evid) {
-        layout.collapsed.evid = false;
-        applyLayout();
-      }
       var card = document.querySelector('[data-anchor="' + wanted + '"]');
       if (card) {
         var focused = document.querySelectorAll(".is-focus");
@@ -433,9 +315,6 @@ function peBoot() {
     pending = requestAnimationFrame(function () {
       pending = null;
       mountCanvases();
-      mountRails();
-      mountResizers();
-      applyLayout();
       restoreState(document);
       autoScroll();
       document.body.classList.toggle(
@@ -447,9 +326,6 @@ function peBoot() {
   observer.observe(app, { childList: true, subtree: true });
 
   mountCanvases();
-  mountRails();
-  mountResizers();
-  applyLayout();
   restoreState(document);
   resizeRing();
   window.addEventListener("resize", function () {

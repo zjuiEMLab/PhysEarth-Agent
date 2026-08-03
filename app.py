@@ -146,14 +146,10 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                     send = gr.Button("Send", variant="primary", elem_id="pe-send")
                 gr.HTML(render.chips(), elem_classes=["pe-slot"])
 
-            gr.HTML("<div></div>", elem_classes=["resizer", "resizer--left"])
-
             with gr.Column(elem_classes=["pe-panel", "pe-panel--trace"]):
                 trace_slot = gr.HTML(
                     render.trace([], agent.new_state()), elem_classes=["pe-slot"]
                 )
-
-            gr.HTML("<div></div>", elem_classes=["resizer", "resizer--right"])
 
             with gr.Column(elem_classes=["pe-panel", "pe-panel--evid"]):
                 evidence_slot = gr.HTML(

@@ -42,7 +42,6 @@ ICONS = {
     "<path d='M8 7.5h7M8 11h7'/>",
     "models": "<path d='M12 2.5l8 4.5v9l-8 4.5-8-4.5v-9z'/><path d='M12 11.5l8-4.5M12 11.5v9"
     "M12 11.5L4 7'/>",
-    "collapse": "<path d='M15 6l-6 6 6 6'/>",
     "chevron": "<path d='M9 6l6 6-6 6'/>",
     "check": "<path d='M4 12.5l5.2 5.2L20 7'/>",
     "block": "<circle cx='12' cy='12' r='9'/><path d='M6 6l12 12'/>",
@@ -175,10 +174,8 @@ def conversation_head(count):
     return (
         "<div class='subpanel' style='padding-bottom:0'><div class='sec-head'>%s"
         "<span class='sec-title'>Conversation</span>"
-        "<span class='sec-count'>%d question%s</span>"
-        "<button type='button' class='panel-toggle' data-collapse='chat' "
-        "title='Collapse'>%s</button></div></div>"
-        % (_svg("chat", "sec-icon"), count, "" if count == 1 else "s", _svg("collapse", ""))
+        "<span class='sec-count'>%d question%s</span></div></div>"
+        % (_svg("chat", "sec-icon"), count, "" if count == 1 else "s")
     )
 
 
@@ -383,6 +380,13 @@ def _event_body(event, index):
             "<span></span><span></span><span></span></div>"
         )
 
+    if kind in ("empty_response", "harness_stop") and event.get("upstream"):
+        return "%s%s" % (
+            "<div class='step-card__line'>%s on %s</div>"
+            % (_e(event.get("detail") or event.get("reason") or ""), _mono(event.get("model", ""))),
+            _disclosure("upstream-%d" % index, "what the endpoint said", event["upstream"]),
+        )
+
     detail = event.get("reason") or event.get("detail") or ""
     return "<div class='step-card__line'>%s</div>" % _e(detail)
 
@@ -446,15 +450,8 @@ def trace(events, state, running=False):
     head = (
         "<div class='subpanel' style='padding-bottom:0'><div class='sec-head'>%s"
         "<span class='sec-title'>Run trace</span>"
-        "<span class='sec-count'>%d event%s</span>"
-        "<button type='button' class='panel-toggle' data-collapse='trace' "
-        "title='Collapse'>%s</button></div></div>"
-        % (
-            _svg("trace", "sec-icon"),
-            len(events),
-            "" if len(events) == 1 else "s",
-            _svg("collapse", ""),
-        )
+        "<span class='sec-count'>%d event%s</span></div></div>"
+        % (_svg("trace", "sec-icon"), len(events), "" if len(events) == 1 else "s")
     )
     if not events and not running:
         body = (
@@ -783,9 +780,7 @@ def evidence(state, figures=None, sections=None, datasets=None):
         "<input class='tab-input' type='radio' name='pe-evtab' id='pe-tab-figures' checked>"
         "<input class='tab-input' type='radio' name='pe-evtab' id='pe-tab-sources'>"
         "<input class='tab-input' type='radio' name='pe-evtab' id='pe-tab-models'>"
-        "<div class='tabbar'>%s%s%s"
-        "<button type='button' class='panel-toggle' data-collapse='evid' title='Collapse'>%s"
-        "</button></div>"
+        "<div class='tabbar'>%s%s%s</div>"
         "<div class='tab-panes'>"
         "<div class='tab-pane'><div class='pane-scroll'>%s</div></div>"
         "<div class='tab-pane'><div class='pane-scroll'>%s</div></div>"
@@ -795,7 +790,6 @@ def evidence(state, figures=None, sections=None, datasets=None):
             tab(1, "figures", "figure", "Figures", len(figures)),
             tab(2, "sources", "sources", "Sources", len(sections) + len(datasets)),
             tab(3, "models", "models", "Models", len(rows)),
-            _svg("collapse", ""),
             figures_pane,
             sources_pane,
             models_pane,
