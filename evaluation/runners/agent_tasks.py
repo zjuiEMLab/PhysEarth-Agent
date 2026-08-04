@@ -31,6 +31,12 @@ SUITES = ("tier1", "probe")
 SAFE = re.compile(r"[^A-Za-z0-9._-]+")
 FAULTS = ("quota", "withdrawn", "upstream", "global_budget")
 
+# Deliberately not one of the three the interface offers. Those are reserved for a person
+# driving the deployed Studio; a sweep of a few hundred calls would spend their daily
+# quota and trip the account's requests-per-minute limit underneath them.
+DEFAULT_LLM = "Qwen/Qwen3-Next-80B-A3B-Instruct"
+PACE_S = 3.0
+
 
 def key(task_id, config_name, llm, repeat):
     return "%s__%s__%s__r%d.json" % (task_id, config_name, SAFE.sub("-", llm), repeat)
@@ -104,7 +110,9 @@ def _stop_rule(events):
 
 def run_one(task, config_entry, llm, repeat, build):
     started = time.perf_counter()
-    session = agent.new_session(llm)
+    # Unrestricted on purpose: the sweep runs on a model outside the interface's switcher,
+    # so it never competes for the daily quota of the three a reviewer might be using.
+    session = agent.new_session(llm, unrestricted=True)
     answer, events, state = agent.run(
         task["question"], model=llm, session=session, switches=config_entry["switches"]
     )
@@ -150,13 +158,15 @@ def main(argv=None):
     parser.add_argument("--configs", nargs="*", default=None)
     parser.add_argument("--tasks", nargs="*", default=None)
     parser.add_argument("--suites", nargs="*", default=list(SUITES))
-    parser.add_argument("--llm", default=None)
+    parser.add_argument("--llm", default=DEFAULT_LLM)
+    parser.add_argument("--pace", type=float, default=PACE_S,
+                        help="seconds to wait between runs, to stay under the account RPM limit")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
     config.load_dotenv()
-    llm = args.llm or agent.default_model()
+    llm = args.llm or DEFAULT_LLM
     build = build_id()
     configs = common.load_configs(args.configs)
     tasks = [t for suite in args.suites for t in common.load_tasks(suite)]
@@ -210,6 +220,8 @@ def main(argv=None):
         print("          %s, %d LLM calls, %d tool calls, stop=%s"
               % ("answered" if record["answer"] else "no answer",
                  record["model_calls"], record["tool_calls"], record["stop_rule"]), flush=True)
+        if args.pace and index < len(todo):
+            time.sleep(args.pace)
 
     print("\n%d run(s) written, %d failed" % (written, failures))
     return 1 if failures else 0

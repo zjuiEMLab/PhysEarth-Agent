@@ -45,14 +45,26 @@ def default_model():
     return wanted if wanted in known else (known[0] if known else wanted)
 
 
-def resolve_model(name):
-    """Only ever run a model from the catalogue, whatever the client sent."""
+def resolve_model(name, unrestricted=False):
+    """Only ever run a model from the catalogue, whatever the client sent.
+
+    The guard exists because the chosen model arrives from the browser, and without it a
+    crafted value would make this process call an arbitrary endpoint. `unrestricted` is
+    for callers that are not a browser: the evaluation suite drives the agent on models
+    outside the switcher on purpose, so that a sweep never competes for the quota of the
+    three the interface offers. It is passed by the process that starts the run and is
+    reachable from nothing else.
+    """
     known = [m["id"] for m in CATALOGUE]
+    if unrestricted and name:
+        return name
     return name if name in known else default_model()
 
 
-def new_session(model=None):
-    return session_state.new_session(resolve_model(model))
+def new_session(model=None, unrestricted=False):
+    session = session_state.new_session(resolve_model(model, unrestricted))
+    session["unrestricted"] = bool(unrestricted)
+    return session
 
 
 def new_state(model=None, session=None):
@@ -273,7 +285,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
     the application leaves it None, which turns everything on.
     """
     session = new_session(model) if session is None else session
-    session["model"] = resolve_model(model or session.get("model"))
+    session["model"] = resolve_model(
+        model or session.get("model"), session.get("unrestricted", False)
+    )
     session["turns"] = session.get("turns", 0) + 1
     state = session_state.new_state(session, session["model"])
     state["switches"] = switch_flags.resolve(switches)
