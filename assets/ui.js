@@ -295,12 +295,6 @@ function peBoot() {
     }
   });
 
-  /* Enter sends, shift+Enter makes a new line.
-
-     Registered in the capture phase and stopping propagation, because Gradio's own
-     Textbox handler binds on the target and, with lines > 1, treats shift+Enter as a
-     submit while suppressing the newline. Left alone it would both refuse to break the
-     line and start a second concurrent run on the same session. */
   /* ---------- answer the click before the server can ----------
 
      The server does 0.2 ms of work to build the first frame; everything the visitor
@@ -342,9 +336,12 @@ function peBoot() {
 
   function escapeHtml(value) {
     return value
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/
-/g, "<br>");
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;")
+      .replace(/\n/g, "<br>");
   }
 
   document.addEventListener("click", function (event) {
@@ -354,6 +351,12 @@ function peBoot() {
     if (target.id === "pe-clear") optimisticClear();
   }, true);
 
+  /* Enter sends, shift+Enter makes a new line.
+
+     Registered in the capture phase and stopping propagation, because Gradio's own
+     Textbox handler binds on the target and, with lines > 1, treats shift+Enter as a
+     submit while suppressing the newline. Left alone it would both refuse to break the
+     line and start a second concurrent run on the same session. */
   document.addEventListener("keydown", function (event) {
     var area = textarea();
     if (!area || event.target !== area) return;

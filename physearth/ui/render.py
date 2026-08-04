@@ -884,95 +884,6 @@ def _rejected_card(item):
     )
 
 
-def environment_card(report=None):
-    """The startup self-check, on screen instead of only on stdout.
-
-    It answers, for anyone looking at the deployed Studio, the questions a reviewer would
-    otherwise have to take on trust: which Python and which package versions are actually
-    running, whether the temporary directory survives a restart, which outbound hosts this
-    instance can reach, and which models registered and which were refused and why.
-    """
-    if report is None:
-        from physearth import diagnostics
-
-        report = diagnostics.report()
-
-    packages = "".join(
-        "<div class='info-row'><span class='k'>%s</span><span class='v'>%s</span></div>"
-        % (_e(name), _e(version))
-        for name, version in (report.get("packages") or {}).items()
-    )
-    probes = "".join(
-        "<tr><td class='name'>%s</td><td><span class='badge badge--%s'>%s</span></td>"
-        "<td class='num'>%s s</td></tr>"
-        % (
-            _e(probe["name"]),
-            "ok" if probe["ok"] else "block",
-            _e(probe["status"]),
-            _e(probe["elapsed_s"]),
-        )
-        for probe in (report.get("network") or [])
-    )
-    models = report.get("models") or {}
-    registered = ", ".join(
-        "%s v%s" % (row["name"], row["version"]) for row in models.get("registered") or []
-    )
-    rejected = models.get("rejected") or []
-    rejected_html = (
-        "".join(
-            "<div class='info-row'><span class='k'>rejected</span><span class='v'>%s</span></div>"
-            % _e(item["reason"])
-            for item in rejected
-        )
-        or "<div class='info-row'><span class='k'>rejected</span><span class='v'>none</span>"
-        "</div>"
-    )
-    boot = report.get("boot") or {}
-    runtime = report.get("runtime") or {}
-    smrt = report.get("smrt") or {}
-    return (
-        "<div class='ev-card' data-anchor='environment'>"
-        "<div class='ev-card__head'><span class='badge badge--mono'>environment</span>"
-        "<span class='ev-card__title'>What this instance actually is</span></div>"
-        "<div class='info-card'>"
-        "<div class='info-row'><span class='k'>python</span><span class='v'>%s</span></div>"
-        "<div class='info-row'><span class='k'>cores</span><span class='v'>%s</span></div>"
-        "<div class='info-row'><span class='k'>temp dir writable</span><span class='v'>%s</span>"
-        "</div>"
-        "<div class='info-row'><span class='k'>process boot</span><span class='v'>%s</span></div>"
-        "<div class='info-row'><span class='k'>online literature</span><span class='v'>%s</span>"
-        "</div>"
-        "<div class='info-row'><span class='k'>models</span><span class='v'>%s</span></div>"
-        "%s"
-        "<div class='info-row'><span class='k'>smrt warm-up</span><span class='v'>%s</span></div>"
-        "</div>"
-        "<table class='table'><thead><tr><th>outbound host</th><th>reachable</th>"
-        "<th>elapsed</th></tr></thead><tbody>%s</tbody></table>"
-        "<div class='info-card'>%s</div>"
-        "<div class='pane-note' style='margin:8px 0 0'>Collected once when this process "
-        "started. The reachability of the literature hosts is what decides whether the "
-        "online layer can work at all; when it cannot, the agent is told the service was "
-        "unreachable and never that nothing was found.</div>"
-        "</div>"
-        % (
-            _e(runtime.get("python", "?")),
-            _e(runtime.get("cpu_count", "?")),
-            _e(boot.get("writable")),
-            _e(boot.get("boot_count", "?")),
-            _e("on" if report.get("online") else "off"),
-            _e(registered or "none"),
-            rejected_html,
-            _e(
-                "%s K V-pol in %s s" % (smrt.get("tb_v"), smrt.get("cold_call_s"))
-                if smrt.get("available")
-                else smrt.get("error", "not available")
-            ),
-            probes,
-            packages,
-        )
-    )
-
-
 def evidence(session=None, figures=None, sections=None, datasets=None):
     """Everything the conversation holds. Defaults come from the session, so a figure
     drawn in the first question is still on screen during the third."""
@@ -1003,14 +914,13 @@ def evidence(session=None, figures=None, sections=None, datasets=None):
             "it.</div></div>"
         )
     corpus = "".join(_corpus_card(entry) for entry in knowledge.catalogue())
-    corpus += environment_card()
 
     opened = len(sections) + len(datasets)
     sources_pane = (
         "<input class='scope-input' type='radio' name='pe-scope' id='pe-scope-read' checked>"
         "<input class='scope-input' type='radio' name='pe-scope' id='pe-scope-all'>"
         "<div class='scope'><label for='pe-scope-read'>Opened here (%d)</label>"
-        "<label for='pe-scope-all'>Corpus and environment (%d)</label></div>"
+        "<label for='pe-scope-all'>Whole corpus (%d)</label></div>"
         "<div class='scope-body'><div class='scope-pane'>%s</div>"
         "<div class='scope-pane'>%s</div></div>"
         "<div class='pane-note'>Every full card in the first list is a section the agent "

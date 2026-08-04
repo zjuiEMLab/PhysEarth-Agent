@@ -274,3 +274,48 @@ def test_a_windowed_rate_limit_is_waited_out_not_reported_as_a_fault():
     # The wait has to outlast the window it is counted over, or retrying cannot help.
     span = sum(agent.RATE_LIMIT_BACKOFF_S * i for i in range(1, agent.RATE_LIMIT_RETRIES + 1))
     assert span >= 60.0
+
+
+def test_the_client_script_actually_parses():
+    """A brace-count is not a parser. An unterminated regex literal once shipped a script
+    that died on load, taking the model switcher and the background with it, while every
+    balance check still passed."""
+    import shutil
+    import subprocess
+
+    from physearth.ui import theme
+
+    node = shutil.which("node")
+    if not node:
+        import pytest
+
+        pytest.skip("node is not available to parse the script")
+    result = subprocess.run(
+        [node, "--check", str(theme.ASSETS / "ui.js")],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_the_evidence_panel_no_longer_carries_the_environment_report():
+    from physearth import session
+
+    out = render.evidence(session.new_session("m"))
+    assert "outbound host" not in out
+    assert "What this instance actually is" not in out
+    assert "Whole corpus" in out
+
+
+def test_a_turn_can_speak_in_more_than_one_block():
+    from physearth import agent as agent_module
+
+    text = agent_module.transcript(["first thought", "second thought"], "third")
+    out = render.answer_html(text, running=True)
+    assert out.count("class='seg") == 3
+    assert out.count("seg--later") == 2
+    assert out.index("first thought") < out.index("second thought") < out.index("third")
+
+
+def test_the_opening_hint_steps_aside_for_a_question_in_flight():
+    assert "pane-empty" in render.history([])
+    assert "pane-empty" not in render.history([], pending=True)
