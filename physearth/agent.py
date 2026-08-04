@@ -21,10 +21,10 @@ CATALOGUE = [
         "note": "mixture of experts, the default",
     },
     {
-        "id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
-        "label": "Qwen3-Next 80B-A3B",
-        "vendor": "Qwen",
-        "note": "fastest, answers without a reasoning pass",
+        "id": "deepseek-ai/DeepSeek-V4-Flash",
+        "label": "DeepSeek V4 Flash",
+        "vendor": "DeepSeek",
+        "note": "fast reasoning model",
     },
     {
         "id": "ZhipuAI/GLM-4.7-Flash",
