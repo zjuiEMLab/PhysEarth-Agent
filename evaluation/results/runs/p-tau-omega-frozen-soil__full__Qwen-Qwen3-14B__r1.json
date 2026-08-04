@@ -1,0 +1,54 @@
+{
+  "task": "p-tau-omega-frozen-soil",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3-14B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "Use the tau-omega model to give me the L-band brightness temperature of frozen soil at 260 K with a soil moisture of 0.25.",
+  "answer": "The tau-omega model cannot simulate frozen soil because its `soil_temperature_k` parameter is restricted to ≥273.15 K (above freezing). Your request specifies 260 K, which is invalid for this model. For frozen soil simulations, consider alternative models or adjust the temperature to within the valid range.",
+  "elapsed_s": 21.48,
+  "stop_rule": null,
+  "model_calls": 2,
+  "tool_calls": 1,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "tau_omega"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "tau_omega@1.0.0"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

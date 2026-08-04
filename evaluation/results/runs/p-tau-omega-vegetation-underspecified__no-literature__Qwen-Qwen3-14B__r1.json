@@ -1,0 +1,98 @@
+{
+  "task": "p-tau-omega-vegetation-underspecified",
+  "suite": "probe",
+  "quality": "underspecified",
+  "config": "no-literature",
+  "switches": {
+    "harness": true,
+    "literature": false,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3-14B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "How sensitive is L-band emission to vegetation?",
+  "answer": "The sensitivity of L-band emission to vegetation is evident in the results from the `tau_omega` model. As vegetation optical depth increases from 0 to 2, the vertically polarized brightness temperature ($T_b^v$) rises from ~203.6 K to ~278.6 K, while horizontally polarized brightness temperature ($T_b^h$) increases from ~157.4 K to ~278.2 K. Emissivity values remain constant at ~0.537 (horizontal) and ~0.695 (vertical), indicating that vegetation primarily modulates brightness temperature through attenuation and emission, not emissivity.\n\nThis shows that vegetation significantly affects L-band emissions, with higher optical depth leading to warmer observed brightness temperatures. The relationship is monotonic and strong, as both $T_b^h$ and $T_b^v$ increase consistently with vegetation. \n\nA plot would clarify this trend visually. Would you like me to generate one?",
+  "elapsed_s": 24.19,
+  "stop_rule": null,
+  "model_calls": 3,
+  "tool_calls": 2,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "tau_omega"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "tau_omega",
+        "parameters": {
+          "frequency_ghz": 1.41,
+          "angle_deg": 40.0,
+          "soil_moisture": 0.25,
+          "bulk_density_g_cm3": 1.3,
+          "soil_temperature_k": 293.0,
+          "canopy_temperature_k": 293.0,
+          "vegetation_optical_depth": 0.3,
+          "single_scattering_albedo": 0.05,
+          "roughness_h": 0.3,
+          "cross_q": 0.0,
+          "sweep_parameter": "vegetation_optical_depth",
+          "sweep_start": 0.0,
+          "sweep_stop": 2.0,
+          "sweep_points": 10
+        }
+      },
+      "status": "success",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "vegetation_optical_depth",
+        "sweep_start": 0.0,
+        "sweep_stop": 2.0,
+        "sweep_points": 10
+      },
+      "handle": "res_f490587c23b0",
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "tau_omega@1.0.0"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "task": "p-tvc-ku-model-versus-measurement",
+  "suite": "probe",
+  "quality": "complete",
+  "config": "no-literature",
+  "switches": {
+    "harness": true,
+    "literature": false,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3-14B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "At Trail Valley Creek, what Ku-band backscatter was actually measured, and how does SMRT compare at the same incidence angles? Plot the measurement and the model in one chart.",
+  "answer": "",
+  "elapsed_s": 113.44,
+  "stop_rule": null,
+  "model_calls": 6,
+  "tool_calls": 5,
+  "interventions": 2,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "read_reference_dataset",
+      "arguments": {
+        "dataset": "tvc-backscatter",
+        "filters": {
+          "band": "Ku"
+        }
+      },
+      "status": "success",
+      "spec": null,
+      "handle": "res_b02600de5698",
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "frequency_ghz": 13.6,
+        "output": "sigma",
+        "sweep_parameter": "angle_deg",
+        "sweep_start": 18,
+        "sweep_stop": 81,
+        "sweep_points": 100
+      },
+      "status": "needs_input",
+      "spec": null,
+      "problems": [
+        "sweep_points = 100 is outside the physical range 2 to 60 count",
+        "sweep_stop = 81.0 is outside the physical range of angle_deg, which is 0.0 to 80.0 degree"
+      ]
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "frequency_ghz": 13.6,
+          "output": "sigma",
+          "sweep_parameter": "angle_deg",
+          "sweep_start": 18,
+          "sweep_stop": 80,
+          "sweep_points": 60
+        }
+      },
+      "status": "terminal_error",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "sigma",
+        "frequency_ghz": 13.6,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "angle_deg",
+        "sweep_start": 18.0,
+        "sweep_stop": 80.0,
+        "sweep_points": 60
+      },
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "frequency_ghz": 13.6,
+          "output": "sigma",
+          "sweep_parameter": "angle_deg",
+          "sweep_start": 18,
+          "sweep_stop": 70,
+          "sweep_points": 60
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "sigma",
+        "frequency_ghz": 13.6,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "angle_deg",
+        "sweep_start": 18.0,
+        "sweep_stop": 70.0,
+        "sweep_points": 60
+      },
+      "handle": "res_30e6923c31e8",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "plot",
+      "arguments": {},
+      "status": "needs_input",
+      "spec": null,
+      "problems": [
+        "series 1 has 2080 points, above the 400 point limit for one chart."
+      ]
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": [
+      "tvc-backscatter"
+    ]
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_block",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_block",
+    "model_call",
+    "harness_pass"
+  ]
+}

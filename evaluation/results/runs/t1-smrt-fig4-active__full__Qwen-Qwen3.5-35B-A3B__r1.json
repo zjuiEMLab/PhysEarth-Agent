@@ -1,0 +1,221 @@
+{
+  "task": "t1-smrt-fig4-active",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-35B-A3B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "The SMRT paper reports its active-mode comparison in Figure 4b for the same snowpack as the passive panel. Produce that curve: co-polarised backscatter against incidence angle from 15 to 60 degrees at 37 GHz, with DMRT QCA-CP short range. Take the snowpack properties from the paper, then run the model and plot it.",
+  "answer": "I've produced the active-mode backscatter curve from the SMRT paper. Here are the details:\n\n**Model configuration** (from [smrt-v1#08] and [model:smrt@1.5.1]):\n- Electromagnetic theory: DMRT QCA-CP short range\n- Microstructure: Sticky hard spheres\n- Frequency: 37 GHz\n- Snowpack: density = 300 kg m⁻³, temperature = 256 K, sphere radius = 0.1 mm (100 µm), stickiness = 0.5\n- Layer thickness: assumed semi-infinite (effectively optically thick)\n- Angle sweep: 15° to 60° (15 points)\n\n**Results** ([res_45ec710dbd71]):\nBoth HH and VV co-polarized backscatter show the expected decrease with increasing incidence angle:\n- At 15°: σ⁰_HH ≈ −20.3 dB, σ⁰_VV ≈ −20.2 dB\n- At 60°: σ⁰_HH ≈ −24.4 dB, σ⁰_VV ≈ −23.7 dB\n\nThe chart shows both polarizations declining monotonically across the angular range, consistent with the scattering behavior reported in Figure 4b of the SMRT validation paper.",
+  "elapsed_s": 20.15,
+  "stop_rule": null,
+  "model_calls": 7,
+  "tool_calls": 6,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "sigma",
+          "frequency_ghz": 37,
+          "angle_deg": 55,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300,
+          "temperature_k": 256,
+          "radius_m": 0.0001,
+          "stickiness": 0.5
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "sigma",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 256.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_90977196ec02",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "sigma",
+          "frequency_ghz": 37,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300,
+          "temperature_k": 256,
+          "radius_m": 0.0001,
+          "stickiness": 0.5,
+          "sweep_parameter": "angle_deg",
+          "sweep_start": 15,
+          "sweep_stop": 60,
+          "sweep_points": 15
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "sigma",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 256.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "sweep_parameter": "angle_deg",
+        "sweep_start": 15.0,
+        "sweep_stop": 60.0,
+        "sweep_points": 15
+      },
+      "handle": "res_45ec710dbd71",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "plot",
+      "arguments": {
+        "series": [
+          {
+            "handle": "res_45ec710dbd71",
+            "x": "angle_deg",
+            "y": "sigma_hh_db",
+            "label": "HH backscatter"
+          },
+          {
+            "handle": "res_45ec710dbd71",
+            "x": "angle_deg",
+            "y": "sigma_vv_db",
+            "label": "VV backscatter"
+          }
+        ],
+        "x_label": "Incidence angle (deg)",
+        "y_label": "Backscatter (dB)",
+        "title": "SMRT active-mode backscatter vs. incidence angle (DMRT QCA-CP short range)"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#08"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [
+    {
+      "provenance": [
+        "model_run"
+      ],
+      "series": [
+        {
+          "label": "HH backscatter",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 15,
+          "handle": "res_45ec710dbd71"
+        },
+        {
+          "label": "VV backscatter",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 15,
+          "handle": "res_45ec710dbd71"
+        }
+      ]
+    }
+  ],
+  "markers": {
+    "literature": [
+      "smrt-v1#08"
+    ],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

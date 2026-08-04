@@ -1,0 +1,189 @@
+{
+  "task": "t1-smrt-fig5-iba-shs",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-35B-A3B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "The SMRT paper argues that pairing IBA with the sticky hard sphere microstructure escapes the radius limit of the DMRT short-range approximation. Show what that pairing predicts: brightness temperature against sphere radius from 50 to 400 micrometres at 37 GHz, with stickiness held at the value the paper fixes it to and the same snowpack density and temperature as its earlier comparison. Plot it.",
+  "answer": "The SMRT paper [smrt-v1#08] shows that pairing the Improved Born Approximation (IBA) with the sticky hard sphere (SHS) microstructure removes the radius limit imposed by the DMRT short-range approximation. Running this IBA+SHS configuration at 37 GHz with stickiness fixed at 0.5 (the value used in the paper's comparison), density at 300 kg m⁻³ and temperature at 265 K, brightness temperature increases monotonically with sphere radius from 92.1 K/97.4 K (H/V) at 50 µm to 112.1 K/126.8 K (H/V) at 400 µm:\n\n- **TB_H**: 92.1 → 112.1 K  \n- **TB_V**: 97.4 → 126.8 K  \n\nThese trends reflect stronger scattering as grain size grows, reducing emissivity and raising brightness temperature. The chart plots both polarizations against sphere radius; the values are exactly those returned by the run above.\n\n**Key points from the model declaration and run**  \n- Model: smrt@1.5.1 [model:smrt@1.5.1]  \n- Configuration: `electromagnetic_model=iba`, `microstructure_model=sticky_hard_spheres`, `frequency_ghz=37`, `angle_deg=55`, `thickness_m=1.0`, `density_kg_m3=300`, `temperature_k=265`, `stickiness=0.5`  \n- Sweep: radius_m from 50 µm to 400 µm in 10 steps  \n- Outputs plotted: `tb_h`, `tb_v` in kelvin  \n\nThis confirms the paper’s claim that IBA+SHS remains stable and physically plausible well beyond the ~185–285 µm radius range where DMRT short-range begins to fail or break numerically [smrt-v1#08].",
+  "elapsed_s": 16.17,
+  "stop_rule": null,
+  "model_calls": 6,
+  "tool_calls": 5,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "tb",
+          "frequency_ghz": 37,
+          "angle_deg": 55,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300,
+          "temperature_k": 265,
+          "sweep_parameter": "radius_m",
+          "sweep_start": 5e-05,
+          "sweep_stop": 0.0004,
+          "sweep_points": 10,
+          "stickiness": 0.5
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.5,
+        "sweep_parameter": "radius_m",
+        "sweep_start": 5e-05,
+        "sweep_stop": 0.0004,
+        "sweep_points": 10
+      },
+      "handle": "res_8d091b2cba2f",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "plot",
+      "arguments": {
+        "kind": "line+markers",
+        "series": [
+          {
+            "handle": "res_8d091b2cba2f",
+            "x": "radius_m",
+            "y": "tb_v",
+            "label": "TB_V"
+          },
+          {
+            "handle": "res_8d091b2cba2f",
+            "x": "radius_m",
+            "y": "tb_h",
+            "label": "TB_H"
+          }
+        ],
+        "title": "SMRT IBA + sticky hard spheres: Brightness temperature vs. sphere radius",
+        "x_label": "Sphere radius (µm)",
+        "y_label": "Brightness temperature (K)"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_reference_dataset",
+      "arguments": {
+        "dataset": "tvc-backscatter",
+        "filters": {
+          "band": "C"
+        }
+      },
+      "status": "success",
+      "spec": null,
+      "handle": "res_5756b1ab638a",
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#08"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": [
+      "tvc-backscatter"
+    ]
+  },
+  "figures": [
+    {
+      "provenance": [
+        "model_run"
+      ],
+      "series": [
+        {
+          "label": "TB_V",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 10,
+          "handle": "res_8d091b2cba2f"
+        },
+        {
+          "label": "TB_H",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 10,
+          "handle": "res_8d091b2cba2f"
+        }
+      ]
+    }
+  ],
+  "markers": {
+    "literature": [
+      "smrt-v1#08",
+      "smrt-v1#08"
+    ],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

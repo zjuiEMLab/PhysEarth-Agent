@@ -19,4 +19,70 @@ The three SMRT tasks compare the adapter against the upstream `smrt` package dri
 
 ## Agent task set
 
-No agent run has been recorded yet. `python evaluation/runners/agent_tasks.py`
+48 recorded runs over 12 tasks, 4 configurations, 1 repeat(s).
+
+Run as a blocked design: a task is a block, and all 4 configurations of a task run on one language model at one build. Models differ between tasks because the free inference quota is counted per model per day, and no single model holds enough of it for the whole sweep. Every contrast below is therefore computed within a task and then averaged across tasks; none of them straddles two models.
+
+Builds: 4607046. Models: Qwen/Qwen3-14B, Qwen/Qwen3.5-35B-A3B.
+
+Every metric on this page is recomputed from the record by `evaluation/metrics/score.py`, never read off what the harness decided at run time. A call is illegal if the model card says so, whether or not the harness was switched on to notice; a marker resolves if the run actually gathered the evidence it names, whether or not the citation gate was there to check. Without that, an ablation would be comparing each configuration to its own opinion of itself.
+
+### The three ablations
+
+| config        | runs | completed | LLM calls | illegal calls | illegal executed | self-corrected | citations resolve | config match |
+| ------------- | ---- | --------- | --------- | ------------- | ---------------- | -------------- | ----------------- | ------------ |
+| full          | 12   | 58%       | 3.8       | 12%           | 0%               | 100%           | 100%              | 72%          |
+| no-harness    | 12   | 42%       | 3.9       | 33%           | 17%              | 0%             | 67%               | 72%          |
+| no-capability | 12   | 33%       | 4.2       | 62%           | 0%               | 50%            | 100%              | 62%          |
+| no-literature | 12   | 75%       | 3.4       | 20%           | 0%               | 67%            | 100%              | 73%          |
+
+### False-premise questions
+
+These are the questions whose stated configuration cannot exist: a snow density above solid ice, a theory paired with a microstructure it has no derivation for, a liquid-water dielectric model asked about frozen ground, a fitted operator asked outside the angles it was fitted over, and two models asked which is more sensitive when one answers in kelvin and the other in decibels.
+
+| config        | runs | handled | ran the illegal call | call refused | answer names the limit |
+| ------------- | ---- | ------- | -------------------- | ------------ | ---------------------- |
+| full          | 5    | 80%     | 0%                   | 20%          | 60%                    |
+| no-harness    | 5    | 60%     | 0%                   | 20%          | 60%                    |
+| no-capability | 5    | 20%     | 0%                   | 20%          | 20%                    |
+| no-literature | 5    | 80%     | 0%                   | 40%          | 80%                    |
+
+### Tier 1, reproducing the figures of the SMRT paper
+
+Configuration match is the fraction of the fields the paper actually states that the agent got right. The error column is what changes when only those fields are corrected and every free choice the agent made is left alone, so it reports the cost of the configuration mistakes rather than the cost of a snow depth the paper never fixed.
+
+| task                   | config        | runs | config match | mean error | unit | within tolerance |
+| ---------------------- | ------------- | ---- | ------------ | ---------- | ---- | ---------------- |
+| t1-smrt-fig4-active    | full          | 1    | 100%         | 0.00       | dB   | 100%             |
+| t1-smrt-fig4-active    | no-harness    | 1    | 100%         | 0.00       | dB   | 100%             |
+| t1-smrt-fig4-active    | no-capability | 1    | 100%         | 0.00       | dB   | 100%             |
+| t1-smrt-fig4-active    | no-literature | 1    | 67%          | 13.00      | dB   | 0%               |
+| t1-smrt-fig4-passive   | full          | 1    | 100%         | 0.00       | K    | 100%             |
+| t1-smrt-fig4-passive   | no-harness    | 1    | 100%         | 0.00       | K    | 100%             |
+| t1-smrt-fig4-passive   | no-capability | 1    | 100%         | 0.00       | K    | 100%             |
+| t1-smrt-fig4-passive   | no-literature | 1    | 67%          | 6.70       | K    | 0%               |
+| t1-smrt-fig5-iba-shs   | full          | 1    | 88%          | 15.30      | K    | 0%               |
+| t1-smrt-fig5-iba-shs   | no-harness    | 1    | 88%          | 23.47      | K    | 0%               |
+| t1-smrt-fig5-iba-shs   | no-capability | 1    | 50%          | -          | K    | 0%               |
+| t1-smrt-fig5-iba-shs   | no-literature | 1    | 75%          | 23.51      | K    | 0%               |
+| t1-smrt-fig6-memls-iba | full          | 1    | 0%           | -          | -    | -                |
+| t1-smrt-fig6-memls-iba | no-harness    | 1    | 0%           | -          | -    | -                |
+| t1-smrt-fig6-memls-iba | no-capability | 1    | 0%           | -          | -    | -                |
+| t1-smrt-fig6-memls-iba | no-literature | 1    | 83%          | 16.83      | K    | 0%               |
+
+### Per task
+
+| task                                  | suite | question quality | runs | completed | illegal calls | citations resolve |
+| ------------------------------------- | ----- | ---------------- | ---- | --------- | ------------- | ----------------- |
+| p-smrt-arctic-underspecified          | probe | underspecified   | 4    | 50%       | 0%            | 100%              |
+| p-smrt-density-above-ice              | probe | false_premise    | 4    | 50%       | -             | 100%              |
+| p-smrt-dmrt-with-exponential-acf      | probe | false_premise    | 4    | 75%       | 67%           | 100%              |
+| p-tau-omega-frozen-soil               | probe | false_premise    | 4    | 100%      | 67%           | 100%              |
+| p-tau-omega-vegetation-underspecified | probe | underspecified   | 4    | 25%       | 0%            | -                 |
+| p-tvc-ku-model-versus-measurement     | probe | complete         | 4    | 0%        | 33%           | -                 |
+| p-two-models-not-comparable           | probe | false_premise    | 4    | 0%        | -             | -                 |
+| p-water-cloud-beyond-swath            | probe | false_premise    | 4    | 75%       | -             | 50%               |
+| t1-smrt-fig4-active                   | tier1 | complete         | 4    | 100%      | 12%           | 100%              |
+| t1-smrt-fig4-passive                  | tier1 | complete         | 4    | 75%       | 38%           | 100%              |
+| t1-smrt-fig5-iba-shs                  | tier1 | complete         | 4    | 25%       | 12%           | 100%              |
+| t1-smrt-fig6-memls-iba                | tier1 | complete         | 4    | 50%       | 0%            | 100%              |

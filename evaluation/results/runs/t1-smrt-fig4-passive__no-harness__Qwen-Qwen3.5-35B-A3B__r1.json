@@ -1,0 +1,219 @@
+{
+  "task": "t1-smrt-fig4-passive",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-35B-A3B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "Reproduce the passive panel of Figure 4 of the SMRT paper: brightness temperature against incidence angle from 0 to 60 degrees at 37 GHz, for the semi-infinite snowpack that figure uses, with SMRT's DMRT QCA-CP short-range formulation. Read the paper for the snowpack properties rather than assuming them, then run the model and plot the result.",
+  "answer": "",
+  "elapsed_s": 18.58,
+  "stop_rule": null,
+  "model_calls": 8,
+  "tool_calls": 7,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "05"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "list_literature",
+      "arguments": {
+        "query": "Figure 4 semi-infinite snowpack DMRT QCA-CP short-range",
+        "kind": "paper"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "07"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "06"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "angle_deg": 0,
+          "corr_length_m": null,
+          "density_kg_m3": 300,
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "frequency_ghz": 37,
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "tb",
+          "radius_m": 0.0001,
+          "sweep_parameter": "angle_deg",
+          "sweep_points": 61,
+          "sweep_start": 0,
+          "sweep_stop": 60,
+          "stickiness": 0.5,
+          "temperature_k": 256,
+          "thickness_m": 100
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 0.0,
+        "thickness_m": 100.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 256.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "sweep_parameter": "angle_deg",
+        "sweep_start": 0.0,
+        "sweep_stop": 60.0,
+        "sweep_points": 61
+      },
+      "handle": "res_a74fb95f7749",
+      "unguarded_problems": [
+        "sweep_points = 61 is outside the physical range 2 to 60 count"
+      ],
+      "qc_passed": true
+    },
+    {
+      "name": "plot",
+      "arguments": {
+        "kind": "line",
+        "metrics": [
+          "r"
+        ],
+        "series": [
+          {
+            "handle": "res_a74fb95f7749",
+            "label": "SMRT DMRT-QCA-CP (V)",
+            "x": "angle_deg",
+            "y": "tb_v"
+          },
+          {
+            "handle": "res_a74fb95f7749",
+            "label": "SMRT DMRT-QCA-CP (H)",
+            "x": "angle_deg",
+            "y": "tb_h"
+          }
+        ],
+        "title": "Figure 4a of SMRT paper: Brightness temperature vs incidence angle (37 GHz, semi-infinite snow)",
+        "x_label": "Incidence angle (degrees)",
+        "y_label": "Brightness temperature (K)"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#05",
+      "smrt-v1#06",
+      "smrt-v1#07",
+      "smrt-v1#08"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [
+    {
+      "provenance": [
+        "model_run"
+      ],
+      "series": [
+        {
+          "label": "SMRT DMRT-QCA-CP (V)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 61,
+          "handle": "res_a74fb95f7749"
+        },
+        {
+          "label": "SMRT DMRT-QCA-CP (H)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 61,
+          "handle": "res_a74fb95f7749"
+        }
+      ]
+    }
+  ],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

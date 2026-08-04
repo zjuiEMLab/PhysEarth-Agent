@@ -1,0 +1,342 @@
+{
+  "task": "t1-smrt-fig5-iba-shs",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-35B-A3B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "The SMRT paper argues that pairing IBA with the sticky hard sphere microstructure escapes the radius limit of the DMRT short-range approximation. Show what that pairing predicts: brightness temperature against sphere radius from 50 to 400 micrometres at 37 GHz, with stickiness held at the value the paper fixes it to and the same snowpack density and temperature as its earlier comparison. Plot it.",
+  "answer": "Stopped: tool call budget for this question reached (10 of 10). Ask a narrower follow-up question.",
+  "elapsed_s": 28.51,
+  "stop_rule": "budget",
+  "model_calls": 10,
+  "tool_calls": 10,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "sticky_hard_spheres",
+          "frequency_ghz": 37,
+          "angle_deg": 55,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300,
+          "temperature_k": 265,
+          "stickiness": 0.2,
+          "radius_m": 5e-05,
+          "sweep_parameter": "radius_m",
+          "sweep_start": 5e-05,
+          "sweep_stop": 0.0004,
+          "sweep_points": 8
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 5e-05,
+        "stickiness": 0.2,
+        "sweep_parameter": "radius_m",
+        "sweep_start": 5e-05,
+        "sweep_stop": 0.0004,
+        "sweep_points": 8
+      },
+      "handle": "res_4b47c7909f02",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "plot",
+      "arguments": {
+        "series": [
+          {
+            "handle": "res_4b47c7909f02",
+            "x": "radius_m",
+            "y": "tb_v",
+            "label": "SMRT IBA + SHS (V)"
+          },
+          {
+            "handle": "res_4b47c7909f02",
+            "x": "radius_m",
+            "y": "tb_h",
+            "label": "SMRT IBA + SHS (H)"
+          }
+        ],
+        "x_label": "Sphere radius (m)",
+        "y_label": "Brightness temperature (K)",
+        "title": "SMRT IBA with sticky hard spheres: TB vs. sphere radius at 37 GHz"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "sticky_hard_spheres",
+          "frequency_ghz": 37,
+          "angle_deg": 55,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300,
+          "temperature_k": 265,
+          "radius_m": 5e-05,
+          "stickiness": 0.5,
+          "sweep_parameter": "radius_m",
+          "sweep_start": 5e-05,
+          "sweep_stop": 0.0004,
+          "sweep_points": 8
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 5e-05,
+        "stickiness": 0.5,
+        "sweep_parameter": "radius_m",
+        "sweep_start": 5e-05,
+        "sweep_stop": 0.0004,
+        "sweep_points": 8
+      },
+      "handle": "res_b964e789899c",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "plot",
+      "arguments": {
+        "series": [
+          {
+            "handle": "res_b964e789899c",
+            "x": "radius_m",
+            "y": "tb_v",
+            "label": "SMRT IBA + SHS (V)"
+          },
+          {
+            "handle": "res_b964e789899c",
+            "x": "radius_m",
+            "y": "tb_h",
+            "label": "SMRT IBA + SHS (H)"
+          }
+        ],
+        "x_label": "Sphere radius (m)",
+        "y_label": "Brightness temperature (K)",
+        "title": "SMRT IBA with sticky hard spheres: TB vs. sphere radius at 37 GHz, stickiness = 0.5"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "sticky_hard_spheres",
+          "frequency_ghz": 37,
+          "angle_deg": 55,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300,
+          "temperature_k": 265,
+          "radius_m": 5e-05,
+          "sweep_parameter": "radius_m",
+          "sweep_start": 5e-05,
+          "sweep_stop": 0.0004,
+          "sweep_points": 8
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 5e-05,
+        "stickiness": 0.2,
+        "sweep_parameter": "radius_m",
+        "sweep_start": 5e-05,
+        "sweep_stop": 0.0004,
+        "sweep_points": 8
+      },
+      "handle": "res_455af8679afd",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#08"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [
+    {
+      "provenance": [
+        "model_run"
+      ],
+      "series": [
+        {
+          "label": "SMRT IBA + SHS (V)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 8,
+          "handle": "res_4b47c7909f02"
+        },
+        {
+          "label": "SMRT IBA + SHS (H)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 8,
+          "handle": "res_4b47c7909f02"
+        }
+      ]
+    },
+    {
+      "provenance": [
+        "model_run"
+      ],
+      "series": [
+        {
+          "label": "SMRT IBA + SHS (V)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 8,
+          "handle": "res_b964e789899c"
+        },
+        {
+          "label": "SMRT IBA + SHS (H)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 8,
+          "handle": "res_b964e789899c"
+        }
+      ]
+    }
+  ],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "harness_stop"
+  ]
+}

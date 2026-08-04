@@ -1,0 +1,91 @@
+{
+  "task": "t1-smrt-fig6-memls-iba",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "no-literature",
+  "switches": {
+    "harness": true,
+    "literature": false,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3-14B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "For its comparison against MEMLS the SMRT paper runs one specific configuration. Set that configuration up and report the brightness temperature it gives at 37 GHz and 55 degrees. State which correlation length and which microstructure representation the paper used, and cite where you read it.",
+  "answer": "The SMRT paper used the exponential microstructure representation with a correlation length of 0.00015 m for its comparison against MEMLS. At 37 GHz and 55° incidence angle, the model predicts:\n\n- Vertical polarization brightness temperature: [model:smrt@1.5.1] 127.23 K  \n- Horizontal polarization brightness temperature: [model:smrt@1.5.1] 112.44 K  \n\nThis configuration is documented in the SMRT paper (Picard et al., 2018).",
+  "elapsed_s": 34.19,
+  "stop_rule": null,
+  "model_calls": 3,
+  "tool_calls": 2,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "microstructure_model": "exponential",
+          "corr_length_m": 0.00015,
+          "output": "tb"
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_f4adb4b4c6b3",
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1",
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

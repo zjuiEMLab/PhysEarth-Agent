@@ -1,0 +1,93 @@
+{
+  "task": "p-smrt-arctic-underspecified",
+  "suite": "probe",
+  "quality": "underspecified",
+  "config": "no-literature",
+  "switches": {
+    "harness": true,
+    "literature": false,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3-14B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "What brightness temperature would you expect from Arctic snow?",
+  "answer": "The expected brightness temperature from Arctic snow, based on the SMRT model with default parameters (37 GHz frequency, 55° incidence angle, 1 m thickness, 300 kg/m³ density, 265 K temperature, and exponential microstructure), is approximately:\n\n- **Vertical polarization (TBᵥ):** 127.2 K  \n- **Horizontal polarization (TBₕ):** 112.4 K  \n\nThese values assume dry, cold snow conditions typical of Arctic regions. Let me know if you'd like to compare this with measured data or adjust parameters! [model:smrt@1.5.1]",
+  "elapsed_s": 22.89,
+  "stop_rule": null,
+  "model_calls": 3,
+  "tool_calls": 2,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "frequency_ghz": 37,
+          "angle_deg": 55,
+          "thickness_m": 1,
+          "density_kg_m3": 300,
+          "temperature_k": 265,
+          "microstructure_model": "exponential",
+          "electromagnetic_model": "iba",
+          "output": "tb"
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_abd09d2ab116",
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

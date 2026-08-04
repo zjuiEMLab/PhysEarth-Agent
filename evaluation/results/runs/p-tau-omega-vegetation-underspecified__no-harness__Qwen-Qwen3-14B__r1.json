@@ -1,0 +1,67 @@
+{
+  "task": "p-tau-omega-vegetation-underspecified",
+  "suite": "probe",
+  "quality": "underspecified",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3-14B",
+  "repeat": 1,
+  "build": "4607046",
+  "question": "How sensitive is L-band emission to vegetation?",
+  "answer": "",
+  "elapsed_s": 14.57,
+  "stop_rule": null,
+  "model_calls": 3,
+  "tool_calls": 2,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_literature",
+      "arguments": {
+        "kind": "any",
+        "query": "vegetation sensitivity L-band",
+        "scenario": "vegetation"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "vod-sensitivity"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}
