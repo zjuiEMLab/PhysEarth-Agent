@@ -248,3 +248,29 @@ def test_only_one_route_reaches_the_agent():
         if getattr(dep, "name", None) == "respond" or getattr(getattr(dep, "fn", None), "__name__", "") == "respond"
     ]
     assert len(handlers) == 1
+
+
+def test_a_windowed_rate_limit_is_waited_out_not_reported_as_a_fault():
+    """Three fault classes that look alike and must not be treated alike: a limit that
+    clears by waiting, a quota that will not clear until tomorrow, and a model the
+    endpoint no longer serves."""
+
+    class Rpm(Exception):
+        status_code = 429
+        body = {"message": "request limited RPM reached, current: 11, limit: 10"}
+
+    class Spent(Exception):
+        status_code = 429
+        body = {"message": "You have exceeded today's quota for model X"}
+
+    class Gone(Exception):
+        status_code = 400
+        body = {"message": "Model id : x/y , has no provider supported"}
+
+    assert agent._rate_limited(Rpm()) and agent._dead_for_today(Rpm()) == ""
+    assert not agent._rate_limited(Spent()) and agent._dead_for_today(Spent()) == "quota"
+    assert not agent._rate_limited(Gone()) and agent._dead_for_today(Gone()) == "withdrawn"
+
+    # The wait has to outlast the window it is counted over, or retrying cannot help.
+    span = sum(agent.RATE_LIMIT_BACKOFF_S * i for i in range(1, agent.RATE_LIMIT_RETRIES + 1))
+    assert span >= 60.0

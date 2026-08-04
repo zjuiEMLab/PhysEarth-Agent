@@ -11,7 +11,12 @@ MAX_MODEL_CALLS = session_state.MAX_MODEL_CALLS
 MAX_TOOL_CALLS = session_state.MAX_TOOL_CALLS
 EMPTY_RESPONSE_RETRIES = 3
 RETRY_BACKOFF_S = 1.5
-RATE_LIMIT_FACTOR = 2
+# A rate limit is counted over a window, so a backoff shorter than the window cannot
+# clear it. The account limit here is per minute, and three attempts at a few seconds
+# each used to report an upstream fault after eighteen seconds of trying, when waiting
+# would have worked. These three attempts span just over a minute instead.
+RATE_LIMIT_BACKOFF_S = 12.0
+RATE_LIMIT_RETRIES = 4
 MAX_OUTPUT_TOKENS = 2048
 CONTEXT_CEILING_TOKENS = session_state.CONTEXT_CEILING_TOKENS
 
@@ -102,6 +107,18 @@ def _upstream_text(exc):
         if message:
             return str(message)[:400]
     return str(exc)[:400]
+
+
+def _rate_limited(exc):
+    """A limit counted over a window, which waiting clears. Not the same as a spent quota.
+
+    The endpoint expresses this two ways: an SDK RateLimitError, and a plain message about
+    requests per minute. Both mean wait, not stop.
+    """
+    if "RateLimit" in type(exc).__name__:
+        return True
+    text = _upstream_text(exc).lower()
+    return "rpm" in text or "rate limit" in text or "too many requests" in text
 
 
 def _dead_for_today(exc):
@@ -326,7 +343,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
         last_fault = "no choices"
         last_upstream = ""
         model_dead = ""
-        for attempt in range(1, EMPTY_RESPONSE_RETRIES + 1):
+        attempt, budget_left = 0, EMPTY_RESPONSE_RETRIES
+        while attempt < budget_left:
+            attempt += 1
             started = time.perf_counter()
             candidate = _Completion()
             try:
@@ -360,8 +379,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     )
                 )
                 yield answer, events, state
-                rate_limited = "RateLimit" in type(exc).__name__
-                time.sleep(RETRY_BACKOFF_S * attempt * (RATE_LIMIT_FACTOR if rate_limited else 1))
+                # A rate limit is worth waiting out rather than reporting: it clears on
+                # its own, and it is the one upstream fault where giving up quickly turns
+                # a slow answer into no answer. It gets its own, longer, retry budget.
+                if _rate_limited(exc):
+                    budget_left = max(budget_left, RATE_LIMIT_RETRIES)
+                    time.sleep(RATE_LIMIT_BACKOFF_S * attempt)
+                else:
+                    time.sleep(RETRY_BACKOFF_S * attempt)
                 continue
             if not candidate.empty():
                 completion = candidate
