@@ -192,6 +192,7 @@ def build():
 
     llms = sorted({r["llm"] for r in runs})
     repeats = sorted({r["repeat"] for r in runs})
+    builds = sorted({r.get("build") or "unrecorded" for r in runs})
     header = [
         "# PhysEarth-Agent evaluation",
         "",
@@ -214,10 +215,27 @@ def build():
     header += [
         "## Agent task set",
         "",
-        "%d recorded runs over %d tasks, %d configurations, %d repeat(s), on %s."
+        "%d recorded runs over %d tasks, %d configurations, %d repeat(s), on %s, at build %s."
         % (len(scored), len(set(s["task"] for s in scored)),
-           len(set(s["config"] for s in scored)), len(repeats), ", ".join(llms)),
+           len(set(s["config"] for s in scored)), len(repeats), ", ".join(llms),
+           ", ".join(builds)),
         "",
+    ]
+    if len(builds) > 1 or len(llms) > 1:
+        header += [
+            "> **These runs do not all describe the same system.** The table below mixes %s. "
+            "A cell is only comparable with the others when the code and the language model "
+            "behind it were the same, so treat this report as provisional until the sweep has "
+            "been re-run at one build: delete `evaluation/results/runs/` and run "
+            "`agent_tasks.py` again."
+            % (
+                "builds %s" % ", ".join(builds)
+                if len(builds) > 1
+                else "language models %s" % ", ".join(llms)
+            ),
+            "",
+        ]
+    header += [
         "Every metric on this page is recomputed from the record by "
         "`evaluation/metrics/score.py`, never read off what the harness decided at run "
         "time. A call is illegal if the model card says so, whether or not the harness was "

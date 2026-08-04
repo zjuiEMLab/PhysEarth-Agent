@@ -7,6 +7,7 @@ never enter the language model's context.
 
 import base64
 import io
+import math
 from pathlib import Path
 
 from physearth import results
@@ -78,6 +79,55 @@ def _origin(payload):
     return "%s@%s" % (payload.get("model", "?"), payload.get("version", "?"))
 
 
+def outline(spec):
+    """Resolve a chart that has no data behind it yet.
+
+    A sweep costs model evaluations, so it is worth being sure the chart is the one you
+    wanted before paying for it. A preview names the axes, their units, the series and
+    which of them will be drawn as a measurement, and deliberately carries no values.
+    """
+    problems = []
+    raw = spec.get("series") or []
+    if not isinstance(raw, list) or not raw:
+        return [], ["series must be a non-empty list of {x, y} objects."]
+    if len(raw) > MAX_SERIES:
+        return [], ["at most %d series can be drawn in one chart." % MAX_SERIES]
+    resolved = []
+    for index, item in enumerate(raw, 1):
+        if not isinstance(item, dict):
+            problems.append("series %d is not an object." % index)
+            continue
+        xname, yname = item.get("x"), item.get("y")
+        if not xname or not yname:
+            problems.append("series %d needs both an x and a y column name." % index)
+            continue
+        source = item.get("source") or "model_run"
+        if source not in SOURCE_COLOURS:
+            problems.append(
+                "series %d: source must be one of %s." % (index, ", ".join(SOURCE_COLOURS))
+            )
+            continue
+        units = {}
+        payload = results.get(item.get("handle"), spec.get("owner")) if item.get("handle") else None
+        if payload:
+            units = payload.get("units") or {}
+            source = _source(payload)
+        resolved.append(
+            {
+                "handle": item.get("handle") or "",
+                "label": str(item.get("label") or "%s vs %s" % (yname, xname))[:80],
+                "x": [],
+                "y": [],
+                "x_name": xname,
+                "y_name": yname,
+                "source": source,
+                "origin": "not run yet" if not payload else _origin(payload),
+                "units": units,
+            }
+        )
+    return resolved, problems
+
+
 def resolve(spec, owner=None):
     """Return (series, problems). Each series carries its own arrays and provenance."""
     problems = []
@@ -145,7 +195,113 @@ def resolve(spec, owner=None):
     return resolved, problems
 
 
-def render(spec, series):
+METRICS = ("bias", "rmse", "mae", "r")
+
+
+def _unit(series, axis):
+    return (series.get("units") or {}).get(series["%s_name" % axis], "")
+
+
+def agreement(series, metrics):
+    """Statistics between exactly two series, or the reason there are none.
+
+    This is the comparison method note turned into code. The note says to establish that
+    two results are comparable before differencing them; here the difference simply does
+    not happen until they are. Refusing is the useful behaviour: a bias in kelvin between
+    a brightness temperature and a backscatter is a number with no meaning, and printing
+    it would be worse than printing nothing.
+    """
+    wanted = [m for m in (metrics or []) if m in METRICS] or list(METRICS)
+    if len(series) != 2:
+        return None, [
+            "agreement statistics need exactly two series, got %d. Draw the model run and "
+            "the thing you are comparing it with, and nothing else." % len(series)
+        ]
+    a, b = series
+    problems = []
+    if _unit(a, "y") != _unit(b, "y"):
+        problems.append(
+            "the two series are in different units, %r and %r, so their difference is not a "
+            "physical quantity. Brightness temperature and backscatter cannot be differenced."
+            % (_unit(a, "y") or "unstated", _unit(b, "y") or "unstated")
+        )
+    if a["x_name"] != b["x_name"]:
+        problems.append(
+            "the two series are indexed by different quantities, %s and %s, so there is no "
+            "common axis to compare them on." % (a["x_name"], b["x_name"])
+        )
+    if problems:
+        return None, problems
+
+    low = max(min(a["x"]), min(b["x"]))
+    high = min(max(a["x"]), max(b["x"]))
+    if low > high:
+        return None, [
+            "the two series do not overlap: %s runs %g to %g and %s runs %g to %g."
+            % (a["label"], min(a["x"]), max(a["x"]), b["label"], min(b["x"]), max(b["x"]))
+        ]
+
+    xs = [x for x in a["x"] if low <= x <= high]
+    if len(xs) < 2:
+        return None, [
+            "only %d point of %s falls inside the range %s covers, which is too few to "
+            "compare." % (len(xs), a["label"], b["label"])
+        ]
+    left = [a["y"][a["x"].index(x)] for x in xs]
+    right = _interpolate(b["x"], b["y"], xs)
+    pairs = [(p, q) for p, q in zip(left, right, strict=True) if q is not None]
+    n = len(pairs)
+    differences = [p - q for p, q in pairs]
+
+    values = {"n_points": n, "overlap": [low, high], "unit": _unit(a, "y")}
+    if "bias" in wanted:
+        values["bias"] = round(sum(differences) / n, 4)
+    if "mae" in wanted:
+        values["mae"] = round(sum(abs(d) for d in differences) / n, 4)
+    if "rmse" in wanted:
+        values["rmse"] = round(math.sqrt(sum(d * d for d in differences) / n), 4)
+    if "r" in wanted:
+        values["r"] = _pearson([p for p, _ in pairs], [q for _, q in pairs])
+    values["of"] = a["label"]
+    values["against"] = b["label"]
+    values["provenance"] = [a["source"], b["source"]]
+    return values, []
+
+
+def _interpolate(xs, ys, targets):
+    pairs = sorted(zip(xs, ys, strict=True))
+    px = [p[0] for p in pairs]
+    py = [p[1] for p in pairs]
+    out = []
+    for target in targets:
+        if target < px[0] or target > px[-1]:
+            out.append(None)
+            continue
+        lo = max(i for i in range(len(px)) if px[i] <= target)
+        hi = min(len(px) - 1, lo + 1)
+        if hi == lo or abs(px[hi] - px[lo]) < 1e-15:
+            out.append(py[lo])
+            continue
+        weight = (target - px[lo]) / (px[hi] - px[lo])
+        out.append(py[lo] + weight * (py[hi] - py[lo]))
+    return out
+
+
+def _pearson(left, right):
+    n = len(left)
+    if n < 2:
+        return None
+    mean_l = sum(left) / n
+    mean_r = sum(right) / n
+    cov = sum((a - mean_l) * (b - mean_r) for a, b in zip(left, right, strict=True))
+    var_l = sum((a - mean_l) ** 2 for a in left)
+    var_r = sum((b - mean_r) ** 2 for b in right)
+    if var_l <= 0 or var_r <= 0:
+        return None
+    return round(cov / math.sqrt(var_l * var_r), 4)
+
+
+def render(spec, series, preview=False):
     """Draw the chart and return a figure record with the PNG inlined as a data URI."""
     import matplotlib
 
@@ -155,10 +311,10 @@ def render(spec, series):
     families = _install_font()
     kind = spec.get("kind") if spec.get("kind") in KINDS else "line"
     with matplotlib.rc_context({"font.family": families + ["serif"] if families else ["serif"]}):
-        return _draw(plt, spec, series, kind)
+        return _draw(plt, spec, series, kind, preview)
 
 
-def _draw(plt, spec, series, kind):
+def _draw(plt, spec, series, kind, preview=False):
     figure, axes = plt.subplots(figsize=(4.6, 2.9), dpi=170)
     figure.patch.set_facecolor(PAPER)
     axes.set_facecolor(PAPER)
@@ -170,6 +326,11 @@ def _draw(plt, spec, series, kind):
             colour = EXTRA_COLOURS[index % len(EXTRA_COLOURS)]
         seen[item["source"]] = True
         style = "--" if item["source"] == "model_run" and len(series) > 1 else "-"
+        if preview:
+            # An empty artist still earns its legend entry, which is the whole point: the
+            # preview shows what will be drawn and in which style, and no values.
+            axes.plot([], [], style, color=colour, linewidth=2.0, label=item["label"])
+            continue
         if kind == "scatter" or (kind == "line+markers" and item["source"] == "measured"):
             axes.plot(
                 item["x"], item["y"], "o", color=colour, markersize=4.2, label=item["label"]
@@ -178,6 +339,19 @@ def _draw(plt, spec, series, kind):
                 axes.plot(item["x"], item["y"], style, color=colour, linewidth=1.4, alpha=0.55)
         else:
             axes.plot(item["x"], item["y"], style, color=colour, linewidth=2.0, label=item["label"])
+
+    if preview:
+        axes.text(
+            0.5,
+            0.5,
+            "preview\nno data yet",
+            transform=axes.transAxes,
+            ha="center",
+            va="center",
+            fontsize=11,
+            color=INK_MUTE,
+            alpha=0.65,
+        )
 
     first = series[0]
     axes.set_xlabel(spec.get("x_label") or _label(first, "x"), fontsize=8.5, color=INK_SOFT)
@@ -191,7 +365,10 @@ def _draw(plt, spec, series, kind):
     for side in ("left", "bottom"):
         axes.spines[side].set_color(LINE)
     axes.tick_params(colors=INK_MUTE, labelsize=7.5, length=3)
-    if len(series) > 1:
+    if preview:
+        axes.set_xticks([])
+        axes.set_yticks([])
+    if len(series) > 1 or preview:
         legend = axes.legend(fontsize=7.5, frameon=False, loc="best")
         for text in legend.get_texts():
             text.set_color(INK_SOFT)
@@ -206,7 +383,8 @@ def _draw(plt, spec, series, kind):
     return {
         "png": "data:image/png;base64,%s" % payload,
         "title": spec.get("title") or first["label"],
-        "kind": kind,
+        "kind": "preview" if preview else kind,
+        "preview": preview,
         "provenance": sources,
         "series": [
             {

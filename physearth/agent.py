@@ -191,6 +191,17 @@ def _record_tool_result(name, result, state, events):
     for key in result.get("citations", []):
         state["sections_read"].add(key)
     data = result.get("data") or {}
+    if name == "read_literature" and result["status"] == "success" and data.get("section_id"):
+        if data.get("source") == "skill":
+            state["skills_read"].add(data["slug"])
+            events.append(
+                _event(
+                    "protocol",
+                    rule="skill_followed",
+                    detail="%s is now open, so [skill:%s] resolves in this answer."
+                    % (data["slug"], data["slug"]),
+                )
+            )
     if name == "discover_literature" and result["status"] == "success":
         for item in data.get("candidates") or []:
             state["abstracts_seen"].add(item["doi"])

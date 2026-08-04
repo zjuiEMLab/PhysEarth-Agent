@@ -14,6 +14,7 @@ per day, so a re-run of the report must not cost a second quota.
 import argparse
 import json
 import re
+import subprocess
 import sys
 import time
 import traceback
@@ -33,6 +34,35 @@ FAULTS = ("quota", "withdrawn", "upstream", "global_budget")
 
 def key(task_id, config_name, llm, repeat):
     return "%s__%s__%s__r%d.json" % (task_id, config_name, SAFE.sub("-", llm), repeat)
+
+
+def build_id():
+    """Which commit produced a record.
+
+    A run is only comparable with the other cells of its table if the system under test
+    was the same. The quota is spent over more than one day, so the cache holds records
+    made at different times, and without this there is no way to notice that half a table
+    describes an older system.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(common.REPO),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        head = out.stdout.strip() or "unknown"
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=str(common.REPO),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return head + ("+dirty" if dirty.stdout.strip() else "")
+    except Exception:
+        return "unknown"
 
 
 def _tool_log(events):
@@ -72,7 +102,7 @@ def _stop_rule(events):
     return None
 
 
-def run_one(task, config_entry, llm, repeat):
+def run_one(task, config_entry, llm, repeat, build):
     started = time.perf_counter()
     session = agent.new_session(llm)
     answer, events, state = agent.run(
@@ -86,6 +116,7 @@ def run_one(task, config_entry, llm, repeat):
         "switches": config_entry["switches"],
         "llm": llm,
         "repeat": repeat,
+        "build": build,
         "question": task["question"],
         "answer": answer,
         "elapsed_s": round(time.perf_counter() - started, 2),
@@ -126,6 +157,7 @@ def main(argv=None):
 
     config.load_dotenv()
     llm = args.llm or agent.default_model()
+    build = build_id()
     configs = common.load_configs(args.configs)
     tasks = [t for suite in args.suites for t in common.load_tasks(suite)]
     if args.tasks:
@@ -140,8 +172,8 @@ def main(argv=None):
     RUNS.mkdir(parents=True, exist_ok=True)
     todo = [p for p in planned if args.force or not (RUNS / key(p[0]["id"], p[1]["name"], llm, p[2])).is_file()]
 
-    print("%d task(s) x %d config(s) x %d repeat(s) = %d run(s) on %s"
-          % (len(tasks), len(configs), args.repeats, len(planned), llm))
+    print("%d task(s) x %d config(s) x %d repeat(s) = %d run(s) on %s at build %s"
+          % (len(tasks), len(configs), args.repeats, len(planned), llm, build))
     print("%d already cached, %d to run" % (len(planned) - len(todo), len(todo)))
     if args.dry_run:
         for task, entry, repeat in todo:
@@ -153,7 +185,7 @@ def main(argv=None):
         name = key(task["id"], entry["name"], llm, repeat)
         print("[%3d/%3d] %s" % (index, len(todo), name), flush=True)
         try:
-            record = run_one(task, entry, llm, repeat)
+            record = run_one(task, entry, llm, repeat, build)
         except Exception:
             failures += 1
             print(traceback.format_exc())

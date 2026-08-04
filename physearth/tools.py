@@ -187,6 +187,26 @@ PLOT_SPEC = {
                 "title": {"type": "string"},
                 "x_label": {"type": "string"},
                 "y_label": {"type": "string"},
+                "dry_run": {
+                    "type": "boolean",
+                    "description": (
+                        "Draw the chart empty: axes, units, series names and which of them "
+                        "is a measurement, with no data. Handles are not needed, so use it "
+                        "to agree the chart with the user before paying for the sweep that "
+                        "fills it. Give x, y, an optional label and an optional source of "
+                        "model_run or measured for each series."
+                    ),
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": list(plotting.METRICS)},
+                    "description": (
+                        "Also compute agreement between exactly two drawn series. Refused, "
+                        "with the reason, when the two are in different units, are indexed "
+                        "by different quantities, or do not overlap: a bias between a "
+                        "brightness temperature and a backscatter is not a quantity."
+                    ),
+                },
             },
             "required": ["series"],
         },
@@ -645,15 +665,27 @@ def read_reference_dataset(dataset=None, filters=None, _owner=None):
     )
 
 
-def plot(series=None, kind="line", title=None, x_label=None, y_label=None, _owner=None):
+def plot(
+    series=None,
+    kind="line",
+    title=None,
+    x_label=None,
+    y_label=None,
+    dry_run=False,
+    metrics=None,
+    _owner=None,
+):
     spec = {
         "series": series or [],
         "kind": kind,
         "title": title,
         "x_label": x_label,
         "y_label": y_label,
+        "owner": _owner,
     }
-    resolved, problems = plotting.resolve(spec, _owner)
+    resolved, problems = (
+        plotting.outline(spec) if dry_run else plotting.resolve(spec, _owner)
+    )
     if problems:
         return {
             "status": "needs_input",
@@ -665,26 +697,60 @@ def plot(series=None, kind="line", title=None, x_label=None, y_label=None, _owne
             "error": "; ".join(problems),
         }
     try:
-        figure = plotting.render(spec, resolved)
+        figure = plotting.render(spec, resolved, preview=bool(dry_run))
     except Exception as exc:
         return _fail("The chart could not be drawn: %s: %s" % (type(exc).__name__, exc))
-    return _ok(
-        "Drew a %s chart with %d series over %d point(s). It is on screen; do not restate "
-        "its values."
-        % (figure["kind"], len(resolved), sum(len(s["x"]) for s in resolved)),
+
+    described = [
         {
-            "series": [
-                {
-                    "label": s["label"],
-                    "source": s["source"],
-                    "origin": s["origin"],
-                    "n_points": len(s["x"]),
-                }
-                for s in resolved
-            ],
-        },
-        ui={"figure": figure},
+            "label": s["label"],
+            "source": s["source"],
+            "origin": s["origin"],
+            "n_points": len(s["x"]),
+            "x": s["x_name"],
+            "y": s["y_name"],
+            "y_unit": (s.get("units") or {}).get(s["y_name"], ""),
+        }
+        for s in resolved
+    ]
+
+    if dry_run:
+        return _ok(
+            "Preview only: a %s chart of %s against %s with %d series, drawn with its axes, "
+            "units and legend and no data. Check it is the chart you want, then run what it "
+            "needs and call plot again without dry_run."
+            % (kind, resolved[0]["y_name"], resolved[0]["x_name"], len(resolved)),
+            {"preview": True, "series": described},
+            ui={"figure": figure},
+        )
+
+    data = {"preview": False, "series": described}
+    summary = "Drew a %s chart with %d series over %d point(s). It is on screen; do not " "restate its values." % (
+        figure["kind"],
+        len(resolved),
+        sum(len(s["x"]) for s in resolved),
     )
+    if metrics is not None:
+        values, refusals = plotting.agreement(resolved, metrics)
+        if refusals:
+            data["agreement_refused"] = refusals
+            summary += (
+                " Agreement statistics were refused: %s The chart is still on screen; report "
+                "the two curves separately and say why they cannot be differenced."
+                % " ".join(refusals)
+            )
+        else:
+            data["agreement"] = values
+            figure["agreement"] = values
+            summary += " Agreement over %d overlapping point(s): %s." % (
+                values["n_points"],
+                ", ".join(
+                    "%s %s" % (name, values[name])
+                    for name in plotting.METRICS
+                    if values.get(name) is not None
+                ),
+            )
+    return _ok(summary, data, ui={"figure": figure})
 
 
 DISPATCH = {

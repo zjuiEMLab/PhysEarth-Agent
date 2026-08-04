@@ -1,0 +1,255 @@
+"""The method notes and the two increments that live inside the plot tool.
+
+Neither `compare` nor a chart preview is a new medium, so neither gets a tool of its own.
+The comparison is a mode of the tool that already holds two curves, and the preview is a
+mode of the tool that already knows what a chart of them would look like.
+"""
+
+import pytest
+
+from physearth import harness, knowledge, plotting, prompt, session, tools
+
+
+def _own():
+    box = session.new_session("m")
+    return box, box["id"]
+
+
+def test_the_three_declared_method_notes_all_exist_and_are_readable():
+    slugs = {item["slug"] for item in knowledge.skills()}
+    assert slugs == {"model-comparison", "research-planning", "research-reporting"}
+    box, _ = _own()
+    for slug in sorted(slugs):
+        opened = tools.call("read_literature", {"slug": slug, "section_id": "00"}, session=box)
+        assert opened["status"] == "success"
+        assert opened["data"]["source"] == "skill"
+        assert len(opened["data"]["text"]) > 1500
+
+
+def test_a_method_note_is_findable_through_the_catalogue_not_only_the_prompt():
+    box, _ = _own()
+    only_skills = tools.call("list_literature", {"kind": "skill"}, session=box)
+    assert {p["slug"] for p in only_skills["data"]["papers"]} == {
+        "model-comparison",
+        "research-planning",
+        "research-reporting",
+    }
+    only_papers = tools.call("list_literature", {"kind": "paper"}, session=box)
+    assert "model-comparison" not in {p["slug"] for p in only_papers["data"]["papers"]}
+    both = tools.call("list_literature", {"kind": "any"}, session=box)
+    assert len(both["data"]["papers"]) == len(only_papers["data"]["papers"]) + 3
+
+
+def test_following_a_protocol_is_a_claim_that_has_to_be_earned():
+    box, _ = _own()
+    state = session.new_state(box)
+    claim = "I established comparability first [skill:model-comparison]."
+    refused = harness.check_citations(claim, set(), skills_read=state["skills_read"])
+    assert refused["unresolved"] == ["skill:model-comparison"]
+
+    from physearth import agent
+
+    opened = tools.call(
+        "read_literature", {"slug": "model-comparison", "section_id": "00"}, session=box
+    )
+    events = []
+    agent._record_tool_result("read_literature", opened, state, events)
+    assert "model-comparison" in box["skills_read"]
+    assert any(e["kind"] == "protocol" for e in events)
+    assert harness.check_citations(claim, set(), skills_read=state["skills_read"])["passed"]
+
+
+def test_reading_the_index_of_a_note_is_not_reading_it():
+    box, _ = _own()
+    from physearth import agent
+
+    state = session.new_state(box)
+    index = tools.call("read_literature", {"slug": "model-comparison"}, session=box)
+    agent._record_tool_result("read_literature", index, state, [])
+    assert "model-comparison" not in box["skills_read"]
+
+
+def test_the_prompt_names_the_situation_not_only_the_note():
+    text = prompt.build(session.new_state(session.new_session("m")))
+    assert "first run_model call of an answer" in text
+    assert "put two model runs side by side" in text
+    assert "final answer that contains a number" in text
+    assert "[skill:slug]" in text
+
+
+def test_a_preview_needs_no_data_and_says_so():
+    box, own = _own()
+    result = tools.call(
+        "plot",
+        {
+            "dry_run": True,
+            "series": [
+                {"x": "density_kg_m3", "y": "tb_v", "label": "SMRT"},
+                {"x": "density_kg_m3", "y": "tb_v", "label": "measured", "source": "measured"},
+            ],
+        },
+        owner=own,
+    )
+    assert result["status"] == "success"
+    assert result["data"]["preview"] is True
+    assert all(s["n_points"] == 0 for s in result["data"]["series"])
+    assert result["ui"]["figure"]["preview"] is True
+    assert result["ui"]["figure"]["kind"] == "preview"
+    assert result["ui"]["figure"]["png"].startswith("data:image/png;base64,")
+    assert "measured" in result["ui"]["figure"]["provenance"]
+
+
+def test_a_preview_still_refuses_a_chart_that_makes_no_sense():
+    box, own = _own()
+    assert tools.call("plot", {"dry_run": True, "series": []}, owner=own)["status"] == (
+        "needs_input"
+    )
+    missing = tools.call("plot", {"dry_run": True, "series": [{"x": "a"}]}, owner=own)
+    assert missing["status"] == "needs_input"
+    assert "both an x and a y" in missing["error"]
+
+
+@pytest.fixture
+def two_runs():
+    box, own = _own()
+    first = tools.call(
+        "run_model",
+        {
+            "model": "smrt",
+            "parameters": {
+                "sweep_parameter": "temperature_k",
+                "sweep_start": 240,
+                "sweep_stop": 270,
+                "sweep_points": 7,
+            },
+        },
+        owner=own,
+    )
+    second = tools.call(
+        "run_model",
+        {
+            "model": "smrt",
+            "parameters": {
+                "corr_length_m": 0.0002,
+                "sweep_parameter": "temperature_k",
+                "sweep_start": 245,
+                "sweep_stop": 272,
+                "sweep_points": 6,
+            },
+        },
+        owner=own,
+    )
+    return own, first["data"]["handle"], second["data"]["handle"]
+
+
+def test_two_comparable_curves_get_statistics_tied_to_their_overlap(two_runs):
+    own, a, b = two_runs
+    result = tools.call(
+        "plot",
+        {
+            "metrics": ["bias", "rmse", "r"],
+            "series": [
+                {"handle": a, "x": "temperature_k", "y": "tb_v", "label": "0.15 mm"},
+                {"handle": b, "x": "temperature_k", "y": "tb_v", "label": "0.20 mm"},
+            ],
+        },
+        owner=own,
+    )
+    values = result["data"]["agreement"]
+    assert values["unit"] == "K"
+    assert values["overlap"] == [245.0, 270.0]
+    assert values["n_points"] >= 2
+    assert values["bias"] is not None and values["rmse"] >= abs(values["bias"])
+    assert "agreement" in result["ui"]["figure"]
+
+
+def test_a_bias_between_kelvin_and_decibels_is_refused_and_the_chart_survives():
+    box, own = _own()
+    passive = tools.call(
+        "run_model",
+        {
+            "model": "tau_omega",
+            "parameters": {
+                "sweep_parameter": "soil_moisture",
+                "sweep_start": 0.05,
+                "sweep_stop": 0.45,
+                "sweep_points": 6,
+            },
+        },
+        owner=own,
+    )
+    active = tools.call(
+        "run_model",
+        {
+            "model": "water_cloud",
+            "parameters": {
+                "sweep_parameter": "soil_moisture",
+                "sweep_start": 0.05,
+                "sweep_stop": 0.45,
+                "sweep_points": 6,
+            },
+        },
+        owner=own,
+    )
+    result = tools.call(
+        "plot",
+        {
+            "metrics": ["bias"],
+            "series": [
+                {"handle": passive["data"]["handle"], "x": "soil_moisture", "y": "tb_v"},
+                {
+                    "handle": active["data"]["handle"],
+                    "x": "soil_moisture",
+                    "y": "sigma0_total_db",
+                },
+            ],
+        },
+        owner=own,
+    )
+    assert result["status"] == "success"
+    assert "agreement" not in result["data"]
+    assert "different units" in result["data"]["agreement_refused"][0]
+    assert result["ui"]["figure"]["png"]
+
+
+def test_statistics_are_refused_when_there_is_nothing_to_compare_against(two_runs):
+    own, a, _ = two_runs
+    alone = tools.call(
+        "plot",
+        {"metrics": ["bias"], "series": [{"handle": a, "x": "temperature_k", "y": "tb_v"}]},
+        owner=own,
+    )
+    assert "agreement" not in alone["data"]
+    assert "exactly two series" in alone["data"]["agreement_refused"][0]
+
+
+def test_series_that_never_overlap_are_refused_rather_than_extrapolated():
+    left = {
+        "label": "a",
+        "x": [1.0, 2.0, 3.0],
+        "y": [1.0, 2.0, 3.0],
+        "x_name": "t",
+        "y_name": "tb_v",
+        "units": {"tb_v": "K"},
+        "source": "model_run",
+    }
+    right = dict(left, label="b", x=[10.0, 11.0], y=[1.0, 2.0])
+    values, problems = plotting.agreement([left, right], ["bias"])
+    assert values is None
+    assert "do not overlap" in problems[0]
+
+
+def test_the_tool_count_did_not_grow_for_either_increment():
+    names = {s["function"]["name"] for s in tools.specs()}
+    assert "compare" not in names
+    assert "propose_plan" not in names
+    assert names == {
+        "list_literature",
+        "read_literature",
+        "list_models",
+        "run_model",
+        "read_reference_dataset",
+        "plot",
+        "discover_literature",
+        "ingest_paper",
+    }

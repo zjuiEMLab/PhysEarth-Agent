@@ -6,6 +6,7 @@ CITATION_PATTERN = re.compile(r"\[([a-z0-9-]+)#(\d{1,3})\]")
 MODEL_PATTERN = re.compile(r"\[(?:model:)?([A-Za-z0-9_-]+)@([^\]\s]+)\]")
 DATA_PATTERN = re.compile(r"\[data:([a-z0-9-]+)\]")
 ABSTRACT_PATTERN = re.compile(r"\[abs:(10\.\d{4,9}/[^\]\s]+)\]", re.I)
+SKILL_PATTERN = re.compile(r"\[skill:([a-z0-9-]+)\]")
 UNCITED_ANSWER_CHARS = 400
 MAX_INTERVENTIONS = 3
 
@@ -37,27 +38,44 @@ def find_abstract_markers(text):
     return [d.lower() for d in ABSTRACT_PATTERN.findall(text or "")]
 
 
-def check_citations(text, sections_read, models_run=(), datasets_read=(), abstracts_seen=()):
+def find_skill_markers(text):
+    return SKILL_PATTERN.findall(text or "")
+
+
+def check_citations(
+    text,
+    sections_read,
+    models_run=(),
+    datasets_read=(),
+    abstracts_seen=(),
+    skills_read=(),
+):
     text = text or ""
     # An [abs:doi] marker also matches the literature pattern's shape in some DOIs, so it
-    # is removed before the other three are counted.
-    without_abstracts = ABSTRACT_PATTERN.sub(" ", text)
-    markers = find_markers(without_abstracts)
-    model_markers = find_model_markers(without_abstracts)
-    data_markers = find_data_markers(without_abstracts)
+    # is removed before the other markers are counted.
+    plain = ABSTRACT_PATTERN.sub(" ", text)
+    markers = find_markers(plain)
+    model_markers = find_model_markers(plain)
+    data_markers = find_data_markers(plain)
     abstract_markers = find_abstract_markers(text)
+    skill_markers = find_skill_markers(text)
     unresolved = sorted({m for m in markers if m not in sections_read})
     unresolved += sorted({m for m in model_markers if m not in set(models_run)})
     unresolved += sorted({m for m in data_markers if m not in set(datasets_read)})
     unresolved += sorted(
         {"abs:" + m for m in abstract_markers if m not in {a.lower() for a in abstracts_seen}}
     )
+    # "I followed the comparison protocol" is a claim like any other. It resolves only for
+    # a method note this conversation actually opened, which turns a piece of self-praise
+    # into a fact the run trace can confirm.
+    unresolved += sorted({"skill:" + m for m in skill_markers if m not in set(skills_read)})
     return {
         "rule": "citation_integrity",
         "markers": markers
         + ["model:" + m for m in model_markers]
         + ["data:" + m for m in data_markers]
-        + ["abs:" + m for m in abstract_markers],
+        + ["abs:" + m for m in abstract_markers]
+        + ["skill:" + m for m in skill_markers],
         "unresolved": unresolved,
         "passed": not unresolved,
     }
@@ -125,8 +143,9 @@ def citation_correction(result):
         "a section you opened with read_literature, and a marker of the form "
         "[model:name@version] must name a model you actually ran or whose declaration you read, "
         "and a marker of the form [data:slug] must name a reference dataset you actually "
-        "queried. Note that a model name is not a paper slug. Fix or drop each one and "
-        "re-send the full answer."
+        "queried, and a marker of the form [skill:slug] must name a method note you actually "
+        "opened with read_literature. Note that a model name is not a paper slug. Fix or drop "
+        "each one and re-send the full answer."
         % ", ".join(result["unresolved"])
     )
 
@@ -184,6 +203,7 @@ def review_final(text, state):
             state.get("models_run", ()),
             state.get("datasets_read", ()),
             state.get("abstracts_seen", ()),
+            state.get("skills_read", ()),
         ),
         check_abstract_depth(text),
     ]

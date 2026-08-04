@@ -17,6 +17,7 @@ CITE = re.compile(r"\[([a-z0-9][a-z0-9-]*)#(\d{1,3})\]")
 MODEL_CITE = re.compile(r"\[model:([A-Za-z0-9_-]+)@([^\]\s]+)\]")
 DATA_CITE = re.compile(r"\[data:([a-z0-9][a-z0-9-]*)\]")
 ABS_CITE = re.compile(r"\[abs:(10\.\d{4,9}/[^\]\s]+)\]", re.I)
+SKILL_CITE = re.compile(r"\[skill:([a-z0-9][a-z0-9-]*)\]")
 BOLD = re.compile(r"\*\*([^*]+)\*\*")
 CODE = re.compile(r"`([^`]+)`")
 SECTION_PREVIEW_CHARS = 620
@@ -100,8 +101,17 @@ def _markers(text):
             "measured or computed value'>abs:%s</a>" % (_e(doi), _e(doi))
         )
 
+    def skill(match):
+        slug = match.group(1)
+        return (
+            "<a class='cite cite--skill' href='#' data-jump='sec-%s#00' "
+            "data-tab='pe-tab-sources' title='the agent opened this method note before "
+            "writing this sentence'>%s</a>" % (_e(slug), _e(slug))
+        )
+
     # The abstract form goes first: some DOIs would otherwise be eaten by the model pattern.
     text = ABS_CITE.sub(abstract, text)
+    text = SKILL_CITE.sub(skill, text)
     text = CITE.sub(section, text)
     text = MODEL_CITE.sub(model, text)
     return DATA_CITE.sub(data, text)
@@ -262,6 +272,7 @@ BADGES = {
     "untrusted_content": ("badge--warn", "BOUNDARY", "step-card--warn"),
     "empty_response": ("badge--mute", "UPSTREAM RETRY", "step-card--muted"),
     "literature_tier": ("badge--model", "LITERATURE TIER", "step-card--tool"),
+    "protocol": ("badge--ok", "PROTOCOL", "step-card--pass"),
 }
 
 
@@ -543,31 +554,74 @@ def trace(events, state, running=False):
 # ---------------------------------------------------------------- evidence
 
 
+def _agreement_row(values):
+    """Statistics under the chart they came from, never floating free of it."""
+    stats = "".join(
+        "<span class='stat'><b>%s</b>%s%s</span>"
+        % (_e(name), _e(values[name]), _e(" " + values["unit"] if name != "r" else ""))
+        for name in ("bias", "rmse", "mae", "r")
+        if values.get(name) is not None
+    )
+    return (
+        "<div class='fig-stats'>%s<span class='fig-stats__note'>%s against %s over %d "
+        "overlapping point(s), %g to %g</span></div>"
+        % (
+            stats,
+            _e(values.get("of", "")),
+            _e(values.get("against", "")),
+            values.get("n_points", 0),
+            (values.get("overlap") or [0, 0])[0],
+            (values.get("overlap") or [0, 0])[1],
+        )
+    )
+
+
 def _figure_card(figure, index):
     sources = figure.get("provenance") or ["model_run"]
-    ribbon = "fig-ribbon--measured" if "measured" in sources else "fig-ribbon--computed"
-    label = " + ".join("model run" if s == "model_run" else s for s in sources)
+    preview = bool(figure.get("preview"))
+    ribbon = (
+        "fig-ribbon--preview"
+        if preview
+        else "fig-ribbon--measured"
+        if "measured" in sources
+        else "fig-ribbon--computed"
+    )
+    label = (
+        "preview, no data"
+        if preview
+        else " + ".join("model run" if s == "model_run" else s for s in sources)
+    )
     legend = "".join(
         "<span class='badge badge--%s'>%s</span> %s "
         % (
             "ok" if item["source"] == "measured" else "model",
             "measured" if item["source"] == "measured" else "model run",
-            _e("%s, %s, %d points" % (item["label"], item["origin"], item["n_points"])),
+            _e(
+                "%s, %s%s"
+                % (
+                    item["label"],
+                    item["origin"],
+                    "" if preview else ", %d points" % item["n_points"],
+                )
+            ),
         )
         for item in figure.get("series") or []
     )
+    agreement = _agreement_row(figure["agreement"]) if figure.get("agreement") else ""
     return (
-        "<div class='fig-card' data-anchor='fig-%d'>"
+        "<div class='fig-card%s' data-anchor='fig-%d'>"
         "<div class='fig-ribbon %s'>%s<span class='handle'>%s</span></div>"
-        "<div class='fig-body'><img alt='%s' src='%s'>"
+        "<div class='fig-body'><img alt='%s' src='%s'>%s"
         "<div class='fig-cap'>%s</div></div></div>"
         % (
+            " fig-card--preview" if preview else "",
             index,
             ribbon,
             _e(label),
             _e((figure.get("series") or [{}])[0].get("handle", "")),
             _e(figure.get("title") or "chart"),
             _e(figure.get("png", "")),
+            agreement,
             legend or _e(figure.get("title") or ""),
         )
     )

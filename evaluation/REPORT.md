@@ -19,44 +19,4 @@ The three SMRT tasks compare the adapter against the upstream `smrt` package dri
 
 ## Agent task set
 
-8 recorded runs over 2 tasks, 4 configurations, 1 repeat(s), on Qwen/Qwen3.5-122B-A10B.
-
-Every metric on this page is recomputed from the record by `evaluation/metrics/score.py`, never read off what the harness decided at run time. A call is illegal if the model card says so, whether or not the harness was switched on to notice; a marker resolves if the run actually gathered the evidence it names, whether or not the citation gate was there to check. Without that, an ablation would be comparing each configuration to its own opinion of itself.
-
-### The three ablations
-
-| config        | runs | completed | LLM calls | illegal calls | illegal executed | self-corrected | citations resolve | config match |
-| ------------- | ---- | --------- | --------- | ------------- | ---------------- | -------------- | ----------------- | ------------ |
-| full          | 2    | 100%      | 5.5       | 25%           | 0%               | 100%           | 100%              | 100%         |
-| no-harness    | 2    | 100%      | 3.0       | 0%            | 0%               | -              | 100%              | 100%         |
-| no-capability | 2    | 100%      | 7.0       | 50%           | 0%               | 100%           | 100%              | 100%         |
-| no-literature | 2    | 100%      | 3.0       | 0%            | 0%               | -              | 100%              | 83%          |
-
-### False-premise questions
-
-These are the questions whose stated configuration cannot exist: a snow density above solid ice, a theory paired with a microstructure it has no derivation for, a liquid-water dielectric model asked about frozen ground, a fitted operator asked outside the angles it was fitted over, and two models asked which is more sensitive when one answers in kelvin and the other in decibels.
-
-| config        | runs | handled | ran the illegal call | call refused | answer names the limit |
-| ------------- | ---- | ------- | -------------------- | ------------ | ---------------------- |
-| full          | 1    | 100%    | 0%                   | 0%           | 100%                   |
-| no-harness    | 1    | 100%    | 0%                   | 0%           | 100%                   |
-| no-capability | 1    | 100%    | 0%                   | 100%         | 100%                   |
-| no-literature | 1    | 100%    | 0%                   | 0%           | 100%                   |
-
-### Tier 1, reproducing the figures of the SMRT paper
-
-Configuration match is the fraction of the fields the paper actually states that the agent got right. The error column is what changes when only those fields are corrected and every free choice the agent made is left alone, so it reports the cost of the configuration mistakes rather than the cost of a snow depth the paper never fixed.
-
-| task                   | config        | runs | config match | mean error | unit | within tolerance |
-| ---------------------- | ------------- | ---- | ------------ | ---------- | ---- | ---------------- |
-| t1-smrt-fig6-memls-iba | full          | 1    | 100%         | 0.00       | K    | 100%             |
-| t1-smrt-fig6-memls-iba | no-harness    | 1    | 100%         | 0.00       | K    | 100%             |
-| t1-smrt-fig6-memls-iba | no-capability | 1    | 100%         | 0.00       | K    | 100%             |
-| t1-smrt-fig6-memls-iba | no-literature | 1    | 83%          | 16.83      | K    | 0%               |
-
-### Per task
-
-| task                     | suite | question quality | runs | completed | illegal calls | citations resolve |
-| ------------------------ | ----- | ---------------- | ---- | --------- | ------------- | ----------------- |
-| p-smrt-density-above-ice | probe | false_premise    | 4    | 100%      | 17%           | 100%              |
-| t1-smrt-fig6-memls-iba   | tier1 | complete         | 4    | 100%      | 25%           | 100%              |
+No agent run has been recorded yet. `python evaluation/runners/agent_tasks.py`
