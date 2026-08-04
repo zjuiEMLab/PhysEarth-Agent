@@ -84,19 +84,24 @@ piling models in.
 | `tau_omega` | soil and vegetation, passive microwave | brightness temperature, emissivity | yes |
 | `water_cloud` | soil and vegetation, active microwave | backscatter | yes |
 | `pywatershed` | catchment hydrology, PRMS | SWE, snowmelt, surface runoff, soil-zone and groundwater flow | yes |
+| `prosail` | vegetation, optical | canopy reflectance in four bands, NDVI | yes |
+| `pyet` | land surface, water balance | reference evapotranspiration, six formulations | yes |
 
-The first three answer what a surface looks like to a microwave sensor. `pywatershed` runs
+Every one of them is a `demo` model: it ships in this package and runs where the package
+runs. The `local` tier exists for a model an operator registers themselves, and nothing
+published here uses it.
+
+The first three answer what a surface looks like to a microwave sensor, `prosail` answers
+what the same vegetated surface looks like to an optical one, and `pyet` and `pywatershed`
+answer what the water in it is doing. `pywatershed` runs
 the PRMS process chain over the official five-year Sagehen Creek domain and answers what the
 water in that surface is doing, which is why the harness is not written around any one
 physics: the same parameter validation, quality control and citation rules apply to a
 hydrologic model that never emits a photon. See
 [`tasks/pywatershed-prms-3.0.0.md`](tasks/pywatershed-prms-3.0.0.md).
 
-It is also the worked example of a model whose host decides whether it can run. It declares
-`tier: local` with `requires_import: pywatershed`, so where the package is installed it runs,
-and where it is not it still registers with its whole capability declaration and says so
-plainly instead of failing obscurely. Its pinned Sagehen domain is fetched once into the
-state directory and checksummed; it is not redistributed here.
+Its pinned Sagehen domain is fetched once into the state directory and checksummed on first
+use; it is not redistributed here.
 
 ## Next steps
 

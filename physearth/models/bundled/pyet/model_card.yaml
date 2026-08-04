@@ -1,0 +1,151 @@
+name: pyet
+version: 1.5.0
+tier: demo
+entrypoint: adapter:run
+license: MIT
+citation: 'Vremec, M., Collenteur, R. A., and Birk, S.: pyet v1.3.1, a Python package for the estimation
+  of potential evapotranspiration, Geosci. Model Dev., 17, 7083-7103, 2024. https://doi.org/10.5194/gmd-17-7083-2024'
+description: 'Reference evapotranspiration from meteorology. Six published formulations of the same quantity,
+  from the full Penman-Monteith energy balance down to temperature-only approximations. Use it when a
+  question is about how much water leaves a surface, and choose the method deliberately: the formulations
+  disagree, and each is entitled to a different set of inputs.'
+parameters:
+  method:
+    type: string
+    unit: none
+    default: pm
+    enum:
+    - penman
+    - pm
+    - priestley_taylor
+    - makkink
+    - hargreaves
+    - oudin
+    description: Which published formulation to evaluate. penman and pm need wind, net radiation, pressure
+      and humidity; priestley_taylor needs net radiation and pressure; makkink needs solar radiation and
+      pressure; hargreaves needs the daily temperature range; oudin needs temperature and latitude alone.
+  air_temperature_c:
+    type: number
+    unit: degC
+    minimum: -40.0
+    maximum: 55.0
+    default: 20.0
+    description: Daily mean air temperature.
+  tmax_c:
+    type: number
+    unit: degC
+    minimum: -40.0
+    maximum: 60.0
+    default: 28.0
+    required: false
+    description: Daily maximum air temperature, used by hargreaves.
+  tmin_c:
+    type: number
+    unit: degC
+    minimum: -60.0
+    maximum: 45.0
+    default: 12.0
+    required: false
+    description: Daily minimum air temperature, used by hargreaves.
+  latitude_deg:
+    type: number
+    unit: degree
+    minimum: -66.5
+    maximum: 66.5
+    default: 40.0
+    description: Latitude, which sets extraterrestrial radiation for the temperature-only methods.
+  net_radiation_mj_m2_day:
+    type: number
+    unit: MJ m-2 d-1
+    minimum: -5.0
+    maximum: 35.0
+    default: 12.0
+    required: false
+    description: Net radiation at the surface.
+  solar_radiation_mj_m2_day:
+    type: number
+    unit: MJ m-2 d-1
+    minimum: 0.0
+    maximum: 45.0
+    default: 20.0
+    required: false
+    description: Incoming shortwave radiation, used by makkink.
+  wind_speed_m_s:
+    type: number
+    unit: m s-1
+    minimum: 0.0
+    maximum: 30.0
+    default: 2.0
+    required: false
+    description: Wind speed at two metres.
+  relative_humidity_pct:
+    type: number
+    unit: percent
+    minimum: 1.0
+    maximum: 100.0
+    default: 60.0
+    required: false
+    description: Relative humidity.
+  air_pressure_kpa:
+    type: number
+    unit: kPa
+    minimum: 50.0
+    maximum: 110.0
+    default: 101.3
+    required: false
+    description: Atmospheric pressure at the site.
+  sweep_parameter:
+    type: string
+    unit: none
+    default: none
+    required: false
+    enum:
+    - none
+    - air_temperature_c
+    - net_radiation_mj_m2_day
+    - wind_speed_m_s
+    - relative_humidity_pct
+    - latitude_deg
+    description: Numeric parameter to sweep instead of holding fixed.
+  sweep_start:
+    type: number
+    unit: same as the swept parameter
+    description: First value of the sweep.
+    minimum: -1000000000.0
+    maximum: 1000000000.0
+    required: false
+  sweep_stop:
+    type: number
+    unit: same as the swept parameter
+    description: Last value of the sweep.
+    minimum: -1000000000.0
+    maximum: 1000000000.0
+    required: false
+  sweep_points:
+    type: integer
+    unit: count
+    description: Number of points in the sweep.
+    minimum: 2
+    maximum: 60
+    default: 10
+    required: false
+combinations:
+- when:
+    method:
+    - oudin
+  allow:
+    wind_speed_m_s:
+    - 2.0
+  reason: The Oudin formulation uses temperature and latitude only. Supplying a wind speed suggests it
+    influences the result, and it does not.
+outputs:
+  et0_mm_day:
+    unit: mm d-1
+    valid_min: -2.0
+    valid_max: 25.0
+    description: Reference evapotranspiration.
+resource_profile:
+  typical_call_seconds: 0.01
+  needs_gpu: false
+  needs_external_data: false
+  notes: Closed-form expressions over pandas Series.

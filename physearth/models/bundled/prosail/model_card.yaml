@@ -1,0 +1,197 @@
+name: prosail
+version: 2.0.5
+tier: demo
+entrypoint: adapter:run
+license: GPL-3.0
+citation: 'Jacquemoud, S. and Baret, F.: PROSPECT, a model of leaf optical properties spectra, Remote
+  Sens. Environ., 34, 75-91, 1990. Verhoef, W.: Light scattering by leaf layers with application to canopy
+  reflectance modelling, the SAIL model, Remote Sens. Environ., 16, 125-141, 1984. Python wrappers: prosail
+  2.0.5.'
+description: 'Optical canopy reflectance. PROSPECT gives a leaf''s reflectance and transmittance from
+  its pigments, water and dry matter, and 4SAIL propagates that through a canopy of a given leaf area
+  index and angle distribution over a soil background, for a stated sun and view geometry. Returns reflectance
+  in the green, red, near infrared and shortwave infrared, and NDVI. This is the optical counterpart of
+  the microwave models: the same vegetated surface, a different kind of sensor.'
+parameters:
+  leaf_structure:
+    type: number
+    unit: none
+    minimum: 1.0
+    maximum: 3.0
+    default: 1.5
+    description: PROSPECT structure parameter N, the number of compact leaf layers.
+  chlorophyll_ug_cm2:
+    type: number
+    unit: ug cm-2
+    minimum: 0.0
+    maximum: 100.0
+    default: 40.0
+    description: Leaf chlorophyll a+b content, the dominant control on red reflectance.
+  carotenoid_ug_cm2:
+    type: number
+    unit: ug cm-2
+    minimum: 0.0
+    maximum: 30.0
+    default: 8.0
+    description: Leaf carotenoid content.
+  anthocyanin_ug_cm2:
+    type: number
+    unit: ug cm-2
+    minimum: 0.0
+    maximum: 40.0
+    default: 0.0
+    description: Leaf anthocyanin content, raised in stressed or senescing leaves.
+  brown_pigment:
+    type: number
+    unit: none
+    minimum: 0.0
+    maximum: 1.0
+    default: 0.0
+    description: Brown pigment fraction, zero for a green leaf.
+  equivalent_water_thickness_cm:
+    type: number
+    unit: cm
+    minimum: 0.0001
+    maximum: 0.1
+    default: 0.01
+    description: Leaf water, the control on shortwave infrared absorption.
+  dry_matter_g_cm2:
+    type: number
+    unit: g cm-2
+    minimum: 0.0001
+    maximum: 0.05
+    default: 0.009
+    description: Leaf dry matter per unit area.
+  leaf_area_index:
+    type: number
+    unit: m2 m-2
+    minimum: 0.0
+    maximum: 10.0
+    default: 3.0
+    description: One-sided leaf area per unit ground area. Above about 6 the canopy is optically closed
+      and reflectance saturates.
+  average_leaf_angle_deg:
+    type: number
+    unit: degree
+    minimum: 10.0
+    maximum: 80.0
+    default: 50.0
+    description: Mean leaf inclination angle of the ellipsoidal distribution.
+  hot_spot:
+    type: number
+    unit: none
+    minimum: 0.001
+    maximum: 1.0
+    default: 0.01
+    description: Hot spot parameter, the ratio of leaf size to canopy height.
+  solar_zenith_deg:
+    type: number
+    unit: degree
+    minimum: 0.0
+    maximum: 80.0
+    default: 30.0
+    description: Solar zenith angle.
+  view_zenith_deg:
+    type: number
+    unit: degree
+    minimum: 0.0
+    maximum: 80.0
+    default: 10.0
+    description: Viewing zenith angle.
+  relative_azimuth_deg:
+    type: number
+    unit: degree
+    minimum: 0.0
+    maximum: 180.0
+    default: 0.0
+    description: Relative azimuth between sun and sensor.
+  soil_brightness:
+    type: number
+    unit: none
+    minimum: 0.0
+    maximum: 2.0
+    default: 1.0
+    description: Soil brightness scaling of the background spectrum.
+  soil_moisture_fraction:
+    type: number
+    unit: none
+    minimum: 0.0
+    maximum: 1.0
+    default: 1.0
+    description: Soil wetness mixing weight; 1 is the dry soil spectrum and 0 the wet one.
+  sweep_parameter:
+    type: string
+    unit: none
+    default: none
+    required: false
+    enum:
+    - none
+    - leaf_area_index
+    - chlorophyll_ug_cm2
+    - equivalent_water_thickness_cm
+    - solar_zenith_deg
+    - average_leaf_angle_deg
+    - soil_brightness
+    description: Numeric parameter to sweep instead of holding fixed.
+  sweep_start:
+    type: number
+    unit: same as the swept parameter
+    description: First value of the sweep.
+    minimum: -1000000000.0
+    maximum: 1000000000.0
+    required: false
+  sweep_stop:
+    type: number
+    unit: same as the swept parameter
+    description: Last value of the sweep.
+    minimum: -1000000000.0
+    maximum: 1000000000.0
+    required: false
+  sweep_points:
+    type: integer
+    unit: count
+    description: Number of points in the sweep.
+    minimum: 2
+    maximum: 60
+    default: 10
+    required: false
+combinations:
+- when:
+    leaf_area_index:
+    - 0.0
+  allow:
+    hot_spot:
+    - 0.001
+  reason: With no leaves there is no canopy for a hot spot to form in, so the parameter has nothing to
+    act on and a non-default value would be misleading.
+outputs:
+  reflectance_green:
+    unit: none
+    valid_min: 0.0
+    valid_max: 1.0
+    description: Reflectance at 550 nm.
+  reflectance_red:
+    unit: none
+    valid_min: 0.0
+    valid_max: 1.0
+    description: Reflectance at 670 nm, the chlorophyll absorption band.
+  reflectance_nir:
+    unit: none
+    valid_min: 0.0
+    valid_max: 1.0
+    description: Reflectance at 800 nm, the near-infrared plateau.
+  reflectance_swir:
+    unit: none
+    valid_min: 0.0
+    valid_max: 1.0
+    description: Reflectance at 1600 nm, sensitive to leaf water.
+  ndvi:
+    unit: none
+    valid_min: -1.0
+    valid_max: 1.0
+    description: Normalised difference vegetation index from the 800 and 670 nm bands.
+resource_profile:
+  typical_call_seconds: 0.02
+  needs_gpu: false
+  needs_external_data: false
+  notes: Pure Python and numpy over 2101 one-nanometre bands.

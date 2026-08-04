@@ -1,0 +1,19 @@
+id: t0-pyet-et0
+suite: tier0
+model: pyet
+title: Reference evapotranspiration responds to energy and temperature
+rationale: >-
+  Evapotranspiration is an energy-limited process, so more net radiation and a warmer
+  atmosphere both raise it. These directions are definitional rather than empirical, and a
+  formulation that reversed either one would be wrong rather than merely different.
+parameters:
+  method: pm
+  air_temperature_c: 20.0
+  net_radiation_mj_m2_day: 12.0
+monotonic_sweep:
+  parameter: net_radiation_mj_m2_day
+  start: 1.0
+  stop: 25.0
+  points: 8
+  expect:
+    et0_mm_day: increasing

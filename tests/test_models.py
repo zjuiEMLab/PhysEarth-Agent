@@ -304,18 +304,34 @@ def test_a_source_cannot_forge_the_closing_delimiter():
     assert wrapped.count(untrusted.CLOSE) == 1
 
 
-def test_a_model_can_declare_the_dependency_that_decides_where_it_runs():
-    """`smrt` runs everywhere it is registered. `pywatershed` needs numpy 2 and a Python
-    this deployment does not have, so it must register with its full declaration and say
-    plainly why it cannot run, rather than be rejected or fail obscurely at call time."""
+def test_nothing_we_ship_is_a_local_model():
+    """`local` means the operator supplies the model themselves. A released package is a
+    package of demo models; a local one inside it would be a contradiction."""
     from physearth.models import registry
 
-    entry = registry.get("pywatershed")
-    assert entry is not None, "a model whose dependency is absent must still register"
-    assert entry.tier == "local"
-    assert entry.requires == "pywatershed"
-    assert entry.runnable is entry.available
-    assert not any(r["directory"].endswith("pywatershed") for r in registry.rejected())
+    rows = registry.summary()
+    assert rows, "no model registered"
+    assert {r["tier"] for r in rows} == {"demo"}
+    assert all(r["runnable"] for r in rows)
+    assert not registry.rejected()
+
+
+def test_the_tier_mechanism_still_serves_a_model_an_operator_registers():
+    """The tier is not removed, it is simply not used by anything we publish."""
+    from physearth.models import contract, registry
+
+    card = {
+        "name": "someone_elses", "version": "1", "description": "d", "citation": "c",
+        "license": "MIT", "tier": "local", "entrypoint": "adapter:run",
+        "requires_import": "a_module_that_is_not_installed",
+        "parameters": {"a": {"type": "number", "unit": "none", "description": "d",
+                             "minimum": 0, "maximum": 1}},
+        "outputs": {"y": {"unit": "none", "description": "d"}},
+    }
+    assert contract.validate_card(card) == []
+    model = registry.Model(card, run=None, source="test")
+    assert not model.available and not model.runnable
+    assert "not installed in this environment" in model.unavailable_reason
 
 
 def test_an_unavailable_model_still_publishes_its_whole_declaration():

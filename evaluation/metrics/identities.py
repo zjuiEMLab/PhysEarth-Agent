@@ -86,6 +86,16 @@ def albedo_is_scattering_over_extinction(spec, series, run):
     return abs(albedo - expected) <= TIGHT, "albedo %.9f vs ks/(ks+ka) %.9f" % (albedo, expected)
 
 
+def near_infrared_exceeds_red_for_a_green_canopy(spec, series, run):
+    """The red edge. A green canopy absorbs red and scatters near infrared, and the gap
+    between them is what every vegetation index is built on."""
+    red = _first(series, "reflectance_red")
+    nir = _first(series, "reflectance_nir")
+    if red is None or nir is None:
+        return False, "the run did not return both bands"
+    return nir > red * 3.0, "nir %.4f, red %.4f, ratio %.2f" % (nir, red, nir / red if red else 0)
+
+
 REGISTRY = {
     name: value
     for name, value in list(globals().items())

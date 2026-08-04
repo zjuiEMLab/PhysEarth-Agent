@@ -1,0 +1,24 @@
+id: t0-prosail-canopy
+suite: tier0
+model: prosail
+title: Optical canopy reflectance behaves the way vegetation does
+rationale: >-
+  Two statements that hold for any correct implementation of PROSPECT and SAIL. A green
+  canopy reflects far more in the near infrared than in the red, which is the entire basis
+  of every vegetation index. And adding leaves cannot lower NDVI: it rises and then
+  saturates once the canopy closes. The direction of red reflectance alone is deliberately
+  not asserted: it falls overall as leaves cover the soil, but not monotonically, because
+  at low leaf area the soil background and the canopy geometry compete. Pinning it would be
+  pinning an artefact.
+parameters:
+  leaf_area_index: 3.0
+  chlorophyll_ug_cm2: 40.0
+monotonic_sweep:
+  parameter: leaf_area_index
+  start: 0.1
+  stop: 7.0
+  points: 8
+  expect:
+    ndvi: increasing
+identities:
+  - near_infrared_exceeds_red_for_a_green_canopy
