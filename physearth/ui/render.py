@@ -415,12 +415,20 @@ def _event_card(event, index):
     )
 
 
-def _meter(label, value, cap, tone=""):
+def _meter(label, value, cap, tone="", note=""):
     pct = 0 if not cap else min(100, round(100.0 * value / cap))
     return (
         "<div class='meter'><div class='meter__head'><span>%s</span><b>%s / %s</b></div>"
         "<div class='meter__track'><div class='meter__fill %s' style='width:%d%%'></div></div>"
-        "</div>" % (_e(label), value, cap, tone, pct)
+        "%s</div>"
+        % (
+            _e(label),
+            value,
+            cap,
+            tone,
+            pct,
+            "<div class='meter__note'>%s</div>" % _e(note) if note else "",
+        )
     )
 
 
@@ -453,14 +461,26 @@ def trace(events, state, running=False):
             )
 
     used, cap = budget.used()
+    # The meters read the session, not the turn: the budget that actually stops the
+    # conversation is cumulative, and so is the evidence the citation check resolves against.
+    session = state.get("session") or state
+    turns = session.get("turns", 0)
     meters = "".join(
         [
-            _meter("model calls", state.get("model_calls", 0), state.get("max_model_calls", 1)),
+            _meter(
+                "model calls",
+                session.get("model_calls", 0),
+                session.get("max_model_calls", 1),
+                note="%d this question, cap %d"
+                % (state.get("model_calls", 0), state.get("max_model_calls", 0)),
+            ),
             _meter(
                 "tool calls",
-                state.get("tool_calls", 0),
-                state.get("max_tool_calls", 1),
+                session.get("tool_calls", 0),
+                session.get("max_tool_calls", 1),
                 "is-violet",
+                note="%d this question, cap %d"
+                % (state.get("tool_calls", 0), state.get("max_tool_calls", 0)),
             ),
             _meter(
                 "context",
@@ -468,27 +488,35 @@ def trace(events, state, running=False):
                 state.get("context_ceiling", 1),
                 "is-ok",
             ),
-            _meter("hourly quota", used, cap, "is-ok"),
+            _meter("hourly quota", used, cap, "is-ok", note="shared by every visitor"),
         ]
     )
     counters = "".join(
         [
+            "<span class='badge badge--mono'>%d question%s in this session</span>"
+            % (turns, "" if turns == 1 else "s"),
             "<span class='badge badge--%s'>%d blocked</span>"
-            % ("block" if state.get("interventions") else "mute", state.get("interventions", 0)),
+            % (
+                "block" if session.get("interventions") else "mute",
+                session.get("interventions", 0),
+            ),
             "<span class='badge badge--%s'>%d boundary</span>"
-            % ("warn" if state.get("boundary_flags") else "mute", state.get("boundary_flags", 0)),
+            % (
+                "warn" if session.get("boundary_flags") else "mute",
+                session.get("boundary_flags", 0),
+            ),
             "<span class='badge badge--%s'>%d QC failure%s</span>"
             % (
-                "block" if state.get("qc_failures") else "ok",
-                state.get("qc_failures", 0),
-                "" if state.get("qc_failures") == 1 else "s",
+                "block" if session.get("qc_failures") else "ok",
+                session.get("qc_failures", 0),
+                "" if session.get("qc_failures") == 1 else "s",
             ),
             "<span class='badge badge--src'>%d model run%s</span>"
-            % (state.get("model_runs", 0), "" if state.get("model_runs") == 1 else "s"),
+            % (session.get("model_runs", 0), "" if session.get("model_runs") == 1 else "s"),
             "<span class='badge badge--src'>%d section%s read</span>"
             % (
-                len(state.get("sections_read") or ()),
-                "" if len(state.get("sections_read") or ()) == 1 else "s",
+                len(session.get("sections_read") or ()),
+                "" if len(session.get("sections_read") or ()) == 1 else "s",
             ),
         ]
     )
@@ -697,10 +725,13 @@ def _rejected_card(item):
     )
 
 
-def evidence(state, figures=None, sections=None, datasets=None):
-    figures = list(figures or [])
-    sections = sorted(sections or [])
-    datasets = sorted(datasets or [])
+def evidence(session=None, figures=None, sections=None, datasets=None):
+    """Everything the conversation holds. Defaults come from the session, so a figure
+    drawn in the first question is still on screen during the third."""
+    session = session or {}
+    figures = list(session.get("figures") or [] if figures is None else figures)
+    sections = sorted(session.get("sections_read") or () if sections is None else sections)
+    datasets = sorted(session.get("datasets_read") or () if datasets is None else datasets)
 
     if figures:
         figures_pane = "".join(_figure_card(fig, n) for n, fig in enumerate(figures, 1))

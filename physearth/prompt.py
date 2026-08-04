@@ -1,4 +1,5 @@
 from physearth import knowledge, reference, untrusted
+from physearth import session as session_state
 from physearth.models import registry
 
 ROLE = """\
@@ -84,18 +85,21 @@ def catalogue_section():
 
 
 def status_block(state):
-    read = sorted(state.get("sections_read", []))
-    runs = state.get("model_runs", 0)
+    session = state.get("session") or {}
     return (
-        "Run status. LLM calls used: %d/%d. Tool calls used: %d/%d. Physical model runs: %d. "
-        "Sections read: %s."
+        "Run status. This question has used %d/%d LLM calls and %d/%d tool calls. This "
+        "conversation has used %d/%d LLM calls and %d/%d tool calls in total, over %d "
+        "question(s)."
         % (
             state.get("model_calls", 0),
             state.get("max_model_calls", 0),
             state.get("tool_calls", 0),
             state.get("max_tool_calls", 0),
-            runs,
-            ", ".join(read) if read else "none",
+            session.get("model_calls", 0),
+            session.get("max_model_calls", 0),
+            session.get("tool_calls", 0),
+            session.get("max_tool_calls", 0),
+            session.get("turns", 0),
         )
     )
 
@@ -113,5 +117,8 @@ def build(state=None):
         STYLE,
     ]
     if state:
+        held = session_state.held_block(state.get("session"))
+        if held:
+            blocks.append(held)
         blocks.append(status_block(state))
     return "\n\n".join(blocks)

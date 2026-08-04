@@ -300,7 +300,7 @@ def list_models(model=None):
     )
 
 
-def run_model(model, parameters=None, **extra):
+def run_model(model, parameters=None, _owner=None, **extra):
     parameters = dict(parameters or {})
     parameters.update(extra)
     entry = registry.get(model)
@@ -358,7 +358,8 @@ def run_model(model, parameters=None, **extra):
             "series": result.get("series"),
             "points": points,
             "units": units,
-        }
+        },
+        _owner,
     )
     summary = "%s ran in %.2fs: %d point(s)%s. Quality control %s." % (
         model,
@@ -391,7 +392,7 @@ def run_model(model, parameters=None, **extra):
     )
 
 
-def read_reference_dataset(dataset=None, filters=None):
+def read_reference_dataset(dataset=None, filters=None, _owner=None):
     if dataset in (None, ""):
         return _ok(
             "%d reference dataset(s) available." % len(reference.slugs()),
@@ -425,7 +426,8 @@ def read_reference_dataset(dataset=None, filters=None):
             "columns": reference.columns(dataset, indices),
             "units": {name: spec["unit"] for name, spec in card["columns"].items()},
             "n_rows": len(indices),
-        }
+        },
+        _owner,
     )
     return _ok(
         "%s: %d row(s) match. Every value is a measurement."
@@ -446,7 +448,7 @@ def read_reference_dataset(dataset=None, filters=None):
     )
 
 
-def plot(series=None, kind="line", title=None, x_label=None, y_label=None):
+def plot(series=None, kind="line", title=None, x_label=None, y_label=None, _owner=None):
     spec = {
         "series": series or [],
         "kind": kind,
@@ -454,7 +456,7 @@ def plot(series=None, kind="line", title=None, x_label=None, y_label=None):
         "x_label": x_label,
         "y_label": y_label,
     }
-    resolved, problems = plotting.resolve(spec)
+    resolved, problems = plotting.resolve(spec, _owner)
     if problems:
         return {
             "status": "needs_input",
@@ -497,11 +499,19 @@ DISPATCH = {
     "plot": plot,
 }
 
+# Tools that read or write the result store. The session that owns a handle is supplied
+# by the caller, never by the model, so a leading underscore is stripped from whatever
+# the model sent before dispatch.
+OWNER_SCOPED = ("run_model", "read_reference_dataset", "plot")
 
-def call(name, arguments):
+
+def call(name, arguments, owner=None):
     handler = DISPATCH.get(name)
     if handler is None:
         return _fail("Unknown tool %r. Available tools: %s." % (name, ", ".join(DISPATCH)))
+    arguments = {k: v for k, v in (arguments or {}).items() if not str(k).startswith("_")}
+    if name in OWNER_SCOPED:
+        arguments["_owner"] = owner
     try:
         return handler(**arguments)
     except TypeError as exc:

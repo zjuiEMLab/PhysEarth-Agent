@@ -4,14 +4,15 @@ import time
 from openai import OpenAI
 
 from physearth import budget, config, harness, prompt, tools
+from physearth import session as session_state
 
-MAX_MODEL_CALLS = 12
-MAX_TOOL_CALLS = 10
+MAX_MODEL_CALLS = session_state.MAX_MODEL_CALLS
+MAX_TOOL_CALLS = session_state.MAX_TOOL_CALLS
 EMPTY_RESPONSE_RETRIES = 3
 RETRY_BACKOFF_S = 1.5
 RATE_LIMIT_FACTOR = 2
 MAX_OUTPUT_TOKENS = 2048
-CONTEXT_CEILING_TOKENS = 96000
+CONTEXT_CEILING_TOKENS = session_state.CONTEXT_CEILING_TOKENS
 
 CATALOGUE = [
     {
@@ -47,27 +48,14 @@ def resolve_model(name):
     return name if name in known else default_model()
 
 
-def new_state(model=None):
-    return {
-        "model": model or default_model(),
-        "phase": "idle",
-        "model_calls": 0,
-        "tool_calls": 0,
-        "max_model_calls": MAX_MODEL_CALLS,
-        "max_tool_calls": MAX_TOOL_CALLS,
-        "context_ceiling": CONTEXT_CEILING_TOKENS,
-        "sections_read": set(),
-        "model_runs": 0,
-        "models_run": set(),
-        "datasets_read": set(),
-        "figures": [],
-        "qc_failures": 0,
-        "rejected_calls": 0,
-        "interventions": 0,
-        "boundary_flags": 0,
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-    }
+def new_session(model=None):
+    return session_state.new_session(resolve_model(model))
+
+
+def new_state(model=None, session=None):
+    if session is None:
+        return session_state.new_state(model=resolve_model(model))
+    return session_state.new_state(session, resolve_model(model or session.get("model")))
 
 
 def _client():
@@ -176,6 +164,28 @@ def _messages(question, history, state):
     return messages
 
 
+def _handle_line(name, data):
+    """One line describing a stored result, for the session's `already held` block."""
+    if name == "run_model":
+        axis = data.get("axis") or {}
+        span = (
+            "%d points over %s" % (data.get("n_points", 0), axis["name"])
+            if axis.get("name")
+            else "%d point(s)" % data.get("n_points", 0)
+        )
+        return "%s@%s, %s, columns %s" % (
+            data.get("model"),
+            data.get("version"),
+            span,
+            ", ".join(sorted((data.get("series_summary") or {}))) or "none",
+        )
+    return "measured %s, %d row(s), columns %s" % (
+        data.get("dataset"),
+        data.get("n_rows", 0),
+        ", ".join(sorted((data.get("summary") or {}))) or "none",
+    )
+
+
 def _record_tool_result(name, result, state, events):
     for key in result.get("citations", []):
         state["sections_read"].add(key)
@@ -186,7 +196,7 @@ def _record_tool_result(name, result, state, events):
         for row in data.get("models") or []:
             state["models_run"].add("%s@%s" % (row["name"], row["version"]))
     for finding in data.get("external_source_findings") or []:
-        state["boundary_flags"] += 1
+        session_state.bump(state, "boundary_flags")
         events.append(
             _event(
                 "untrusted_content",
@@ -201,19 +211,28 @@ def _record_tool_result(name, result, state, events):
             state["datasets_read"].add(row["slug"])
     if name == "run_model":
         if result["status"] == "success":
-            state["model_runs"] += 1
+            session_state.bump(state, "model_runs")
             state["models_run"].add("%s@%s" % (data["model"], data["version"]))
             if result.get("qc") and not result["qc"]["passed"]:
-                state["qc_failures"] += 1
+                session_state.bump(state, "qc_failures")
         elif result["status"] == "needs_input":
-            state["rejected_calls"] += 1
+            session_state.bump(state, "rejected_calls")
+    if data.get("handle") and result["status"] == "success":
+        session_state.remember_handle(state, data["handle"], _handle_line(name, data))
     if name == "plot" and result["status"] == "success":
-        state["figures"].append((result.get("ui") or {})["figure"])
+        session_state.remember_figure(state, (result.get("ui") or {})["figure"])
 
 
-def stream(question, history=None, model=None):
-    """Run one turn, yielding (answer, events, state) every time something happens."""
-    state = new_state(resolve_model(model))
+def stream(question, history=None, model=None, session=None):
+    """Run one turn, yielding (answer, events, state) every time something happens.
+
+    `session` carries everything the conversation has already read, run and stored. It
+    is created by the caller and lives until the visitor clears the conversation.
+    """
+    session = new_session(model) if session is None else session
+    session["model"] = resolve_model(model or session.get("model"))
+    session["turns"] = session.get("turns", 0) + 1
+    state = session_state.new_state(session, session["model"])
     events = []
     answer = ""
 
@@ -229,10 +248,17 @@ def stream(question, history=None, model=None):
     model_id = state["model"]
 
     while True:
-        session_budget = harness.check_budget(state)
-        if not session_budget["passed"]:
-            events.append(_event("harness_stop", rule="budget", reason=session_budget["reason"]))
-            answer = answer or "Stopped: %s." % session_budget["reason"]
+        spend = harness.check_budget(state)
+        if not spend["passed"]:
+            events.append(
+                _event("harness_stop", rule="budget", scope=spend["scope"], reason=spend["reason"])
+            )
+            answer = answer or (
+                "Stopped: %s. Clear the conversation to start a fresh budget."
+                % spend["reason"]
+                if spend["scope"] == "session"
+                else "Stopped: %s. Ask a narrower follow-up question." % spend["reason"]
+            )
             break
 
         state["phase"] = "calling_model"
@@ -318,9 +344,9 @@ def stream(question, history=None, model=None):
                 )
             break
 
-        state["model_calls"] += 1
-        state["prompt_tokens"] += completion.prompt_tokens or 0
-        state["completion_tokens"] += completion.completion_tokens or 0
+        session_state.bump(state, "model_calls")
+        session_state.bump(state, "prompt_tokens", completion.prompt_tokens or 0)
+        session_state.bump(state, "completion_tokens", completion.completion_tokens or 0)
         events.append(
             _event(
                 "model_call",
@@ -361,12 +387,12 @@ def stream(question, history=None, model=None):
                 events.pop()
 
                 started_tool = time.perf_counter()
-                result = tools.call(name, arguments)
-                state["tool_calls"] += 1
+                result = tools.call(name, arguments, owner=session["id"])
+                session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
 
                 if result["status"] == "needs_input":
-                    state["interventions"] += 1
+                    session_state.bump(state, "interventions")
                     events.append(
                         _event(
                             "harness_block",
@@ -409,7 +435,7 @@ def stream(question, history=None, model=None):
         answer = completion.content or ""
         check, correction = harness.review_final(answer, state)
         if correction and state["interventions"] < harness.MAX_INTERVENTIONS:
-            state["interventions"] += 1
+            session_state.bump(state, "interventions")
             events.append(
                 _event(
                     "harness_block",
@@ -437,9 +463,9 @@ def stream(question, history=None, model=None):
     yield answer, events, state
 
 
-def run(question, history=None, model=None):
+def run(question, history=None, model=None, session=None):
     """Blocking form of stream. Returns (answer, events, state)."""
-    last = ("", [], new_state(resolve_model(model)))
-    for step in stream(question, history, model):
+    last = ("", [], new_state(model, session))
+    for step in stream(question, history, model, session):
         last = step
     return last

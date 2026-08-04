@@ -78,7 +78,7 @@ def _origin(payload):
     return "%s@%s" % (payload.get("model", "?"), payload.get("version", "?"))
 
 
-def resolve(spec):
+def resolve(spec, owner=None):
     """Return (series, problems). Each series carries its own arrays and provenance."""
     problems = []
     raw = spec.get("series") or []
@@ -93,7 +93,7 @@ def resolve(spec):
             problems.append("series %d is not an object." % index)
             continue
         handle = item.get("handle")
-        payload = results.get(handle) if handle else None
+        payload = results.get(handle, owner) if handle else None
         if payload is None:
             problems.append(
                 "series %d: %r is not a live result handle. Use the handle returned by "

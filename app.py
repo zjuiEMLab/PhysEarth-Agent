@@ -9,14 +9,11 @@ _REPORT = diagnostics.collect()
 print(diagnostics.render(_REPORT), flush=True)
 
 
-def _accumulated(turns):
-    """Everything the session has read, run and drawn, oldest turn first."""
-    figures, sections, datasets = [], set(), set()
-    for turn in turns or []:
-        figures.extend(turn["state"].get("figures") or [])
-        sections |= set(turn["state"].get("sections_read") or ())
-        datasets |= set(turn["state"].get("datasets_read") or ())
-    return figures, sections, datasets
+def _session(box, model_id):
+    """One session per visitor, held in gr.State. Nothing about it is module level."""
+    if isinstance(box, dict) and box.get("id"):
+        return box
+    return agent.new_session(model_id)
 
 
 FAULT_RULES = ("upstream", "quota", "withdrawn", "global_budget")
@@ -39,17 +36,17 @@ def _archive(turn, state, events, question, answer):
         "faulted": _faulted(events),
         "state": {
             "model_runs": state.get("model_runs", 0),
-            "sections_read": sorted(state.get("sections_read") or ()),
-            "datasets_read": sorted(state.get("datasets_read") or ()),
-            "figures": list(state.get("figures") or []),
+            "model_calls": state.get("model_calls", 0),
+            "tool_calls": state.get("tool_calls", 0),
             "interventions": state.get("interventions", 0),
         },
     }
 
 
-def respond(question, turns, model_id):
+def respond(question, turns, box, model_id):
     question = (question or "").strip()
     turns = list(turns or [])
+    session = _session(box, model_id)
     if not question:
         yield (
             gr.update(),
@@ -59,6 +56,7 @@ def respond(question, turns, model_id):
             gr.update(),
             gr.update(),
             turns,
+            session,
             "",
         )
         return
@@ -72,22 +70,22 @@ def respond(question, turns, model_id):
         if not t.get("faulted")
         for role, content in (("user", t["question"]), ("assistant", t["answer"]))
     ]
-    figures, sections, datasets = _accumulated(turns)
 
     yield (
         render.hero(model_id, running=True, status="Running"),
         render.conversation_head(index),
         render.history(turns),
         render.live(question, "", running=True),
-        render.trace([], agent.new_state(model_id), running=True),
-        render.evidence({}, figures, sections, datasets),
+        render.trace([], agent.new_state(model_id, session), running=True),
+        render.evidence(session),
         turns,
+        session,
         "",
     )
 
-    answer, events, state = "", [], agent.new_state(model_id)
+    answer, events, state = "", [], agent.new_state(model_id, session)
     try:
-        for answer, events, state in agent.stream(question, seen, model_id):
+        for answer, events, state in agent.stream(question, seen, model_id, session):
             running = state.get("phase") != "done"
             yield (
                 gr.update(),
@@ -95,49 +93,50 @@ def respond(question, turns, model_id):
                 gr.update(),
                 render.live(question, answer, running=running),
                 render.trace(events, state, running=running),
-                render.evidence(
-                    state,
-                    figures + list(state.get("figures") or []),
-                    sections | set(state.get("sections_read") or ()),
-                    datasets | set(state.get("datasets_read") or ()),
-                ),
+                render.evidence(session),
                 gr.update(),
+                session,
                 "",
             )
     except Exception as exc:
         answer = "The run failed: %s: %s" % (type(exc).__name__, exc)
         events = events or []
-        state = state or agent.new_state(model_id)
+        state = state or agent.new_state(model_id, session)
 
     turns = turns + [_archive(index, state, events, question, answer)]
-    figures, sections, datasets = _accumulated(turns)
     yield (
         render.hero(model_id, running=False, status="Idle - %d events last run" % len(events)),
         render.conversation_head(len(turns)),
         render.history(turns),
         render.live("", ""),
         render.trace(events, state, running=False),
-        render.evidence(state, figures, sections, datasets),
+        render.evidence(session),
         turns,
+        session,
         "",
     )
 
 
 def reset(model_id):
+    """Clearing the conversation drops the evidence and the session budget with it. The
+    hourly deployment quota is shared across visitors and deliberately survives."""
+    session = agent.new_session(model_id)
     return (
         render.hero(model_id, running=False, status="Idle"),
         render.conversation_head(0),
         render.history([]),
         render.live("", ""),
-        render.trace([], agent.new_state(model_id), running=False),
-        render.evidence({}, [], set(), set()),
+        render.trace([], agent.new_state(model_id, session), running=False),
+        render.evidence(session),
         [],
+        session,
         "",
     )
 
 
 with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     turns_state = gr.State([])
+    session_box = gr.State(None)
 
     with gr.Column(elem_id="pe-app"):
         hero = gr.HTML(render.hero(), elem_classes=["pe-slot"])
@@ -183,10 +182,12 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         trace_slot,
         evidence_slot,
         turns_state,
+        session_box,
         question,
     ]
-    send.click(respond, [question, turns_state, model_bridge], outputs)
-    question.submit(respond, [question, turns_state, model_bridge], outputs)
+    inputs = [question, turns_state, session_box, model_bridge]
+    send.click(respond, inputs, outputs)
+    question.submit(respond, inputs, outputs)
     clear.click(reset, [model_bridge], outputs)
 
 if __name__ == "__main__":

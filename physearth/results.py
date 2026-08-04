@@ -6,6 +6,11 @@ returns a handle plus a bounded preview, and the full arrays stay here for whate
 consumes them next.
 
 Handles are unguessable and the store is capped, so nothing accumulates.
+
+The store is process wide because one Studio process serves every visitor, so each
+entry records the session that produced it. A handle only reads back for its own
+session, and eviction takes that session's oldest entry first, so a busy visitor
+cannot push another visitor's results out from under them.
 """
 
 import statistics
@@ -13,25 +18,37 @@ import threading
 import uuid
 from collections import OrderedDict
 
-MAX_STORED = 200
+MAX_STORED = 400
+MAX_PER_OWNER = 40
 PREVIEW_POINTS = 12
 
 _LOCK = threading.Lock()
 _STORE = OrderedDict()
 
 
-def put(payload):
+def _evict(owner):
+    """Oldest first, within the owner that just grew, then globally."""
+    mine = [h for h, entry in _STORE.items() if entry["owner"] == owner]
+    while len(mine) > MAX_PER_OWNER:
+        del _STORE[mine.pop(0)]
+    while len(_STORE) > MAX_STORED:
+        _STORE.popitem(last=False)
+
+
+def put(payload, owner=None):
     handle = "res_" + uuid.uuid4().hex[:12]
     with _LOCK:
-        _STORE[handle] = payload
-        while len(_STORE) > MAX_STORED:
-            _STORE.popitem(last=False)
+        _STORE[handle] = {"owner": owner, "payload": payload}
+        _evict(owner)
     return handle
 
 
-def get(handle):
+def get(handle, owner=None):
     with _LOCK:
-        return _STORE.get(handle)
+        entry = _STORE.get(handle)
+    if entry is None or entry["owner"] != owner:
+        return None
+    return entry["payload"]
 
 
 def size():

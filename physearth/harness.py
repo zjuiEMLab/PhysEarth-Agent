@@ -72,11 +72,30 @@ def evidence_correction(result):
 
 
 def check_budget(state):
-    if state["model_calls"] >= state["max_model_calls"]:
-        return {"rule": "budget", "passed": False, "reason": "model call budget reached"}
-    if state["tool_calls"] >= state["max_tool_calls"]:
-        return {"rule": "budget", "passed": False, "reason": "tool call budget reached"}
-    return {"rule": "budget", "passed": True, "reason": ""}
+    """Two ceilings. The turn's is soft: it ends this answer and the visitor can ask
+    again. The session's is hard: it ends the conversation until the session is
+    cleared, and it is what actually protects the shared quota."""
+    session = state.get("session") or {}
+    for name, label in (("model_calls", "model call"), ("tool_calls", "tool call")):
+        cap = session.get("max_%s" % name)
+        if cap is not None and session.get(name, 0) >= cap:
+            return {
+                "rule": "budget",
+                "passed": False,
+                "scope": "session",
+                "reason": "session %s budget reached (%d of %d)"
+                % (label, session.get(name, 0), cap),
+            }
+    for name, label in (("model_calls", "model call"), ("tool_calls", "tool call")):
+        if state.get(name, 0) >= state["max_%s" % name]:
+            return {
+                "rule": "budget",
+                "passed": False,
+                "scope": "turn",
+                "reason": "%s budget for this question reached (%d of %d)"
+                % (label, state.get(name, 0), state["max_%s" % name]),
+            }
+    return {"rule": "budget", "passed": True, "scope": "", "reason": ""}
 
 
 def review_final(text, state):
