@@ -325,13 +325,38 @@ function peBoot() {
     var hint = document.querySelector("#pe-chat-scroll .pane-empty");
     if (hint && hint.parentNode) hint.parentNode.removeChild(hint);
     autoScroll();
+
+    /* Empty the box on the next turn of the event loop, not now. Gradio reads the value
+       during its own bubble-phase handler for this same click; clearing it here, in the
+       capture phase, would hand the server an empty question. The timeout runs after that
+       handler, and it deliberately does not dispatch an input event: Gradio's store keeps
+       the text it already captured, and the first frame back sets the box to empty anyway,
+       so the two agree. */
+    setTimeout(function () {
+      var box = textarea();
+      if (box) box.value = "";
+    }, 0);
   }
+
+  var TRACE_EMPTY =
+    "<div class='pane-empty'><div class='pane-empty__title'>Nothing has run yet</div>" +
+    "<div class='pane-empty__hint'>Every model call, every tool call and every system " +
+    "refusal appears here as it happens.</div></div>";
 
   function optimisticClear() {
     pendingUntil = 0;
     document.body.classList.remove("is-reasoning");
     var slots = document.querySelectorAll("#pe-chat-scroll .pe-slot");
     for (var i = 0; i < slots.length; i++) slots[i].innerHTML = "<div class='msg-group'></div>";
+    /* The run trace is the panel the visitor is watching, so it has to empty with the
+       conversation rather than a round trip later. Its meters keep their last values for
+       that moment; the frame coming back replaces the whole panel. */
+    var trace = document.querySelector(".pe-panel--trace .subpanel__scroll");
+    if (trace) trace.innerHTML = TRACE_EMPTY;
+    var approve = document.querySelector(".approve");
+    if (approve) approve.setAttribute("hidden", "");
+    var box = textarea();
+    if (box) box.value = "";
   }
 
   function escapeHtml(value) {

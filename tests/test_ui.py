@@ -319,3 +319,28 @@ def test_a_turn_can_speak_in_more_than_one_block():
 def test_the_opening_hint_steps_aside_for_a_question_in_flight():
     assert "pane-empty" in render.history([])
     assert "pane-empty" not in render.history([], pending=True)
+
+
+def test_the_optimistic_paint_covers_the_box_and_the_trace():
+    """The client paints the consequence of a click before the server answers. Whatever it
+    paints has to be a copy of what the server would have sent, or the two disagree for a
+    moment and the visitor sees a flicker."""
+    from physearth import session
+    from physearth.ui import theme
+
+    js = theme.js()
+    assert "optimisticSend" in js and "optimisticClear" in js
+
+    # Sending clears the composer, but only after Gradio has read it.
+    assert "setTimeout(function () {" in js
+    assert 'box.value = ""' in js
+
+    # Clearing empties the transcript, the run trace and the approval bar at once.
+    assert ".pe-panel--trace .subpanel__scroll" in js
+    assert "TRACE_EMPTY" in js
+
+    empty_trace = render.trace([], agent.new_state("m", session.new_session("m")))
+    for phrase in ("Nothing has run yet",
+                   "Every model call, every tool call and every system refusal appears here"):
+        assert phrase in empty_trace, "the server no longer says this"
+        assert phrase.split(" refusal")[0] in js, "the client fake has drifted from the server"
