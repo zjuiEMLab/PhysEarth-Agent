@@ -1,0 +1,99 @@
+name: pywatershed
+version: "3.0.0"
+tier: local
+requires_import: pywatershed
+entrypoint: adapter:run
+license: CC0-1.0
+citation: >-
+  McCreight, J. L., Markstrom, S. L., Hay, L. E., et al.: pywatershed, a Python
+  implementation of the Precipitation-Runoff Modeling System (PRMS), U.S. Geological
+  Survey software release 3.0.0, 2026. https://github.com/DOI-USGS/pywatershed
+  Pinned to release 3.0.0, commit 41707c16f1fac09e2e4d4ecb9e3bf6bf1948885e.
+description: >-
+  Catchment hydrology. Runs the PRMS process chain over the official Sagehen Creek test
+  domain in the Sierra Nevada: solar geometry and atmosphere drive a canopy, a snowpack, a
+  surface runoff scheme, a soil zone and a groundwater reservoir on daily time steps. Use it
+  for how precipitation becomes snowpack, snowmelt, runoff and groundwater flow over a water
+  year. It is the one registered model that is not microwave: where the others say what a
+  surface would look like to a sensor, this one says what the water in it is doing. It needs
+  numpy 2 and Python 3.12 or 3.13, so it registers everywhere and runs only where those are
+  present.
+
+parameters:
+  variable:
+    type: string
+    unit: none
+    description: >-
+      Which simulated quantity to return as the series. Each is a basin total or mean over
+      the Sagehen hydrologic response units.
+    enum:
+      - snowpack_water_equivalent
+      - snowmelt
+      - surface_runoff
+      - soil_zone_flow
+      - groundwater_flow
+      - precipitation
+    default: snowpack_water_equivalent
+  water_year_start:
+    type: integer
+    unit: year
+    description: >-
+      First water year of the run. The pinned Sagehen fixture covers water years 1981 to
+      1985, a water year running from 1 October to 30 September.
+    minimum: 1981
+    maximum: 1985
+    default: 1981
+  water_year_end:
+    type: integer
+    unit: year
+    description: Last water year of the run, inclusive.
+    minimum: 1981
+    maximum: 1985
+    default: 1981
+  aggregation:
+    type: string
+    unit: none
+    description: >-
+      How the daily basin series is reported. Daily is the model's native step; monthly and
+      water-year means are aggregates of it and are not independent evidence.
+    enum: [daily, monthly, water_year]
+    default: monthly
+  budget_check:
+    type: boolean
+    unit: none
+    description: >-
+      Enforce the PRMS mass budgets during the run. Turning it off lets a run finish that
+      does not conserve water, which is worth doing only when diagnosing why.
+    default: true
+    required: false
+
+combinations:
+  - when: {aggregation: [water_year]}
+    allow: {budget_check: [true]}
+    reason: >-
+      A water-year mean hides the daily behaviour that would show a budget failure, so it
+      may only be reported from a run whose mass balance was actually enforced.
+
+outputs:
+  value:
+    unit: mm
+    description: >-
+      The selected variable as a basin-mean depth over the period, one value per time step
+      of the chosen aggregation.
+    valid_min: 0.0
+    valid_max: 5000.0
+  time_index:
+    unit: count
+    description: Position of each value in the series, counting from the start of the run.
+    valid_min: 0.0
+    valid_max: 100000.0
+
+resource_profile:
+  typical_call_seconds: 45.0
+  needs_gpu: false
+  needs_external_data: true
+  notes: >-
+    Needs the Sagehen fixture from the pinned release, fetched once into the state
+    directory and checksummed. A single water year of daily simulation takes tens of
+    seconds on one core; the full five years takes a few minutes. Requires numpy 2 and
+    Python 3.12 or 3.13, which is why the tier is local rather than demo.

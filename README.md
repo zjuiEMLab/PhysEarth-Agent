@@ -15,14 +15,20 @@ license: Apache License 2.0
 
 # PhysEarth-Agent
 
-> **Novelty.** PhysEarth-Agent converts natural-language Earth-science questions into reproducible, model-ready physical experiments by jointly resolving computational environments, scientific data transformations, physical-model contracts, execution, validation, and provenance.
-
-An open-source GeoAI agent that runs physical Earth models for terrestrial water cycle.
+An open-source GeoAI agent that turns geophysical models into research instruments you can
+talk to, check and reproduce. **Register a model and it inherits the whole system: parameter
+validation, illegal-call refusal, result quality control, citation integrity and a visible
+run trace.** None of that has to be rewritten for the next model.
 
 Most GeoAI systems are data-driven. This one runs physics, and its point is not that it can
-talk about physics but that it cannot assert physics it did not read or run. A misconfigured
-forward model does not crash; it returns numbers that look entirely reasonable and mean
-nothing. So the checks live in the system rather than in the prompt:
+run a physical model — a notebook can do that — but that a physical model can be
+**configured with justified confidence**. Deep models fail visibly: a bad configuration
+gives a bad score. Physical models fail silently. Snow density entered as 2000 kg/m³, a
+microstructure representation that does not apply at the chosen frequency, a unit off by an
+order of magnitude — none of these crash. Each returns a curve that is physically
+meaningless and numerically entirely plausible.
+
+So the checks live in the system rather than in the prompt:
 
 - parameters are checked against each model's declared physical ranges and legal
   combinations **before** the model runs;
@@ -67,22 +73,30 @@ and pins the bundled models against the upstream packages they wrap. The agent t
 reproduces figures from the SMRT paper and probes what happens when the harness, the corpus
 or the capability declarations are removed. See [`evaluation/README.md`](evaluation/README.md).
 
-## Bundled models
+## Registered models
 
-| Model | Medium | Output |
-|---|---|---|
-| `smrt` | snow and ice | brightness temperature, backscatter |
-| `tau_omega` | soil and vegetation | brightness temperature, emissivity |
-| `water_cloud` | soil and vegetation | backscatter |
+Few and deliberate. Breadth is meant to come from the registration mechanism, not from us
+piling models in.
+
+| Model | Domain | Output | Runs here |
+|---|---|---|---|
+| `smrt` | snow and ice, microwave | brightness temperature, backscatter | yes |
+| `tau_omega` | soil and vegetation, passive microwave | brightness temperature, emissivity | yes |
+| `water_cloud` | soil and vegetation, active microwave | backscatter | yes |
+| `pywatershed` | catchment hydrology, PRMS | SWE, snowmelt, runoff, groundwater flow | where its dependency is installed |
+
+`pywatershed` is the worked example of a model whose dependencies do not fit every host: it
+needs `numpy>=2` and Python 3.12–3.13, while this deployment is pinned to `numpy<2` to match
+its platform. It registers with its full capability declaration everywhere, and reports
+plainly where it cannot run rather than failing obscurely. See
+[`tasks/pywatershed-prms-3.0.0.md`](tasks/pywatershed-prms-3.0.0.md).
 
 ## Next steps
 
-- [Add pywatershed/PRMS 3.0.0](tasks/pywatershed-prms-3.0.0.md): establish a
-  model-ready hydrologic workflow on the official five-year Sagehen domain before adding
-  forcing acquisition and transformation for new study areas.
 - [Reproduce the SMRT v1 Section 3 experiments](tasks/smrt_section3_scientific_questions_and_steps.md):
-  use the paper's sparse-medium, reference-model, and microstructure-equivalence
-  investigations as an end-to-end research-agent baseline.
+  the paper's sparse-medium, reference-model and microstructure-equivalence investigations
+  as an end-to-end research-agent baseline. Several of its steps need model outputs this
+  build does not yet expose, which the document is useful for having identified.
 
 ## Bundled literature and method notes
 

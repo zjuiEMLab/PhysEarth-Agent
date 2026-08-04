@@ -525,8 +525,8 @@ def run_model(model, parameters=None, _owner=None, _switches=None, **extra):
         )
     if not entry.runnable:
         return _fail(
-            "%s is registered but its tier is %r, so it cannot run in this environment. "
-            "Deploy it locally to use it." % (model, entry.tier)
+            entry.unavailable_reason,
+            {"model": model, "tier": entry.tier, "requires_import": entry.requires},
         )
 
     spec, problems = validation.resolve(entry.card, parameters or {}, enforce=guarded)

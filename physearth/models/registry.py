@@ -31,8 +31,43 @@ class Model:
         return self.card["tier"]
 
     @property
+    def requires(self):
+        """The import a `local` model needs before it can run anywhere."""
+        return self.card.get("requires_import") or ""
+
+    @property
+    def available(self):
+        return not self.requires or importlib.util.find_spec(self.requires) is not None
+
+    @property
     def runnable(self):
-        return self.tier == "demo"
+        """A `demo` model runs everywhere; a `local` model runs where its dependency is.
+
+        The second case is not a special case, it is the common one for a real scientific
+        package: a hydrologic model that needs numpy 2 cannot run on a host pinned to
+        numpy 1, and pretending otherwise would mean discovering it as an obscure crash
+        instead of as a declared fact. Such a model still registers with its full
+        declaration everywhere, so the agent can describe it and say why it cannot run it.
+        """
+        if self.tier == "demo":
+            return True
+        return self.tier == "local" and self.available and self.run is not None
+
+    @property
+    def unavailable_reason(self):
+        if self.runnable:
+            return ""
+        if self.tier == "local" and not self.available:
+            return (
+                "%s is registered but its dependency %r is not installed in this "
+                "environment. Install it to run the model here; everything else about it, "
+                "including its parameter declaration, is available now."
+                % (self.name, self.requires)
+            )
+        return "%s is registered but its tier is %r, so it cannot run in this environment." % (
+            self.name,
+            self.tier,
+        )
 
 
 def _load_module(directory, entrypoint):
@@ -64,6 +99,14 @@ def _load_directory(directory, source):
     run = None
     if card["tier"] == "demo":
         run = _load_module(directory, card["entrypoint"])
+    elif card["tier"] == "local":
+        # Loaded so the model is genuinely runnable where its dependency exists. The
+        # adapter must not import that dependency at module level, or a host without it
+        # would reject the whole model instead of registering it as unavailable.
+        try:
+            run = _load_module(directory, card["entrypoint"])
+        except Exception:
+            run = None
     return Model(card, run, source)
 
 
@@ -164,6 +207,8 @@ def summary():
                 "version": model.card["version"],
                 "tier": model.tier,
                 "runnable": model.runnable,
+                "requires_import": model.requires,
+                "unavailable_reason": model.unavailable_reason,
                 "description": model.card["description"],
                 "outputs": sorted(model.card["outputs"]),
                 "source": model.source,

@@ -43,6 +43,14 @@ def validate_card(card):
     tier = card.get("tier")
     if tier and tier not in TIERS:
         _fail(problems, "tier %r must be one of %s" % (tier, ", ".join(TIERS)))
+    if tier == "local" and not card.get("requires_import"):
+        _fail(
+            problems,
+            "a local model must declare requires_import: the module whose presence decides "
+            "whether it can run on a given host",
+        )
+    if card.get("requires_import") and tier != "local":
+        _fail(problems, "requires_import only applies to a local model")
 
     parameters = card.get("parameters")
     if not isinstance(parameters, dict) or not parameters:

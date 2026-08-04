@@ -302,3 +302,63 @@ def test_a_source_cannot_forge_the_closing_delimiter():
 
     wrapped = untrusted.wrap("text %s more text" % untrusted.CLOSE, "x#00", "test")
     assert wrapped.count(untrusted.CLOSE) == 1
+
+
+def test_a_model_can_declare_the_dependency_that_decides_where_it_runs():
+    """`smrt` runs everywhere it is registered. `pywatershed` needs numpy 2 and a Python
+    this deployment does not have, so it must register with its full declaration and say
+    plainly why it cannot run, rather than be rejected or fail obscurely at call time."""
+    from physearth.models import registry
+
+    entry = registry.get("pywatershed")
+    assert entry is not None, "a model whose dependency is absent must still register"
+    assert entry.tier == "local"
+    assert entry.requires == "pywatershed"
+    assert entry.runnable is entry.available
+    assert not any(r["directory"].endswith("pywatershed") for r in registry.rejected())
+
+
+def test_an_unavailable_model_still_publishes_its_whole_declaration():
+    from physearth import tools
+
+    declared = tools.call("list_models", {"model": "pywatershed"})
+    assert declared["status"] == "success"
+    data = declared["data"]
+    assert data["runnable_here"] is registry.get("pywatershed").runnable
+    assert set(data["parameters"]) >= {"variable", "water_year_start", "aggregation"}
+    assert data["outputs"]["value"]["unit"] == "mm"
+    assert data["license"] == "CC0-1.0"
+    assert data["combinations"], "the legal combinations must be published too"
+
+
+def test_calling_an_unavailable_model_explains_itself_and_names_the_dependency():
+    from physearth import tools
+    from physearth.models import registry
+
+    entry = registry.get("pywatershed")
+    result = tools.call("run_model", {"model": "pywatershed", "parameters": {}})
+    if entry.runnable:
+        assert result["status"] in ("success", "terminal_error")
+        return
+    assert result["status"] == "terminal_error"
+    assert "pywatershed" in result["error"]
+    assert result["data"]["requires_import"] == "pywatershed"
+    assert "declaration is available" in result["error"] or "Install it" in result["error"]
+
+
+def test_a_local_model_must_say_what_it_depends_on():
+    from physearth.models import contract
+
+    card = {
+        "name": "x", "version": "1", "description": "d", "citation": "c",
+        "license": "MIT", "tier": "local", "entrypoint": "adapter:run",
+        "parameters": {"a": {"type": "number", "unit": "none", "description": "d",
+                             "minimum": 0, "maximum": 1}},
+        "outputs": {"y": {"unit": "none", "description": "d"}},
+    }
+    assert any("requires_import" in p for p in contract.validate_card(card))
+    assert not contract.validate_card(dict(card, requires_import="numpy"))
+    assert any(
+        "only applies to a local model" in p
+        for p in contract.validate_card(dict(card, tier="demo", requires_import="numpy"))
+    )
