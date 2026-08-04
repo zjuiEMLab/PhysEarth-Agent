@@ -23,7 +23,9 @@ CATALOGUE = [
         "note": "mixture of experts, the default",
     },
     {
-        "id": "deepseek-ai/DeepSeek-V4-Flash",
+        # The endpoint re-dated this identifier. The undated form now answers "has no
+        # provider supported", which reads like a withdrawal and is not one.
+        "id": "deepseek-ai/DeepSeek-V4-Flash-0731",
         "label": "DeepSeek V4 Flash",
         "vendor": "DeepSeek",
         "note": "fast reasoning model",
