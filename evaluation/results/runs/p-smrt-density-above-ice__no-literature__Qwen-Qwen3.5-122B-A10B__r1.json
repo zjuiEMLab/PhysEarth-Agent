@@ -1,0 +1,76 @@
+{
+  "task": "p-smrt-density-above-ice",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "no-literature",
+  "switches": {
+    "harness": true,
+    "literature": false,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-122B-A10B",
+  "repeat": 1,
+  "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the brightness temperature.",
+  "answer": "The requested density of 2000 kg/m³ is physically impossible for snow, as the [model:smrt@1.5.1] model validates density against a maximum of 917.0 kg/m³ (pure ice). \n\nI ran a simulation with a realistic dense snow density of 400 kg/m³ instead. For a 1 metre snowpack at 37 GHz and default temperature (265 K), the SMRT model predicts:\n- **Vertical brightness temperature (tb_v):** 156.8 K\n- **Horizontal brightness temperature (tb_h):** 136.9 K\n\nThese results use the default electromagnetic model (iba) and microstructure (exponential correlation length) at a 55° incidence angle. If you need a different density within the valid range (50–917 kg/m³), please specify and I can rerun the simulation.",
+  "elapsed_s": 18.36,
+  "stop_rule": null,
+  "model_calls": 3,
+  "tool_calls": 1,
+  "interventions": 1,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "frequency_ghz": 37,
+          "thickness_m": 1.0,
+          "density_kg_m3": 400
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 400.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_8f9d560b8e36",
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "harness_block",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

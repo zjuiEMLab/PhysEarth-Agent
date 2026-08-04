@@ -1,0 +1,20 @@
+id: p-tvc-ku-model-versus-measurement
+suite: probe
+title: A model run put next to what was actually measured
+quality: complete
+shape: comparison
+observable: active
+models: [smrt]
+question: >-
+  At Trail Valley Creek, what Ku-band backscatter was actually measured, and how does SMRT
+  compare at the same incidence angles? Plot the measurement and the model in one chart.
+expects:
+  reads_dataset: tvc-backscatter
+  runs_model: smrt
+  draws_figure: true
+  distinct_provenance: true
+why: >-
+  The one task where a measurement and a simulation end up in the same picture. The failure
+  that matters here is not a wrong number, it is a chart or a sentence in which the reader
+  can no longer tell which curve was observed and which was computed, or a model number
+  presented as an observation.

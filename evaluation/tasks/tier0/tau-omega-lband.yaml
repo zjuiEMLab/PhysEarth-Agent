@@ -1,0 +1,33 @@
+id: t0-tau-omega-lband
+suite: tier0
+model: tau_omega
+title: L-band emission of a vegetated soil surface
+rationale: >-
+  Two closed-form identities that hold whatever dielectric model sits underneath, plus a
+  pinned regression value. The identities are the real check: with no canopy the
+  brightness temperature must be exactly the soil temperature times the emissivity the
+  model reports, and emission must fall as the soil wets.
+source:
+  paper: cmem-sampling-density
+  doi: 10.5194/hess-24-1957-2020
+parameters:
+  frequency_ghz: 1.41
+  angle_deg: 40.0
+  soil_moisture: 0.25
+  bulk_density_g_cm3: 1.3
+  soil_temperature_k: 293.0
+  canopy_temperature_k: 293.0
+  vegetation_optical_depth: 0.3
+  single_scattering_albedo: 0.05
+identities:
+  - bare_soil_tb_is_soil_temperature_times_emissivity
+  - emissivity_stays_between_zero_and_one
+monotonic_sweep:
+  parameter: soil_moisture
+  start: 0.05
+  stop: 0.45
+  points: 9
+  expect:
+    tb_v: decreasing
+    tb_h: decreasing
+    emissivity_v: decreasing

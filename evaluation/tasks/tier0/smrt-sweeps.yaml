@@ -1,0 +1,40 @@
+id: t0-smrt-sweeps
+suite: tier0
+model: smrt
+title: Two sweeps whose direction is fixed by physics, not by implementation
+rationale: >-
+  The sweep path of the adapter, pinned by two statements that hold whatever the
+  electromagnetic theory does. Emission scales with the physical temperature of the
+  emitter, so brightness temperature must rise with snow temperature. And a snow layer
+  over a vacuum background emits more the deeper it gets, saturating at the
+  semi-infinite value, so brightness temperature must rise with thickness. If a refactor
+  drops the per-point sweep override, or reverses the axis, the direction breaks before
+  any value does. The direction of the density sweep is deliberately not asserted: at a
+  fixed correlation length it is not monotonic, and pinning it would be pinning an
+  artefact.
+parameters:
+  electromagnetic_model: iba
+  microstructure_model: exponential
+  output: tb
+  frequency_ghz: 37.0
+  angle_deg: 55.0
+  thickness_m: 1.0
+  density_kg_m3: 300.0
+  temperature_k: 265.0
+  corr_length_m: 0.00015
+  sweep_parameter: temperature_k
+  sweep_start: 240.0
+  sweep_stop: 272.0
+  sweep_points: 8
+monotonic:
+  tb_v: increasing
+  tb_h: increasing
+axis_length: 8
+monotonic_sweep:
+  parameter: thickness_m
+  start: 0.1
+  stop: 2.0
+  points: 6
+  expect:
+    tb_v: increasing
+    tb_h: increasing

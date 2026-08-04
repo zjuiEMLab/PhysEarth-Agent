@@ -1,0 +1,40 @@
+id: t0-smrt-active
+suite: tier0
+model: smrt
+title: SMRT in active mode, backscatter from the Figure 4 snowpack
+rationale: >-
+  The adapter switches sensor mode on one enumerated parameter. This pins the active
+  path, which returns different outputs from the same snowpack, against upstream SMRT.
+source:
+  paper: smrt-v1
+  section: "08"
+  doi: 10.5194/gmd-11-2763-2018
+parameters:
+  electromagnetic_model: dmrt_qcacp_shortrange
+  microstructure_model: sticky_hard_spheres
+  output: sigma
+  frequency_ghz: 37.0
+  angle_deg: 55.0
+  thickness_m: 10.0
+  density_kg_m3: 300.0
+  temperature_k: 256.0
+  radius_m: 0.0001
+  stickiness: 0.5
+upstream:
+  kind: smrt_direct
+  electromagnetic_model: dmrt_qcacp_shortrange
+  snowpack:
+    thickness: [10.0]
+    microstructure_model: sticky_hard_spheres
+    density: [300.0]
+    temperature: [256.0]
+    radius: [0.0001]
+    stickiness: [0.5]
+  sensor:
+    mode: active
+    frequency_hz: 37000000000.0
+    angle_deg: 55.0
+  outputs:
+    sigma_vv_db: sigmaVV_dB
+    sigma_hh_db: sigmaHH_dB
+  tolerance: 1.0e-9

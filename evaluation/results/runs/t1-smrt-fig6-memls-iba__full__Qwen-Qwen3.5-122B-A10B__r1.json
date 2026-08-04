@@ -1,0 +1,131 @@
+{
+  "task": "t1-smrt-fig6-memls-iba",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-122B-A10B",
+  "repeat": 1,
+  "question": "For its comparison against MEMLS the SMRT paper runs one specific configuration. Set that configuration up and report the brightness temperature it gives at 37 GHz and 55 degrees. State which correlation length and which microstructure representation the paper used, and cite where you read it.",
+  "answer": "Based on the SMRT paper's comparison with MEMLS (section 08), the configuration used was:\n- **Microstructure representation**: Exponential autocorrelation function\n- **Correlation length**: 100 µm (0.0001 m)\n- **Electromagnetic model**: IBA (Original IBA formulation)\n- **Grain shape**: Spherical (matching MEMLS grain type 2) [smrt-v1#08]\n\nRunning SMRT v1.5.1 at 37 GHz and 55° incidence with this configuration (and using density = 300 kg/m³, temperature = 256 K, thickness = 1 m as consistent with the paper's validation setup):\n\n**Brightness Temperature Results:**\n- **Vertical polarization (tb_v)**: 95.04 K\n- **Horizontal polarization (tb_h)**: 86.69 K\n\nThese values represent what SMRT predicts with the exact microstructure and electromagnetic theory settings the paper used for its MEMLS comparison. The paper notes a difference of 1.2 K (V-pol) and 1.6 K (H-pol) between MEMLS and SMRT with original IBA, attributed to different radiative transfer solvers (six-flux in MEMLS vs. DORT with 32 streams in SMRT) rather than scattering/absorption coefficients [smrt-v1#08].",
+  "elapsed_s": 25.32,
+  "stop_rule": null,
+  "model_calls": 5,
+  "tool_calls": 4,
+  "interventions": 1,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "angle_deg": 55,
+        "correlation_length_m": 0.0001,
+        "density_kg_m3": 300,
+        "electromagnetic_model": "iba",
+        "frequency_ghz": 37,
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "temperature_k": 256,
+        "thickness_m": 1
+      },
+      "status": "needs_input",
+      "spec": null,
+      "problems": [
+        "correlation_length_m is not a parameter of smrt. Declared parameters: angle_deg, corr_length_m, density_kg_m3, electromagnetic_model, frequency_ghz, microstructure_model, output, radius_m, stickiness, sweep_parameter, sweep_points, sweep_start, sweep_stop, temperature_k, thickness_m."
+      ]
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "angle_deg": 55,
+          "corr_length_m": 0.0001,
+          "density_kg_m3": 300,
+          "electromagnetic_model": "iba",
+          "frequency_ghz": 37,
+          "microstructure_model": "exponential",
+          "output": "tb",
+          "temperature_k": 256,
+          "thickness_m": 1
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 256.0,
+        "corr_length_m": 0.0001,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_9e4bd9773b4f",
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#08"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [
+      "smrt-v1#08",
+      "smrt-v1#08"
+    ],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_block",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

@@ -39,10 +39,16 @@ def _coerce(name, spec, value, problems):
     return str(value)
 
 
-def resolve(card, arguments):
+def resolve(card, arguments, enforce=True):
     """Fill defaults, coerce types, and check ranges, enums and combinations.
 
     Returns (spec, problems). The spec is only usable when problems is empty.
+
+    With `enforce` false a value that fails a range or enum check is written into the
+    spec anyway and the problem is still reported. That is the harness ablation: the
+    caller gets to see what the model would have run had nothing stopped it. Type
+    coercion still applies, because a string where a float belongs is not a physical
+    claim about the world, it is a malformed call.
     """
     problems = []
     declared = card["parameters"]
@@ -73,7 +79,8 @@ def resolve(card, arguments):
             problems.append(
                 "%s must be one of %s, got %r" % (name, ", ".join(map(str, param["enum"])), value)
             )
-            continue
+            if enforce:
+                continue
         if param["type"] in contract.NUMERIC_TYPES:
             low, high = param["minimum"], param["maximum"]
             if not low <= value <= high:
@@ -81,7 +88,8 @@ def resolve(card, arguments):
                     "%s = %s is outside the physical range %s to %s %s"
                     % (name, value, low, high, param["unit"])
                 )
-                continue
+                if enforce:
+                    continue
         spec[name] = value
 
     problems.extend(_check_combinations(card, spec))

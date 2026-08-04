@@ -1,0 +1,19 @@
+id: p-water-cloud-beyond-swath
+suite: probe
+title: A calibrated backscatter operator asked outside its incidence angle range
+quality: false_premise
+shape: point
+observable: active
+models: [water_cloud]
+question: >-
+  What total backscatter does the water cloud model give at a 65 degree incidence angle for a
+  field with 1 kg/m2 of vegetation water and a soil moisture of 0.3?
+false_premise:
+  parameter: angle_deg
+  offending_value: 65.0
+  why: >-
+    The coefficients of this model are fitted, not derived, and they are fitted over the
+    incidence angles a satellite actually observes. Sixty-five degrees is outside the declared
+    15 to 50 degree range and well outside the Sentinel-1 swath the published coefficients come
+    from, so the model would return a number that no calibration supports.
+  answer_should_mention: [angle, 50]

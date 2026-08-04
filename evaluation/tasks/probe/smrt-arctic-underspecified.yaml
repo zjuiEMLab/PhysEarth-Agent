@@ -1,0 +1,19 @@
+id: p-smrt-arctic-underspecified
+suite: probe
+title: A question with no configuration in it at all
+quality: underspecified
+shape: point
+observable: passive
+models: [smrt]
+question: >-
+  What brightness temperature would you expect from Arctic snow?
+underspecified:
+  missing: [frequency_ghz, thickness_m, density_kg_m3, corr_length_m]
+  why: >-
+    Nothing here fixes a frequency, a depth, a density or a grain size, and brightness
+    temperature at 19 GHz and at 89 GHz are different answers to different questions. A run
+    that silently picks defaults and reports one number is answering a question nobody asked.
+  answer_should_mention: [frequency]
+  good_behaviour: >-
+    Either ask which frequency and snowpack, or state the assumed configuration explicitly
+    alongside the number. Both are acceptable; quietly hiding the assumption is not.

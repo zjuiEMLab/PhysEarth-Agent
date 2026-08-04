@@ -1,0 +1,32 @@
+id: t0-water-cloud-s1
+suite: tier0
+model: water_cloud
+title: Sentinel-1 style backscatter from a vegetated soil surface
+rationale: >-
+  Every term of the water cloud model is analytic, so its identities are exact rather
+  than approximate. With no vegetation water the total backscatter must equal the soil
+  law to the last bit, and the two-way transmissivity must equal Beer-Lambert attenuation
+  along the slant path. Nothing here depends on how the adapter is written.
+source:
+  paper: backscatter-forward-operator
+  doi: 10.5194/hess-25-6283-2021
+parameters:
+  angle_deg: 37.0
+  soil_moisture: 0.25
+  vegetation_water_kg_m2: 1.0
+  coefficient_a: 0.09
+  coefficient_b: 0.12
+  coefficient_c: -22.0
+  coefficient_d: 30.0
+identities:
+  - bare_soil_backscatter_is_the_soil_law
+  - transmissivity_is_beer_lambert
+  - total_backscatter_exceeds_neither_component_sum
+monotonic_sweep:
+  parameter: soil_moisture
+  start: 0.05
+  stop: 0.45
+  points: 9
+  expect:
+    sigma0_total_db: increasing
+    sigma0_soil_db: increasing

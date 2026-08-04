@@ -1,0 +1,42 @@
+id: t0-smrt-dmrt-shs
+suite: tier0
+model: smrt
+title: SMRT DMRT QCA-CP short range with sticky hard spheres
+rationale: >-
+  The second electromagnetic path through the adapter, and the one the capability
+  declaration constrains to a single microstructure. The snowpack is the one the SMRT
+  paper uses for its Figure 4 comparison against DMRT-ML and DMRT-QMS: 0.1 mm spheres,
+  300 kg m-3, stickiness 0.5, 256 K.
+source:
+  paper: smrt-v1
+  section: "08"
+  doi: 10.5194/gmd-11-2763-2018
+parameters:
+  electromagnetic_model: dmrt_qcacp_shortrange
+  microstructure_model: sticky_hard_spheres
+  output: tb
+  frequency_ghz: 37.0
+  angle_deg: 55.0
+  thickness_m: 10.0
+  density_kg_m3: 300.0
+  temperature_k: 256.0
+  radius_m: 0.0001
+  stickiness: 0.5
+upstream:
+  kind: smrt_direct
+  electromagnetic_model: dmrt_qcacp_shortrange
+  snowpack:
+    thickness: [10.0]
+    microstructure_model: sticky_hard_spheres
+    density: [300.0]
+    temperature: [256.0]
+    radius: [0.0001]
+    stickiness: [0.5]
+  sensor:
+    mode: passive
+    frequency_hz: 37000000000.0
+    angle_deg: 55.0
+  outputs:
+    tb_v: TbV
+    tb_h: TbH
+  tolerance: 1.0e-9

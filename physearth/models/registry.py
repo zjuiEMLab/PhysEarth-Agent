@@ -172,7 +172,13 @@ def summary():
     return rows
 
 
-def capability_block():
+def capability_block(declared=True):
+    """The models as the agent sees them.
+
+    With `declared` false only the name, the description and the output names survive;
+    every range, enum, default and legal combination is withheld. That is the capability
+    ablation, and nothing else about the system changes with it.
+    """
     _ensure()
     lines = []
     for name, model in _REGISTRY.items():
@@ -182,11 +188,22 @@ def capability_block():
             head += " [registered but not runnable in this environment]"
         lines.append("%s\n  %s" % (head, card["description"]))
         lines.append("  outputs: %s" % ", ".join(sorted(card["outputs"])))
+        if not declared:
+            lines.append("  parameters: %s" % ", ".join(card["parameters"]))
+            continue
         for pname, spec in card["parameters"].items():
             lines.append("  %s" % _parameter_line(pname, spec))
         for rule in card.get("combinations") or []:
             lines.append("  constraint: %s" % rule["reason"])
     return "\n".join(lines)
+
+
+def undeclared_parameters(card):
+    """A parameter list stripped of everything the capability ablation withholds."""
+    return {
+        name: {"type": spec["type"], "unit": spec["unit"], "description": spec["description"]}
+        for name, spec in card["parameters"].items()
+    }
 
 
 def _parameter_line(name, spec):

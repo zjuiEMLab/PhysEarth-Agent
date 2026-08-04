@@ -1,5 +1,7 @@
 import re
 
+from physearth import switches
+
 CITATION_PATTERN = re.compile(r"\[([a-z0-9-]+)#(\d{1,3})\]")
 MODEL_PATTERN = re.compile(r"\[(?:model:)?([A-Za-z0-9_-]+)@([^\]\s]+)\]")
 DATA_PATTERN = re.compile(r"\[data:([a-z0-9-]+)\]")
@@ -99,6 +101,11 @@ def check_budget(state):
 
 
 def review_final(text, state):
+    if not switches.resolve(state.get("switches"))["harness"]:
+        return (
+            {"rule": "citation_integrity", "passed": True, "markers": find_markers(text), "off": True},
+            None,
+        )
     checks = [
         check_evidence(
             text,

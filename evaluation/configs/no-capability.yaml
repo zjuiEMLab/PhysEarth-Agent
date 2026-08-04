@@ -1,0 +1,12 @@
+name: no-capability
+description: >-
+  The models still run and the harness still refuses illegal calls, but the agent is no
+  longer told what legal means. Parameter ranges, enumerated choices, defaults and the
+  legal combination rules are withheld from the system prompt and from list_models; only
+  parameter names, units and one-line descriptions remain. This is the ablation that
+  quantifies the central claim, because it separates declaring a model's validity domain
+  from enforcing it.
+switches:
+  harness: true
+  literature: true
+  capability: false

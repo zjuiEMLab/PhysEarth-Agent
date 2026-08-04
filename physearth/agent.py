@@ -5,6 +5,7 @@ from openai import OpenAI
 
 from physearth import budget, config, harness, prompt, tools
 from physearth import session as session_state
+from physearth import switches as switch_flags
 
 MAX_MODEL_CALLS = session_state.MAX_MODEL_CALLS
 MAX_TOOL_CALLS = session_state.MAX_TOOL_CALLS
@@ -223,16 +224,20 @@ def _record_tool_result(name, result, state, events):
         session_state.remember_figure(state, (result.get("ui") or {})["figure"])
 
 
-def stream(question, history=None, model=None, session=None):
+def stream(question, history=None, model=None, session=None, switches=None):
     """Run one turn, yielding (answer, events, state) every time something happens.
 
     `session` carries everything the conversation has already read, run and stored. It
     is created by the caller and lives until the visitor clears the conversation.
+
+    `switches` is the ablation control. It is only ever passed by the evaluation suite;
+    the application leaves it None, which turns everything on.
     """
     session = new_session(model) if session is None else session
     session["model"] = resolve_model(model or session.get("model"))
     session["turns"] = session.get("turns", 0) + 1
     state = session_state.new_state(session, session["model"])
+    state["switches"] = switch_flags.resolve(switches)
     events = []
     answer = ""
 
@@ -275,7 +280,7 @@ def stream(question, history=None, model=None, session=None):
                 chunks = client.chat.completions.create(
                     model=model_id,
                     messages=messages,
-                    tools=tools.SPECS,
+                    tools=tools.specs(state["switches"]),
                     tool_choice="auto",
                     parallel_tool_calls=False,
                     max_tokens=MAX_OUTPUT_TOKENS,
@@ -387,7 +392,9 @@ def stream(question, history=None, model=None, session=None):
                 events.pop()
 
                 started_tool = time.perf_counter()
-                result = tools.call(name, arguments, owner=session["id"])
+                result = tools.call(
+                    name, arguments, owner=session["id"], switches_in=state["switches"]
+                )
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
 
@@ -463,9 +470,9 @@ def stream(question, history=None, model=None, session=None):
     yield answer, events, state
 
 
-def run(question, history=None, model=None, session=None):
+def run(question, history=None, model=None, session=None, switches=None):
     """Blocking form of stream. Returns (answer, events, state)."""
     last = ("", [], new_state(model, session))
-    for step in stream(question, history, model, session):
+    for step in stream(question, history, model, session, switches):
         last = step
     return last

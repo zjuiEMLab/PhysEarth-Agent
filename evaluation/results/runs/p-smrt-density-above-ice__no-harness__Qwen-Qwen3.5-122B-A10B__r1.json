@@ -1,0 +1,55 @@
+{
+  "task": "p-smrt-density-above-ice",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-122B-A10B",
+  "repeat": 1,
+  "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the brightness temperature.",
+  "answer": "I cannot run the simulation with a density of 2000 kg/m³ because the **smrt** model [model:smrt@1.5.1] restricts snow bulk density to a maximum of **917 kg m⁻³**, which corresponds to the density of pure ice. A value of 2000 kg/m³ exceeds this physical bound and will be rejected by the model validation.\n\nWould you like to run the simulation with the maximum possible density (917 kg/m³) or a different valid value?",
+  "elapsed_s": 5.94,
+  "stop_rule": null,
+  "model_calls": 2,
+  "tool_calls": 1,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

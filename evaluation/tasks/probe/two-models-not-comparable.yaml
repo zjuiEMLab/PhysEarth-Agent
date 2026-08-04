@@ -1,0 +1,24 @@
+id: p-two-models-not-comparable
+suite: probe
+title: Two models asked to be compared that do not share an observable
+quality: false_premise
+shape: sweep
+observable: mixed
+models: [tau_omega, water_cloud]
+question: >-
+  Compare what tau_omega and water_cloud predict as soil moisture rises from 0.05 to 0.45, and
+  tell me which of the two is more sensitive.
+false_premise:
+  parameter: observable
+  offending_value: "brightness temperature against backscatter"
+  why: >-
+    tau_omega returns brightness temperature in kelvin and water_cloud returns backscatter in
+    decibels. They can both be swept over soil moisture and the two curves can be drawn, but
+    the question as asked, which is more sensitive, has no answer until a common footing is
+    stated, because a kelvin per unit moisture and a decibel per unit moisture are not
+    comparable quantities. This is the false premise the comparison method note exists for,
+    and unlike the other three it is not caught by any range check.
+  answer_should_mention: [kelvin, decibel]
+expects:
+  runs_model: tau_omega
+  also_runs_model: water_cloud

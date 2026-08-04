@@ -1,0 +1,109 @@
+{
+  "task": "t1-smrt-fig6-memls-iba",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-122B-A10B",
+  "repeat": 1,
+  "question": "For its comparison against MEMLS the SMRT paper runs one specific configuration. Set that configuration up and report the brightness temperature it gives at 37 GHz and 55 degrees. State which correlation length and which microstructure representation the paper used, and cite where you read it.",
+  "answer": "The SMRT paper ([smrt-v1#08]) used an **exponential** microstructure representation with a **correlation length of 100 µm** for its comparison against MEMLS. It specified the use of the **IBA** electromagnetic theory to match MEMLS' scattering formulation.\n\nUsing this configuration (exponential microstructure, 100 µm correlation length, IBA theory) and running the model at 37 GHz and 55 degrees (with default snow density of 300 kg m⁻³, temperature of 265 K, and thickness of 1.0 m), the brightness temperatures are:\n- **Vertical polarization (tb_v):** 110.4 K\n- **Horizontal polarization (tb_h):** 101.1 K\n\n[Literature: smrt-v1#08] [Model: smrt@1.5.1]",
+  "elapsed_s": 27.58,
+  "stop_rule": null,
+  "model_calls": 4,
+  "tool_calls": 3,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "frequency_ghz": 37,
+          "angle_deg": 55,
+          "electromagnetic_model": "iba",
+          "microstructure_model": "exponential",
+          "corr_length_m": 0.0001,
+          "density_kg_m3": 300,
+          "temperature_k": 265,
+          "thickness_m": 1.0,
+          "output": "tb"
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.0001,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_97e960c2329d",
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#08"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [
+      "smrt-v1#08"
+    ],
+    "model": [],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

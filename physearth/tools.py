@@ -1,7 +1,7 @@
 import concurrent.futures
 import time
 
-from physearth import knowledge, plotting, reference, results, untrusted, validation
+from physearth import knowledge, plotting, reference, results, switches, untrusted, validation
 from physearth.models import registry
 
 OUTPUT_BUDGET_CHARS = 16000
@@ -269,7 +269,8 @@ def read_literature(slug, section_id=None):
     )
 
 
-def list_models(model=None):
+def list_models(model=None, _switches=None):
+    declared = switches.resolve(_switches)["capability"]
     if model in (None, ""):
         rows = registry.summary()
         rejected = registry.rejected()
@@ -284,7 +285,10 @@ def list_models(model=None):
         )
     card = entry.card
     return _ok(
-        "Capability declaration for %s v%s." % (card["name"], card["version"]),
+        "Capability declaration for %s v%s." % (card["name"], card["version"])
+        if declared
+        else "Parameter names for %s v%s. Ranges and combinations are not published."
+        % (card["name"], card["version"]),
         {
             "name": card["name"],
             "version": card["version"],
@@ -292,15 +296,18 @@ def list_models(model=None):
             "runnable_here": entry.runnable,
             "citation": card["citation"],
             "license": card["license"],
-            "parameters": card["parameters"],
-            "combinations": card.get("combinations") or [],
+            "parameters": card["parameters"]
+            if declared
+            else registry.undeclared_parameters(card),
+            "combinations": (card.get("combinations") or []) if declared else [],
             "outputs": card["outputs"],
             "resource_profile": card.get("resource_profile") or {},
         },
     )
 
 
-def run_model(model, parameters=None, _owner=None, **extra):
+def run_model(model, parameters=None, _owner=None, _switches=None, **extra):
+    guarded = switches.resolve(_switches)["harness"]
     parameters = dict(parameters or {})
     parameters.update(extra)
     entry = registry.get(model)
@@ -314,8 +321,8 @@ def run_model(model, parameters=None, _owner=None, **extra):
             "Deploy it locally to use it." % (model, entry.tier)
         )
 
-    spec, problems = validation.resolve(entry.card, parameters or {})
-    if problems:
+    spec, problems = validation.resolve(entry.card, parameters or {}, enforce=guarded)
+    if problems and guarded:
         return {
             "status": "needs_input",
             "summary": "The call was rejected before running %s: %d problem(s)." % (model, len(problems)),
@@ -374,6 +381,8 @@ def run_model(model, parameters=None, _owner=None, **extra):
             "model": model,
             "version": entry.card["version"],
             "spec": spec,
+            # Empty whenever the harness is on, because such a call never reaches here.
+            "unguarded_problems": problems,
             "handle": handle,
             "n_points": len(points),
             "axis": {"name": axis["name"]} if axis else None,
@@ -499,19 +508,36 @@ DISPATCH = {
     "plot": plot,
 }
 
-# Tools that read or write the result store. The session that owns a handle is supplied
-# by the caller, never by the model, so a leading underscore is stripped from whatever
-# the model sent before dispatch.
+# Tools that read or write the result store, and tools whose behaviour an ablation
+# changes. Both values are supplied by the caller, never by the model, so a leading
+# underscore is stripped from whatever the model sent before dispatch.
 OWNER_SCOPED = ("run_model", "read_reference_dataset", "plot")
+SWITCH_AWARE = ("run_model", "list_models")
+CORPUS_TOOLS = ("list_literature", "read_literature")
 
 
-def call(name, arguments, owner=None):
+def specs(switches_in=None):
+    """The tool list the model is offered. The corpus ablation removes two of them."""
+    if switches.resolve(switches_in)["literature"]:
+        return list(SPECS)
+    return [s for s in SPECS if s["function"]["name"] not in CORPUS_TOOLS]
+
+
+def call(name, arguments, owner=None, switches_in=None):
+    flags = switches.resolve(switches_in)
+    if name in CORPUS_TOOLS and not flags["literature"]:
+        return _fail(
+            "Unknown tool %r. Available tools: %s."
+            % (name, ", ".join(t["function"]["name"] for t in specs(switches_in)))
+        )
     handler = DISPATCH.get(name)
     if handler is None:
         return _fail("Unknown tool %r. Available tools: %s." % (name, ", ".join(DISPATCH)))
     arguments = {k: v for k, v in (arguments or {}).items() if not str(k).startswith("_")}
     if name in OWNER_SCOPED:
         arguments["_owner"] = owner
+    if name in SWITCH_AWARE:
+        arguments["_switches"] = flags
     try:
         return handler(**arguments)
     except TypeError as exc:

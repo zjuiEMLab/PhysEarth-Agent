@@ -1,0 +1,376 @@
+{
+  "suite": "tier0",
+  "n_tasks": 6,
+  "n_checks": 27,
+  "n_passed": 6,
+  "records": [
+    {
+      "id": "t0-smrt-active",
+      "model": "smrt",
+      "title": "SMRT in active mode, backscatter from the Figure 4 snowpack",
+      "path": "evaluation/tasks/tier0/smrt-active-backscatter.yaml",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "sigma",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 10.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 256.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "values": {
+        "sigma_vv_db": -20.41233610120497,
+        "sigma_hh_db": -20.923880152725665
+      },
+      "checks": [
+        {
+          "check": "upstream",
+          "output": "sigma_vv_db",
+          "passed": true,
+          "expected": -20.412336101,
+          "got": -20.412336101,
+          "abs_error": 0.0,
+          "tolerance": 1e-09,
+          "detail": "upstream SMRT sigma_vv_db"
+        },
+        {
+          "check": "upstream",
+          "output": "sigma_hh_db",
+          "passed": true,
+          "expected": -20.923880153,
+          "got": -20.923880153,
+          "abs_error": 0.0,
+          "tolerance": 1e-09,
+          "detail": "upstream SMRT sigma_hh_db"
+        },
+        {
+          "check": "quality_control",
+          "passed": true,
+          "detail": "2 declared-output checks"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "t0-smrt-dmrt-shs",
+      "model": "smrt",
+      "title": "SMRT DMRT QCA-CP short range with sticky hard spheres",
+      "path": "evaluation/tasks/tier0/smrt-dmrt-sticky-hard-spheres.yaml",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 10.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 256.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "values": {
+        "tb_v": 251.37977396087405,
+        "tb_h": 236.90075257524435
+      },
+      "checks": [
+        {
+          "check": "upstream",
+          "output": "tb_v",
+          "passed": true,
+          "expected": 251.379773961,
+          "got": 251.379773961,
+          "abs_error": 0.0,
+          "tolerance": 1e-09,
+          "detail": "upstream SMRT tb_v"
+        },
+        {
+          "check": "upstream",
+          "output": "tb_h",
+          "passed": true,
+          "expected": 236.900752575,
+          "got": 236.900752575,
+          "abs_error": 0.0,
+          "tolerance": 1e-09,
+          "detail": "upstream SMRT tb_h"
+        },
+        {
+          "check": "quality_control",
+          "passed": true,
+          "detail": "2 declared-output checks"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "t0-smrt-iba-exponential-37",
+      "model": "smrt",
+      "title": "SMRT IBA with an exponential autocorrelation function at 37 GHz",
+      "path": "evaluation/tasks/tier0/smrt-iba-exponential-37.yaml",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "values": {
+        "tb_v": 127.227824125192,
+        "tb_h": 112.43873316839368
+      },
+      "checks": [
+        {
+          "check": "upstream",
+          "output": "tb_v",
+          "passed": true,
+          "expected": 127.227824125,
+          "got": 127.227824125,
+          "abs_error": 0.0,
+          "tolerance": 1e-09,
+          "detail": "upstream SMRT tb_v"
+        },
+        {
+          "check": "upstream",
+          "output": "tb_h",
+          "passed": true,
+          "expected": 112.438733168,
+          "got": 112.438733168,
+          "abs_error": 0.0,
+          "tolerance": 1e-09,
+          "detail": "upstream SMRT tb_h"
+        },
+        {
+          "check": "quality_control",
+          "passed": true,
+          "detail": "2 declared-output checks"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "t0-smrt-sweeps",
+      "model": "smrt",
+      "title": "Two sweeps whose direction is fixed by physics, not by implementation",
+      "path": "evaluation/tasks/tier0/smrt-sweeps.yaml",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "temperature_k",
+        "sweep_start": 240.0,
+        "sweep_stop": 272.0,
+        "sweep_points": 8
+      },
+      "values": {
+        "tb_v": 88.47945052030778,
+        "tb_h": 76.94164155133522
+      },
+      "checks": [
+        {
+          "check": "monotonic",
+          "output": "tb_v",
+          "passed": true,
+          "expected": "increasing",
+          "got": "increasing",
+          "detail": "8 points, 88.4795 to 141.865"
+        },
+        {
+          "check": "monotonic",
+          "output": "tb_h",
+          "passed": true,
+          "expected": "increasing",
+          "got": "increasing",
+          "detail": "8 points, 76.9416 to 126.0952"
+        },
+        {
+          "check": "axis_length",
+          "passed": true,
+          "expected": 8,
+          "got": 8,
+          "detail": "sweep axis"
+        },
+        {
+          "check": "monotonic",
+          "output": "tb_v",
+          "passed": true,
+          "expected": "increasing",
+          "got": "increasing",
+          "detail": "6 points, 13.6054 to 189.6316"
+        },
+        {
+          "check": "monotonic",
+          "output": "tb_h",
+          "passed": true,
+          "expected": "increasing",
+          "got": "increasing",
+          "detail": "6 points, 12.3956 to 170.0246"
+        },
+        {
+          "check": "quality_control",
+          "passed": true,
+          "detail": "3 declared-output checks"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "t0-tau-omega-lband",
+      "model": "tau_omega",
+      "title": "L-band emission of a vegetated soil surface",
+      "path": "evaluation/tasks/tier0/tau-omega-lband.yaml",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "values": {
+        "tb_h": 224.80441221818447,
+        "tb_v": 246.43581601380535,
+        "emissivity_h": 0.5371663352397188,
+        "emissivity_v": 0.6949598001337605
+      },
+      "checks": [
+        {
+          "check": "identity",
+          "name": "bare_soil_tb_is_soil_temperature_times_emissivity",
+          "passed": true,
+          "detail": "tb_v 203.623221439 vs T*e 203.623221439; tb_h 157.389736225 vs T*e 157.389736225"
+        },
+        {
+          "check": "identity",
+          "name": "emissivity_stays_between_zero_and_one",
+          "passed": true,
+          "detail": "emissivity_v = 0.694960; emissivity_h = 0.537166"
+        },
+        {
+          "check": "monotonic",
+          "output": "tb_v",
+          "passed": true,
+          "expected": "decreasing",
+          "got": "decreasing",
+          "detail": "9 points, 268.9662 to 236.3995"
+        },
+        {
+          "check": "monotonic",
+          "output": "tb_h",
+          "passed": true,
+          "expected": "decreasing",
+          "got": "decreasing",
+          "detail": "9 points, 248.1286 to 216.234"
+        },
+        {
+          "check": "monotonic",
+          "output": "emissivity_v",
+          "passed": true,
+          "expected": "decreasing",
+          "got": "decreasing",
+          "detail": "9 points, 0.8593 to 0.6217"
+        },
+        {
+          "check": "quality_control",
+          "passed": true,
+          "detail": "4 declared-output checks"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "t0-water-cloud-s1",
+      "model": "water_cloud",
+      "title": "Sentinel-1 style backscatter from a vegetated soil surface",
+      "path": "evaluation/tasks/tier0/water-cloud-sentinel1.yaml",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "values": {
+        "sigma0_total_db": -13.474800303156298,
+        "sigma0_vegetation_db": -17.29168775654675,
+        "sigma0_soil_db": -14.5,
+        "two_way_transmissivity": 0.7404386057033007
+      },
+      "checks": [
+        {
+          "check": "identity",
+          "name": "bare_soil_backscatter_is_the_soil_law",
+          "passed": true,
+          "detail": "total -14.500000000000 vs C + D*mv -14.500000000000"
+        },
+        {
+          "check": "identity",
+          "name": "transmissivity_is_beer_lambert",
+          "passed": true,
+          "detail": "gamma2 0.740438605703 vs exp(-2BW/cos) 0.740438605703"
+        },
+        {
+          "check": "identity",
+          "name": "total_backscatter_exceeds_neither_component_sum",
+          "passed": true,
+          "detail": "total 0.044928298, veg + soil 0.054137884"
+        },
+        {
+          "check": "monotonic",
+          "output": "sigma0_total_db",
+          "passed": true,
+          "expected": "increasing",
+          "got": "increasing",
+          "detail": "9 points, -15.9764 to -9.0923"
+        },
+        {
+          "check": "monotonic",
+          "output": "sigma0_soil_db",
+          "passed": true,
+          "expected": "increasing",
+          "got": "increasing",
+          "detail": "9 points, -20.5 to -8.5"
+        },
+        {
+          "check": "quality_control",
+          "passed": true,
+          "detail": "4 declared-output checks"
+        }
+      ],
+      "passed": true
+    }
+  ]
+}

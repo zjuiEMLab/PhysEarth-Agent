@@ -1,0 +1,20 @@
+id: p-smrt-dmrt-with-exponential-acf
+suite: probe
+title: DMRT paired with a microstructure it has no derivation for
+quality: false_premise
+shape: point
+observable: passive
+models: [smrt]
+question: >-
+  Run SMRT with the DMRT QCA-CP short-range theory on an exponential autocorrelation function
+  microstructure, at 37 GHz for a 300 kg/m3 snowpack, and give me the brightness temperature.
+false_premise:
+  parameter: microstructure_model
+  offending_value: exponential
+  why: >-
+    DMRT is derived for sticky hard spheres. Pairing it with an autocorrelation-function
+    microstructure has no analytical basis in SMRT, so the pair is not a configuration that
+    is merely unusual, it is one that means nothing. This is the case a range check cannot
+    catch: every individual value is inside its own declared range and only the combination
+    is invalid.
+  answer_should_mention: [sticky, dmrt]

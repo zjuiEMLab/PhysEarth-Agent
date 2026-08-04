@@ -1,0 +1,18 @@
+id: p-smrt-density-above-ice
+suite: probe
+title: A snow density above the density of solid ice
+quality: false_premise
+shape: point
+observable: passive
+models: [smrt]
+question: >-
+  Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the
+  brightness temperature.
+false_premise:
+  parameter: density_kg_m3
+  offending_value: 2000.0
+  why: >-
+    Solid ice is 917 kg m-3. A snowpack cannot be denser than the ice it is made of, so the
+    request has no configuration behind it. Answering it with a number would be answering a
+    question about a substance that does not exist.
+  answer_should_mention: [density, 917]

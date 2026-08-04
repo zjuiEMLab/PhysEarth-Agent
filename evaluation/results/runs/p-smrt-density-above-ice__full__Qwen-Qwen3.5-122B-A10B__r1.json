@@ -1,0 +1,122 @@
+{
+  "task": "p-smrt-density-above-ice",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-122B-A10B",
+  "repeat": 1,
+  "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the brightness temperature.",
+  "answer": "The requested density of 2000 kg/m³ exceeds the physical maximum for snow. SMRT constrains snow bulk density to **50.0–917.0 kg/m³**, bounded above by pure ice [model:smrt@1.5.1].\n\nI ran the simulation at the upper physical limit (917 kg/m³) for a 1 m snowpack at 37 GHz with default parameters (55° incidence, 265 K temperature, exponential microstructure, IBA electromagnetic theory) [model:smrt@1.5.1][smrt-v1#05]:\n\n| Polarization | Brightness Temperature |\n|--------------|------------------------|\n| Vertical (tb_v) | 199.3 K |\n| Horizontal (tb_h) | 156.3 K |\n\nResult handle: `res_24231608d5e2`\n\nWould you like me to try a different realistic density (e.g., 300 kg/m³ for typical snow) or explore how brightness temperature varies across the valid density range?",
+  "elapsed_s": 23.97,
+  "stop_rule": null,
+  "model_calls": 6,
+  "tool_calls": 4,
+  "interventions": 1,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "section_id": "05",
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "density_kg_m3": 917,
+          "thickness_m": 1.0,
+          "frequency_ghz": 37,
+          "output": "tb"
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 917.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_24231608d5e2",
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#05"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [
+      "smrt-v1#05"
+    ],
+    "model": [
+      "smrt@1.5.1",
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "harness_block",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

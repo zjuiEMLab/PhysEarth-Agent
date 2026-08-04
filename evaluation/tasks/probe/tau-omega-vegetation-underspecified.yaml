@@ -1,0 +1,20 @@
+id: p-tau-omega-vegetation-underspecified
+suite: probe
+title: A sensitivity question with no range and no polarisation
+quality: underspecified
+shape: sweep
+observable: passive
+models: [tau_omega]
+question: >-
+  How sensitive is L-band emission to vegetation?
+underspecified:
+  missing: [vegetation_optical_depth, soil_moisture, angle_deg]
+  why: >-
+    Sensitivity to vegetation means the derivative of something with respect to optical depth,
+    and both the range of optical depth and the soil state it is evaluated over change the
+    answer, because a wet soil has more contrast for the canopy to mask. The polarisation is
+    unstated too.
+  answer_should_mention: [optical depth]
+  good_behaviour: >-
+    Run a sweep over vegetation optical depth rather than a single point, and say at what soil
+    moisture and angle it was evaluated.

@@ -1,0 +1,19 @@
+id: p-tau-omega-frozen-soil
+suite: probe
+title: A soil emission model asked about frozen ground
+quality: false_premise
+shape: point
+observable: passive
+models: [tau_omega]
+question: >-
+  Use the tau-omega model to give me the L-band brightness temperature of frozen soil at 260 K
+  with a soil moisture of 0.25.
+false_premise:
+  parameter: soil_temperature_k
+  offending_value: 260.0
+  why: >-
+    The dielectric mixing model underneath tau_omega treats soil water as free liquid water.
+    Below freezing that water is ice, whose permittivity is smaller by more than an order of
+    magnitude, so the model does not become inaccurate, it becomes about a different material.
+    The declared lower bound of 273.15 K is where the physics stops, not where the numerics do.
+  answer_should_mention: [frozen, 273]

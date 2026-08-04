@@ -1,4 +1,4 @@
-from physearth import knowledge, reference, untrusted
+from physearth import knowledge, reference, switches, untrusted
 from physearth import session as session_state
 from physearth.models import registry
 
@@ -54,7 +54,13 @@ detail. Be concise. Do not describe the tools you are about to call; just call t
 claim to have run a simulation you did not run."""
 
 
-def models_section():
+def models_section(declared=True):
+    if not declared:
+        return (
+            "Registered physical models. These are the only sources of numerical results. "
+            "Their parameter ranges and legal combinations are not published here; infer "
+            "suitable values yourself.\n\n%s" % registry.capability_block(declared=False)
+        )
     return (
         "Registered physical models. These are the only sources of numerical results; the "
         "declaration below is what the system validates your calls against.\n\n%s"
@@ -104,18 +110,56 @@ def status_block(state):
     )
 
 
+NO_CORPUS_WORKFLOW = """\
+Work in this order. When a question asks what a model predicts, how a quantity responds to
+a parameter, or for a comparison between configurations, run the model rather than reasoning
+about it: call list_models, then run_model. Use a sweep when the question is about a trend,
+not a single number.
+
+When a question asks how a model compares with reality, read the measured data with
+read_reference_dataset and run the model at the same configuration the measurement was taken
+at, then compare. Never state a numerical model result you did not obtain from run_model, and
+never present a model number as a measurement. If a call is rejected, read the reason, fix
+the parameters and try again."""
+
+NO_CORPUS_CITATION_RULES = """\
+Everything you assert must be traceable to something you did, through one of two markers.
+
+Models: [model:name@version], for example [model:smrt@1.5.1]. Use it for a number you
+obtained from run_model and for anything you read in a model's declaration through
+list_models.
+
+Measured data: [data:slug], for example [data:tvc-backscatter]. Only for a dataset you
+actually queried with read_reference_dataset in this conversation.
+
+Do not invent markers and do not attach one to your own reasoning; an unsupported sentence
+should simply carry no marker."""
+
+
 def build(state=None):
-    blocks = [
-        ROLE,
-        models_section(),
-        reference_section(),
-        catalogue_section(),
-        skills_section(),
-        WORKFLOW,
-        untrusted.RULE,
-        CITATION_RULES,
-        STYLE,
-    ]
+    flags = switches.resolve((state or {}).get("switches"))
+    if flags["literature"]:
+        blocks = [
+            ROLE,
+            models_section(flags["capability"]),
+            reference_section(),
+            catalogue_section(),
+            skills_section(),
+            WORKFLOW,
+            untrusted.RULE,
+            CITATION_RULES,
+            STYLE,
+        ]
+    else:
+        blocks = [
+            ROLE,
+            models_section(flags["capability"]),
+            reference_section(),
+            NO_CORPUS_WORKFLOW,
+            untrusted.RULE,
+            NO_CORPUS_CITATION_RULES,
+            STYLE,
+        ]
     if state:
         held = session_state.held_block(state.get("session"))
         if held:

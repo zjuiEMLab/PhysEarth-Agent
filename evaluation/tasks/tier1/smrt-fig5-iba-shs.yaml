@@ -1,0 +1,56 @@
+id: t1-smrt-fig5-iba-shs
+suite: tier1
+title: Figure 5 of the SMRT paper, IBA on sticky hard spheres against sphere radius
+source:
+  paper: smrt-v1
+  section: "08"
+  figure: Figure 5
+  doi: 10.5194/gmd-11-2763-2018
+  quote: >-
+    To overcome the restrictive range of validity of the DMRT QCA short range ... an
+    alternative strategy is to combine IBA with the SHS microstructure model. In the first
+    column plot, stickiness is fixed at 0.5 and in the second, the radius is set to 200 um.
+quality: complete
+shape: sweep
+observable: passive
+models: [smrt]
+question: >-
+  The SMRT paper argues that pairing IBA with the sticky hard sphere microstructure escapes the
+  radius limit of the DMRT short-range approximation. Show what that pairing predicts: brightness
+  temperature against sphere radius from 50 to 400 micrometres at 37 GHz, with stickiness held at
+  the value the paper fixes it to and the same snowpack density and temperature as its earlier
+  comparison. Plot it.
+reference:
+  model: smrt
+  parameters:
+    electromagnetic_model: iba
+    microstructure_model: sticky_hard_spheres
+    output: tb
+    frequency_ghz: 37.0
+    angle_deg: 55.0
+    thickness_m: 10.0
+    density_kg_m3: 300.0
+    temperature_k: 256.0
+    stickiness: 0.5
+    sweep_parameter: radius_m
+    sweep_start: 5.0e-05
+    sweep_stop: 4.0e-04
+    sweep_points: 10
+  graded_fields:
+    - electromagnetic_model
+    - microstructure_model
+    - output
+    - frequency_ghz
+    - density_kg_m3
+    - temperature_k
+    - stickiness
+    - sweep_parameter
+  curve:
+    axis: radius_m
+    series: tb_v
+    tolerance_rmse: 5.0
+    unit: K
+notes: >-
+  This is the one task where the legal combination rules point the other way from the obvious
+  reading: IBA with sticky hard spheres is allowed, while DMRT with anything but sticky hard
+  spheres is not. A run that reaches for DMRT here is answering a different question.

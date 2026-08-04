@@ -1,0 +1,35 @@
+id: t0-smrt-iba-exponential-37
+suite: tier0
+model: smrt
+title: SMRT IBA with an exponential autocorrelation function at 37 GHz
+rationale: >-
+  The default configuration of the bundled adapter, checked against the upstream SMRT
+  package driven directly with the recipe from its own documentation. If the adapter
+  drifts from what SMRT itself computes, this is where it shows.
+parameters:
+  electromagnetic_model: iba
+  microstructure_model: exponential
+  output: tb
+  frequency_ghz: 37.0
+  angle_deg: 55.0
+  thickness_m: 1.0
+  density_kg_m3: 300.0
+  temperature_k: 265.0
+  corr_length_m: 0.00015
+upstream:
+  kind: smrt_direct
+  electromagnetic_model: iba
+  snowpack:
+    thickness: [1.0]
+    microstructure_model: exponential
+    density: [300.0]
+    temperature: [265.0]
+    corr_length: [0.00015]
+  sensor:
+    mode: passive
+    frequency_hz: 37000000000.0
+    angle_deg: 55.0
+  outputs:
+    tb_v: TbV
+    tb_h: TbH
+  tolerance: 1.0e-9
