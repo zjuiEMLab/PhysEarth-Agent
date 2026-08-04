@@ -55,6 +55,27 @@ def upstream_smrt(recipe):
     return {name: float(getattr(result, method)()) for name, method in recipe["outputs"].items()}
 
 
+def check_published(expected, series, label):
+    """Compare against a value a paper printed, with the tolerance the task declares."""
+    checks = []
+    for name, spec in expected.items():
+        got = (series.get(name) or [None])[0]
+        delta = abs(got - spec["value"]) if got is not None else float("inf")
+        checks.append(
+            {
+                "check": label,
+                "output": name,
+                "passed": delta <= spec["tolerance"],
+                "expected": spec["value"],
+                "got": None if got is None else round(got, 6),
+                "abs_error": None if got is None else round(delta, 6),
+                "tolerance": spec["tolerance"],
+                "detail": "%s printed in the paper, %s" % (name, spec.get("unit", "")),
+            }
+        )
+    return checks
+
+
 def check_upstream(task, series):
     recipe = task["upstream"]
     if recipe["kind"] != "smrt_direct":
@@ -130,6 +151,14 @@ def run_task(task):
     series = result["series"]
     checks = []
 
+    if task.get("published"):
+        checks.extend(check_published(task["published"], series, "published"))
+    if task.get("contrast"):
+        block = task["contrast"]
+        _, other = run_model(task["model"], dict(task["parameters"], **block["override"]))
+        checks.extend(
+            check_published(block["published"], other["series"], "published, contrast")
+        )
     if task.get("upstream"):
         checks.extend(check_upstream(task, series))
     if task.get("identities"):

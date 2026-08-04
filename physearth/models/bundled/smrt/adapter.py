@@ -1,3 +1,4 @@
+import math
 import warnings
 
 MICROSTRUCTURE_ARGS = {
@@ -45,21 +46,68 @@ def _extract(result, output):
         return {
             "sigma_vv_db": float(result.sigmaVV_dB()),
             "sigma_hh_db": float(result.sigmaHH_dB()),
+            "sigma_hv_db": float(result.sigmaHV_dB()),
         }
     return {"tb_v": float(result.TbV()), "tb_h": float(result.TbH())}
+
+
+def _scalar(value):
+    """SMRT returns coefficients as its own matrix type, an array, or a bare float."""
+    import numpy as np
+
+    value = value() if callable(value) else value
+    value = getattr(value, "values", value)
+    return float(np.atleast_1d(np.asarray(value, dtype=complex)).ravel()[0].real)
+
+
+def _coefficients(spec, overrides=None):
+    """The electromagnetic coefficients of the layer, without solving radiative transfer.
+
+    This is what separates a question about the medium from a question about what a
+    sensor would see. The scattering and absorption coefficients are properties of the
+    snow and the theory alone; brightness temperature is those coefficients after a
+    solver has been run over them. Asking for the first should not require paying for,
+    or being confounded by, the second.
+    """
+    from smrt.core.plugin import import_class
+
+    values = dict(spec)
+    values.update(overrides or {})
+    snowpack = _snowpack(values)
+    sensor = _sensor(dict(values, output="tb"))
+    emmodel = import_class("emmodel", values["electromagnetic_model"])(
+        sensor, snowpack.layers[0]
+    )
+    mu = math.cos(math.radians(values["angle_deg"]))
+    ks = _scalar(emmodel.ks(mu))
+    ka = _scalar(emmodel.ka)
+    total = ks + ka
+    return {
+        "ks_per_m": ks,
+        "ka_per_m": ka,
+        "effective_permittivity": _scalar(emmodel.effective_permittivity),
+        "single_scattering_albedo": ks / total if total > 0 else 0.0,
+    }
 
 
 def run(spec):
     from smrt import make_model
 
+    coefficients_only = spec["output"] == "coefficients"
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model = make_model(spec["electromagnetic_model"], "dort")
+        model = None if coefficients_only else make_model(
+            spec["electromagnetic_model"], "dort"
+        )
         swept = spec.get("sweep_parameter") or "none"
 
         if swept == "none":
-            result = model.run(_sensor(spec), _snowpack(spec))
-            values = _extract(result, spec["output"])
+            if coefficients_only:
+                values = _coefficients(spec)
+            else:
+                result = model.run(_sensor(spec), _snowpack(spec))
+                values = _extract(result, spec["output"])
             return {
                 "axis": None,
                 "points": [{"index": 0, **values}],
@@ -76,8 +124,11 @@ def run(spec):
         series = {}
         for index, value in enumerate(axis_values):
             override = {swept: value}
-            result = model.run(_sensor(spec, override), _snowpack(spec, override))
-            values = _extract(result, spec["output"])
+            if coefficients_only:
+                values = _coefficients(spec, override)
+            else:
+                result = model.run(_sensor(spec, override), _snowpack(spec, override))
+                values = _extract(result, spec["output"])
             points.append({"index": index, swept: value, **values})
             for key, item in values.items():
                 series.setdefault(key, []).append(item)

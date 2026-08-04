@@ -75,6 +75,17 @@ def total_backscatter_exceeds_neither_component_sum(spec, series, run):
     return total <= veg + soil + EXACT, "total %.9f, veg + soil %.9f" % (total, veg + soil)
 
 
+def albedo_is_scattering_over_extinction(spec, series, run):
+    """A definition, not a measurement: the albedo must be ks over ks plus ka."""
+    ks = _first(series, "ks_per_m")
+    ka = _first(series, "ka_per_m")
+    albedo = _first(series, "single_scattering_albedo")
+    if ks is None or ka is None or albedo is None:
+        return False, "the run did not return the coefficients"
+    expected = ks / (ks + ka)
+    return abs(albedo - expected) <= TIGHT, "albedo %.9f vs ks/(ks+ka) %.9f" % (albedo, expected)
+
+
 REGISTRY = {
     name: value
     for name, value in list(globals().items())

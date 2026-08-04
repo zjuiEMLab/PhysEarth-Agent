@@ -1,0 +1,43 @@
+id: t0-smrt-published-coefficients
+suite: tier0
+model: smrt
+title: The electromagnetic coefficients printed in the SMRT paper
+rationale: >-
+  The strongest kind of regression pin available: not our own earlier output, and not the
+  upstream package either, but numbers a peer-reviewed paper printed in prose. Section 3.3
+  of the SMRT paper reports the scattering and absorption coefficients and the effective
+  permittivity for one specific snowpack, and separately reports that the default IBA
+  absorbs more than the original formulation. If the adapter ever stops reproducing these,
+  it has stopped agreeing with the literature, which is a different and worse failure than
+  disagreeing with its own past.
+source:
+  paper: smrt-v1
+  section: "08"
+  doi: 10.5194/gmd-11-2763-2018
+  quote: >-
+    kappa_s=0.2056 m-1 and kappa_a=0.3087 m-1 for SMRT. Likewise, the effective
+    permittivities are numerically close, 1.5244 in MEMLS and 1.5236. ... The reason is a
+    slightly higher absorption of kappa_a=0.3426 m-1 versus kappa_a=0.3092 m-1.
+parameters:
+  electromagnetic_model: iba_original
+  microstructure_model: exponential
+  output: coefficients
+  frequency_ghz: 37.0
+  angle_deg: 55.0
+  thickness_m: 10.0
+  density_kg_m3: 300.0
+  temperature_k: 265.0
+  corr_length_m: 0.0001
+published:
+  ks_per_m: {value: 0.2056, tolerance: 0.002, unit: m-1}
+  ka_per_m: {value: 0.3087, tolerance: 0.002, unit: m-1}
+  effective_permittivity: {value: 1.5236, tolerance: 0.002, unit: none}
+contrast:
+  description: >-
+    The paper's other stated result: the default IBA absorbs more than the original, which
+    is why it predicts a warmer brightness temperature.
+  override: {electromagnetic_model: iba}
+  published:
+    ka_per_m: {value: 0.3426, tolerance: 0.002, unit: m-1}
+identities:
+  - albedo_is_scattering_over_extinction

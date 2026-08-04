@@ -80,7 +80,7 @@ piling models in.
 
 | Model | Domain | Output | Runs here |
 |---|---|---|---|
-| `smrt` | snow and ice, microwave | brightness temperature, backscatter | yes |
+| `smrt` | snow and ice, microwave | brightness temperature, backscatter, electromagnetic coefficients | yes |
 | `tau_omega` | soil and vegetation, passive microwave | brightness temperature, emissivity | yes |
 | `water_cloud` | soil and vegetation, active microwave | backscatter | yes |
 | `pywatershed` | catchment hydrology, PRMS | SWE, snowmelt, surface runoff, soil-zone and groundwater flow | yes |
@@ -102,8 +102,10 @@ state directory and checksummed; it is not redistributed here.
 
 - [Reproduce the SMRT v1 Section 3 experiments](tasks/smrt_section3_scientific_questions_and_steps.md):
   the paper's sparse-medium, reference-model and microstructure-equivalence investigations
-  as an end-to-end research-agent baseline. Several of its steps need model outputs this
-  build does not yet expose, which the document is useful for having identified.
+  as an end-to-end research-agent baseline. Reading that document is what prompted the
+  `coefficients` output, `iba_original`, cross-polarised backscatter and the widened
+  density and thickness bounds below; what remains out of reach is the part that needs
+  DMRT-ML, DMRT-QMS and MEMLS, which are three separate packages.
 
 ## Bundled literature and method notes
 

@@ -1,8 +1,8 @@
 {
   "suite": "tier0",
-  "n_tasks": 6,
-  "n_checks": 27,
-  "n_passed": 6,
+  "n_tasks": 7,
+  "n_checks": 33,
+  "n_passed": 7,
   "records": [
     {
       "id": "t0-smrt-active",
@@ -26,7 +26,8 @@
       },
       "values": {
         "sigma_vv_db": -20.41233610120497,
-        "sigma_hh_db": -20.923880152725665
+        "sigma_hh_db": -20.923880152725665,
+        "sigma_hv_db": -44.98812859032201
       },
       "checks": [
         {
@@ -52,7 +53,7 @@
         {
           "check": "quality_control",
           "passed": true,
-          "detail": "2 declared-output checks"
+          "detail": "3 declared-output checks"
         }
       ],
       "passed": true
@@ -159,6 +160,87 @@
           "check": "quality_control",
           "passed": true,
           "detail": "2 declared-output checks"
+        }
+      ],
+      "passed": true
+    },
+    {
+      "id": "t0-smrt-published-coefficients",
+      "model": "smrt",
+      "title": "The electromagnetic coefficients printed in the SMRT paper",
+      "path": "evaluation/tasks/tier0/smrt-published-coefficients.yaml",
+      "spec": {
+        "electromagnetic_model": "iba_original",
+        "microstructure_model": "exponential",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 10.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.0001,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "values": {
+        "ks_per_m": 0.20570654743561653,
+        "ka_per_m": 0.30888501185354406,
+        "effective_permittivity": 1.5238598740331406,
+        "single_scattering_albedo": 0.3997472242253111
+      },
+      "checks": [
+        {
+          "check": "published",
+          "output": "ks_per_m",
+          "passed": true,
+          "expected": 0.2056,
+          "got": 0.205707,
+          "abs_error": 0.000107,
+          "tolerance": 0.002,
+          "detail": "ks_per_m printed in the paper, m-1"
+        },
+        {
+          "check": "published",
+          "output": "ka_per_m",
+          "passed": true,
+          "expected": 0.3087,
+          "got": 0.308885,
+          "abs_error": 0.000185,
+          "tolerance": 0.002,
+          "detail": "ka_per_m printed in the paper, m-1"
+        },
+        {
+          "check": "published",
+          "output": "effective_permittivity",
+          "passed": true,
+          "expected": 1.5236,
+          "got": 1.52386,
+          "abs_error": 0.00026,
+          "tolerance": 0.002,
+          "detail": "effective_permittivity printed in the paper, none"
+        },
+        {
+          "check": "published, contrast",
+          "output": "ka_per_m",
+          "passed": true,
+          "expected": 0.3426,
+          "got": 0.342786,
+          "abs_error": 0.000186,
+          "tolerance": 0.002,
+          "detail": "ka_per_m printed in the paper, m-1"
+        },
+        {
+          "check": "identity",
+          "name": "albedo_is_scattering_over_extinction",
+          "passed": true,
+          "detail": "albedo 0.399747224 vs ks/(ks+ka) 0.399747224"
+        },
+        {
+          "check": "quality_control",
+          "passed": true,
+          "detail": "4 declared-output checks"
         }
       ],
       "passed": true
