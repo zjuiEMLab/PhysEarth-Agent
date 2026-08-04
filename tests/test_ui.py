@@ -80,15 +80,17 @@ def test_the_session_shows_every_turn_until_it_is_cleared():
 
 
 def test_the_model_switcher_marks_the_running_model():
-    out = render.hero("deepseek-ai/DeepSeek-V4-Flash")
-    assert "data-model='deepseek-ai/DeepSeek-V4-Flash'" in out
-    assert re.search(r"data-model='deepseek-ai/DeepSeek-V4-Flash' class='is-active'", out)
+    second = agent.CATALOGUE[1]["id"]
+    out = render.hero(second)
+    assert "data-model='%s'" % second in out
+    assert re.search(r"data-model='%s' class='is-active'" % re.escape(second), out)
     assert out.count("data-model=") == len(agent.CATALOGUE)
 
 
 def test_an_unknown_model_falls_back_to_the_default():
     assert agent.resolve_model("evil/model") == agent.default_model()
-    assert agent.resolve_model("ZhipuAI/GLM-4.7-Flash") == "ZhipuAI/GLM-4.7-Flash"
+    for item in agent.CATALOGUE:
+        assert agent.resolve_model(item["id"]) == item["id"]
 
 
 def test_the_stylesheet_carries_the_fonts_and_neutralises_gradio():
@@ -124,8 +126,8 @@ def test_a_spent_daily_quota_is_not_retried():
         status_code = 429
         body = {"message": "Too many requests, slow down"}
 
-    assert agent._quota_exhausted(Spent())
-    assert not agent._quota_exhausted(Busy())
+    assert agent._dead_for_today(Spent()) == "quota"
+    assert agent._dead_for_today(Busy()) == ""
     assert agent._fault(Spent()) == "rate limited (HTTP 429)"
 
 
@@ -139,3 +141,48 @@ def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
     assert "Nothing has run yet" in trace
     assert "No chart yet" in evidence
     assert "%d / %d" % used_before in trace
+
+
+def test_the_opening_hint_belongs_to_the_empty_session_only():
+    assert "pane-empty" in render.history([])
+    assert "pane-empty" not in render.live("", "")
+    turns = [{"index": 1, "question": "q", "answer": "a", "events": [], "state": {}}]
+    assert "pane-empty" not in render.history(turns)
+    assert "pane-empty" not in render.live("", "")
+
+
+def test_a_withdrawn_model_is_not_retried_either():
+    class Gone(Exception):
+        status_code = 400
+        body = {"message": "Model id : x/y , has no provider supported"}
+
+    class Other(Exception):
+        status_code = 400
+        body = {"message": "unsupported parameter"}
+
+    assert agent._dead_for_today(Gone()) == "withdrawn"
+    assert agent._dead_for_today(Other()) == ""
+
+
+def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
+    import app
+
+    fault = [{"kind": "harness_stop", "rule": "quota", "reason": "rate limited"}]
+    good = [{"kind": "harness_pass", "rule": "citation_integrity", "markers": []}]
+    assert app._faulted(fault) and not app._faulted(good)
+
+    turns = [
+        app._archive(1, {}, fault, "q one", "The free daily quota is used up."),
+        app._archive(2, {}, good, "q two", "A real answer."),
+    ]
+    seen = [
+        {"role": role, "content": content}
+        for t in turns
+        if not t.get("faulted")
+        for role, content in (("user", t["question"]), ("assistant", t["answer"]))
+    ]
+    assert [m["content"] for m in seen] == ["q two", "A real answer."]
+
+    out = render.history(turns)
+    assert out.count("msg--fault") == 1
+    assert "not an answer" in out

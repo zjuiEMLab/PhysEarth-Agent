@@ -9,7 +9,7 @@ MAX_MODEL_CALLS = 12
 MAX_TOOL_CALLS = 10
 EMPTY_RESPONSE_RETRIES = 3
 RETRY_BACKOFF_S = 1.5
-RATE_LIMIT_FACTOR = 6
+RATE_LIMIT_FACTOR = 2
 MAX_OUTPUT_TOKENS = 2048
 CONTEXT_CEILING_TOKENS = 96000
 
@@ -21,10 +21,10 @@ CATALOGUE = [
         "note": "mixture of experts, the default",
     },
     {
-        "id": "deepseek-ai/DeepSeek-V4-Flash",
-        "label": "DeepSeek V4 Flash",
-        "vendor": "DeepSeek",
-        "note": "fast reasoning model",
+        "id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+        "label": "Qwen3-Next 80B-A3B",
+        "vendor": "Qwen",
+        "note": "fastest, answers without a reasoning pass",
     },
     {
         "id": "ZhipuAI/GLM-4.7-Flash",
@@ -101,9 +101,19 @@ def _upstream_text(exc):
     return str(exc)[:400]
 
 
-def _quota_exhausted(exc):
-    """The free quota is per model and per day, so retrying it cannot help."""
-    return getattr(exc, "status_code", None) == 429 and "quota" in _upstream_text(exc).lower()
+def _dead_for_today(exc):
+    """Faults that belong to one model and will not clear by retrying.
+
+    Two are known: the free quota is per model and per day, and a model can be withdrawn
+    from the endpoint entirely, which it reports as having no provider.
+    """
+    status = getattr(exc, "status_code", None)
+    text = _upstream_text(exc).lower()
+    if status == 429 and "quota" in text:
+        return "quota"
+    if status == 400 and "no provider" in text:
+        return "withdrawn"
+    return ""
 
 
 class _Completion:
@@ -231,7 +241,7 @@ def stream(question, history=None, model=None):
         completion = None
         last_fault = "no choices"
         last_upstream = ""
-        quota_spent = False
+        model_dead = ""
         for attempt in range(1, EMPTY_RESPONSE_RETRIES + 1):
             started = time.perf_counter()
             candidate = _Completion()
@@ -252,8 +262,9 @@ def stream(question, history=None, model=None):
             except Exception as exc:
                 last_fault = _fault(exc)
                 last_upstream = _upstream_text(exc)
-                if _quota_exhausted(exc):
-                    quota_spent = True
+                dead = _dead_for_today(exc)
+                if dead:
+                    model_dead = dead
                     break
                 events.append(
                     _event(
@@ -280,22 +291,31 @@ def stream(question, history=None, model=None):
             events.append(
                 _event(
                     "harness_stop",
-                    rule="quota" if quota_spent else "upstream",
+                    rule=model_dead or "upstream",
                     reason=last_fault,
                     model=model_id,
                     upstream=last_upstream,
                 )
             )
-            others = [m["label"] for m in CATALOGUE if m["id"] != model_id]
-            answer = answer or (
-                "The free daily quota for %s is used up. That quota is per model, so pick "
-                "another one in the switcher at the top: %s. Nothing was computed, so nothing "
-                "here is a modelling result." % (model_id, " or ".join(others))
-                if quota_spent
-                else "The inference endpoint refused %d times in a row: %s. This is an upstream "
-                "fault, not a modelling result; the run trace has what the endpoint said."
-                % (EMPTY_RESPONSE_RETRIES, last_fault)
-            )
+            others = " or ".join(m["label"] for m in CATALOGUE if m["id"] != model_id)
+            if model_dead == "quota":
+                answer = answer or (
+                    "The free daily quota for %s is used up. That quota is per model, so pick "
+                    "another one in the switcher at the top: %s. Nothing was computed, so "
+                    "nothing here is a modelling result." % (model_id, others)
+                )
+            elif model_dead == "withdrawn":
+                answer = answer or (
+                    "%s is not being served by the endpoint right now, so this run never "
+                    "started. Pick another model in the switcher at the top: %s."
+                    % (model_id, others)
+                )
+            else:
+                answer = answer or (
+                    "The inference endpoint refused %d times in a row: %s. This is an upstream "
+                    "fault, not a modelling result; the run trace has what the endpoint said."
+                    % (EMPTY_RESPONSE_RETRIES, last_fault)
+                )
             break
 
         state["model_calls"] += 1

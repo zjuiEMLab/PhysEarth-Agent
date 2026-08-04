@@ -181,26 +181,6 @@ def conversation_head(count):
 def history(turns):
     """The session so far. It keeps growing until the visitor clears it."""
     if not turns:
-        return "<div class='msg-group'></div>"
-    out = []
-    for turn in turns:
-        out.append(_message("you", turn["question"], user=True))
-        out.append(_message("physearth", turn["answer"]))
-    return "<div class='msg-group'>%s</div>" % "".join(out)
-
-
-def _message(who, text, user=False, running=False):
-    body = _e(text).replace("\n", "<br>") if user else answer_html(text, running)
-    return (
-        "<div class='msg msg--%s'><div class='msg__head'>"
-        "<span class='msg__who'>%s</span><span class='msg__rule'></span></div>"
-        "<div class='msg__body'>%s</div></div>"
-        % ("user" if user else "agent", _e(who), body)
-    )
-
-
-def live(question, answer, running=False):
-    if not question:
         return (
             "<div class='msg-group'><div class='pane-empty'>"
             "<div class='pane-empty__title'>Ask a question, or use an example below</div>"
@@ -208,6 +188,32 @@ def live(question, answer, running=False):
             "actually read and ran. The run trace in the middle shows each check, including "
             "the refusals.</div></div></div>"
         )
+    out = []
+    for turn in turns:
+        out.append(_message("you", turn["question"], user=True))
+        out.append(_message("physearth", turn["answer"], faulted=turn.get("faulted")))
+    return "<div class='msg-group'>%s</div>" % "".join(out)
+
+
+def _message(who, text, user=False, running=False, faulted=False):
+    body = _e(text).replace("\n", "<br>") if user else answer_html(text, running)
+    note = (
+        "<span class='badge badge--warn'>not an answer</span><span class='msg__rule'></span>"
+        if faulted
+        else "<span class='msg__rule'></span>"
+    )
+    return (
+        "<div class='msg msg--%s%s'><div class='msg__head'>"
+        "<span class='msg__who'>%s</span>%s</div>"
+        "<div class='msg__body'>%s</div></div>"
+        % ("user" if user else "agent", " msg--fault" if faulted else "", _e(who), note, body)
+    )
+
+
+def live(question, answer, running=False):
+    """The turn in flight. Once it finishes it moves into the history and this empties."""
+    if not question:
+        return "<div class='msg-group'></div>"
     return "<div class='msg-group'>%s%s</div>" % (
         _message("you", question, user=True),
         _message("physearth", answer, running=running),

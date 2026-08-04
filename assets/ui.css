@@ -355,6 +355,10 @@ a.tag:hover {
   overflow: hidden !important;
 }
 
+/* The three panels, addressed structurally as well as by class. Gradio has been seen to
+   drop a class it recognises from elem_classes, and a panel that loses its direction turns
+   the whole column into a row. */
+#pe-app .stage > .column,
 .pe-panel {
   position: relative;
   min-width: 0 !important;
@@ -688,6 +692,18 @@ a.tag:hover {
   line-height: 1.62;
   color: var(--ink);
   max-width: 62ch;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.msg--fault .msg__who {
+  color: var(--warn);
+}
+
+.msg--fault .msg__body {
+  color: var(--ink-mute);
+  border-left: 2px solid var(--warn-wash);
+  padding-left: 11px;
 }
 
 .msg--user .msg__body {
@@ -790,7 +806,9 @@ body:not(.is-reasoning) .caret {
 #pe-chat-scroll {
   flex: 1 1 auto !important;
   min-height: 0 !important;
+  min-width: 0 !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   display: block !important;
   gap: 0 !important;
   padding: 0 var(--pad) 6px !important;
@@ -1618,6 +1636,10 @@ body:not(.is-reasoning) .step-card--thinking {
   line-height: 1.6;
   max-width: 270px;
   opacity: 0.9;
+}
+
+.msg-group {
+  min-width: 0;
 }
 
 .msg-group:empty {

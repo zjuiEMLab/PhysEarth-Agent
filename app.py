@@ -19,6 +19,16 @@ def _accumulated(turns):
     return figures, sections, datasets
 
 
+FAULT_RULES = ("upstream", "quota", "withdrawn", "global_budget")
+
+
+def _faulted(events):
+    """True when the turn ended on an upstream fault rather than on an answer."""
+    return any(
+        event["kind"] == "harness_stop" and event.get("rule") in FAULT_RULES for event in events
+    )
+
+
 def _archive(turn, state, events, question, answer):
     """A turn keeps its own trace, so an old exchange can be reopened with its evidence."""
     return {
@@ -26,6 +36,7 @@ def _archive(turn, state, events, question, answer):
         "question": question,
         "answer": answer,
         "events": events,
+        "faulted": _faulted(events),
         "state": {
             "model_runs": state.get("model_runs", 0),
             "sections_read": sorted(state.get("sections_read") or ()),
@@ -53,9 +64,12 @@ def respond(question, turns, model_id):
         return
 
     index = len(turns) + 1
+    # A turn that died upstream produced no answer, only an apology. Replaying it as an
+    # assistant message would teach the model that such text is a valid reply.
     seen = [
         {"role": role, "content": content}
         for t in turns
+        if not t.get("faulted")
         for role, content in (("user", t["question"]), ("assistant", t["answer"]))
     ]
     figures, sections, datasets = _accumulated(turns)
