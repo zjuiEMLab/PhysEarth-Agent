@@ -15,8 +15,9 @@ license: Apache License 2.0
 
 # PhysEarth-Agent
 
-An open-source GeoAI agent that runs physical Earth models for microwave remote sensing of
-snow, soil and vegetation.
+> **Novelty.** PhysEarth-Agent converts natural-language Earth-science questions into reproducible, model-ready physical experiments by jointly resolving computational environments, scientific data transformations, physical-model contracts, execution, validation, and provenance.
+
+An open-source GeoAI agent that runs physical Earth models for terrestrial water cycle.
 
 Most GeoAI systems are data-driven. This one runs physics, and its point is not that it can
 talk about physics but that it cannot assert physics it did not read or run. A misconfigured
@@ -73,6 +74,15 @@ or the capability declarations are removed. See [`evaluation/README.md`](evaluat
 | `smrt` | snow and ice | brightness temperature, backscatter |
 | `tau_omega` | soil and vegetation | brightness temperature, emissivity |
 | `water_cloud` | soil and vegetation | backscatter |
+
+## Next steps
+
+- [Add pywatershed/PRMS 3.0.0](tasks/pywatershed-prms-3.0.0.md): establish a
+  model-ready hydrologic workflow on the official five-year Sagehen domain before adding
+  forcing acquisition and transformation for new study areas.
+- [Reproduce the SMRT v1 Section 3 experiments](tasks/smrt_section3_scientific_questions_and_steps.md):
+  use the paper's sparse-medium, reference-model, and microstructure-equivalence
+  investigations as an end-to-end research-agent baseline.
 
 ## Bundled literature and method notes
 
