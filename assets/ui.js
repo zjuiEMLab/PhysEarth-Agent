@@ -230,29 +230,7 @@ function peBoot() {
     return box ? box.querySelector("textarea") : null;
   }
 
-  function setQuestion(text) {
-    var area = textarea();
-    if (!area) return false;
-    var setter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      "value"
-    ).set;
-    setter.call(area, text);
-    area.dispatchEvent(new Event("input", { bubbles: true }));
-    return true;
-  }
-
   document.addEventListener("click", function (event) {
-    var chip = event.target.closest ? event.target.closest("[data-example]") : null;
-    if (chip) {
-      event.preventDefault();
-      if (setQuestion(chip.getAttribute("data-example"))) {
-        var send = document.getElementById("pe-send");
-        if (send) setTimeout(function () { send.click(); }, 30);
-      }
-      return;
-    }
-
     var pick = event.target.closest ? event.target.closest("[data-model]") : null;
     if (pick) {
       event.preventDefault();

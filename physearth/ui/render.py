@@ -22,19 +22,14 @@ BOLD = re.compile(r"\*\*([^*]+)\*\*")
 CODE = re.compile(r"`([^`]+)`")
 SECTION_PREVIEW_CHARS = 620
 
-EXAMPLES = [
-    "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes from "
-    "100 to 700 kg/m3 for a 1 m layer, plot it, and explain the trend.",
-    "At Trail Valley Creek, what Ku-band backscatter was actually measured, and how does "
-    "SMRT compare at the same incidence angles? Plot both.",
-    "How does L-band brightness temperature respond to soil moisture from 0.05 to 0.45, and "
-    "how much does vegetation optical depth change that?",
-    "Compare what tau_omega and water_cloud predict as soil moisture rises. Are the two "
-    "results comparable?",
-    "Simulate a snowpack at 37 GHz with a density of 2000 kg/m3.",
-    "Do not use any tools. From your own knowledge, write a full paragraph explaining how "
-    "snow density affects 37 GHz brightness temperature.",
-]
+# The composer's own greyed-out text, in place of a row of preset buttons. It has to teach
+# the two things a first-time visitor cannot guess: that this runs models rather than
+# talking about them, and that a question may name a configuration.
+PLACEHOLDER = (
+    "Ask about microwave modelling of snow, soil or vegetation. For example: run SMRT to "
+    "show how 37 GHz brightness temperature changes as snow density goes from 100 to 700 "
+    "kg/m3 for a 1 m layer, plot it, and explain the trend."
+)
 
 ICONS = {
     "chat": "<path d='M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4.2-.9L3 20.5l1.5-4.4A8.4 8.4 "
@@ -157,7 +152,6 @@ def hero(model_id=None, running=False, status=""):
         )
         for item in agent.CATALOGUE
     )
-    used, cap = budget.used()
     return (
         "<header class='hero'>"
         "<div class='hero-brand'>"
@@ -167,22 +161,17 @@ def hero(model_id=None, running=False, status=""):
         "M4.9 4.9l2.3 2.3M16.8 16.8l2.3 2.3M19.1 4.9l-2.3 2.3M7.2 16.8l-2.3 2.3'/></svg>"
         "<span class='hero-title'>PhysEarth-Agent</span>"
         "<span class='hero-sep'>/</span>"
-        "<span class='hero-sub'>physical Earth models you can trust yourself to configure"
-        "</span></div>"
+        "<span class='hero-sub'>Trusted Geophysical Agent</span></div>"
         "<div class='hero-spacer'></div>"
         "<div class='hero-right'>"
         "<span class='status'><span class='status-dot'></span><span>%s</span></span>"
         "<div class='segment segment--model'>%s</div>"
         "<a class='tag' href='https://github.com/zjuiEMLab/PhysEarth-Agent' target='_blank' "
         "rel='noopener'>GitHub</a>"
-        "<span class='tag'>%d/%d this hour</span>"
-        "<span class='tag'>Apache-2.0</span>"
         "</div></header>%s"
         % (
             _e(status or ("Running" if running else "Idle")),
             buttons,
-            used,
-            cap,
             "<span data-running='1' hidden></span>" if running else "",
         )
     )
@@ -240,22 +229,6 @@ def live(question, answer, running=False):
         _message("you", question, user=True),
         _message("physearth", answer, running=running),
     )
-
-
-def chips():
-    items = "".join(
-        "<button type='button' class='chip' data-example=\"%s\">"
-        "<span class='dot'></span>%s</button>" % (_e(text), _e(_short(text)))
-        for text in EXAMPLES
-    )
-    return (
-        "<div class='subpanel' style='padding-top:11px'><div class='chips'>%s</div></div>" % items
-    )
-
-
-def _short(text, limit=44):
-    text = " ".join(text.split())
-    return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
 
 
 # ---------------------------------------------------------------- run trace
@@ -884,9 +857,6 @@ def _rejected_card(item):
     )
 
 
-_ENVIRONMENT = None
-
-
 def environment_card(report=None):
     """The startup self-check, on screen instead of only on stdout.
 
@@ -895,13 +865,10 @@ def environment_card(report=None):
     running, whether the temporary directory survives a restart, which outbound hosts this
     instance can reach, and which models registered and which were refused and why.
     """
-    global _ENVIRONMENT
     if report is None:
-        if _ENVIRONMENT is None:
-            from physearth import diagnostics
+        from physearth import diagnostics
 
-            _ENVIRONMENT = diagnostics.collect()
-        report = _ENVIRONMENT
+        report = diagnostics.report()
 
     packages = "".join(
         "<div class='info-row'><span class='k'>%s</span><span class='v'>%s</span></div>"

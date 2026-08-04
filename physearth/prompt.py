@@ -92,8 +92,13 @@ def models_section(declared=True):
         )
     return (
         "Registered physical models. These are the only sources of numerical results; the "
-        "declaration below is what the system validates your calls against.\n\n%s"
-        % registry.capability_block()
+        "declaration below is what the system validates your calls against.\n\n"
+        "This table is here so you can choose a model and get a call right the first time. "
+        "Reading it is not an act you performed in the conversation, so it earns no "
+        "citation: a [model:name@version] marker resolves only after you have run that "
+        "model or called list_models on it. If you want to state its version, a range or a "
+        "constraint in the answer, call list_models first. Do not cite a version you have "
+        "only seen here.\n\n%s" % registry.capability_block()
     )
 
 

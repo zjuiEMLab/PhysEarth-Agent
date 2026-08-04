@@ -150,6 +150,22 @@ def model_registry_report():
     }
 
 
+_REPORT = None
+
+
+def report():
+    """The startup self-check, collected once per process.
+
+    It costs five network probes with a six second timeout each, so anything that renders
+    it on a request path must not be the thing that collects it. The application collects
+    it at import, before the first visitor arrives, and every later reader gets this.
+    """
+    global _REPORT
+    if _REPORT is None:
+        _REPORT = collect()
+    return _REPORT
+
+
 def collect():
     from physearth.ingest import http
 

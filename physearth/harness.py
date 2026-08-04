@@ -144,8 +144,11 @@ def citation_correction(result):
         "[model:name@version] must name a model you actually ran or whose declaration you read, "
         "and a marker of the form [data:slug] must name a reference dataset you actually "
         "queried, and a marker of the form [skill:slug] must name a method note you actually "
-        "opened with read_literature. Note that a model name is not a paper slug. Fix or drop "
-        "each one and re-send the full answer."
+        "opened with read_literature. Note that a model name is not a paper slug, and that "
+        "seeing a model's version in the capability table is not the same as reading its "
+        "declaration: if you want to keep a [model:...] marker, call list_models on that "
+        "model now and then re-send. Otherwise drop the marker. Fix or drop each one and "
+        "re-send the full answer."
         % ", ".join(result["unresolved"])
     )
 

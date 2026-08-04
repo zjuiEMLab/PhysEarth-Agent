@@ -5,7 +5,9 @@ from physearth.ui import render, theme
 
 config.load_dotenv()
 
-_REPORT = diagnostics.collect()
+# Collected here, at import, so no visitor ever waits for five network probes on the
+# request path. Every later reader, including the evidence panel, shares this one result.
+_REPORT = diagnostics.report()
 print(diagnostics.render(_REPORT), flush=True)
 
 
@@ -162,11 +164,10 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                         show_label=False,
                         container=False,
                         lines=3,
-                        placeholder="Ask about snow, soil or vegetation microwave modelling",
+                        placeholder=render.PLACEHOLDER,
                     )
                     clear = gr.Button("Clear the session", elem_id="pe-clear")
                     send = gr.Button("Send", variant="primary", elem_id="pe-send")
-                gr.HTML(render.chips(), elem_classes=["pe-slot"])
 
             with gr.Column(elem_classes=["pe-panel", "pe-panel--trace"]):
                 trace_slot = gr.HTML(

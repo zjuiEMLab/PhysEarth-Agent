@@ -112,10 +112,16 @@ main.contain > .column {
 }
 
 /* Every Gradio wrapper inside the shell stops taking part in layout, so our own
-   markup is what the grid and the flex boxes see. */
-#pe-app .block,
-#pe-app .form,
-#pe-app .html-container,
+   markup is what the grid and the flex boxes see.
+
+   The three panels and the stage are excluded by name. Gradio has been seen to add its
+   own `block` class to a Column it re-renders, and `#pe-app .block` outranks `.pe-panel`
+   on specificity, so without this exclusion a panel would collapse to `display: contents`
+   and its heading, body and composer would fall through into the stage's three grid
+   columns, laying the conversation out to the right of its own title. */
+#pe-app .block:not(.pe-panel):not(.stage),
+#pe-app .form:not(.pe-panel):not(.stage),
+#pe-app .html-container:not(.pe-panel):not(.stage),
 #pe-app .prose.gradio-style {
   display: contents !important;
 }
@@ -355,10 +361,14 @@ a.tag:hover {
   overflow: hidden !important;
 }
 
-/* The three panels, addressed structurally as well as by class. Gradio has been seen to
-   drop a class it recognises from elem_classes, and a panel that loses its direction turns
-   the whole column into a row. */
+/* The three panels, addressed structurally as well as by class, and by the id so this
+   outranks every `#pe-app .something` neutralising rule above. Gradio has been seen to
+   drop a class it recognises from elem_classes and to add its own; addressing the stage's
+   direct children by structure survives both, because whatever else changes, a child of
+   the stage is a panel. */
+#pe-app .stage > *,
 #pe-app .stage > .column,
+#pe-app .pe-panel,
 .pe-panel {
   position: relative;
   min-width: 0 !important;
@@ -822,7 +832,9 @@ body:not(.is-reasoning) .caret {
   flex: none !important;
   gap: 0 !important;
   margin: 0 !important;
-  padding: var(--pad) var(--pad) 0 !important;
+  /* The bottom padding used to come from the example chips sitting underneath. With those
+     gone the composer is the last child, so it carries its own bottom gap. */
+  padding: var(--pad) !important;
   min-width: 0 !important;
   width: auto !important;
 }
