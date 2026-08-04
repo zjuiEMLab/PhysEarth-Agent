@@ -215,24 +215,39 @@ def build():
     header += [
         "## Agent task set",
         "",
-        "%d recorded runs over %d tasks, %d configurations, %d repeat(s), on %s, at build %s."
+        "%d recorded runs over %d tasks, %d configurations, %d repeat(s)."
         % (len(scored), len(set(s["task"] for s in scored)),
-           len(set(s["config"] for s in scored)), len(repeats), ", ".join(llms),
-           ", ".join(builds)),
+           len(set(s["config"] for s in scored)), len(repeats)),
         "",
     ]
-    if len(builds) > 1 or len(llms) > 1:
+    # The comparison this report makes is between configurations, within a task. That
+    # contrast is only meaningful if the four cells of a task share a language model and a
+    # build, which is what the runner's blocked design guarantees. Several models across
+    # different tasks is by design, because the free quota is counted per model per day and
+    # one model does not hold enough of it. Two models inside one task would not be.
+    split = sorted(
+        task
+        for task, items in group(scored, "task").items()
+        if len({(i.get("llm"), i.get("build")) for i in items}) > 1
+    )
+    header += [
+        "Run as a blocked design: a task is a block, and all %d configurations of a task "
+        "run on one language model at one build. Models differ between tasks because the "
+        "free inference quota is counted per model per day, and no single model holds "
+        "enough of it for the whole sweep. Every contrast below is therefore computed "
+        "within a task and then averaged across tasks; none of them straddles two models."
+        % len(set(s["config"] for s in scored)),
+        "",
+        "Builds: %s. Models: %s." % (", ".join(builds), ", ".join(llms)),
+        "",
+    ]
+    if split:
         header += [
-            "> **These runs do not all describe the same system.** The table below mixes %s. "
-            "A cell is only comparable with the others when the code and the language model "
-            "behind it were the same, so treat this report as provisional until the sweep has "
-            "been re-run at one build: delete `evaluation/results/runs/` and run "
-            "`agent_tasks.py` again."
-            % (
-                "builds %s" % ", ".join(builds)
-                if len(builds) > 1
-                else "language models %s" % ", ".join(llms)
-            ),
+            "> **%d task(s) do not hold together: %s.** Their configurations were not all "
+            "run on the same model and build, so the contrast for those tasks compares two "
+            "things at once. Delete their records under `evaluation/results/runs/` and "
+            "re-run `agent_tasks.py`, which will place each block on one model."
+            % (len(split), ", ".join(split)),
             "",
         ]
     header += [

@@ -31,10 +31,23 @@ SUITES = ("tier1", "probe")
 SAFE = re.compile(r"[^A-Za-z0-9._-]+")
 FAULTS = ("quota", "withdrawn", "upstream", "global_budget")
 
-# Deliberately not one of the three the interface offers. Those are reserved for a person
+# Deliberately none of the three the interface offers. Those are reserved for a person
 # driving the deployed Studio; a sweep of a few hundred calls would spend their daily
 # quota and trip the account's requests-per-minute limit underneath them.
-DEFAULT_LLM = "Qwen/Qwen3-Next-80B-A3B-Instruct"
+#
+# A pool rather than one model, because the free quota is counted per model per day and
+# one model does not hold enough of it for the whole sweep. The sweep is therefore run as
+# a blocked design: a task is a block, and every configuration of that task runs on the
+# same model, so the comparison the report makes -- between configurations, within a task
+# -- never straddles two models. A block whose model runs out is discarded whole and
+# retried on the next model, never left half finished.
+DEFAULT_POOL = [
+    "Qwen/Qwen3-Next-80B-A3B-Instruct",
+    "Qwen/Qwen3.5-35B-A3B",
+    "Qwen/Qwen3-30B-A3B",
+    "Qwen/Qwen3-14B",
+    "stepfun-ai/Step-3.5-Flash",
+]
 PACE_S = 3.0
 
 
@@ -158,7 +171,8 @@ def main(argv=None):
     parser.add_argument("--configs", nargs="*", default=None)
     parser.add_argument("--tasks", nargs="*", default=None)
     parser.add_argument("--suites", nargs="*", default=list(SUITES))
-    parser.add_argument("--llm", default=DEFAULT_LLM)
+    parser.add_argument("--llm", nargs="*", default=None,
+                        help="model pool; a task's configurations all run on one of them")
     parser.add_argument("--pace", type=float, default=PACE_S,
                         help="seconds to wait between runs, to stay under the account RPM limit")
     parser.add_argument("--force", action="store_true")
@@ -166,65 +180,98 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     config.load_dotenv()
-    llm = args.llm or DEFAULT_LLM
+    pool = args.llm or list(DEFAULT_POOL)
     build = build_id()
     configs = common.load_configs(args.configs)
     tasks = [t for suite in args.suites for t in common.load_tasks(suite)]
     if args.tasks:
         tasks = [t for t in tasks if t["id"] in args.tasks]
-
-    planned = [
-        (task, entry, repeat)
-        for task in tasks
-        for entry in configs
-        for repeat in range(1, args.repeats + 1)
-    ]
     RUNS.mkdir(parents=True, exist_ok=True)
-    todo = [p for p in planned if args.force or not (RUNS / key(p[0]["id"], p[1]["name"], llm, p[2])).is_file()]
 
-    print("%d task(s) x %d config(s) x %d repeat(s) = %d run(s) on %s at build %s"
-          % (len(tasks), len(configs), args.repeats, len(planned), llm, build))
-    print("%d already cached, %d to run" % (len(planned) - len(todo), len(todo)))
+    print("%d task(s) x %d config(s) x %d repeat(s) = %d run(s) at build %s"
+          % (len(tasks), len(configs), args.repeats,
+             len(tasks) * len(configs) * args.repeats, build))
+    print("model pool: %s" % ", ".join(pool))
+
+    def block_of(task, repeat):
+        """Which model already holds a complete block for this task, if any."""
+        for llm in pool:
+            names = [key(task["id"], c["name"], llm, repeat) for c in configs]
+            if all((RUNS / n).is_file() for n in names):
+                return llm, names
+        return None, []
+
+    planned, cached = [], 0
+    for task in tasks:
+        for repeat in range(1, args.repeats + 1):
+            done, _ = block_of(task, repeat)
+            if done and not args.force:
+                cached += 1
+            else:
+                planned.append((task, repeat))
+    print("%d block(s) already complete, %d to run" % (cached, len(planned)))
     if args.dry_run:
-        for task, entry, repeat in todo:
-            print("  would run %s" % key(task["id"], entry["name"], llm, repeat))
+        for task, repeat in planned:
+            print("  would run block %s r%d (%d configs)" % (task["id"], repeat, len(configs)))
         return 0
 
-    failures, written = 0, 0
-    for index, (task, entry, repeat) in enumerate(todo, 1):
-        name = key(task["id"], entry["name"], llm, repeat)
-        print("[%3d/%3d] %s" % (index, len(todo), name), flush=True)
-        try:
-            record = run_one(task, entry, llm, repeat, build)
-        except Exception:
-            failures += 1
-            print(traceback.format_exc())
-            continue
-        # An upstream fault is not a result. Caching one would freeze an empty record into
-        # the report and the cache would then skip it forever, so it is never written; and
-        # a spent daily quota will not clear before tomorrow, so there is nothing to gain
-        # by working through the rest of the plan.
-        if record["stop_rule"] in FAULTS:
-            print("          upstream fault: %s. Nothing written." % record["stop_rule"])
-            if record["stop_rule"] in ("quota", "withdrawn"):
-                print("\n%s is spent or withdrawn for today on %s. %d run(s) written, "
-                      "%d still to do; re-run this command and the cache will resume."
-                      % (record["stop_rule"], llm, written, len(todo) - index))
-                return 2
-            failures += 1
-            continue
-        (RUNS / name).write_text(
-            json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
-        written += 1
-        print("          %s, %d LLM calls, %d tool calls, stop=%s"
-              % ("answered" if record["answer"] else "no answer",
-                 record["model_calls"], record["tool_calls"], record["stop_rule"]), flush=True)
-        if args.pace and index < len(todo):
-            time.sleep(args.pace)
+    dead = set()
+    written, abandoned = 0, []
+    for index, (task, repeat) in enumerate(planned, 1):
+        placed = False
+        for llm in pool:
+            if llm in dead:
+                continue
+            print("[%2d/%2d] block %s r%d on %s"
+                  % (index, len(planned), task["id"], repeat, llm), flush=True)
+            made, spent = [], False
+            for entry in configs:
+                name = key(task["id"], entry["name"], llm, repeat)
+                if (RUNS / name).is_file() and not args.force:
+                    made.append(name)
+                    continue
+                try:
+                    record = run_one(task, entry, llm, repeat, build)
+                except Exception:
+                    print(traceback.format_exc())
+                    spent = True
+                    break
+                if record["stop_rule"] in FAULTS:
+                    print("        %s: %s" % (entry["name"], record["stop_rule"]))
+                    spent = True
+                    break
+                (RUNS / name).write_text(
+                    json.dumps(record, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+                made.append(name)
+                print("        %-14s %d LLM calls, %d tool calls"
+                      % (entry["name"], record["model_calls"], record["tool_calls"]), flush=True)
+                if args.pace:
+                    time.sleep(args.pace)
+            if not spent:
+                written += len(made)
+                placed = True
+                break
+            # The block is only meaningful whole. Keep the partial records off disk so a
+            # later run cannot mistake them for a comparison.
+            for name in made:
+                if (RUNS / name).is_file():
+                    (RUNS / name).unlink()
+            dead.add(llm)
+            print("        %s is spent for today; retrying this block on the next model" % llm)
+        if not placed:
+            abandoned.append((task["id"], repeat))
+            print("        no model in the pool has quota left for this block")
+            break
 
-    print("\n%d run(s) written, %d failed" % (written, failures))
-    return 1 if failures else 0
+    print("\n%d run(s) written. %d model(s) spent today: %s"
+          % (written, len(dead), ", ".join(sorted(dead)) or "none"))
+    if abandoned:
+        print("%d block(s) not run. Re-run this command tomorrow; complete blocks are cached."
+              % (len(planned) - index + 1))
+        return 2
+    return 0
 
 
 if __name__ == "__main__":

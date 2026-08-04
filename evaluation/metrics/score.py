@@ -336,6 +336,10 @@ def score_record(record, task, reference=None):
         "quality": record.get("quality"),
         "config": record["config"],
         "repeat": record["repeat"],
+        # Carried so the report can check that the four cells of a task share a model and
+        # a build. A contrast that straddles two of either is comparing two things at once.
+        "llm": record.get("llm"),
+        "build": record.get("build"),
         "completed": bool(record["answer"]) and record["stop_rule"] in (None, "citation_integrity"),
         "stop_rule": record["stop_rule"],
         "model_calls": record["model_calls"],
