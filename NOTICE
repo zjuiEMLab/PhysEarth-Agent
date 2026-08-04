@@ -23,6 +23,27 @@ Bundled literature corpus in knowledge/literature/
   vod-sensitivity                CC-BY-4.0  10.5194/bg-20-1027-2023
   backscatter-forward-operator   CC-BY-4.0  10.5194/hess-25-6283-2021
 
+Method notes in knowledge/skills/
+  model-comparison, research-planning and research-reporting are original work,
+  Apache-2.0. They are procedures written for this system, not extracts from any source.
+
+Literature fetched at runtime
+  The online layer reaches three services, none of which is redistributed here and each of
+  which is contacted only over HTTPS at an address this repository constructs from a DOI.
+
+  OpenAlex           https://api.openalex.org      metadata and abstracts. OpenAlex data is
+                     released into the public domain under CC0-1.0 by OurResearch. Nothing
+                     retrieved from it is stored beyond the lifetime of one conversation.
+  Europe PMC         https://www.ebi.ac.uk         full text of open-access articles, served
+                     under each article's own licence, which is recorded with the text and
+                     shown in the interface.
+  Copernicus         https://*.copernicus.org      full text of EGU journal articles, served
+                     under each article's own Creative Commons licence, likewise recorded.
+
+  A paper taken in this way lives in one visitor's session, is never written to disk, and is
+  discarded when that conversation is cleared. Its licence and attribution travel with every
+  section and are shown beside the text.
+
 Registered physical models
   smrt          Uses the third-party SMRT package, which remains under its own LGPL-3.0
                 licence. The model card and adapter here are original work, Apache-2.0.

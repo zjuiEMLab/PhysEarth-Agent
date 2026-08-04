@@ -162,7 +162,7 @@ def test_a_declined_call_reaches_the_model_as_a_tool_result(monkeypatch):
 
     steps = agent.stream("run smrt for me", session=box)
     phases = []
-    for _, events, state in steps:
+    for _, _events, state in steps:
         phases.append(state.get("phase"))
         if state.get("phase") == "needs_approval":
             approval.decide(box, "reject")

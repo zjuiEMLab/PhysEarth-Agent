@@ -25,18 +25,46 @@ nothing. So the checks live in the system rather than in the prompt:
 
 - parameters are checked against each model's declared physical ranges and legal
   combinations **before** the model runs;
+- a human approves the run, and the model has no way to approve on its own behalf;
 - the result is checked against the declared output bounds **after** it runs;
 - every claim in an answer must carry a marker that resolves to a paper section the agent
-  actually opened, a model it actually ran, or a dataset it actually queried;
+  actually opened, a model it actually ran, a dataset it actually queried, or a method note
+  it actually followed;
+- a paper the agent has only seen listed carries a weaker marker that may never carry a
+  value in kelvin, decibels or volumetric soil moisture;
 - text that came from outside the system arrives inside a labelled boundary and is treated
   as evidence, never as instruction;
 - numeric arrays never enter the model's context. A run returns a handle and a bounded
   preview, and the full result stays in the session store;
 - charts are drawn from a declarative specification naming those handles, never from code
-  the agent wrote, and a measured series is never drawn like a simulated one.
+  the agent wrote, and a measured series is never drawn like a simulated one;
+- two curves are not differenced until they are shown to be comparable, so a bias between a
+  brightness temperature and a backscatter is refused rather than printed.
 
 None of these is a tool the agent may skip. The run trace shows each one, including the
 refusals.
+
+## What the evidence is, and how far each kind reaches
+
+| Tier | What it is | Marker | What it can support |
+|---|---|---|---|
+| bundled | shipped with this repository, full text | `[slug#id]` | anything |
+| session | fetched by DOI during the conversation, full text | `[slug#id]`, marked in the trace | anything |
+| abstract | seen in a search result, metadata only | `[abs:doi]` | what a study was about, never a value |
+| method | a procedure note the agent opened before acting | `[skill:slug]` | that the procedure was followed |
+
+The agent can search the open-access literature through OpenAlex and take a paper's full
+text into the conversation by DOI, from Copernicus or Europe PMC. It passes a DOI and never
+a URL: every address is constructed here, only over HTTPS, only to an allowed host.
+`PHYSEARTH_ONLINE=0` closes that layer entirely and nothing else changes.
+
+## Evaluation
+
+`evaluation/` holds a reproducible task set, four ablation configurations and the runners
+that produce [`evaluation/REPORT.md`](evaluation/REPORT.md). Tier 0 costs nothing to re-run
+and pins the bundled models against the upstream packages they wrap. The agent task set
+reproduces figures from the SMRT paper and probes what happens when the harness, the corpus
+or the capability declarations are removed. See [`evaluation/README.md`](evaluation/README.md).
 
 ## Bundled models
 
@@ -46,10 +74,11 @@ refusals.
 | `tau_omega` | soil and vegetation | brightness temperature, emissivity |
 | `water_cloud` | soil and vegetation | backscatter |
 
-## Bundled literature
+## Bundled literature and method notes
 
 Eight open-access Copernicus papers, redistributed under their CC-BY licences, split into 79
-citable sections. See `NOTICE` for the per-paper attribution.
+citable sections, plus three method notes the agent reads before acting: planning a run,
+comparing two models, and reporting a result. See `NOTICE` for the per-paper attribution.
 
 ## Bundled measurements
 
@@ -70,6 +99,17 @@ python app.py
 `MODELSCOPE_MODEL` sets the language model the agent starts with. The interface offers
 three, and the choice is per session: Qwen3.5-122B-A10B, DeepSeek-V4-Flash and
 GLM-4.7-Flash, all reached through the public ModelScope API-Inference endpoint.
+
+Every setting has a working default, so the application starts with no `.env` present.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `MODELSCOPE_TOKEN` | empty | the only secret; needed to reach the inference endpoint |
+| `MODELSCOPE_MODEL` | `Qwen/Qwen3.5-122B-A10B` | which language model a session starts on |
+| `PHYSEARTH_ONLINE` | `1` | `0` removes the two online literature tools entirely |
+| `PHYSEARTH_MODEL_PATH` | empty | extra model directories to register |
+| `PHYSEARTH_STATE_DIR` | `_state` | the one directory written to |
+| `PHYSEARTH_HOST`, `PHYSEARTH_PORT` | `0.0.0.0`, `7860` | where it listens |
 
 ---
 
