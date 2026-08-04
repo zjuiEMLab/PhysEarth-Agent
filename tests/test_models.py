@@ -332,18 +332,40 @@ def test_an_unavailable_model_still_publishes_its_whole_declaration():
 
 
 def test_calling_an_unavailable_model_explains_itself_and_names_the_dependency():
+    """The refusal path only. Executing this model would fetch a 156 MB fixture and run a
+    hydrologic simulation, neither of which belongs in a unit test."""
     from physearth import tools
     from physearth.models import registry
 
     entry = registry.get("pywatershed")
-    result = tools.call("run_model", {"model": "pywatershed", "parameters": {}})
     if entry.runnable:
-        assert result["status"] in ("success", "terminal_error")
-        return
+        pytest.skip("pywatershed is installed here, so there is no refusal to check")
+    result = tools.call("run_model", {"model": "pywatershed", "parameters": {}})
     assert result["status"] == "terminal_error"
     assert "pywatershed" in result["error"]
     assert result["data"]["requires_import"] == "pywatershed"
     assert "declaration is available" in result["error"] or "Install it" in result["error"]
+
+
+def test_the_hydrologic_adapter_declares_only_what_prms_actually_produces():
+    """Checked without running anything: the variables the card offers must all be names
+    the adapter knows how to pull out of the process chain."""
+    import importlib.util
+
+    from physearth.models import registry
+
+    entry = registry.get("pywatershed")
+    spec = importlib.util.spec_from_file_location(
+        "pws_adapter_probe", entry.card["_dir"] / "adapter.py"
+    )
+    adapter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adapter)
+
+    declared = set(entry.card["parameters"]["variable"]["enum"])
+    assert declared == set(adapter.VARIABLES)
+    assert entry.card["outputs"]["value"]["unit"] == "mm"
+    assert adapter.INCH_TO_MM == 25.4
+    assert adapter.COMMIT and len(adapter.COMMIT) == 40
 
 
 def test_a_local_model_must_say_what_it_depends_on():

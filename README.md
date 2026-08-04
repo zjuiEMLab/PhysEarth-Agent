@@ -83,13 +83,20 @@ piling models in.
 | `smrt` | snow and ice, microwave | brightness temperature, backscatter | yes |
 | `tau_omega` | soil and vegetation, passive microwave | brightness temperature, emissivity | yes |
 | `water_cloud` | soil and vegetation, active microwave | backscatter | yes |
-| `pywatershed` | catchment hydrology, PRMS | SWE, snowmelt, runoff, groundwater flow | where its dependency is installed |
+| `pywatershed` | catchment hydrology, PRMS | SWE, snowmelt, surface runoff, soil-zone and groundwater flow | yes |
 
-`pywatershed` is the worked example of a model whose dependencies do not fit every host: it
-needs `numpy>=2` and Python 3.12–3.13, while this deployment is pinned to `numpy<2` to match
-its platform. It registers with its full capability declaration everywhere, and reports
-plainly where it cannot run rather than failing obscurely. See
+The first three answer what a surface looks like to a microwave sensor. `pywatershed` runs
+the PRMS process chain over the official five-year Sagehen Creek domain and answers what the
+water in that surface is doing, which is why the harness is not written around any one
+physics: the same parameter validation, quality control and citation rules apply to a
+hydrologic model that never emits a photon. See
 [`tasks/pywatershed-prms-3.0.0.md`](tasks/pywatershed-prms-3.0.0.md).
+
+It is also the worked example of a model whose host decides whether it can run. It declares
+`tier: local` with `requires_import: pywatershed`, so where the package is installed it runs,
+and where it is not it still registers with its whole capability declaration and says so
+plainly instead of failing obscurely. Its pinned Sagehen domain is fetched once into the
+state directory and checksummed; it is not redistributed here.
 
 ## Next steps
 

@@ -22,13 +22,13 @@ BOLD = re.compile(r"\*\*([^*]+)\*\*")
 CODE = re.compile(r"`([^`]+)`")
 SECTION_PREVIEW_CHARS = 620
 
-# The composer's own greyed-out text, in place of a row of preset buttons. It has to teach
-# the two things a first-time visitor cannot guess: that this runs models rather than
-# talking about them, and that a question may name a configuration.
+# The composer's own greyed-out text, in place of a row of preset buttons. It is one
+# question and nothing else: a visitor who types over it should be replacing a sentence,
+# not editing an instruction. It shows without being told that a question here names a
+# configuration and asks for a run rather than for an explanation.
 PLACEHOLDER = (
-    "Ask about microwave modelling of snow, soil or vegetation. For example: run SMRT to "
-    "show how 37 GHz brightness temperature changes as snow density goes from 100 to 700 "
-    "kg/m3 for a 1 m layer, plot it, and explain the trend."
+    "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes from "
+    "100 to 700 kg/m3 for a 1 m layer, plot it, and explain the trend."
 )
 
 ICONS = {
@@ -198,7 +198,7 @@ def history(turns):
     if not turns:
         return (
             "<div class='msg-group'><div class='pane-empty'>"
-            "<div class='pane-empty__title'>Ask a question, or use an example below</div>"
+            "<div class='pane-empty__title'>Ask a question to begin</div>"
             "<div class='pane-empty__hint'>Every answer is checked against what the agent "
             "actually read and ran. The run trace in the middle shows each check, including "
             "the refusals.</div></div></div>"
