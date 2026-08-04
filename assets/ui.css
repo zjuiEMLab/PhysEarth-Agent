@@ -1,4 +1,7 @@
 :root {
+  /* The palette is fixed to light. Declared here as well as on .dark so the form
+     controls Gradio still owns cannot be rendered dark by the browser itself. */
+  color-scheme: light;
   --paper: #faf9f5;
   --paper-2: #f5f4ed;
   --hover: #f0eee6;
@@ -1024,6 +1027,12 @@ body:not(.is-reasoning) .caret {
   background: var(--paper);
   border: 1px solid var(--line);
   margin-bottom: 10px;
+}
+
+/* Only the newest card animates in. The trace panel is replaced wholesale on every
+   stream chunk, so animating every card restarted all of them many times a second
+   and left the column the reviewer is meant to watch permanently translucent. */
+.step-card:last-child {
   animation: rise 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -1521,7 +1530,9 @@ body:not(.is-reasoning) .step-card--thinking {
   margin-bottom: 10px;
 }
 
-.ev-card.is-focus {
+/* Any card a citation can jump to, not only a source card: model and figure cards
+   carry data-anchor too, and without this the jump scrolled silently. */
+.is-focus {
   border-color: var(--ok);
   box-shadow: 0 0 0 3px var(--ok-wash);
 }
@@ -1886,4 +1897,54 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   flex: 1 1 auto !important;
   height: 32px !important;
   font-size: 12.5px !important;
+}
+
+/* ---------- long external strings ---------- */
+
+.ev-card__foot,
+.info-row,
+.kv {
+  min-width: 0;
+}
+
+.ev-card__foot a,
+.ev-card__foot span,
+.info-row .v,
+.kv dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- the approval buttons are the one place Gradio's own chrome shows ---------- */
+
+.approve__row button {
+  color: var(--ink) !important;
+  background: var(--btn) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: var(--radius-xs) !important;
+  box-shadow: none !important;
+}
+
+.approve__row button:hover {
+  background: var(--hover) !important;
+}
+
+#pe-approve-yes {
+  color: var(--paper) !important;
+  background: var(--clay) !important;
+  border-color: var(--clay) !important;
+}
+
+#pe-approve-yes:hover {
+  background: var(--clay-press) !important;
+}
+
+/* ---------- keyboard users can reach the pure-CSS tab radios ---------- */
+
+.tab-input:focus-visible + .tab-input + .tab-input ~ .tabbar,
+.tab-input:focus-visible ~ .tabbar,
+.scope-input:focus-visible ~ .scope {
+  outline: 2px solid var(--clay);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }

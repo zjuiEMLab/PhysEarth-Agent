@@ -67,25 +67,27 @@ def _mono(value):
 def _markers(text):
     """Turn the four marker forms into chips that jump to the evidence they name."""
 
+    # Every closure below runs over text that _inline has already escaped, so none of
+    # them escapes again: a second pass turns an ampersand inside a DOI into &amp;amp;.
     def section(match):
         key = "%s#%s" % (match.group(1), match.group(2))
         return (
             "<a class='cite' href='#' data-jump='sec-%s' data-tab='pe-tab-sources'>%s</a>"
-            % (_e(key), _e(key))
+            % (key, key)
         )
 
     def model(match):
         key = "%s@%s" % (match.group(1), match.group(2))
         return (
             "<a class='cite cite--model' href='#' data-jump='model-%s' "
-            "data-tab='pe-tab-models'>%s</a>" % (_e(match.group(1)), _e(key))
+            "data-tab='pe-tab-models'>%s</a>" % (match.group(1), key)
         )
 
     def data(match):
         slug = match.group(1)
         return (
             "<a class='cite cite--data' href='#' data-jump='data-%s' "
-            "data-tab='pe-tab-sources'>%s</a>" % (_e(slug), _e(slug))
+            "data-tab='pe-tab-sources'>%s</a>" % (slug, slug)
         )
 
     def abstract(match):
@@ -93,7 +95,7 @@ def _markers(text):
         return (
             "<a class='cite cite--abs' href='#' data-jump='abs-%s' "
             "data-tab='pe-tab-sources' title='abstract level: metadata only, never a "
-            "measured or computed value'>abs:%s</a>" % (_e(doi), _e(doi))
+            "measured or computed value'>abs:%s</a>" % (doi, doi)
         )
 
     def skill(match):
@@ -101,7 +103,7 @@ def _markers(text):
         return (
             "<a class='cite cite--skill' href='#' data-jump='sec-%s#00' "
             "data-tab='pe-tab-sources' title='the agent opened this method note before "
-            "writing this sentence'>%s</a>" % (_e(slug), _e(slug))
+            "writing this sentence'>%s</a>" % (slug, slug)
         )
 
     # The abstract form goes first: some DOIs would otherwise be eaten by the model pattern.
@@ -141,7 +143,9 @@ def _inline(text):
 
 
 def hero(model_id=None, running=False, status=""):
-    chosen = model_id or agent.default_model()
+    # The same fallback the agent applies to whatever the bridge sent. Without it the
+    # switcher can show nothing selected while a real model is running.
+    chosen = agent.resolve_model(model_id) if model_id else agent.default_model()
     buttons = "".join(
         "<button type='button' data-model='%s' class='%s' title='%s'>%s</button>"
         % (

@@ -105,7 +105,12 @@ def summarise(slug, indices):
     item = _load()[slug]
     summary = {}
     for name, column in table["columns"].items():
-        values = [_column_values(table, name)[i] for i in indices]
+        # The column is fetched once and then indexed. Written the other way round, with
+        # the call inside the comprehension, it rebuilds the whole column per row: on the
+        # 23658-row backscatter table that is half a billion list constructions, and it
+        # put thirty seconds into every redraw of the evidence panel.
+        source = _column_values(table, name)
+        values = [source[i] for i in indices]
         entry = {"unit": item["columns"][name]["unit"], "source": item["columns"][name]["source"]}
         if not values:
             entry["note"] = "no rows"
@@ -135,9 +140,11 @@ def sample(slug, indices, limit=MAX_SAMPLE_ROWS):
 def columns(slug, indices):
     """Full column arrays for the matching rows, for the plot renderer only."""
     table = _table(slug)
-    return {
-        name: [_column_values(table, name)[i] for i in indices] for name in table["columns"]
-    }
+    out = {}
+    for name in table["columns"]:
+        source = _column_values(table, name)
+        out[name] = [source[i] for i in indices]
+    return out
 
 
 def provenance(slug):

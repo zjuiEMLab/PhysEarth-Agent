@@ -29,6 +29,7 @@ function peBoot() {
 
   function mountCanvases() {
     var hosts = document.querySelectorAll(".hero, .pe-panel");
+    var previous = panels;
     panels = [];
     for (var i = 0; i < hosts.length; i++) {
       var host = hosts[i];
@@ -39,7 +40,13 @@ function peBoot() {
         cv.setAttribute("aria-hidden", "true");
         host.insertBefore(cv, host.firstChild);
       }
-      panels.push({ el: host, cv: cv, ctx: cv.getContext("2d"), w: 0, h: 0 });
+      /* Keep the measured size of a canvas we have already mounted. Resetting it to
+         zero makes panelFrame reallocate the backing store on every re-render. */
+      var prior = null;
+      for (var j = 0; j < previous.length; j++) {
+        if (previous[j].cv === cv) { prior = previous[j]; break; }
+      }
+      panels.push(prior || { el: host, cv: cv, ctx: cv.getContext("2d"), w: 0, h: 0 });
     }
   }
 
@@ -166,10 +173,19 @@ function peBoot() {
     ringKey = "";
   }
 
+  var drawnOnce = false;
+
   function tick() {
     for (var i = 0; i < panels.length; i++) panelFrame(panels[i], fxT);
     ringFrame(!reduce);
-    if (!reduce) fxT += 1;
+    if (reduce) {
+      /* The background is decorative. With reduced motion asked for, draw it once and
+         stop: the frame never changes, and redrawing it sixty times a second costs a
+         shared 2 vCPU instance real work for no visible difference. */
+      drawnOnce = true;
+      return;
+    }
+    fxT += 1;
     requestAnimationFrame(tick);
   }
 
@@ -214,7 +230,12 @@ function peBoot() {
   /* ---------- keep the scrolling panes pinned to the newest content ---------- */
 
   function scrollToEnd(node) {
-    if (node) node.scrollTop = node.scrollHeight;
+    /* Only follow the newest content when the reader is already at the bottom. Pinning
+       unconditionally makes it impossible to read back during a run. */
+    if (!node) return;
+    if (node.scrollHeight - node.scrollTop - node.clientHeight < 48) {
+      node.scrollTop = node.scrollHeight;
+    }
   }
 
   function autoScroll() {
@@ -274,16 +295,22 @@ function peBoot() {
     }
   });
 
-  /* Enter sends, shift+Enter makes a new line. */
+  /* Enter sends, shift+Enter makes a new line.
+
+     Registered in the capture phase and stopping propagation, because Gradio's own
+     Textbox handler binds on the target and, with lines > 1, treats shift+Enter as a
+     submit while suppressing the newline. Left alone it would both refuse to break the
+     line and start a second concurrent run on the same session. */
   document.addEventListener("keydown", function (event) {
     var area = textarea();
     if (!area || event.target !== area) return;
-    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
-      event.preventDefault();
-      var send = document.getElementById("pe-send");
-      if (send) send.click();
-    }
-  });
+    if (event.key !== "Enter" || event.isComposing) return;
+    event.stopPropagation();
+    if (event.shiftKey) return;
+    event.preventDefault();
+    var send = document.getElementById("pe-send");
+    if (send) send.click();
+  }, true);
 
   /* ---------- react to every Gradio re-render ---------- */
 
@@ -293,6 +320,10 @@ function peBoot() {
     pending = requestAnimationFrame(function () {
       pending = null;
       mountCanvases();
+      silenceBridge();
+      if (reduce && drawnOnce) {
+        for (var i = 0; i < panels.length; i++) panelFrame(panels[i], fxT);
+      }
       restoreState(document);
       autoScroll();
       document.body.classList.toggle(
@@ -303,7 +334,18 @@ function peBoot() {
   });
   observer.observe(app, { childList: true, subtree: true });
 
+  /* The model bridge is offscreen but still an editable textbox in the tab order.
+     Keyboard users tabbing through the composer would land in an invisible field. */
+  function silenceBridge() {
+    var bridge = document.getElementById("pe-model-bridge");
+    if (!bridge) return;
+    bridge.setAttribute("aria-hidden", "true");
+    var fields = bridge.querySelectorAll("textarea, input");
+    for (var i = 0; i < fields.length; i++) fields[i].setAttribute("tabindex", "-1");
+  }
+
   mountCanvases();
+  silenceBridge();
   restoreState(document);
   resizeRing();
   window.addEventListener("resize", function () {

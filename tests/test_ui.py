@@ -190,3 +190,61 @@ def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
     out = render.history(turns)
     assert out.count("msg--fault") == 1
     assert "not an answer" in out
+
+
+def test_clearing_the_session_does_not_disarm_the_approval_gate():
+    """The gate is off in the library and switched on per interface session. Clearing the
+    conversation makes a new one, and a gate that quietly stopped applying after the
+    visitor pressed Clear would be worse than having none."""
+    import app
+    from physearth import approval
+
+    first = app._session(None, agent.default_model())
+    assert approval.required(first)
+
+    session = app.reset(agent.default_model())[8]
+    assert approval.required(session)
+    assert app._session(session, agent.default_model()) is session
+    assert approval.required(session)
+
+
+def test_the_evidence_panel_is_cheap_enough_to_redraw():
+    """It is rendered on every stream yield, so a linear scan of a 23658-row table inside
+    it once cost thirty seconds a chunk."""
+    import time
+
+    from physearth import reference
+
+    started = time.perf_counter()
+    render._dataset_card("tvc-backscatter")
+    assert time.perf_counter() - started < 2.0
+
+    indices, _ = reference.query("tvc-backscatter")
+    summary = reference.summarise("tvc-backscatter", indices)
+    assert summary["band"]["values"] == ["C", "Ku", "X"]
+    assert summary["sigma0_db"]["min"] < summary["sigma0_db"]["max"]
+    assert len(reference.columns("tvc-backscatter", indices)["sigma0_db"]) == len(indices)
+
+
+def test_a_marker_is_escaped_once_and_only_once():
+    out = render.answer_html("see [abs:10.1175/1520-0442(2003)016<0100:X>2.0.CO;2] for that")
+    assert "&amp;amp;" not in out
+    assert "&amp;lt;" not in out
+    assert "&lt;0100:X&gt;" in out
+
+
+def test_the_switcher_never_shows_nothing_selected():
+    out = render.hero("someone/else")
+    assert out.count("is-active") == 1
+    assert "data-model='%s' class='is-active'" % agent.default_model() in out
+
+
+def test_only_one_route_reaches_the_agent():
+    """Two bindings would let a stray submit start a second run against one session."""
+    import app
+
+    handlers = [
+        dep for dep in app.demo.fns.values()
+        if getattr(dep, "name", None) == "respond" or getattr(getattr(dep, "fn", None), "__name__", "") == "respond"
+    ]
+    assert len(handlers) == 1
