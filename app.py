@@ -1,6 +1,6 @@
 import gradio as gr
 
-from physearth import agent, config, diagnostics
+from physearth import agent, approval, config, diagnostics
 from physearth.ui import render, theme
 
 config.load_dotenv()
@@ -13,7 +13,11 @@ def _session(box, model_id):
     """One session per visitor, held in gr.State. Nothing about it is module level."""
     if isinstance(box, dict) and box.get("id"):
         return box
-    return agent.new_session(model_id)
+    session = agent.new_session(model_id)
+    # The gate is off in the library and switched on here, because this is the only
+    # context with a person in it to answer.
+    approval.set_mode(session, approval.ASK)
+    return session
 
 
 FAULT_RULES = ("upstream", "quota", "withdrawn", "global_budget")
@@ -55,6 +59,7 @@ def respond(question, turns, box, model_id):
             gr.update(),
             gr.update(),
             gr.update(),
+            gr.update(),
             turns,
             session,
             "",
@@ -78,6 +83,7 @@ def respond(question, turns, box, model_id):
         render.live(question, "", running=True),
         render.trace([], agent.new_state(model_id, session), running=True),
         render.evidence(session),
+        render.approval_bar(session),
         turns,
         session,
         "",
@@ -94,6 +100,7 @@ def respond(question, turns, box, model_id):
                 render.live(question, answer, running=running),
                 render.trace(events, state, running=running),
                 render.evidence(session),
+                render.approval_bar(session),
                 gr.update(),
                 session,
                 "",
@@ -111,6 +118,7 @@ def respond(question, turns, box, model_id):
         render.live("", ""),
         render.trace(events, state, running=False),
         render.evidence(session),
+        render.approval_bar(session),
         turns,
         session,
         "",
@@ -128,6 +136,7 @@ def reset(model_id):
         render.live("", ""),
         render.trace([], agent.new_state(model_id, session), running=False),
         render.evidence(session),
+        render.approval_bar(session),
         [],
         session,
         "",
@@ -163,6 +172,14 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                 trace_slot = gr.HTML(
                     render.trace([], agent.new_state()), elem_classes=["pe-slot"]
                 )
+                with gr.Column(elem_id="pe-approve"):
+                    approval_slot = gr.HTML(
+                        render.approval_bar(None), elem_classes=["pe-slot"]
+                    )
+                    with gr.Row(elem_classes=["approve__row"]):
+                        approve = gr.Button("Run it", variant="primary", elem_id="pe-approve-yes")
+                        approve_all = gr.Button("Run it and stop asking", elem_id="pe-approve-all")
+                        decline = gr.Button("Decline", elem_id="pe-approve-no")
 
             with gr.Column(elem_classes=["pe-panel", "pe-panel--evid"]):
                 evidence_slot = gr.HTML(
@@ -181,6 +198,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         live_slot,
         trace_slot,
         evidence_slot,
+        approval_slot,
         turns_state,
         session_box,
         question,
@@ -189,6 +207,27 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     send.click(respond, inputs, outputs)
     question.submit(respond, inputs, outputs)
     clear.click(reset, [model_bridge], outputs)
+
+    # These three must be able to run while `respond` is blocked inside the gate waiting
+    # for them, so they are exempt from the queue's concurrency limit. Without that the
+    # click would sit behind the very generator it is meant to release.
+    for button, decision in (
+        (approve, "approve"),
+        (approve_all, approval.ALWAYS),
+        (decline, "reject"),
+    ):
+        button.click(
+            lambda box, verdict=decision: (
+                approval.decide(box, verdict),
+                render.approval_bar(box),
+            )[1],
+            [session_box],
+            [approval_slot],
+            concurrency_limit=None,
+            queue=False,
+        )
+
+demo.queue(default_concurrency_limit=4)
 
 if __name__ == "__main__":
     demo.launch(

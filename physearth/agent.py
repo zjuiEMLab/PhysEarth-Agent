@@ -3,7 +3,7 @@ import time
 
 from openai import OpenAI
 
-from physearth import budget, config, harness, prompt, tools
+from physearth import approval, budget, config, harness, prompt, tools
 from physearth import session as session_state
 from physearth import switches as switch_flags
 
@@ -429,12 +429,44 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 events.pop()
 
                 started_tool = time.perf_counter()
-                result = tools.call(
-                    name,
-                    arguments,
-                    owner=session["id"],
-                    switches_in=state["switches"],
-                    session=session,
+                # The gate sits here, between deciding to run a model and running it. The
+                # model has no way past it, because there is nothing it can put in a tool
+                # call that reaches this branch.
+                declined = False
+                if name == "run_model" and approval.required(session):
+                    approval.request(session, name, arguments)
+                    state["phase"] = "needs_approval"
+                    events.append(
+                        _event("approval_wait", rule="human_approval", name=name, arguments=arguments)
+                    )
+                    yield answer, events, state
+                    verdict = approval.wait(session)
+                    events.pop()
+                    state["phase"] = "running_tool"
+                    if verdict["decision"] == "reject":
+                        declined = True
+                    elif verdict["decision"] == "edit" and verdict["arguments"]:
+                        arguments = verdict["arguments"]
+                    events.append(
+                        _event(
+                            "approval",
+                            rule="human_approval",
+                            decision=verdict["decision"],
+                            name=name,
+                            arguments=arguments,
+                        )
+                    )
+                    yield answer, events, state
+                result = (
+                    approval.declined_result(name, arguments)
+                    if declined
+                    else tools.call(
+                        name,
+                        arguments,
+                        owner=session["id"],
+                        switches_in=state["switches"],
+                        session=session,
+                    )
                 )
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)

@@ -273,6 +273,16 @@ BADGES = {
     "empty_response": ("badge--mute", "UPSTREAM RETRY", "step-card--muted"),
     "literature_tier": ("badge--model", "LITERATURE TIER", "step-card--tool"),
     "protocol": ("badge--ok", "PROTOCOL", "step-card--pass"),
+    "approval_wait": ("badge--warn", "WAITING FOR YOU", "step-card--warn"),
+    "approval": ("badge--ok", "APPROVAL", "step-card--pass"),
+}
+
+APPROVAL_WORDS = {
+    "approve": "You approved this call.",
+    "reject": "You declined this call. The refusal went back to the model as a tool result, "
+    "so it has to answer without it or propose something different.",
+    "timeout": "Nobody answered within the time limit, so the call went ahead. This is "
+    "recorded here because an unanswered gate is not the same as an approved one.",
 }
 
 
@@ -376,6 +386,22 @@ def _event_body(event, index):
             "tool call.</div>%s" % _disclosure("ext-%d" % index, "excerpt", event.get("detail", ""))
         )
 
+    if kind == "approval_wait":
+        from physearth import approval as gate
+
+        described = gate.describe(event.get("name"), event.get("arguments"))
+        rows = [(k, v, "") for k, v in sorted(described["parameters"].items())]
+        return (
+            "<div class='step-card__line'>The agent wants to run <b>%s</b> as %s. Nothing "
+            "has been computed yet. Approve it, decline it, or let the time limit pass.</div>"
+            "%s" % (_e(described["model"]), _e(described["shape"]), _kv(rows) if rows else "")
+        )
+
+    if kind == "approval":
+        return "<div class='step-card__line'>%s</div>" % _e(
+            APPROVAL_WORDS.get(event.get("decision"), event.get("decision") or "")
+        )
+
     if kind == "tool_start":
         return (
             "<div class='step-card__line thinking-dots'>"
@@ -452,6 +478,34 @@ def _meter(label, value, cap, tone="", note=""):
             tone,
             pct,
             "<div class='meter__note'>%s</div>" % _e(note) if note else "",
+        )
+    )
+
+
+def approval_bar(session):
+    """The buttons that answer the gate, shown only while something is actually waiting."""
+    from physearth import approval as gate
+
+    waiting = gate.pending(session)
+    if not waiting:
+        return "<div class='approve' hidden></div>"
+    described = waiting["description"]
+    rows = "".join(
+        "<span class='approve__p'><b>%s</b> %s</span>" % (_e(k), _e(v))
+        for k, v in sorted(described["parameters"].items())
+    )
+    return (
+        "<div class='approve'>"
+        "<div class='approve__head'>Run <b>%s</b> as %s?</div>"
+        "<div class='approve__params'>%s</div>"
+        "<div class='approve__note'>The model cannot answer this for itself. If nobody "
+        "answers within %d seconds the call goes ahead and the trace says so.</div>"
+        "</div>"
+        % (
+            _e(described["model"]),
+            _e(described["shape"]),
+            rows or "<span class='approve__p'>every parameter at its declared default</span>",
+            int(gate.TIMEOUT_S),
         )
     )
 

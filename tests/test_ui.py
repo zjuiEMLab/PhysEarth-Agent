@@ -135,10 +135,11 @@ def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
     import app
 
     used_before = budget.used()
-    hero, head, history, live, trace, evidence, turns, session, box = app.reset(
+    hero, head, history, live, trace, evidence, approve, turns, session, box = app.reset(
         agent.default_model()
     )
     assert turns == [] and box == ""
+    assert "hidden" in approve
     assert session["turns"] == 0 and not session["sections_read"]
     assert "msg--" not in history and "msg--" not in live
     assert "Nothing has run yet" in trace
