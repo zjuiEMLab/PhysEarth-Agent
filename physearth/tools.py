@@ -1,7 +1,8 @@
 import concurrent.futures
 import time
 
-from physearth import knowledge, plotting, reference, results, switches, untrusted, validation
+from physearth import knowledge, live, plotting, reference, results, switches, validation
+from physearth.ingest import discover, fulltext, http
 from physearth.models import registry
 
 OUTPUT_BUDGET_CHARS = 16000
@@ -13,9 +14,10 @@ SPECS = [
         "function": {
             "name": "list_literature",
             "description": (
-                "Search the bundled open-access literature corpus. Returns one card per paper "
-                "with its slug, title, scenarios, outputs and a one-line description. Use it to "
-                "decide which paper to read; it never returns paper text."
+                "Search what this conversation can already read: the bundled corpus, any paper "
+                "taken in with ingest_paper, and the method notes. Returns one card per item "
+                "with its slug, title, coverage, licence and where it came from. Use it to "
+                "decide what to read; it never returns text."
             ),
             "parameters": {
                 "type": "object",
@@ -28,6 +30,14 @@ SPECS = [
                         "type": "string",
                         "enum": ["snow", "soil", "vegetation"],
                         "description": "Restrict to papers covering this medium.",
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": ["paper", "skill", "any"],
+                        "description": (
+                            "Papers, method notes, or both. Method notes are short procedures "
+                            "to follow, not evidence to cite for a physical claim."
+                        ),
                     },
                 },
             },
@@ -183,10 +193,68 @@ PLOT_SPEC = {
     },
 }
 
+DISCOVER_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "discover_literature",
+        "description": (
+            "Search the open-access literature of the whole world through OpenAlex, beyond "
+            "what this deployment ships with. Returns metadata and abstracts only: title, "
+            "authors, year, venue, licence, topic and whether the full text can be taken in. "
+            "It never returns full text. Anything you state on the strength of a result here "
+            "carries the marker [abs:doi] and may not carry a value in kelvin, decibels or "
+            "volumetric soil moisture; to state a number, take the paper in with ingest_paper "
+            "and cite the section you read."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "What to search for, in words. Not a boolean expression.",
+                },
+                "from_year": {
+                    "type": "integer",
+                    "description": "Only papers published in or after this year.",
+                },
+                "limit": {"type": "integer", "description": "How many candidates, at most 10."},
+            },
+            "required": ["query"],
+        },
+    },
+}
+
+INGEST_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "ingest_paper",
+        "description": (
+            "Take the full text of one open-access paper into this conversation, by DOI. The "
+            "paper is split into sections and becomes readable with read_literature and "
+            "citable as [slug#id], exactly like a bundled paper, and the run trace records "
+            "that it arrived here rather than shipping with the system. Give only a DOI; the "
+            "address is constructed by the system and no other source is reachable. A few "
+            "papers per conversation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "doi": {
+                    "type": "string",
+                    "description": "A DOI, for example 10.5194/tc-18-3971-2024.",
+                }
+            },
+            "required": ["doi"],
+        },
+    },
+}
+
 SPECS.append(LIST_MODELS_SPEC)
 SPECS.append(RUN_MODEL_SPEC)
 SPECS.append(READ_REFERENCE_SPEC)
 SPECS.append(PLOT_SPEC)
+SPECS.append(DISCOVER_SPEC)
+SPECS.append(INGEST_SPEC)
 
 
 def _ok(summary, data, citations=None, qc=None, ui=None):
@@ -214,58 +282,178 @@ def _fail(message, data=None):
     }
 
 
-def list_literature(query="", scenario=""):
-    hits = knowledge.search(query, scenario)
+def list_literature(query="", scenario="", kind="paper", _session=None):
+    wanted = None if kind == "any" else (kind or "paper")
+    hits = live.search(_session, query, scenario, wanted)
+    total = len(live.catalogue(_session, wanted))
     if not hits:
         return _fail(
-            "No paper matches query=%r scenario=%r. The corpus has %d papers; call with no "
-            "arguments to see all of them." % (query, scenario, len(knowledge.slugs()))
+            "Nothing matches query=%r scenario=%r kind=%r. There are %d items of that kind; "
+            "call with no arguments to see all of them." % (query, scenario, kind, total)
         )
-    return _ok("%d of %d papers match." % (len(hits), len(knowledge.slugs())), {"papers": hits})
+    return _ok(
+        "%d of %d item(s) match." % (len(hits), total),
+        {"papers": hits, "sources": sorted({h["source"] for h in hits})},
+    )
 
 
-def read_literature(slug, section_id=None):
-    item = knowledge.card(slug)
+def read_literature(slug, section_id=None, _session=None):
+    item = live.card(_session, slug)
     if not item:
-        return _fail(
-            "Unknown slug %r. Available slugs: %s." % (slug, ", ".join(knowledge.slugs()))
-        )
+        known = sorted(set(knowledge.slugs(kind=None)) | set(live.corpus(_session)))
+        return _fail("Unknown slug %r. Available slugs: %s." % (slug, ", ".join(known)))
+    source = live.source_of(_session, slug)
     if section_id in (None, ""):
         return _ok(
-            "Section index for %s. Call again with a section_id to read one." % slug,
+            "Section index for %s (%s). Call again with a section_id to read one."
+            % (slug, source),
             {
                 "slug": slug,
                 "title": item["title"],
                 "doi": item.get("doi", ""),
                 "license": item.get("license", ""),
-                "sections": knowledge.section_index(slug),
+                "source": source,
+                "sections": live.section_index(_session, slug),
             },
         )
-    section = knowledge.read_section(slug, section_id)
-    if not section:
-        available = ", ".join(s["id"] for s in knowledge.section_index(slug))
+    opened = live.wrapped_section(_session, slug, section_id, OUTPUT_BUDGET_CHARS)
+    if opened is None:
+        available = ", ".join(s["id"] for s in live.section_index(_session, slug) or ())
         return _fail(
             "Section %r not found in %s. Available section ids: %s." % (section_id, slug, available)
         )
-    text = section["text"]
-    truncated = False
-    if len(text) > OUTPUT_BUDGET_CHARS:
-        text = text[:OUTPUT_BUDGET_CHARS] + "\n\n[truncated at output budget]"
-        truncated = True
-    findings = untrusted.scan(text)
-    text = untrusted.wrap(text, section["citation_key"], "published paper", section["license"])
+    section = opened["section"]
     return _ok(
-        "%s section %s: %s (%d chars%s)"
-        % (slug, section["section_id"], section["title"], len(text), ", truncated" if truncated else ""),
+        "%s section %s: %s (%d chars%s, %s)"
+        % (
+            slug,
+            section["section_id"],
+            section["title"],
+            len(opened["text"]),
+            ", truncated" if opened["truncated"] else "",
+            opened["source"],
+        ),
         {
             "slug": slug,
             "section_id": section["section_id"],
             "title": section["title"],
             "citation_key": section["citation_key"],
-            "text": text,
-            "external_source_findings": findings,
+            "source": opened["source"],
+            "text": opened["text"],
+            "external_source_findings": opened["findings"],
         },
         citations=[section["citation_key"]],
+    )
+
+
+def _offline_note(action):
+    return _fail(
+        "This deployment is running with PHYSEARTH_ONLINE=0, so %s is switched off. The "
+        "bundled corpus, the registered models and the reference data are all unaffected; "
+        "work from those, and say plainly that the online literature layer was unavailable "
+        "rather than that nothing was found." % action
+    )
+
+
+def discover_literature(query, from_year=None, limit=6, _session=None):
+    if not http.online():
+        return _offline_note("searching the open-access literature")
+    try:
+        candidates, elapsed = discover.search(
+            query,
+            from_year,
+            limit,
+            held_slugs=set(knowledge.slugs()) | set(live.corpus(_session)),
+            held_dois=live.held_dois(_session),
+        )
+    except http.Upstream as exc:
+        return _fail(
+            "The literature index did not answer (%s). This is an upstream fault, not an "
+            "empty result: there may well be relevant papers and this deployment could not "
+            "reach the service that lists them. Say so, and work from the bundled corpus."
+            % exc
+        )
+    if not candidates:
+        return _ok(
+            "OpenAlex returned no open-access paper for %r. The service answered normally, "
+            "so this is a genuine absence, not a fault." % query,
+            {"query": query, "candidates": [], "topics": []},
+        )
+    live.remember_abstracts(_session, candidates)
+    ready = [
+        c for c in candidates if c["full_text"] == "available" and not c["already_held"]
+    ]
+    return _ok(
+        "%d open-access candidate(s) for %r, %d whose full text is reachable from here. "
+        "These are abstracts and metadata; nothing here is full text."
+        % (len(candidates), query, len(ready)),
+        {
+            "query": query,
+            "candidates": candidates,
+            "topics": discover.topics(candidates),
+            "elapsed_s": elapsed,
+            "note": (
+                "full_text says what ingest_paper can do with each one: available means the "
+                "text is at an address derivable from the DOI, lookup_required means it may "
+                "be held by Europe PMC and the only way to know is to try, unavailable means "
+                "it is not reachable from here and stays at abstract level. Cite any of these "
+                "as [abs:doi], and only for what a study did or was about; for a number, "
+                "ingest the paper and cite the section you read."
+            ),
+        },
+    )
+
+
+def ingest_paper(doi, _session=None):
+    if _session is None:
+        return _fail("ingest_paper needs a conversation to put the paper into.")
+    if not http.online():
+        return _offline_note("taking in a paper by DOI")
+    doi = fulltext.normalise(doi)
+    for slug, item in live.corpus(_session).items():
+        if item["doi"] == doi:
+            return _ok(
+                "%s is already in this conversation as %s." % (doi, slug),
+                {"slug": slug, "doi": doi, "sections": live.section_index(_session, slug)},
+            )
+    for slug in knowledge.slugs():
+        if (knowledge.card(slug).get("doi") or "").lower() == doi:
+            return _ok(
+                "%s ships with this deployment as %s; read it directly." % (doi, slug),
+                {"slug": slug, "doi": doi, "sections": knowledge.section_index(slug)},
+            )
+    hint = (live.abstracts(_session).get(doi) or {}).get("license", "")
+    try:
+        record = fulltext.fetch(doi, hint)
+    except ValueError as exc:
+        return _fail(str(exc))
+    except LookupError as exc:
+        return _fail(
+            "%s. The paper may still exist and be open access; what is missing is a route to "
+            "its full text from here. Keep it at abstract level and cite it as [abs:%s]."
+            % (exc, doi)
+        )
+    except http.Upstream as exc:
+        return _fail(
+            "The full text of %s could not be fetched (%s). This is an upstream fault, not a "
+            "missing paper. Say so rather than reporting that the paper was not found." % (doi, exc)
+        )
+    try:
+        card = live.add(_session, record)
+    except ValueError as exc:
+        return _fail(str(exc))
+    return _ok(
+        "Took in %s as %s: %d section(s) from %s, licensed %s. Read a section with "
+        "read_literature and cite it as [%s#id]."
+        % (doi, card["slug"], len(card["sections"]), record["source"], card["license"], card["slug"]),
+        {
+            "slug": card["slug"],
+            "doi": doi,
+            "title": card["title"],
+            "license": card["license"],
+            "fetched_from": record["source"],
+            "sections": live.section_index(_session, card["slug"]),
+        },
     )
 
 
@@ -506,38 +694,50 @@ DISPATCH = {
     "list_models": list_models,
     "run_model": run_model,
     "plot": plot,
+    "discover_literature": discover_literature,
+    "ingest_paper": ingest_paper,
 }
 
-# Tools that read or write the result store, and tools whose behaviour an ablation
-# changes. Both values are supplied by the caller, never by the model, so a leading
-# underscore is stripped from whatever the model sent before dispatch.
+# Values supplied by the caller, never by the model. A leading underscore is stripped
+# from whatever the model sent before dispatch, so none of these can be forged from a
+# tool call.
 OWNER_SCOPED = ("run_model", "read_reference_dataset", "plot")
 SWITCH_AWARE = ("run_model", "list_models")
-CORPUS_TOOLS = ("list_literature", "read_literature")
+SESSION_SCOPED = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
+CORPUS_TOOLS = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
+ONLINE_TOOLS = ("discover_literature", "ingest_paper")
 
 
 def specs(switches_in=None):
-    """The tool list the model is offered. The corpus ablation removes two of them."""
-    if switches.resolve(switches_in)["literature"]:
-        return list(SPECS)
-    return [s for s in SPECS if s["function"]["name"] not in CORPUS_TOOLS]
+    """The tool list the model is offered.
+
+    The corpus ablation removes the literature tools. The online layer removes the two
+    that reach outside, so with PHYSEARTH_ONLINE=0 the model is never offered a tool that
+    cannot work; it is not left to discover that by being refused.
+    """
+    hidden = set()
+    if not switches.resolve(switches_in)["literature"]:
+        hidden |= set(CORPUS_TOOLS)
+    if not http.online():
+        hidden |= set(ONLINE_TOOLS)
+    return [s for s in SPECS if s["function"]["name"] not in hidden]
 
 
-def call(name, arguments, owner=None, switches_in=None):
+def call(name, arguments, owner=None, switches_in=None, session=None):
     flags = switches.resolve(switches_in)
-    if name in CORPUS_TOOLS and not flags["literature"]:
-        return _fail(
-            "Unknown tool %r. Available tools: %s."
-            % (name, ", ".join(t["function"]["name"] for t in specs(switches_in)))
-        )
+    offered = {t["function"]["name"] for t in specs(switches_in)}
+    if name in DISPATCH and name not in offered:
+        return _fail("Unknown tool %r. Available tools: %s." % (name, ", ".join(sorted(offered))))
     handler = DISPATCH.get(name)
     if handler is None:
-        return _fail("Unknown tool %r. Available tools: %s." % (name, ", ".join(DISPATCH)))
+        return _fail("Unknown tool %r. Available tools: %s." % (name, ", ".join(sorted(offered))))
     arguments = {k: v for k, v in (arguments or {}).items() if not str(k).startswith("_")}
     if name in OWNER_SCOPED:
         arguments["_owner"] = owner
     if name in SWITCH_AWARE:
         arguments["_switches"] = flags
+    if name in SESSION_SCOPED:
+        arguments["_session"] = session
     try:
         return handler(**arguments)
     except TypeError as exc:

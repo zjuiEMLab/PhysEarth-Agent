@@ -5,8 +5,20 @@ from physearth import switches
 CITATION_PATTERN = re.compile(r"\[([a-z0-9-]+)#(\d{1,3})\]")
 MODEL_PATTERN = re.compile(r"\[(?:model:)?([A-Za-z0-9_-]+)@([^\]\s]+)\]")
 DATA_PATTERN = re.compile(r"\[data:([a-z0-9-]+)\]")
+ABSTRACT_PATTERN = re.compile(r"\[abs:(10\.\d{4,9}/[^\]\s]+)\]", re.I)
 UNCITED_ANSWER_CHARS = 400
 MAX_INTERVENTIONS = 3
+
+# What an abstract-level citation is not allowed to carry. These are the units of a
+# result, not of a configuration: an abstract may well say a study was at 37 GHz and 55
+# degrees, and citing it for that is honest. Saying the brightness temperature was 213 K
+# on the strength of an abstract is not, because the number was never read in context and
+# cannot be checked against anything this system holds.
+RESULT_UNIT = re.compile(
+    r"(?<![\w.])\d+(?:\.\d+)?\s*(?:K\b|kelvin\b|dB\b|decibels?\b|m3\s*m-3|m\^?3\s*m\^?-3)",
+    re.I,
+)
+SENTENCE_SPLIT = re.compile(r"(?<=[.!?;])\s+|\n+")
 
 
 def find_markers(text):
@@ -21,21 +33,75 @@ def find_data_markers(text):
     return DATA_PATTERN.findall(text or "")
 
 
-def check_citations(text, sections_read, models_run=(), datasets_read=()):
-    markers = find_markers(text)
-    model_markers = find_model_markers(text)
-    data_markers = find_data_markers(text)
+def find_abstract_markers(text):
+    return [d.lower() for d in ABSTRACT_PATTERN.findall(text or "")]
+
+
+def check_citations(text, sections_read, models_run=(), datasets_read=(), abstracts_seen=()):
+    text = text or ""
+    # An [abs:doi] marker also matches the literature pattern's shape in some DOIs, so it
+    # is removed before the other three are counted.
+    without_abstracts = ABSTRACT_PATTERN.sub(" ", text)
+    markers = find_markers(without_abstracts)
+    model_markers = find_model_markers(without_abstracts)
+    data_markers = find_data_markers(without_abstracts)
+    abstract_markers = find_abstract_markers(text)
     unresolved = sorted({m for m in markers if m not in sections_read})
     unresolved += sorted({m for m in model_markers if m not in set(models_run)})
     unresolved += sorted({m for m in data_markers if m not in set(datasets_read)})
+    unresolved += sorted(
+        {"abs:" + m for m in abstract_markers if m not in {a.lower() for a in abstracts_seen}}
+    )
     return {
         "rule": "citation_integrity",
         "markers": markers
         + ["model:" + m for m in model_markers]
-        + ["data:" + m for m in data_markers],
+        + ["data:" + m for m in data_markers]
+        + ["abs:" + m for m in abstract_markers],
         "unresolved": unresolved,
         "passed": not unresolved,
     }
+
+
+def check_abstract_depth(text):
+    """An abstract-level citation may not carry a result value.
+
+    The tier exists so that "the paper reports doing X" and "the value is Y" cannot be
+    supported by the same evidence. Enforcing it in the harness rather than asking for it
+    in the prompt is the difference between a rule and a request.
+    """
+    offending = []
+    for sentence in SENTENCE_SPLIT.split(text or ""):
+        dois = find_abstract_markers(sentence)
+        if not dois:
+            continue
+        value = RESULT_UNIT.search(ABSTRACT_PATTERN.sub(" ", sentence))
+        if value:
+            offending.append({"doi": dois[0], "value": value.group(0).strip()})
+    if not offending:
+        return {"rule": "abstract_depth", "passed": True, "reason": "", "offending": []}
+    return {
+        "rule": "abstract_depth",
+        "passed": False,
+        "offending": offending,
+        "reason": "%d claim(s) state a result value on the strength of an abstract: %s"
+        % (
+            len(offending),
+            "; ".join("%s cited for %s" % (o["doi"], o["value"]) for o in offending[:3]),
+        ),
+    }
+
+
+def abstract_depth_correction(result):
+    return (
+        "Your answer was blocked by the abstract depth rule: %s. A marker of the form "
+        "[abs:doi] means you have seen the paper's metadata and abstract, not its text, so "
+        "it can support a statement that the study exists and what it was about, but never "
+        "a number in kelvin, decibels or volumetric soil moisture. Either take the number "
+        "out and keep the qualitative statement, or read the paper: call ingest_paper with "
+        "that DOI if it is open access, and then cite the section you actually read. "
+        "Re-send the full answer." % result["reason"]
+    )
 
 
 def check_evidence(text, sections_read, model_runs=0):
@@ -117,14 +183,16 @@ def review_final(text, state):
             state["sections_read"],
             state.get("models_run", ()),
             state.get("datasets_read", ()),
+            state.get("abstracts_seen", ()),
         ),
+        check_abstract_depth(text),
     ]
+    corrections = {
+        "evidence_gate": evidence_correction,
+        "citation_integrity": citation_correction,
+        "abstract_depth": abstract_depth_correction,
+    }
     for check in checks:
         if not check["passed"]:
-            correction = (
-                evidence_correction(check)
-                if check["rule"] == "evidence_gate"
-                else citation_correction(check)
-            )
-            return check, correction
-    return checks[-1], None
+            return check, corrections[check["rule"]](check)
+    return checks[1], None

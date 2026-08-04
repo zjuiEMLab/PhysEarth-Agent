@@ -191,6 +191,32 @@ def _record_tool_result(name, result, state, events):
     for key in result.get("citations", []):
         state["sections_read"].add(key)
     data = result.get("data") or {}
+    if name == "discover_literature" and result["status"] == "success":
+        for item in data.get("candidates") or []:
+            state["abstracts_seen"].add(item["doi"])
+        events.append(
+            _event(
+                "literature_tier",
+                rule="abstract_level",
+                detail="%d candidate(s) recorded at abstract level; none of them is full text."
+                % len(data.get("candidates") or []),
+            )
+        )
+    if name == "ingest_paper" and result["status"] == "success" and data.get("fetched_from"):
+        events.append(
+            _event(
+                "literature_tier",
+                rule="session_full_text",
+                detail="%s arrived from %s as %s, %d section(s), licensed %s."
+                % (
+                    data["doi"],
+                    data["fetched_from"],
+                    data["slug"],
+                    len(data.get("sections") or []),
+                    data.get("license") or "unknown",
+                ),
+            )
+        )
     if name == "list_models" and result["status"] == "success":
         if data.get("version"):
             state["models_run"].add("%s@%s" % (data["name"], data["version"]))
@@ -393,7 +419,11 @@ def stream(question, history=None, model=None, session=None, switches=None):
 
                 started_tool = time.perf_counter()
                 result = tools.call(
-                    name, arguments, owner=session["id"], switches_in=state["switches"]
+                    name,
+                    arguments,
+                    owner=session["id"],
+                    switches_in=state["switches"],
+                    session=session,
                 )
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)

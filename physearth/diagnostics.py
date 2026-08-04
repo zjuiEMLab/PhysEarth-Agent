@@ -15,8 +15,10 @@ from physearth import config
 _PACKAGES = ["gradio", "smrt", "numpy", "scipy", "pandas", "xarray", "numba"]
 _PROBES = [
     ("api-inference", config.get("MODELSCOPE_API_BASE") + "/models"),
+    ("openalex", "https://api.openalex.org/works?per-page=1&select=id"),
+    ("europepmc", "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=test&format=json&pageSize=1"),
+    ("copernicus", "https://tc.copernicus.org/articles/18/3971/2024/tc-18-3971-2024.xml"),
     ("zenodo", "https://zenodo.org/api/records/12750470"),
-    ("modelscope-www", "https://www.modelscope.cn/api/v1/competitions/263/detail"),
 ]
 
 
@@ -135,13 +137,30 @@ def smrt_warmup():
     return entry
 
 
+def model_registry_report():
+    """Which models registered, and why each rejection was rejected."""
+    from physearth.models import registry
+
+    return {
+        "registered": [
+            {"name": row["name"], "version": row["version"], "runnable": row["runnable"]}
+            for row in registry.summary()
+        ],
+        "rejected": registry.rejected(),
+    }
+
+
 def collect():
+    from physearth.ingest import http
+
     return {
         "runtime": runtime_info(),
         "packages": package_versions(),
         "boot": boot_record(),
         "network": network_probes(),
         "smrt": smrt_warmup(),
+        "models": model_registry_report(),
+        "online": http.online(),
         "token_present": config.has_token(),
     }
 
@@ -193,6 +212,16 @@ def render(report):
     lines.append("| --- | --- |")
     lines.append(_table(smrt.items()))
 
+    lines.append("\n## Model registry")
+    models = report.get("models") or {}
+    for row in models.get("registered") or []:
+        lines.append("| %s | v%s | runnable %s |" % (row["name"], row["version"], row["runnable"]))
+    for row in models.get("rejected") or []:
+        lines.append("| REJECTED | %s | %s |" % (row["directory"], row["reason"]))
+    if not models.get("rejected"):
+        lines.append("No model was rejected.")
+
     lines.append("\n## Credentials")
     lines.append("Token present: %s" % report["token_present"])
+    lines.append("Online literature layer: %s" % report.get("online"))
     return "\n".join(lines)

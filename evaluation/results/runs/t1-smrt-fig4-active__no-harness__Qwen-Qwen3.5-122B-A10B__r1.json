@@ -1,0 +1,195 @@
+{
+  "task": "t1-smrt-fig4-active",
+  "suite": "tier1",
+  "quality": "complete",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "Qwen/Qwen3.5-122B-A10B",
+  "repeat": 1,
+  "question": "The SMRT paper reports its active-mode comparison in Figure 4b for the same snowpack as the passive panel. Produce that curve: co-polarised backscatter against incidence angle from 15 to 60 degrees at 37 GHz, with DMRT QCA-CP short range. Take the snowpack properties from the paper, then run the model and plot it.",
+  "answer": "I have produced the curve requested. The plot shows co-polarised backscatter (HH and VV) versus incidence angle from 15 to 60 degrees at 37 GHz, using DMRT QCA-CP short-range formulation with the snowpack properties from the SMRT paper (Figure 4): sphere radius 0.1 mm, density 300 kg/m³, stickiness 0.5, temperature 256 K, and a thick layer (effectively semi-infinite).\n\nThe results show both polarizations decreasing with increasing angle, with HH slightly lower than VV at larger angles, consistent with the behavior shown in Figure 4b of the SMRT paper [smrt-v1#08]. The model run was validated against the physical constraints of the DMRT formulation for sticky hard spheres [model:smrt@1.5.1].",
+  "elapsed_s": 25.36,
+  "stop_rule": null,
+  "model_calls": 7,
+  "tool_calls": 6,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_literature",
+      "arguments": {
+        "query": "SMRT active passive microwave radiative transfer snow"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "sigma",
+          "frequency_ghz": 37,
+          "density_kg_m3": 300,
+          "temperature_k": 256,
+          "radius_m": 0.0001,
+          "stickiness": 0.5,
+          "thickness_m": 100,
+          "sweep_parameter": "angle_deg",
+          "sweep_start": 15,
+          "sweep_stop": 60,
+          "sweep_points": 20
+        }
+      },
+      "status": "success",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "sigma",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 100.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 256.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "sweep_parameter": "angle_deg",
+        "sweep_start": 15.0,
+        "sweep_stop": 60.0,
+        "sweep_points": 20
+      },
+      "handle": "res_371e256ca447",
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "plot",
+      "arguments": {
+        "kind": "line",
+        "series": [
+          {
+            "handle": "res_371e256ca447",
+            "x": "angle_deg",
+            "y": "sigma_hh_db",
+            "label": "HH"
+          },
+          {
+            "handle": "res_371e256ca447",
+            "x": "angle_deg",
+            "y": "sigma_vv_db",
+            "label": "VV"
+          }
+        ],
+        "title": "SMRT DMRT QCA-CP backscatter vs incidence angle (37 GHz)",
+        "x_label": "Incidence angle (deg)",
+        "y_label": "Backscatter coefficient (dB)"
+      },
+      "status": "success",
+      "spec": null,
+      "handle": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#08"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [
+    {
+      "provenance": [
+        "model_run"
+      ],
+      "series": [
+        {
+          "label": "HH",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 20,
+          "handle": "res_371e256ca447"
+        },
+        {
+          "label": "VV",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 20,
+          "handle": "res_371e256ca447"
+        }
+      ]
+    }
+  ],
+  "markers": {
+    "literature": [
+      "smrt-v1#08"
+    ],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}

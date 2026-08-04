@@ -44,8 +44,11 @@ def new_session(model=None):
         "models_run": set(),
         "datasets_read": set(),
         "skills_read": set(),
+        "abstracts_seen": set(),
         "figures": [],
         "handles": [],
+        "corpus": {},
+        "abstracts": {},
         "max_model_calls": MAX_SESSION_MODEL_CALLS,
         "max_tool_calls": MAX_SESSION_TOOL_CALLS,
     }
@@ -67,6 +70,7 @@ def new_state(session=None, model=None):
         "models_run": session["models_run"],
         "datasets_read": session["datasets_read"],
         "skills_read": session["skills_read"],
+        "abstracts_seen": session["abstracts_seen"],
         "figures": [],
     }
     state.update({name: 0 for name in COUNTERS})
@@ -122,6 +126,18 @@ def held_block(session):
         lines.append("Reference datasets already read: %s." % ", ".join(sorted(session["datasets_read"])))
     if session["skills_read"]:
         lines.append("Method notes already read: %s." % ", ".join(sorted(session["skills_read"])))
+    ingested = session.get("corpus") or {}
+    if ingested:
+        lines.append(
+            "Papers taken into this conversation, readable and citable like the bundled "
+            "ones: %s."
+            % ", ".join("%s (%s)" % (slug, item["doi"]) for slug, item in ingested.items())
+        )
+    if session["abstracts_seen"]:
+        lines.append(
+            "Abstracts seen, citable as [abs:doi] and never for a value: %s."
+            % ", ".join(sorted(session["abstracts_seen"])[:8])
+        )
     handles = session["handles"][-MAX_HELD_HANDLES:]
     if handles:
         lines.append("Live result handles, oldest first:")

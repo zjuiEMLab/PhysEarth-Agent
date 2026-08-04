@@ -27,11 +27,36 @@ rejected, read the reason, fix the parameters and try again; the rejection tells
 declared range or the legal combination. If the corpus and the models together cannot answer
 something, say so instead of filling the gap from memory."""
 
+ONLINE_RULES = """\
+Beyond the bundled corpus you can reach the open-access literature of the field, in two
+steps that are deliberately separate.
+
+discover_literature searches OpenAlex and returns metadata and abstracts. It never returns
+full text, so what it gives you supports "this study did X" and never "the value is Y".
+
+ingest_paper takes one open-access paper into this conversation by DOI. Its sections then
+read and cite exactly like a bundled paper. Use it when a candidate is worth reading rather
+than mentioning, and prefer it whenever you are about to state a number.
+
+Reach outside only when the bundled corpus does not cover the question. It was assembled
+for these models and is usually the better answer. If a search or a fetch fails, that is
+an upstream fault, not an absence: say the service could not be reached, never that
+nothing was found."""
+
+ABSTRACT_RULE = """\
+Abstract level: [abs:doi], for example [abs:10.5194/tc-18-3971-2024]. Only for a paper you
+saw in a discover_literature result and have not read. It supports what a study was about
+and that it exists. It may never carry a result value in kelvin, decibels or volumetric
+soil moisture, because you have not read the number in its context and neither has anyone
+else here. The system checks this and will send the answer back. To state such a number,
+read the paper first."""
+
 CITATION_RULES = """\
-Everything you assert must be traceable to something you did, through one of three markers.
+Everything you assert must be traceable to something you did, through one of these markers.
 
 Literature: [slug#section_id], for example [smrt-v1#05]. Only for sections you actually
-opened with read_literature in this conversation. Seeing a paper in the catalogue is not
+opened with read_literature in this conversation, whether that paper shipped with the
+system or you took it in during the conversation. Seeing a paper in the catalogue is not
 reading it.
 
 Models: [model:name@version], for example [model:smrt@1.5.1]. Use it for a number you
@@ -90,6 +115,13 @@ def catalogue_section():
     )
 
 
+def online_available():
+    """The online layer is a deployment choice, so the prompt only claims it when it is on."""
+    from physearth.ingest import http
+
+    return http.online()
+
+
 def status_block(state):
     session = state.get("session") or {}
     return (
@@ -146,10 +178,14 @@ def build(state=None):
             catalogue_section(),
             skills_section(),
             WORKFLOW,
-            untrusted.RULE,
-            CITATION_RULES,
-            STYLE,
         ]
+        citations = CITATION_RULES
+        if online_available():
+            blocks.append(ONLINE_RULES)
+            citations = citations.replace(
+                "\n\nModels: [model:", "\n\n%s\n\nModels: [model:" % ABSTRACT_RULE
+            )
+        blocks += [untrusted.RULE, citations, STYLE]
     else:
         blocks = [
             ROLE,

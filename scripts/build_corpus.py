@@ -3,17 +3,18 @@
 Run from the repository root:  python scripts/build_corpus.py
 """
 
-import re
 import sys
 import urllib.request
-import xml.etree.ElementTree as ET
-
-import yaml
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from physearth.ingest import jats  # noqa: E402
+
 OUT = ROOT / "knowledge" / "literature"
-SECTION_SPLIT_CHARS = 12000
 
 MANIFEST = [
     {
@@ -150,8 +151,6 @@ JOURNAL_NAMES = {
     "bg": "Biogeosciences",
 }
 
-SKIP_TAGS = {"fig", "table-wrap", "graphic", "media", "supplementary-material", "label"}
-
 
 def xml_url(entry):
     stem = "%s-%s-%s-%s" % (entry["journal"], entry["volume"], entry["fpage"], entry["year"])
@@ -168,145 +167,6 @@ def fetch(url):
     request = urllib.request.Request(url, headers={"User-Agent": "physearth-corpus-builder"})
     with urllib.request.urlopen(request, timeout=120) as response:
         return response.read()
-
-
-def clean(text):
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r" *\n *", "\n", text)
-    return text.strip()
-
-
-_REF_LABELS = {}
-
-
-def load_ref_labels(root):
-    _REF_LABELS.clear()
-    for ref in root.findall(".//ref-list/ref"):
-        label = ref.findtext("label") or ""
-        label = re.sub(r"\s*\(\s*", ", ", label.strip()).rstrip(")")
-        if ref.get("id") and label:
-            _REF_LABELS[ref.get("id")] = label
-
-
-def render_xref(node):
-    rids = (node.get("rid") or "").split()
-    if node.get("ref-type") == "bibr":
-        labels = [_REF_LABELS[r] for r in rids if r in _REF_LABELS]
-        return "(%s)" % "; ".join(labels) if labels else ""
-    numbers = [m.group(0) for m in (re.search(r"\d+$", r) for r in rids) if m]
-    return ", ".join(numbers)
-
-
-def inline(node):
-    parts = []
-    if node.tag == "tex-math":
-        return "$%s$" % (node.text or "").strip()
-    if node.tag == "xref":
-        return render_xref(node)
-    if node.tag in SKIP_TAGS:
-        return ""
-    if node.text:
-        parts.append(node.text)
-    for child in node:
-        parts.append(inline(child))
-        if child.tail:
-            parts.append(child.tail)
-    return "".join(parts)
-
-
-def render_block(node, depth):
-    out = []
-    for child in node:
-        tag = child.tag
-        if tag in SKIP_TAGS:
-            continue
-        if tag == "title":
-            continue
-        if tag == "sec":
-            title = child.find("title")
-            if title is not None:
-                out.append("%s %s" % ("#" * min(depth + 1, 6), clean(inline(title))))
-            out.append(render_block(child, depth + 1))
-        elif tag == "p":
-            out.append(clean(inline(child)))
-        elif tag == "disp-formula":
-            math = child.find(".//tex-math")
-            if math is not None and math.text:
-                out.append("$$%s$$" % math.text.strip())
-        elif tag == "list":
-            for item in child.findall("list-item"):
-                out.append("- %s" % clean(inline(item)))
-        else:
-            text = clean(inline(child))
-            if text:
-                out.append(text)
-    return "\n\n".join(p for p in out if p)
-
-
-def text_of(node):
-    return clean(inline(node)) if node is not None else ""
-
-
-def front_matter(root, entry):
-    meta = root.find("front/article-meta")
-    authors = []
-    for contrib in meta.findall("contrib-group/contrib"):
-        given = text_of(contrib.find("name/given-names"))
-        surname = text_of(contrib.find("name/surname"))
-        name = " ".join(x for x in (given, surname) if x)
-        if name:
-            authors.append(name)
-    permissions = text_of(meta.find("permissions"))
-    license_url = ""
-    match = re.search(r"https://creativecommons\.org/licenses/by/[\d.]+/", permissions)
-    if match:
-        license_url = match.group(0)
-    license_id = "CC-BY-4.0" if "/by/4.0" in license_url else "CC-BY-3.0"
-    return {
-        "title": text_of(meta.find("title-group/article-title")),
-        "authors": authors,
-        "journal": JOURNAL_NAMES[entry["journal"]],
-        "volume": text_of(meta.find("volume")),
-        "pages": "%s-%s" % (text_of(meta.find("fpage")), text_of(meta.find("lpage"))),
-        "year": entry["year"],
-        "doi": text_of(meta.find("article-id[@pub-id-type='doi']")),
-        "license": license_id,
-        "license_url": license_url,
-        "abstract": text_of(meta.find("abstract")),
-    }
-
-
-def build_sections(root):
-    sections = []
-    for sec in root.findall("body/sec"):
-        title = text_of(sec.find("title")) or "Section"
-        body = render_block(sec, 1)
-        subs = sec.findall("sec")
-        if len(body) > SECTION_SPLIT_CHARS and subs:
-            lead = render_block_without_subs(sec)
-            if lead:
-                sections.append((title, lead))
-            for sub in subs:
-                sub_title = text_of(sub.find("title")) or "Subsection"
-                sections.append(("%s - %s" % (title, sub_title), render_block(sub, 1)))
-        else:
-            sections.append((title, body))
-    return sections
-
-
-def render_block_without_subs(sec):
-    out = []
-    for child in sec:
-        if child.tag in ("sec", "title") or child.tag in SKIP_TAGS:
-            continue
-        if child.tag == "p":
-            out.append(clean(inline(child)))
-    return "\n\n".join(p for p in out if p)
-
-
-def slugify(text):
-    text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
-    return text[:48] or "section"
 
 
 def flatten(value):
@@ -358,17 +218,15 @@ def write_card(path, card):
 
 
 def build(entry):
-    url = xml_url(entry)
-    root = ET.fromstring(fetch(url))
-    load_ref_labels(root)
-    meta = front_matter(root, entry)
+    parsed = jats.parse(fetch(xml_url(entry)).decode("utf-8"), JOURNAL_NAMES[entry["journal"]])
+    meta = dict(parsed["front"], year=entry["year"])
+    meta.pop("abstract", None)
     target = OUT / entry["slug"]
     (target / "sections").mkdir(parents=True, exist_ok=True)
     for stale in (target / "sections").glob("*.md"):
         stale.unlink()
 
-    pieces = [("Abstract", meta.pop("abstract"))]
-    pieces.extend(build_sections(root))
+    pieces = parsed["sections"]
 
     attribution = "%s (%s). %s. %s %s, %s. https://doi.org/%s. Licensed under %s." % (
         ", ".join(meta["authors"]),
@@ -386,7 +244,7 @@ def build(entry):
         if not body:
             continue
         section_id = "%02d" % index
-        name = "%s_%s.md" % (section_id, slugify(title))
+        name = "%s_%s.md" % (section_id, jats.slugify(title))
         content = "# %s\n\n%s\n\n---\n\n%s\n" % (title, body, attribution)
         (target / "sections" / name).write_text(content, encoding="utf-8")
         sections.append(

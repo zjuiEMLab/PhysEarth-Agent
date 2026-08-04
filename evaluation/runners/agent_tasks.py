@@ -28,6 +28,7 @@ from physearth import agent, config, harness  # noqa: E402
 RUNS = common.RESULTS / "runs"
 SUITES = ("tier1", "probe")
 SAFE = re.compile(r"[^A-Za-z0-9._-]+")
+FAULTS = ("quota", "withdrawn", "upstream", "global_budget")
 
 
 def key(task_id, config_name, llm, repeat):
@@ -147,7 +148,7 @@ def main(argv=None):
             print("  would run %s" % key(task["id"], entry["name"], llm, repeat))
         return 0
 
-    failures = 0
+    failures, written = 0, 0
     for index, (task, entry, repeat) in enumerate(todo, 1):
         name = key(task["id"], entry["name"], llm, repeat)
         print("[%3d/%3d] %s" % (index, len(todo), name), flush=True)
@@ -157,14 +158,28 @@ def main(argv=None):
             failures += 1
             print(traceback.format_exc())
             continue
+        # An upstream fault is not a result. Caching one would freeze an empty record into
+        # the report and the cache would then skip it forever, so it is never written; and
+        # a spent daily quota will not clear before tomorrow, so there is nothing to gain
+        # by working through the rest of the plan.
+        if record["stop_rule"] in FAULTS:
+            print("          upstream fault: %s. Nothing written." % record["stop_rule"])
+            if record["stop_rule"] in ("quota", "withdrawn"):
+                print("\n%s is spent or withdrawn for today on %s. %d run(s) written, "
+                      "%d still to do; re-run this command and the cache will resume."
+                      % (record["stop_rule"], llm, written, len(todo) - index))
+                return 2
+            failures += 1
+            continue
         (RUNS / name).write_text(
             json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
+        written += 1
         print("          %s, %d LLM calls, %d tool calls, stop=%s"
               % ("answered" if record["answer"] else "no answer",
                  record["model_calls"], record["tool_calls"], record["stop_rule"]), flush=True)
 
-    print("\n%d run(s) written, %d failed" % (len(todo) - failures, failures))
+    print("\n%d run(s) written, %d failed" % (written, failures))
     return 1 if failures else 0
 
 

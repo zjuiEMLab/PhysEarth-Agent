@@ -6,6 +6,7 @@ _DEFAULTS = {
     "MODELSCOPE_NAMESPACE": "",
     "MODELSCOPE_API_BASE": "https://api-inference.modelscope.cn/v1",
     "MODELSCOPE_MODEL": "Qwen/Qwen3.5-122B-A10B",
+    "PHYSEARTH_ONLINE": "1",
     "PHYSEARTH_STATE_DIR": "_state",
     "PHYSEARTH_PORT": "7860",
     "PHYSEARTH_HOST": "0.0.0.0",

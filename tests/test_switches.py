@@ -48,12 +48,15 @@ def test_the_harness_ablation_delivers_an_unresolvable_marker():
     assert blocked and "smrt-v1#99" in blocked
 
 
-def test_the_corpus_ablation_removes_both_tools_and_the_catalogue():
+def test_the_corpus_ablation_removes_every_literature_tool_and_the_catalogue():
     off = {"literature": False}
     names = [s["function"]["name"] for s in tools.specs(off)]
-    assert "read_literature" not in names and "list_literature" not in names
-    assert len(tools.specs(None)) == len(names) + 2
+    assert not set(names) & set(tools.CORPUS_TOOLS)
+    assert set(names) == {"list_models", "run_model", "read_reference_dataset", "plot"}
     assert tools.call("read_literature", {"slug": "smrt-v1"}, switches_in=off)["status"] == (
+        "terminal_error"
+    )
+    assert tools.call("discover_literature", {"query": "snow"}, switches_in=off)["status"] == (
         "terminal_error"
     )
     text = prompt.build(_state(off))

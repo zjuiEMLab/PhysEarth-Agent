@@ -10,11 +10,13 @@ import json
 import re
 
 from physearth import agent, budget, knowledge, reference
+from physearth import live as literature
 from physearth.models import registry
 
 CITE = re.compile(r"\[([a-z0-9][a-z0-9-]*)#(\d{1,3})\]")
 MODEL_CITE = re.compile(r"\[model:([A-Za-z0-9_-]+)@([^\]\s]+)\]")
 DATA_CITE = re.compile(r"\[data:([a-z0-9][a-z0-9-]*)\]")
+ABS_CITE = re.compile(r"\[abs:(10\.\d{4,9}/[^\]\s]+)\]", re.I)
 BOLD = re.compile(r"\*\*([^*]+)\*\*")
 CODE = re.compile(r"`([^`]+)`")
 SECTION_PREVIEW_CHARS = 620
@@ -67,9 +69,9 @@ def _mono(value):
 
 
 def _markers(text):
-    """Turn the three marker forms into chips that jump to the evidence they name."""
+    """Turn the four marker forms into chips that jump to the evidence they name."""
 
-    def literature(match):
+    def section(match):
         key = "%s#%s" % (match.group(1), match.group(2))
         return (
             "<a class='cite' href='#' data-jump='sec-%s' data-tab='pe-tab-sources'>%s</a>"
@@ -90,7 +92,17 @@ def _markers(text):
             "data-tab='pe-tab-sources'>%s</a>" % (_e(slug), _e(slug))
         )
 
-    text = CITE.sub(literature, text)
+    def abstract(match):
+        doi = match.group(1)
+        return (
+            "<a class='cite cite--abs' href='#' data-jump='abs-%s' "
+            "data-tab='pe-tab-sources' title='abstract level: metadata only, never a "
+            "measured or computed value'>abs:%s</a>" % (_e(doi), _e(doi))
+        )
+
+    # The abstract form goes first: some DOIs would otherwise be eaten by the model pattern.
+    text = ABS_CITE.sub(abstract, text)
+    text = CITE.sub(section, text)
     text = MODEL_CITE.sub(model, text)
     return DATA_CITE.sub(data, text)
 
@@ -249,6 +261,7 @@ BADGES = {
     "harness_giveup": ("badge--warn", "GAVE UP", "step-card--warn"),
     "untrusted_content": ("badge--warn", "BOUNDARY", "step-card--warn"),
     "empty_response": ("badge--mute", "UPSTREAM RETRY", "step-card--muted"),
+    "literature_tier": ("badge--model", "LITERATURE TIER", "step-card--tool"),
 }
 
 
@@ -560,12 +573,21 @@ def _figure_card(figure, index):
     )
 
 
-def _section_card(key):
+SOURCE_BADGE = {
+    "bundled": ("badge--src", "bundled"),
+    "session": ("badge--model", "fetched in this conversation"),
+    "skill": ("badge--mono", "method note"),
+}
+
+
+def _section_card(session, key):
     slug, _, section_id = key.partition("#")
-    card = knowledge.card(slug)
-    section = knowledge.read_section(slug, section_id) if card else None
+    card = literature.card(session, slug)
+    section = literature.read_section(session, slug, section_id) if card else None
     if not section:
         return ""
+    origin = literature.source_of(session, slug)
+    badge_class, badge_text = SOURCE_BADGE.get(origin, ("badge--src", origin or "source"))
     doi = card.get("doi", "")
     text = " ".join(section["text"].replace("#", " ").split())
     if len(text) > SECTION_PREVIEW_CHARS:
@@ -583,7 +605,8 @@ def _section_card(key):
     return (
         "<div class='ev-card' data-anchor='sec-%s'>"
         "<div class='ev-card__head'><span class='badge badge--mono'>%s</span>"
-        "<span class='ev-card__title'>%s</span></div>"
+        "<span class='ev-card__title'>%s</span>"
+        "<span class='badge %s' style='margin-left:auto'>%s</span></div>"
         "<div class='ev-card__text'>%s</div>"
         "<div class='ev-card__foot'><span class='badge badge--src'>%s</span>"
         "<span>%s (%s)</span>%s</div></div>"
@@ -591,6 +614,8 @@ def _section_card(key):
             _e(key),
             _e(key),
             _e(section["title"]),
+            badge_class,
+            _e(badge_text),
             body,
             _e(card.get("license", "")),
             _e(card.get("title", slug)),
@@ -599,6 +624,32 @@ def _section_card(key):
             % (_e(doi), _e(doi))
             if doi
             else "",
+        )
+    )
+
+
+def _abstract_card(doi, item):
+    """Abstract level. Deliberately drawn as a thinner thing than a section card."""
+    return (
+        "<div class='ev-card ev-card--abs' data-anchor='abs-%s'>"
+        "<div class='ev-card__head'><span class='badge badge--warn'>abstract only</span>"
+        "<span class='ev-card__title'>%s</span></div>"
+        "<div class='ev-card__text'>%s</div>"
+        "<div class='ev-card__foot'><span class='badge badge--src'>%s</span>"
+        "<span>%s &middot; %s</span>"
+        "<a href='https://doi.org/%s' target='_blank' rel='noopener'>doi.org/%s</a></div>"
+        "<div class='pane-note' style='margin:8px 0 0'>Not read. This can support what the "
+        "study was about, never a value in kelvin, decibels or volumetric soil moisture.</div>"
+        "</div>"
+        % (
+            _e(doi),
+            _e(item.get("title") or doi),
+            _e(item.get("abstract") or "No abstract was returned for this record."),
+            _e(item.get("license") or "licence not stated"),
+            _e(item.get("authors") or "unknown authors"),
+            _e(item.get("year") or ""),
+            _e(doi),
+            _e(doi),
         )
     )
 
@@ -725,6 +776,101 @@ def _rejected_card(item):
     )
 
 
+_ENVIRONMENT = None
+
+
+def environment_card(report=None):
+    """The startup self-check, on screen instead of only on stdout.
+
+    It answers, for anyone looking at the deployed Studio, the questions a reviewer would
+    otherwise have to take on trust: which Python and which package versions are actually
+    running, whether the temporary directory survives a restart, which outbound hosts this
+    instance can reach, and which models registered and which were refused and why.
+    """
+    global _ENVIRONMENT
+    if report is None:
+        if _ENVIRONMENT is None:
+            from physearth import diagnostics
+
+            _ENVIRONMENT = diagnostics.collect()
+        report = _ENVIRONMENT
+
+    packages = "".join(
+        "<div class='info-row'><span class='k'>%s</span><span class='v'>%s</span></div>"
+        % (_e(name), _e(version))
+        for name, version in (report.get("packages") or {}).items()
+    )
+    probes = "".join(
+        "<tr><td class='name'>%s</td><td><span class='badge badge--%s'>%s</span></td>"
+        "<td class='num'>%s s</td></tr>"
+        % (
+            _e(probe["name"]),
+            "ok" if probe["ok"] else "block",
+            _e(probe["status"]),
+            _e(probe["elapsed_s"]),
+        )
+        for probe in (report.get("network") or [])
+    )
+    models = report.get("models") or {}
+    registered = ", ".join(
+        "%s v%s" % (row["name"], row["version"]) for row in models.get("registered") or []
+    )
+    rejected = models.get("rejected") or []
+    rejected_html = (
+        "".join(
+            "<div class='info-row'><span class='k'>rejected</span><span class='v'>%s</span></div>"
+            % _e(item["reason"])
+            for item in rejected
+        )
+        or "<div class='info-row'><span class='k'>rejected</span><span class='v'>none</span>"
+        "</div>"
+    )
+    boot = report.get("boot") or {}
+    runtime = report.get("runtime") or {}
+    smrt = report.get("smrt") or {}
+    return (
+        "<div class='ev-card' data-anchor='environment'>"
+        "<div class='ev-card__head'><span class='badge badge--mono'>environment</span>"
+        "<span class='ev-card__title'>What this instance actually is</span></div>"
+        "<div class='info-card'>"
+        "<div class='info-row'><span class='k'>python</span><span class='v'>%s</span></div>"
+        "<div class='info-row'><span class='k'>cores</span><span class='v'>%s</span></div>"
+        "<div class='info-row'><span class='k'>temp dir writable</span><span class='v'>%s</span>"
+        "</div>"
+        "<div class='info-row'><span class='k'>process boot</span><span class='v'>%s</span></div>"
+        "<div class='info-row'><span class='k'>online literature</span><span class='v'>%s</span>"
+        "</div>"
+        "<div class='info-row'><span class='k'>models</span><span class='v'>%s</span></div>"
+        "%s"
+        "<div class='info-row'><span class='k'>smrt warm-up</span><span class='v'>%s</span></div>"
+        "</div>"
+        "<table class='table'><thead><tr><th>outbound host</th><th>reachable</th>"
+        "<th>elapsed</th></tr></thead><tbody>%s</tbody></table>"
+        "<div class='info-card'>%s</div>"
+        "<div class='pane-note' style='margin:8px 0 0'>Collected once when this process "
+        "started. The reachability of the literature hosts is what decides whether the "
+        "online layer can work at all; when it cannot, the agent is told the service was "
+        "unreachable and never that nothing was found.</div>"
+        "</div>"
+        % (
+            _e(runtime.get("python", "?")),
+            _e(runtime.get("cpu_count", "?")),
+            _e(boot.get("writable")),
+            _e(boot.get("boot_count", "?")),
+            _e("on" if report.get("online") else "off"),
+            _e(registered or "none"),
+            rejected_html,
+            _e(
+                "%s K V-pol in %s s" % (smrt.get("tb_v"), smrt.get("cold_call_s"))
+                if smrt.get("available")
+                else smrt.get("error", "not available")
+            ),
+            probes,
+            packages,
+        )
+    )
+
+
 def evidence(session=None, figures=None, sections=None, datasets=None):
     """Everything the conversation holds. Defaults come from the session, so a figure
     drawn in the first question is still on screen during the third."""
@@ -743,8 +889,10 @@ def evidence(session=None, figures=None, sections=None, datasets=None):
             "model.</div></div>"
         )
 
-    read = "".join(_section_card(key) for key in sections)
+    abstracts = literature.abstracts(session)
+    read = "".join(_section_card(session, key) for key in sections)
     read += "".join(_dataset_card(slug) for slug in datasets)
+    read += "".join(_abstract_card(doi, abstracts[doi]) for doi in sorted(abstracts))
     if not read:
         read = (
             "<div class='pane-empty'><div class='pane-empty__title'>Nothing opened yet</div>"
@@ -753,18 +901,22 @@ def evidence(session=None, figures=None, sections=None, datasets=None):
             "it.</div></div>"
         )
     corpus = "".join(_corpus_card(entry) for entry in knowledge.catalogue())
+    corpus += environment_card()
 
+    opened = len(sections) + len(datasets)
     sources_pane = (
         "<input class='scope-input' type='radio' name='pe-scope' id='pe-scope-read' checked>"
         "<input class='scope-input' type='radio' name='pe-scope' id='pe-scope-all'>"
         "<div class='scope'><label for='pe-scope-read'>Opened here (%d)</label>"
-        "<label for='pe-scope-all'>Whole corpus (%d)</label></div>"
+        "<label for='pe-scope-all'>Corpus and environment (%d)</label></div>"
         "<div class='scope-body'><div class='scope-pane'>%s</div>"
         "<div class='scope-pane'>%s</div></div>"
-        "<div class='pane-note'>Every card in the first list is a section the agent actually "
-        "opened in this conversation. A marker in the answer that does not resolve to one of "
-        "them is refused before the answer reaches you.</div>"
-        % (len(sections) + len(datasets), len(knowledge.slugs()), read, corpus)
+        "<div class='pane-note'>Every full card in the first list is a section the agent "
+        "actually opened, whether it shipped with the system or was fetched during this "
+        "conversation. A marker that does not resolve to one of them is refused before the "
+        "answer reaches you. The thin cards marked <b>abstract only</b> are papers the agent "
+        "has seen listed and has not read; they cannot support a number.</div>"
+        % (opened + len(abstracts), len(knowledge.slugs()), read, corpus)
     )
 
     rows = registry.summary()
