@@ -301,6 +301,59 @@ function peBoot() {
      Textbox handler binds on the target and, with lines > 1, treats shift+Enter as a
      submit while suppressing the newline. Left alone it would both refuse to break the
      line and start a second concurrent run on the same session. */
+  /* ---------- answer the click before the server can ----------
+
+     The server does 0.2 ms of work to build the first frame; everything the visitor
+     experiences as lag is the round trip to it. So the click paints its own consequence
+     immediately -- the running glow, the question in the transcript, the emptied box --
+     and the first real frame replaces that a moment later with the authoritative version.
+     Nothing here decides anything; it only shows sooner what is already going to happen. */
+
+  var pendingUntil = 0;
+
+  function optimisticSend() {
+    var area = textarea();
+    var text = area ? area.value.trim() : "";
+    if (!text) return;
+    pendingUntil = Date.now() + 20000;
+    document.body.classList.add("is-reasoning");
+    var live = document.querySelector("#pe-chat-scroll .pe-slot:last-child");
+    if (live) {
+      live.innerHTML =
+        "<div class='msg-group'><div class='msg msg--user'><div class='msg__head'>" +
+        "<span class='msg__who'>you</span><span class='msg__rule'></span></div>" +
+        "<div class='msg__body'>" + escapeHtml(text) + "</div></div>" +
+        "<div class='msg msg--agent'><div class='msg__head'>" +
+        "<span class='msg__who'>physearth</span><span class='msg__rule'></span></div>" +
+        "<div class='msg__body'><p class='hint'>Waiting for the first token.</p>" +
+        "<span class='caret'></span></div></div></div>";
+    }
+    var hint = document.querySelector("#pe-chat-scroll .pane-empty");
+    if (hint && hint.parentNode) hint.parentNode.removeChild(hint);
+    autoScroll();
+  }
+
+  function optimisticClear() {
+    pendingUntil = 0;
+    document.body.classList.remove("is-reasoning");
+    var slots = document.querySelectorAll("#pe-chat-scroll .pe-slot");
+    for (var i = 0; i < slots.length; i++) slots[i].innerHTML = "<div class='msg-group'></div>";
+  }
+
+  function escapeHtml(value) {
+    return value
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/
+/g, "<br>");
+  }
+
+  document.addEventListener("click", function (event) {
+    var target = event.target.closest ? event.target.closest("button") : null;
+    if (!target) return;
+    if (target.id === "pe-send") optimisticSend();
+    if (target.id === "pe-clear") optimisticClear();
+  }, true);
+
   document.addEventListener("keydown", function (event) {
     var area = textarea();
     if (!area || event.target !== area) return;
@@ -326,9 +379,11 @@ function peBoot() {
       }
       restoreState(document);
       autoScroll();
+      var running = !!document.querySelector("[data-running]");
+      if (running) pendingUntil = 0;
       document.body.classList.toggle(
         "is-reasoning",
-        !!document.querySelector("[data-running]")
+        running || Date.now() < pendingUntil
       );
     });
   });

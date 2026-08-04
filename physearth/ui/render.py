@@ -114,19 +114,36 @@ def _markers(text):
     return DATA_CITE.sub(data, text)
 
 
-def answer_html(text, running=False):
-    """Escape first, then apply a deliberately small markdown subset."""
-    if not (text or "").strip():
-        return "<p class='hint'>Waiting for the first token.</p>" if running else ""
+def _paragraphs(text):
     blocks = []
     for raw in re.split(r"\n\s*\n", text.strip()):
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
-        if lines and all(line.startswith(("- ", "* ")) for line in lines):
+        if not lines:
+            continue
+        if all(line.startswith(("- ", "* ")) for line in lines):
             items = "".join("<li>%s</li>" % _inline(line[2:]) for line in lines)
             blocks.append("<ul>%s</ul>" % items)
         else:
             blocks.append("<p>%s</p>" % _inline(" ".join(lines)))
-    body = "".join(blocks)
+    return "".join(blocks)
+
+
+def answer_html(text, running=False):
+    """Escape first, then apply a deliberately small markdown subset.
+
+    A turn can hold several stretches of prose, one before each round of tool calls. They
+    arrive separated by the agent's segment break and are drawn as successive blocks, so a
+    later thought lands underneath the earlier one instead of replacing it.
+    """
+    text = text or ""
+    if not text.strip():
+        return "<p class='hint'>Waiting for the first token.</p>" if running else ""
+    segments = [part for part in text.split(agent.SEGMENT_BREAK) if part.strip()]
+    body = "".join(
+        "<div class='seg%s'>%s</div>"
+        % (" seg--later" if n else "", _paragraphs(part))
+        for n, part in enumerate(segments)
+    )
     if running:
         body += "<span class='caret'></span>"
     return body
@@ -193,9 +210,15 @@ def conversation_head(count):
     )
 
 
-def history(turns):
-    """The session so far. It keeps growing until the visitor clears it."""
+def history(turns, pending=False):
+    """The session so far. It keeps growing until the visitor clears it.
+
+    `pending` means a question is in flight. The opening hint belongs to an empty
+    conversation, not to one that is busy answering its first question underneath it.
+    """
     if not turns:
+        if pending:
+            return "<div class='msg-group'></div>"
         return (
             "<div class='msg-group'><div class='pane-empty'>"
             "<div class='pane-empty__title'>Ask a question to begin</div>"

@@ -18,6 +18,10 @@ RETRY_BACKOFF_S = 1.5
 RATE_LIMIT_BACKOFF_S = 12.0
 RATE_LIMIT_RETRIES = 4
 MAX_OUTPUT_TOKENS = 2048
+# A turn can produce several stretches of prose, one before each round of tool calls. They
+# are separate thoughts and belong in separate blocks, so they travel joined by a character
+# that cannot occur in the text itself rather than run together into one paragraph.
+SEGMENT_BREAK = ""
 CONTEXT_CEILING_TOKENS = session_state.CONTEXT_CEILING_TOKENS
 
 CATALOGUE = [
@@ -185,13 +189,24 @@ class _Completion:
         return not self.content and not self.calls and not self.reasoning
 
 
+def transcript(segments, current=""):
+    """Everything the agent has said this turn, oldest block first."""
+    parts = [s for s in segments if s and s.strip()]
+    if current and current.strip():
+        parts.append(current)
+    return SEGMENT_BREAK.join(parts)
+
+
 def _messages(question, history, state):
     messages = [{"role": "system", "content": prompt.build(state)}]
     for turn in history or []:
         role = turn.get("role") if isinstance(turn, dict) else turn[0]
         content = turn.get("content") if isinstance(turn, dict) else turn[1]
         if role in ("user", "assistant") and isinstance(content, str) and content.strip():
-            messages.append({"role": role, "content": content})
+            # The break is ours, for laying the answer out. The model gets plain prose.
+            messages.append(
+                {"role": role, "content": content.replace(SEGMENT_BREAK, "\n\n")}
+            )
     messages.append({"role": "user", "content": question})
     return messages
 
@@ -310,6 +325,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
     state["switches"] = switch_flags.resolve(switches)
     events = []
     answer = ""
+    segments = []
 
     allowed, message = budget.acquire()
     if not allowed:
@@ -361,7 +377,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 for chunk in chunks:
                     if candidate.feed(chunk) and candidate.content:
-                        yield answer + candidate.content, events, state
+                        yield transcript(segments, candidate.content), events, state
             except Exception as exc:
                 last_fault = _fault(exc)
                 last_upstream = _upstream_text(exc)
@@ -444,6 +460,11 @@ def stream(question, history=None, model=None, session=None, switches=None):
 
         calls = completion.tool_calls()
         if calls:
+            # Prose the model wrote before reaching for a tool is a finished block: the next
+            # one goes underneath it rather than over it.
+            if completion.content and completion.content.strip():
+                segments.append(completion.content)
+                answer = transcript(segments)
             messages.append(
                 {
                     "role": "assistant",
@@ -553,7 +574,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
             messages[0] = {"role": "system", "content": prompt.build(state)}
             continue
 
-        answer = completion.content or ""
+        answer = transcript(segments, completion.content or "")
         check, correction = harness.review_final(answer, state)
         if correction and state["interventions"] < harness.MAX_INTERVENTIONS:
             session_state.bump(state, "interventions")
@@ -566,9 +587,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     intervention=state["interventions"],
                 )
             )
-            messages.append({"role": "assistant", "content": answer})
+            messages.append({"role": "assistant", "content": completion.content or ""})
             messages.append({"role": "user", "content": correction})
-            answer = ""
+            # The refused block is not kept. What survives is what was already delivered.
+            answer = transcript(segments)
             yield answer, events, state
             continue
 

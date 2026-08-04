@@ -101,7 +101,7 @@ def respond(question, turns, box, model_id):
     yield (
         render.hero(model_id, running=True, status="Running"),
         render.conversation_head(index),
-        render.history(turns),
+        render.history(turns, pending=True),
         render.live(question, "", running=True),
         render.trace([], agent.new_state(model_id, session), running=True),
         render.evidence(session),
