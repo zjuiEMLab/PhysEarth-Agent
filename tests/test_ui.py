@@ -102,6 +102,24 @@ def test_the_stylesheet_carries_the_fonts_and_neutralises_gradio():
     assert theme.js().strip().endswith("peBoot();")
 
 
+def test_the_layout_has_resizable_and_hideable_panel_controls():
+    css = theme.css()
+    js = theme.js()
+    assert "pe-layout-handle" in css
+    assert "pe-layout-tools" not in css
+    assert "data-layout-panel" not in js
+    assert "pointerdown" in js
+    assert "localStorage" in js
+    assert "grid-template-columns" in js
+    assert 'grid-template-areas: "chat trace" "chat evid"' not in css
+    assert "pe-panel-chat" in js
+    assert "rightRect" in js
+    assert "col-resize" in css
+    assert "document.addEventListener(\"pointermove\"" in js
+    assert "document.addEventListener(\"mousemove\"" in js
+    assert 'minmax(180px, " + layout.ratios[index] + "fr)' in js
+
+
 def test_the_quota_message_names_the_model_and_the_alternatives():
     event = {
         "kind": "harness_stop",

@@ -183,7 +183,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         hero = gr.HTML(render.hero(), elem_classes=["pe-slot"])
 
         with gr.Row(elem_classes=["stage"]):
-            with gr.Column(elem_classes=["pe-panel", "pe-panel--chat"]):
+            with gr.Column(elem_id="pe-panel-chat", elem_classes=["pe-panel", "pe-panel--chat"]):
                 head_slot = gr.HTML(render.conversation_head(0), elem_classes=["pe-slot"])
                 with gr.Column(elem_id="pe-chat-scroll"):
                     history_slot = gr.HTML(render.history([]), elem_classes=["pe-slot"])
@@ -199,7 +199,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                     clear = gr.Button("Clear the session", elem_id="pe-clear")
                     send = gr.Button("Send", variant="primary", elem_id="pe-send")
 
-            with gr.Column(elem_classes=["pe-panel", "pe-panel--trace"]):
+            with gr.Column(elem_id="pe-panel-trace", elem_classes=["pe-panel", "pe-panel--trace"]):
                 trace_slot = gr.HTML(
                     render.trace([], agent.new_state()), elem_classes=["pe-slot"]
                 )
@@ -212,7 +212,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                         approve_all = gr.Button("Run it and stop asking", elem_id="pe-approve-all")
                         decline = gr.Button("Decline", elem_id="pe-approve-no")
 
-            with gr.Column(elem_classes=["pe-panel", "pe-panel--evid"]):
+            with gr.Column(elem_id="pe-panel-evid", elem_classes=["pe-panel", "pe-panel--evid"]):
                 evidence_slot = gr.HTML(
                     render.evidence({}, [], set(), set()), elem_classes=["pe-slot"]
                 )

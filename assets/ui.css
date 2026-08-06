@@ -349,6 +349,7 @@ a.tag:hover {
 /* ---------- stage and panels ---------- */
 
 .stage {
+  position: relative !important;
   flex: 1 1 auto !important;
   min-height: 0 !important;
   display: grid !important;
@@ -363,6 +364,43 @@ a.tag:hover {
   background: var(--paper-2) !important;
   overflow: hidden !important;
 }
+
+/* ---------- user-controlled panel layout ---------- */
+
+.pe-panel.is-panel-hidden {
+  display: none !important;
+}
+
+.pe-layout-handle {
+  position: absolute;
+  z-index: 25;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.pe-layout-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 46px;
+  border-radius: 999px;
+  background: var(--line);
+  transform: translate(-50%, -50%);
+  transition: background 120ms ease, height 120ms ease;
+}
+
+.pe-layout-handle:hover::after,
+.pe-layout-handle.is-dragging::after {
+  height: 72px;
+  background: var(--accent);
+}
+
 
 /* The three panels, addressed structurally as well as by class, and by the id so this
    outranks every `#pe-app .something` neutralising rule above. Gradio has been seen to
@@ -1755,20 +1793,42 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 
 @media (max-width: 1280px) {
   .stage {
-    grid-template-columns: 1.1fr 1fr !important;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) !important;
-    grid-template-areas: "chat trace" "chat evid" !important;
+    grid-template-columns: 1.16fr 1fr 0.96fr !important;
+    grid-template-rows: minmax(0, 1fr) !important;
     gap: 14px !important;
   }
-  .pe-panel--chat {
-    grid-area: chat;
-  }
-  .pe-panel--trace {
-    grid-area: trace;
-  }
-  .pe-panel--evid {
-    grid-area: evid;
-  }
+}
+
+/* Keep the three Gradio columns as the three grid items even when Gradio adds
+   wrapper classes or re-renders a column. */
+#pe-app .stage > #pe-panel-chat,
+#pe-app .stage > #pe-panel-trace,
+#pe-app .stage > #pe-panel-evid {
+  grid-row: 1 !important;
+}
+
+#pe-app .stage > #pe-panel-chat { grid-column: 1 !important; }
+#pe-app .stage > #pe-panel-trace { grid-column: 2 !important; }
+#pe-app .stage > #pe-panel-evid { grid-column: 3 !important; }
+
+#pe-app .stage > .pe-layout-handle {
+  position: absolute !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: 0 !important;
+  left: 0;
+  display: block !important;
+  width: 20px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: translateX(-50%) !important;
+  cursor: col-resize !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  z-index: 100 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

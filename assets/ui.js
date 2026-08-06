@@ -195,6 +195,214 @@ function peBoot() {
   var activeTab = null;
   var activeScope = null;
 
+  /* ---------- resizable and hideable three-panel layout ---------- */
+
+  var LAYOUT_KEY = "physearth-panel-layout-v1";
+  var DEFAULT_LAYOUT = {
+    ratios: [1.16, 1, 0.96],
+    hidden: [false, false, false]
+  };
+  var layout = loadLayout();
+  var layoutStage = null;
+  var layoutHandles = [];
+  var layoutDrag = null;
+  var layoutPointerEventsBound = false;
+  var layoutMouseEventsBound = false;
+
+  function loadLayout() {
+    try {
+      var raw = window.localStorage.getItem(LAYOUT_KEY);
+      if (!raw) return { ratios: DEFAULT_LAYOUT.ratios.slice(), hidden: DEFAULT_LAYOUT.hidden.slice() };
+      var value = JSON.parse(raw);
+      var ratios = Array.isArray(value.ratios) && value.ratios.length === 3
+        ? value.ratios.map(Number) : DEFAULT_LAYOUT.ratios.slice();
+      var hidden = Array.isArray(value.hidden) && value.hidden.length === 3
+        ? value.hidden.map(Boolean) : DEFAULT_LAYOUT.hidden.slice();
+      if (ratios.some(function (n) { return !isFinite(n) || n <= 0; })) {
+        ratios = DEFAULT_LAYOUT.ratios.slice();
+      }
+      if (hidden.every(Boolean)) hidden[0] = false;
+      return { ratios: ratios, hidden: hidden };
+    } catch (e) {
+      return { ratios: DEFAULT_LAYOUT.ratios.slice(), hidden: DEFAULT_LAYOUT.hidden.slice() };
+    }
+  }
+
+  function saveLayout() {
+    try { window.localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch (e) {}
+  }
+
+  function panelName(index) {
+    return ["Chat", "Trace", "Evidence"][index];
+  }
+
+  function visibleIndexes() {
+    var out = [];
+    for (var i = 0; i < 3; i++) if (!layout.hidden[i]) out.push(i);
+    return out;
+  }
+
+  function panelElements() {
+    if (!layoutStage) return [];
+    var ids = ["pe-panel-chat", "pe-panel-trace", "pe-panel-evid"];
+    var panels = [];
+    for (var i = 0; i < ids.length; i++) {
+      var panel = document.getElementById(ids[i]);
+      if (!panel || !layoutStage.contains(panel)) return [];
+      panels.push(panel);
+    }
+    return panels;
+  }
+
+  function applyLayout() {
+    if (!layoutStage) return;
+    var els = panelElements();
+    if (els.length !== 3) return;
+    for (var i = 0; i < 3; i++) {
+      els[i].classList.toggle("is-panel-hidden", !!layout.hidden[i]);
+    }
+    var visible = visibleIndexes();
+    var total = visible.reduce(function (sum, index) { return sum + layout.ratios[index]; }, 0);
+    if (!isFinite(total) || total <= 0) return;
+    var columns = visible.map(function (index) {
+      return "minmax(180px, " + layout.ratios[index] + "fr)";
+    });
+    layoutStage.style.setProperty("grid-template-columns", columns.join(" "), "important");
+    layoutStage.classList.toggle("has-hidden-panel", visible.length < 3);
+    requestAnimationFrame(positionLayoutHandles);
+  }
+
+  function positionLayoutHandles() {
+    if (!layoutStage) return;
+    var visible = visibleIndexes();
+    var stageRect = layoutStage.getBoundingClientRect();
+    for (var i = 0; i < layoutHandles.length; i++) {
+      var handle = layoutHandles[i];
+      var leftIndex = visible[i], rightIndex = visible[i + 1];
+      if (leftIndex === undefined || rightIndex === undefined) {
+        handle.hidden = true;
+        continue;
+      }
+      var els = panelElements();
+      var leftRect = els[leftIndex].getBoundingClientRect();
+      var rightRect = els[rightIndex].getBoundingClientRect();
+      handle.hidden = false;
+      /* Put the hit area in the middle of the gap. This keeps it visible and
+         clickable even when the neighboring panel has an elevated child layer. */
+      handle.style.left = (((leftRect.right + rightRect.left) / 2) - stageRect.left) + "px";
+      handle.setAttribute("aria-label", "Resize " + panelName(leftIndex) + " and " + panelName(rightIndex));
+      handle.dataset.leftIndex = leftIndex;
+      handle.dataset.rightIndex = rightIndex;
+    }
+  }
+
+  function buildLayoutControls() {
+    var stage = document.querySelector("#pe-app .stage");
+    if (!stage) return;
+    layoutStage = stage;
+    if (layoutHandles.length !== 2 || layoutHandles.some(function (handle) {
+      return handle.parentNode !== stage;
+    })) {
+      layoutHandles = [];
+      for (var i = 0; i < 2; i++) {
+        var handle = document.createElement("div");
+        handle.className = "pe-layout-handle";
+        handle.setAttribute("role", "separator");
+        handle.setAttribute("tabindex", "0");
+        stage.appendChild(handle);
+        layoutHandles.push(handle);
+        bindLayoutHandle(handle);
+      }
+    }
+    bindLayoutPointerEvents();
+    applyLayout();
+  }
+
+  function moveLayout(event) {
+    if (!layoutDrag || layoutDrag.pointer !== event.pointerId || !layoutStage) return;
+    var stageWidth = layoutStage.clientWidth;
+    if (!stageWidth) return;
+    var delta = (event.clientX - layoutDrag.x) / stageWidth;
+    var left = layoutDrag.left, right = layoutDrag.right;
+    var nextLeft = layout.ratios[left] + delta;
+    var nextRight = layout.ratios[right] - delta;
+    var min = 0.12;
+    if (nextLeft < min || nextRight < min) return;
+    layout.ratios[left] = nextLeft;
+    layout.ratios[right] = nextRight;
+    layoutDrag.x = event.clientX;
+    applyLayout();
+    event.preventDefault();
+  }
+
+  function finishLayoutDrag(event) {
+    if (!layoutDrag || layoutDrag.pointer !== event.pointerId) return;
+    var handle = layoutDrag.handle;
+    layoutDrag = null;
+    if (handle) handle.classList.remove("is-dragging");
+    saveLayout();
+    positionLayoutHandles();
+  }
+
+  function moveLayoutMouse(event) {
+    if (!layoutDrag || layoutDrag.pointer !== "mouse") return;
+    moveLayout({
+      pointerId: "mouse",
+      clientX: event.clientX,
+      preventDefault: function () { event.preventDefault(); },
+    });
+  }
+
+  function finishLayoutMouse(event) {
+    if (!layoutDrag || layoutDrag.pointer !== "mouse") return;
+    finishLayoutDrag({ pointerId: "mouse" });
+    event.preventDefault();
+  }
+
+  function bindLayoutPointerEvents() {
+    if (layoutPointerEventsBound) return;
+    layoutPointerEventsBound = true;
+    document.addEventListener("pointermove", moveLayout, true);
+    document.addEventListener("pointerup", finishLayoutDrag, true);
+    document.addEventListener("pointercancel", finishLayoutDrag, true);
+    if (!layoutMouseEventsBound) {
+      layoutMouseEventsBound = true;
+      document.addEventListener("mousemove", moveLayoutMouse, true);
+      document.addEventListener("mouseup", finishLayoutMouse, true);
+    }
+  }
+
+  function bindLayoutHandle(handle) {
+    handle.addEventListener("pointerdown", function (event) {
+      if (handle.hidden || !layoutStage) return;
+      var left = Number(handle.dataset.leftIndex), right = Number(handle.dataset.rightIndex);
+      if (!isFinite(left) || !isFinite(right)) return;
+      try { handle.setPointerCapture(event.pointerId); } catch (e) {}
+      handle.classList.add("is-dragging");
+      layoutDrag = {
+        handle: handle,
+        pointer: event.pointerId,
+        left: left,
+        right: right,
+        x: event.clientX,
+      };
+      event.preventDefault();
+    });
+    handle.addEventListener("mousedown", function (event) {
+      if (event.button !== 0 || handle.hidden || !layoutStage) return;
+      var left = Number(handle.dataset.leftIndex), right = Number(handle.dataset.rightIndex);
+      if (!isFinite(left) || !isFinite(right)) return;
+      handle.classList.add("is-dragging");
+      layoutDrag = { handle: handle, pointer: "mouse", left: left, right: right, x: event.clientX };
+      event.preventDefault();
+    });
+    handle.addEventListener("dblclick", function () {
+      layout.ratios = DEFAULT_LAYOUT.ratios.slice();
+      saveLayout();
+      applyLayout();
+    });
+  }
+
   function rememberOpen(node) {
     var key = node.getAttribute("data-key");
     if (key) openKeys[key] = node.open;
@@ -401,6 +609,7 @@ function peBoot() {
     pending = requestAnimationFrame(function () {
       pending = null;
       mountCanvases();
+      buildLayoutControls();
       silenceBridge();
       if (reduce && drawnOnce) {
         for (var i = 0; i < panels.length; i++) panelFrame(panels[i], fxT);
@@ -428,11 +637,13 @@ function peBoot() {
   }
 
   mountCanvases();
+  buildLayoutControls();
   silenceBridge();
   restoreState(document);
   resizeRing();
   window.addEventListener("resize", function () {
     resizeRing();
+    positionLayoutHandles();
   });
   tick();
 }
