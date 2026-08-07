@@ -48,6 +48,18 @@ def test_illegal_theory_and_microstructure_pair_is_refused(card):
     assert problems and "sticky_hard_spheres" in problems[0]
 
 
+def test_rayleigh_requires_a_sphere_microstructure(card):
+    _, problems = validation.resolve(
+        card, {"electromagnetic_model": "rayleigh", "microstructure_model": "exponential"}
+    )
+    assert problems and "sphere-based" in problems[0]
+
+    _, problems = validation.resolve(
+        card, {"electromagnetic_model": "rayleigh", "microstructure_model": "independent_sphere"}
+    )
+    assert not problems
+
+
 def test_sweep_bounds_are_checked_against_the_swept_parameter(card):
     _, problems = validation.resolve(
         card, {"sweep_parameter": "density_kg_m3", "sweep_start": 50, "sweep_stop": 1200}

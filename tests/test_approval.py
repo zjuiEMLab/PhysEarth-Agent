@@ -102,6 +102,51 @@ def test_the_model_cannot_switch_the_gate_off_through_a_tool_call():
     assert approval.mode(box) == approval.ASK
 
 
+def test_tool_arguments_are_canonical_json_even_when_provider_uses_python_syntax():
+    values, canonical, note = agent._tool_arguments("{'model': 'smrt',}")
+    assert values == {"model": "smrt"}
+    assert canonical == '{"model":"smrt"}'
+    assert note
+
+
+def test_unrepairable_tool_arguments_are_not_replayed_to_provider(monkeypatch):
+    box = _asking()
+    script = [
+        [_call_chunk("list_models", "this is not json")],
+        [_Chunk(_Delta(content="I could not form the tool call."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    final_events = []
+    for _, final_events, _ in agent.stream("inspect the models", session=box):
+        pass
+
+    assert any(event["kind"] == "tool_arguments_invalid" for event in final_events)
+    second_request = sent[1]
+    assert not any(message.get("tool_calls") for message in second_request)
+    assert any("strict JSON" in message.get("content", "") for message in second_request)
+
+
+def test_citation_rewrite_discards_invalid_marker_from_pre_tool_narration(monkeypatch):
+    box = _asking()
+    script = [
+        [
+            _Chunk(_Delta(content="Working note [smrt-v1#03].")),
+            _call_chunk("list_models", '{"model":"smrt"}'),
+        ],
+        [_Chunk(_Delta(content="Draft still cites [smrt-v1#03]."))],
+        [_Chunk(_Delta(content="Verified local model run declaration [model:smrt@1.5.1]."))],
+    ]
+    client, _ = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    answer, events, _ = agent.run("inspect smrt", session=box)
+    assert "smrt-v1#03" not in answer
+    assert "model:smrt@1.5.1" in answer
+    assert any(event["kind"] == "harness_pass" for event in events)
+
+
 class _Delta:
     def __init__(self, content=None, tool_calls=None):
         self.content = content

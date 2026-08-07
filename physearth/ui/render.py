@@ -120,6 +120,14 @@ def _paragraphs(text):
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
         if not lines:
             continue
+        if len(lines) == 1:
+            heading = re.match(r"^(#{1,3})\s+(.+)$", lines[0])
+            if heading:
+                level = len(heading.group(1))
+                blocks.append(
+                    "<h%d>%s</h%d>" % (level, _inline(heading.group(2)), level)
+                )
+                continue
         if all(line.startswith(("- ", "* ")) for line in lines):
             items = "".join("<li>%s</li>" % _inline(line[2:]) for line in lines)
             blocks.append("<ul>%s</ul>" % items)
@@ -234,7 +242,10 @@ def history(turns, pending=False):
 
 
 def _message(who, text, user=False, running=False, faulted=False):
-    body = _e(text).replace("\n", "<br>") if user else answer_html(text, running)
+    # Render user text through the same small, escaped Markdown subset as answers. This
+    # keeps long research questions readable and avoids exposing literal ** markers in the
+    # conversation bubble.
+    body = _paragraphs(text) if user else answer_html(text, running)
     note = (
         "<span class='badge badge--warn'>not an answer</span><span class='msg__rule'></span>"
         if faulted
@@ -269,12 +280,16 @@ BADGES = {
     "harness_pass": ("badge--ok", "PASSED", "step-card--pass"),
     "harness_stop": ("badge--warn", "STOPPED", "step-card--warn"),
     "harness_giveup": ("badge--warn", "GAVE UP", "step-card--warn"),
+    "harness_fallback": ("badge--warn", "SAFE FALLBACK", "step-card--warn"),
     "untrusted_content": ("badge--warn", "BOUNDARY", "step-card--warn"),
     "empty_response": ("badge--mute", "UPSTREAM RETRY", "step-card--muted"),
     "literature_tier": ("badge--model", "LITERATURE TIER", "step-card--tool"),
     "protocol": ("badge--ok", "PROTOCOL", "step-card--pass"),
     "approval_wait": ("badge--warn", "WAITING FOR YOU", "step-card--warn"),
     "approval": ("badge--ok", "APPROVAL", "step-card--pass"),
+    "research_wait": ("badge--warn", "RESEARCH REVIEW", "step-card--warn"),
+    "research_block": ("badge--block", "RESEARCH GATE", "step-card--block"),
+    "research_complete": ("badge--passed", "RESEARCH COMPLETE", "step-card--passed"),
 }
 
 APPROVAL_WORDS = {
@@ -483,8 +498,65 @@ def _meter(label, value, cap, tone="", note=""):
 
 
 def approval_bar(session):
-    """The buttons that answer the gate, shown only while something is actually waiting."""
+    """Render either the research review card or the physical-run approval gate."""
     from physearth import approval as gate
+
+    project = (session or {}).get("research") or {}
+    if project and project.get("phase") not in ("approved", "completed"):
+        plan = project.get("plan") or {}
+        steps = "".join(
+            "<li>%s</li>" % _e(step) for step in (plan.get("steps") or [])
+        )
+        params = "".join(
+            "<span class='approve__p'><b>%s</b> %s</span>" % (_e(key), _e(value))
+            for key, value in sorted((plan.get("parameters") or {}).items())
+        )
+        gaps = plan.get("capability_gaps") or []
+        scope_html = (
+            "<div class='approve__note'><b>Expected outcome:</b> %s%s</div>"
+            % (
+                _e(plan.get("outcome_scope", "full")),
+                _e(" — unavailable locally: " + ", ".join(gaps)) if gaps else "",
+            )
+        )
+        pseudo = project.get("pseudo") or {}
+        pseudo_rows = pseudo.get("points") or []
+        pseudo_html = ""
+        if pseudo_rows:
+            keys = list(pseudo_rows[0])
+            header = "".join("<th>%s</th>" % _e(key) for key in keys)
+            rows = "".join(
+                "<tr>%s</tr>" % "".join("<td>%s</td>" % _e(row.get(key, "")) for key in keys)
+                for row in pseudo_rows[:6]
+            )
+            pseudo_html = (
+                "<div class='approve__note'><b>%s</b></div>"
+                "<table class='research-preview'><thead><tr>%s</tr></thead><tbody>%s</tbody></table>"
+                % (_e(pseudo.get("label", "PSEUDO-DATA — demonstration only")), header, rows)
+            )
+        chart_disabled = "" if project.get("phase") == "pseudo_preview" else " disabled"
+        charts = "".join(
+            "<button type='button' class='approve__chart' data-chart-id='%s'%s>"
+            "<b>[%s]</b> %s <span>(%s: %s → %s)</span></button>"
+            % (_e(item.get("id")), chart_disabled, _e(item.get("id")), _e(item.get("label")), _e(item.get("kind")), _e(item.get("x")), _e(item.get("y")))
+            for item in (plan.get("charts") or [])
+        )
+        return (
+            "<div class='approve approve--research' data-research-phase='%s'>"
+            "<div class='approve__head'>Research review · <b>%s</b> · plan v%03d</div>"
+            "<div class='approve__note'>Phase: %s. No formal physical result is authorized yet.</div>"
+            "<div class='research-question'><b>Question:</b> %s<br><b>Hypothesis:</b> %s</div>"
+            "%s"
+            "<ol class='research-steps'>%s</ol>"
+            "<div class='approve__params'>%s</div>"
+            "%s"
+            "<div class='approve__note'><b>Chart options</b></div><div class='approve__charts'>%s</div>"
+            "<div class='approve__note'>直接点击一个图表选项；如需修改计划或参数，请在对话框中说明。</div>"
+            "</div>"
+            % (_e(project.get("phase")), _e(plan.get("title", "Research plan")), project.get("plan_version", 1),
+               _e(project.get("phase")), _e(plan.get("question", "")), _e(plan.get("hypothesis", "")),
+               scope_html, steps, params, pseudo_html, charts or "none")
+        )
 
     waiting = gate.pending(session)
     if not waiting:
@@ -510,7 +582,42 @@ def approval_bar(session):
     )
 
 
-def trace(events, state, running=False):
+def _trace_metrics(state):
+    used, cap = budget.used()
+    session = state.get("session") or state
+    turns = session.get("turns", 0)
+    meters = "".join(
+        [
+            _meter(
+                "model calls", session.get("model_calls", 0), session.get("max_model_calls", 1),
+                note="%d this question, cap %d" % (state.get("model_calls", 0), state.get("max_model_calls", 0)),
+            ),
+            _meter(
+                "tool calls", session.get("tool_calls", 0), session.get("max_tool_calls", 1), "is-violet",
+                note="%d this question, cap %d" % (state.get("tool_calls", 0), state.get("max_tool_calls", 0)),
+            ),
+            _meter("context", state.get("prompt_tokens", 0), state.get("context_ceiling", 1), "is-ok"),
+            _meter("hourly quota", used, cap, "is-ok", note="shared by every visitor"),
+        ]
+    )
+    counters = "".join(
+        [
+            "<span class='badge badge--mono'>%d question%s in this session</span>" % (turns, "" if turns == 1 else "s"),
+            "<span class='badge badge--%s'>%d blocked</span>" % ("block" if session.get("interventions") else "mute", session.get("interventions", 0)),
+            "<span class='badge badge--%s'>%d boundary</span>" % ("warn" if session.get("boundary_flags") else "mute", session.get("boundary_flags", 0)),
+            "<span class='badge badge--%s'>%d QC failure%s</span>" % ("block" if session.get("qc_failures") else "ok", session.get("qc_failures", 0), "" if session.get("qc_failures") == 1 else "s"),
+            "<span class='badge badge--src'>%d model run%s</span>" % (session.get("model_runs", 0), "" if session.get("model_runs") == 1 else "s"),
+            "<span class='badge badge--src'>%d section%s read</span>" % (len(session.get("sections_read") or ()), "" if len(session.get("sections_read") or ()) == 1 else "s"),
+        ]
+    )
+    return "<div class='trace-metrics'><div class='meters'>%s</div><div class='counters'>%s</div></div>" % (meters, counters)
+
+
+def trace_metrics(state):
+    return _trace_metrics(state)
+
+
+def trace(events, state, running=False, include_footer=True):
     head = (
         "<div class='subpanel' style='padding-bottom:0'><div class='sec-head'>%s"
         "<span class='sec-title'>Run trace</span>"
@@ -538,71 +645,8 @@ def trace(events, state, running=False):
                 )
             )
 
-    used, cap = budget.used()
-    # The meters read the session, not the turn: the budget that actually stops the
-    # conversation is cumulative, and so is the evidence the citation check resolves against.
-    session = state.get("session") or state
-    turns = session.get("turns", 0)
-    meters = "".join(
-        [
-            _meter(
-                "model calls",
-                session.get("model_calls", 0),
-                session.get("max_model_calls", 1),
-                note="%d this question, cap %d"
-                % (state.get("model_calls", 0), state.get("max_model_calls", 0)),
-            ),
-            _meter(
-                "tool calls",
-                session.get("tool_calls", 0),
-                session.get("max_tool_calls", 1),
-                "is-violet",
-                note="%d this question, cap %d"
-                % (state.get("tool_calls", 0), state.get("max_tool_calls", 0)),
-            ),
-            _meter(
-                "context",
-                state.get("prompt_tokens", 0),
-                state.get("context_ceiling", 1),
-                "is-ok",
-            ),
-            _meter("hourly quota", used, cap, "is-ok", note="shared by every visitor"),
-        ]
-    )
-    counters = "".join(
-        [
-            "<span class='badge badge--mono'>%d question%s in this session</span>"
-            % (turns, "" if turns == 1 else "s"),
-            "<span class='badge badge--%s'>%d blocked</span>"
-            % (
-                "block" if session.get("interventions") else "mute",
-                session.get("interventions", 0),
-            ),
-            "<span class='badge badge--%s'>%d boundary</span>"
-            % (
-                "warn" if session.get("boundary_flags") else "mute",
-                session.get("boundary_flags", 0),
-            ),
-            "<span class='badge badge--%s'>%d QC failure%s</span>"
-            % (
-                "block" if session.get("qc_failures") else "ok",
-                session.get("qc_failures", 0),
-                "" if session.get("qc_failures") == 1 else "s",
-            ),
-            "<span class='badge badge--src'>%d model run%s</span>"
-            % (session.get("model_runs", 0), "" if session.get("model_runs") == 1 else "s"),
-            "<span class='badge badge--src'>%d section%s read</span>"
-            % (
-                len(session.get("sections_read") or ()),
-                "" if len(session.get("sections_read") or ()) == 1 else "s",
-            ),
-        ]
-    )
-    return (
-        "%s<div class='subpanel grow'><div class='subpanel__scroll'>%s</div></div>"
-        "<div class='subpanel'><div class='meters'>%s</div>"
-        "<div class='counters'>%s</div></div>" % (head, body, meters, counters)
-    )
+    footer = _trace_metrics(state) if include_footer else ""
+    return "<div class='trace-layout trace-layout--events'>%s<div class='subpanel grow'><div class='subpanel__scroll'>%s</div></div>%s</div>" % (head, body, footer)
 
 
 # ---------------------------------------------------------------- evidence
@@ -674,7 +718,7 @@ def _figure_card(figure, index):
             _e(label),
             _e((figure.get("series") or [{}])[0].get("handle", "")),
             _e(figure.get("title") or "chart"),
-            _e(figure.get("png", "")),
+            _e(figure.get("image_url") or figure.get("png", "")),
             agreement,
             legend or _e(figure.get("title") or ""),
         )

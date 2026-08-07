@@ -55,7 +55,7 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  user-select: none;
+  user-select: text;
 }
 
 input,
@@ -122,20 +122,26 @@ main.contain > .column {
    on specificity, so without this exclusion a panel would collapse to `display: contents`
    and its heading, body and composer would fall through into the stage's three grid
    columns, laying the conversation out to the right of its own title. */
-#pe-app .block:not(.pe-panel):not(.stage),
-#pe-app .form:not(.pe-panel):not(.stage),
-#pe-app .html-container:not(.pe-panel):not(.stage),
+#pe-app .block:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
+#pe-app .form:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
+#pe-app .html-container:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
 #pe-app .prose.gradio-style {
   display: contents !important;
 }
 
 /* One exception: the hidden bridge that carries the chosen model back to the server. */
 #pe-app #pe-model-bridge,
-#pe-app #pe-model-bridge * {
+#pe-app #pe-model-bridge *,
+#pe-app #pe-chart-bridge,
+#pe-app #pe-chart-bridge *,
+#pe-app #pe-chart-submit,
+#pe-app #pe-chart-submit * {
   display: block !important;
 }
 
-#pe-app #pe-model-bridge {
+#pe-app #pe-model-bridge,
+#pe-app #pe-chart-bridge,
+#pe-app #pe-chart-submit {
   position: fixed !important;
   top: 0 !important;
   left: -9999px !important;
@@ -415,6 +421,7 @@ a.tag:hover {
   min-width: 0 !important;
   display: flex !important;
   flex-direction: column !important;
+  flex-wrap: nowrap !important;
   gap: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
@@ -422,6 +429,200 @@ a.tag:hover {
   border: 1px solid var(--line) !important;
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow-panel);
+}
+
+/* Gradio may drop elem_classes from a live Column while replacing its HTML output.
+   The ids are stable, so keep the three real panels in the layout even during that
+   transient state. Without this, the Conversation title stays in column one while
+   its newly-rendered messages can become a sibling grid item in column two. */
+#pe-app #pe-panel-chat,
+#pe-app #pe-panel-trace,
+#pe-app #pe-panel-evid {
+  position: relative !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: var(--paper) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-panel) !important;
+}
+
+#pe-app #pe-panel-chat > #pe-chat-scroll,
+#pe-app #pe-panel-chat > .composer__box {
+  flex-shrink: 0 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Keep the Conversation slots as real block-level children. Gradio's generic
+   `display: contents` normalization is useful for most decorative HTML slots, but
+   here it can let a freshly-rendered message group participate in the wrong flex/grid
+   context and appear beside the heading instead of below it. */
+#pe-app #pe-panel-chat > .pe-slot,
+#pe-app #pe-panel-chat > #pe-chat-scroll,
+#pe-app #pe-panel-chat > .composer__box {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#pe-app #pe-panel-chat > .pe-slot,
+#pe-app #pe-panel-chat > .pe-slot > .html-container,
+#pe-app #pe-panel-chat > .pe-slot > .prose,
+#pe-app #pe-panel-chat > #pe-chat-scroll > .pe-slot,
+#pe-app #pe-panel-chat > #pe-chat-scroll > .pe-slot > .html-container,
+#pe-app #pe-panel-chat > #pe-chat-scroll > .pe-slot > .prose {
+  display: block !important;
+}
+
+#pe-app #pe-panel-chat > .pe-slot {
+  flex: none !important;
+}
+
+#pe-app #pe-panel-chat > #pe-chat-scroll {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+}
+
+/* Run trace has one scroll surface: execution cards and the research review are in the
+   same stream; the meters are a separate fixed footer. */
+#pe-app #pe-panel-trace > #pe-trace-stream {
+  order: 1 !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#pe-app #pe-panel-trace > #pe-trace-stream > .pe-slot {
+  flex: none !important;
+  min-width: 0 !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+#pe-app #pe-panel-trace > #pe-trace-stream > #pe-approve {
+  flex: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* The approval Column also contains the buttons. Hide the whole Column in the idle state;
+   hiding only its HTML card would leave orphaned Run it / Decline buttons above the trace. */
+#pe-app #pe-panel-trace #pe-approve:has(.approve[hidden]) {
+  display: none !important;
+}
+
+#pe-app #pe-panel-trace > #pe-trace-stream > #pe-approve:has(.approve[hidden]) {
+  display: none !important;
+}
+
+#pe-app #pe-panel-trace #pe-approve > .pe-slot {
+  flex: none !important;
+  min-width: 0 !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+#pe-app #pe-panel-trace #pe-approve > .approve__row {
+  flex: none !important;
+  display: flex !important;
+}
+
+#pe-app #pe-panel-trace > .pe-slot {
+  order: 2 !important;
+  flex: none !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  display: block !important;
+  overflow: hidden !important;
+}
+
+#pe-app #pe-panel-trace .trace-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+}
+
+#pe-app #pe-panel-trace .trace-layout > .subpanel {
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#pe-app #pe-panel-trace .trace-layout > .subpanel.grow {
+  flex: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+#pe-app #pe-panel-trace .trace-layout > .subpanel.grow > .subpanel__scroll {
+  height: auto !important;
+  flex: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  overflow-x: hidden !important;
+}
+
+#pe-app #pe-panel-trace > .pe-slot .trace-metrics {
+  display: block !important;
+  width: 100% !important;
+  padding: var(--pad) !important;
+  border-top: 1px solid var(--line) !important;
+}
+
+/* Evidence has the same Gradio wrapper problem the Conversation panel used to have:
+   without an explicit flex height the tab header renders, but .tab-panes resolves to
+   zero pixels and the figure cards exist only in the DOM.  Keep exactly one scroll
+   surface inside the active pane. */
+#pe-app #pe-panel-evid > .pe-slot,
+#pe-app #pe-panel-evid > .pe-slot > .html-container,
+#pe-app #pe-panel-evid > .pe-slot > .html-container > .prose {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#pe-app #pe-panel-evid .tabset {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+#pe-app #pe-panel-evid .pane-scroll {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 .panel-fx {
@@ -711,6 +912,8 @@ a.tag:hover {
 
 .msg {
   margin-bottom: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .msg__head {
@@ -739,12 +942,15 @@ a.tag:hover {
 }
 
 .msg__body {
+  box-sizing: border-box;
   font-size: 14px;
   line-height: 1.62;
   color: var(--ink);
   max-width: 62ch;
   min-width: 0;
+  width: 100%;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .msg--fault .msg__who {
@@ -772,6 +978,19 @@ a.tag:hover {
 .msg__body p:last-child {
   margin-bottom: 0;
 }
+
+.msg__body h1,
+.msg__body h2,
+.msg__body h3 {
+  margin: 17px 0 8px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  line-height: 1.25;
+}
+
+.msg__body h1 { font-size: 20px; }
+.msg__body h2 { font-size: 17px; }
+.msg__body h3 { font-size: 15px; }
 
 .msg__body code {
   font-family: var(--font-mono);
@@ -864,7 +1083,23 @@ body:not(.is-reasoning) .caret {
   gap: 0 !important;
   padding: 0 var(--pad) 6px !important;
   margin: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  align-self: stretch !important;
+}
+
+#pe-chat-scroll > *,
+#pe-chat-scroll .html-container,
+#pe-chat-scroll .prose,
+#pe-chat-scroll .md,
+#pe-chat-scroll .msg-group,
+#pe-chat-scroll .msg {
+  width: 100% !important;
+  max-width: none !important;
   min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .composer__box {
@@ -1060,6 +1295,9 @@ body:not(.is-reasoning) .caret {
 
 .step-card {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 11px 13px 11px 15px;
   border-radius: var(--radius-sm);
   background: var(--paper);
@@ -1105,6 +1343,7 @@ body:not(.is-reasoning) .caret {
   align-items: center;
   gap: 8px;
   margin-bottom: 7px;
+  min-width: 0;
 }
 
 .step-card__n {
@@ -1799,6 +2038,13 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   }
 }
 
+.step-card__head .mono,
+.step-card__head .badge {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 /* Keep the three Gradio columns as the three grid items even when Gradio adds
    wrapper classes or re-renders a column. */
 #pe-app .stage > #pe-panel-chat,
@@ -2015,6 +2261,70 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   margin-top: 14px;
   padding-top: 13px;
   border-top: 1px dashed var(--line);
+}
+
+.approve__charts {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 8px;
+}
+
+.approve__chart {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  color: var(--ink);
+  background: var(--paper);
+  text-align: left;
+  cursor: pointer;
+}
+
+.approve__chart:hover,
+.approve__chart.is-selected {
+  border-color: var(--clay);
+  background: var(--clay-wash);
+}
+
+.approve__chart:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.approve__chart span {
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.research-steps {
+  margin: 8px 0 10px 20px;
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.research-question {
+  margin-top: 9px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.research-preview {
+  width: 100%;
+  margin: 7px 0;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.research-preview th,
+.research-preview td {
+  padding: 3px 5px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
 }
 
 .seg > *:first-child {

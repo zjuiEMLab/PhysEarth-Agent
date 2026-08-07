@@ -147,8 +147,9 @@ def citation_correction(result):
         "opened with read_literature. Note that a model name is not a paper slug, and that "
         "seeing a model's version in the capability table is not the same as reading its "
         "declaration: if you want to keep a [model:...] marker, call list_models on that "
-        "model now and then re-send. Otherwise drop the marker. Fix or drop each one and "
-        "re-send the full answer."
+        "model now and then re-send. Otherwise remove or rewrite the factual claim that depended "
+        "on that marker; deleting only the citation while retaining the unsupported claim is not "
+        "a correction. Fix each claim and re-send the full answer."
         % ", ".join(result["unresolved"])
     )
 

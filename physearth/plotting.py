@@ -5,12 +5,13 @@ columns to draw. The arrays travel from the result store straight to the rendere
 never enter the language model's context.
 """
 
-import base64
+import hashlib
 import io
 import math
 from pathlib import Path
+from urllib.parse import quote
 
-from physearth import results
+from physearth import config, results
 
 FONT_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
 KINDS = ("line", "scatter", "line+markers")
@@ -302,7 +303,7 @@ def _pearson(left, right):
 
 
 def render(spec, series, preview=False):
-    """Draw the chart and return a figure record with the PNG inlined as a data URI."""
+    """Draw a chart and return a small record pointing at a server-owned PNG file."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -377,11 +378,22 @@ def _draw(plt, spec, series, kind, preview=False):
     buffer = io.BytesIO()
     figure.savefig(buffer, format="png", facecolor=PAPER, bbox_inches="tight", pad_inches=0.08)
     plt.close(figure)
-    payload = base64.b64encode(buffer.getvalue()).decode("ascii")
+    payload = buffer.getvalue()
+    digest = hashlib.sha256(payload).hexdigest()[:24]
+    figure_dir = config.state_dir().resolve() / "figures"
+    figure_dir.mkdir(parents=True, exist_ok=True)
+    image_path = figure_dir / ("%s.png" % digest)
+    if not image_path.exists():
+        image_path.write_bytes(payload)
+    # Gradio's file route keeps the large PNG out of gr.State and out of every dynamic
+    # HTML update.  Inlining 40-60 KB data URIs made the tab counter update while the
+    # browser silently retained an empty image node in the full three-panel application.
+    image_url = "/gradio_api/file=%s" % quote(str(image_path), safe="/")
 
     sources = sorted({item["source"] for item in series})
     return {
-        "png": "data:image/png;base64,%s" % payload,
+        "image_path": str(image_path),
+        "image_url": image_url,
         "title": spec.get("title") or first["label"],
         "kind": "preview" if preview else kind,
         "preview": preview,

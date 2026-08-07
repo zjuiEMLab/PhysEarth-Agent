@@ -1,6 +1,6 @@
 import gradio as gr
 
-from physearth import agent, approval, config, diagnostics
+from physearth import agent, approval, config, diagnostics, research
 from physearth.ui import render, theme
 
 config.load_dotenv()
@@ -21,6 +21,7 @@ def _new_session(model_id):
     """
     session = agent.new_session(model_id)
     approval.set_mode(session, approval.ASK)
+    session["research_required"] = True
     return session
 
 
@@ -37,6 +38,7 @@ FAULT_RULES = ("upstream", "quota", "withdrawn", "global_budget")
 def _evidence_key(session):
     """What the evidence panel is showing, cheaply. Anything else is not worth a redraw."""
     return (
+        int(session.get("evidence_revision", 0)),
         len(session.get("figures") or ()),
         len(session.get("sections_read") or ()),
         len(session.get("datasets_read") or ()),
@@ -82,6 +84,7 @@ def respond(question, turns, box, model_id):
             gr.update(),
             gr.update(),
             gr.update(),
+            gr.update(),
             turns,
             session,
             "",
@@ -103,7 +106,8 @@ def respond(question, turns, box, model_id):
         render.conversation_head(index),
         render.history(turns, pending=True),
         render.live(question, "", running=True),
-        render.trace([], agent.new_state(model_id, session), running=True),
+        render.trace([], agent.new_state(model_id, session), running=True, include_footer=False),
+        render.trace_metrics(agent.new_state(model_id, session)),
         render.evidence(session),
         render.approval_bar(session),
         turns,
@@ -128,7 +132,8 @@ def respond(question, turns, box, model_id):
                 gr.update(),
                 gr.update(),
                 render.live(question, answer, running=running),
-                render.trace(events, state, running=running),
+                render.trace(events, state, running=running, include_footer=False),
+                render.trace_metrics(state),
                 render.evidence(session) if changed else gr.update(),
                 render.approval_bar(session),
                 gr.update(),
@@ -146,7 +151,8 @@ def respond(question, turns, box, model_id):
         render.conversation_head(len(turns)),
         render.history(turns),
         render.live("", ""),
-        render.trace(events, state, running=False),
+        render.trace(events, state, running=False, include_footer=False),
+        render.trace_metrics(state),
         render.evidence(session),
         render.approval_bar(session),
         turns,
@@ -166,13 +172,50 @@ def reset(model_id):
         render.conversation_head(0),
         render.history([]),
         render.live("", ""),
-        render.trace([], agent.new_state(model_id, session), running=False),
+        render.trace([], agent.new_state(model_id, session), running=False, include_footer=False),
+        render.trace_metrics(agent.new_state(model_id, session)),
         render.evidence(session),
         render.approval_bar(session),
         [],
         session,
         "",
     )
+
+
+def review_click(box, action):
+    """Advance a human gate and request an agent continuation only after final approval."""
+    session = box if isinstance(box, dict) else None
+    command = ""
+    if session and session.get("research"):
+        phase_before = session["research"].get("phase")
+        research.review_action(session, action)
+        if research.allow_model(session):
+            # Formal execution approval is the run approval. Do not ask a second time.
+            approval.set_mode(session, approval.ALWAYS)
+        if action == "primary" and phase_before == "chart_selected" and research.allow_model(session):
+            command = (
+                "I approve formal execution of the reviewed research plan. Continue now: "
+                "run the registered physical model, create the selected plot from its actual "
+                "outputs, check the result, and only then report the interpretation and conclusion."
+            )
+    else:
+        decision = {"primary": "approve", "secondary": approval.ALWAYS, "pause": "reject"}[action]
+        approval.decide(session, decision)
+    return render.approval_bar(session), session, command
+
+
+def resume_after_review(command, turns, box, model_id):
+    """A distinct, approval-only route; normal questions still have one Send binding."""
+    yield from respond(command, turns, box, model_id)
+
+
+def select_chart_click(box, chart_id):
+    """Record an explicit human chart click without asking the LLM to infer an ID."""
+    session = box if isinstance(box, dict) else None
+    chart_id = str(chart_id or "").strip()
+    if session and session.get("research") and chart_id:
+        research.choose_chart(session, chart_id)
+    return render.approval_bar(session), session, ""
 
 
 with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
@@ -200,17 +243,21 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                     send = gr.Button("Send", variant="primary", elem_id="pe-send")
 
             with gr.Column(elem_id="pe-panel-trace", elem_classes=["pe-panel", "pe-panel--trace"]):
-                trace_slot = gr.HTML(
-                    render.trace([], agent.new_state()), elem_classes=["pe-slot"]
-                )
-                with gr.Column(elem_id="pe-approve"):
-                    approval_slot = gr.HTML(
-                        render.approval_bar(None), elem_classes=["pe-slot"]
+                with gr.Column(elem_id="pe-trace-stream"):
+                    trace_slot = gr.HTML(
+                        render.trace([], agent.new_state(), include_footer=False), elem_classes=["pe-slot"]
                     )
-                    with gr.Row(elem_classes=["approve__row"]):
-                        approve = gr.Button("Run it", variant="primary", elem_id="pe-approve-yes")
-                        approve_all = gr.Button("Run it and stop asking", elem_id="pe-approve-all")
-                        decline = gr.Button("Decline", elem_id="pe-approve-no")
+                    with gr.Column(elem_id="pe-approve"):
+                        approval_slot = gr.HTML(
+                            render.approval_bar(None), elem_classes=["pe-slot"]
+                        )
+                        with gr.Row(elem_classes=["approve__row"]):
+                            approve = gr.Button("Approve / Continue", variant="primary", elem_id="pe-approve-yes")
+                            approve_all = gr.Button("Revise / Regenerate", elem_id="pe-approve-all")
+                            decline = gr.Button("Pause", elem_id="pe-approve-no")
+                trace_metrics_slot = gr.HTML(
+                    render.trace_metrics(agent.new_state()), elem_classes=["pe-slot"]
+                )
 
             with gr.Column(elem_id="pe-panel-evid", elem_classes=["pe-panel", "pe-panel--evid"]):
                 evidence_slot = gr.HTML(
@@ -221,6 +268,14 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
             value=agent.default_model(), elem_id="pe-model-bridge", show_label=False,
             container=False,
         )
+        review_command = gr.Textbox(
+            value="", elem_id="pe-review-command", show_label=False,
+            container=False, visible=False,
+        )
+        chart_bridge = gr.Textbox(
+            value="", elem_id="pe-chart-bridge", show_label=False, container=False,
+        )
+        chart_submit = gr.Button("Select chart", elem_id="pe-chart-submit")
 
     outputs = [
         hero,
@@ -228,6 +283,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         history_slot,
         live_slot,
         trace_slot,
+        trace_metrics_slot,
         evidence_slot,
         approval_slot,
         turns_state,
@@ -241,25 +297,38 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     # twice.
     send.click(respond, inputs, outputs)
     clear.click(reset, [model_bridge], outputs)
+    chart_submit.click(
+        select_chart_click,
+        [session_box, chart_bridge],
+        [approval_slot, session_box, chart_bridge],
+        concurrency_limit=None,
+        queue=False,
+    )
 
     # These three must be able to run while `respond` is blocked inside the gate waiting
     # for them, so they are exempt from the queue's concurrency limit. Without that the
     # click would sit behind the very generator it is meant to release.
     for button, decision in (
-        (approve, "approve"),
-        (approve_all, approval.ALWAYS),
-        (decline, "reject"),
+        (approve, "primary"),
+        (approve_all, "secondary"),
+        (decline, "pause"),
     ):
-        button.click(
-            lambda box, verdict=decision: (
-                approval.decide(box, verdict),
-                render.approval_bar(box),
-            )[1],
+        review_event = button.click(
+            lambda box, verdict=decision: review_click(box, verdict),
             [session_box],
-            [approval_slot],
+            [approval_slot, session_box, review_command],
             concurrency_limit=None,
             queue=False,
         )
+        # The earlier review phases only mutate their explicit gate. Formal execution
+        # approval also resumes the same agent, so the button results in a real model run
+        # and selected plot instead of merely changing a state label.
+        if decision == "primary":
+            review_event.then(
+                resume_after_review,
+                [review_command, turns_state, session_box, model_bridge],
+                outputs,
+            )
 
 demo.queue(default_concurrency_limit=4)
 
@@ -270,4 +339,5 @@ if __name__ == "__main__":
         css=theme.css(),
         js=theme.js(),
         head=theme.head(),
+        allowed_paths=[str(config.state_dir().resolve())],
     )

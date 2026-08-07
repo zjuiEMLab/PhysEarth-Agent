@@ -5,6 +5,8 @@ The comparison is a mode of the tool that already holds two curves, and the prev
 mode of the tool that already knows what a chart of them would look like.
 """
 
+from pathlib import Path
+
 import pytest
 
 from physearth import harness, knowledge, plotting, prompt, session, tools
@@ -95,7 +97,8 @@ def test_a_preview_needs_no_data_and_says_so():
     assert all(s["n_points"] == 0 for s in result["data"]["series"])
     assert result["ui"]["figure"]["preview"] is True
     assert result["ui"]["figure"]["kind"] == "preview"
-    assert result["ui"]["figure"]["png"].startswith("data:image/png;base64,")
+    assert result["ui"]["figure"]["image_url"].startswith("/gradio_api/file=")
+    assert Path(result["ui"]["figure"]["image_path"]).is_file()
     assert "measured" in result["ui"]["figure"]["provenance"]
 
 
@@ -209,7 +212,7 @@ def test_a_bias_between_kelvin_and_decibels_is_refused_and_the_chart_survives():
     assert result["status"] == "success"
     assert "agreement" not in result["data"]
     assert "different units" in result["data"]["agreement_refused"][0]
-    assert result["ui"]["figure"]["png"]
+    assert Path(result["ui"]["figure"]["image_path"]).is_file()
 
 
 def test_statistics_are_refused_when_there_is_nothing_to_compare_against(two_runs):
@@ -252,4 +255,5 @@ def test_the_tool_count_did_not_grow_for_either_increment():
         "plot",
         "discover_literature",
         "ingest_paper",
+        "research_plan",
     }

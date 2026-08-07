@@ -27,6 +27,44 @@ rejected, read the reason, fix the parameters and try again; the rejection tells
 declared range or the legal combination. If the corpus and the models together cannot answer
 something, say so instead of filling the gap from memory."""
 
+RESEARCH_WORKFLOW = """\
+For an executable scientific question, use research_plan before any formal run_model call.
+The protocol is mandatory and question-specific. First analyse the question: identify the
+scientific objective, unknowns, evidence needed, registered physical model, parameters,
+controls, diagnostics and success criteria. Read only the literature/model declarations
+needed to make that plan defensible. Before proposing execution, call list_models for every
+registered model you intend to use and obey its legal combinations. Then call research_plan
+with action=propose and submit your own structured plan, including an explicit `runs` entry
+for every distinct physical-model configuration the conclusion requires. There are no
+built-in plans for benchmark questions. A comparison of three theories requires three
+successful planned runs and a final figure containing all three handles; one surviving curve
+is a partial failure, never a completed comparison. Keep tool arguments concise: short labels,
+one sentence per step, and only parameters that affect execution; do not repeat explanations
+inside every run object. For a trend, interval, threshold, sensitivity, or curve question,
+every compared run must declare the same sweep_parameter, sweep_start, sweep_stop and
+sweep_points. A chart's x field must equal that sweep_parameter and its y field must be a
+real output column declared by list_models (for example tb_v or ks_per_m), never the name
+of an electromagnetic theory. After approval, execute each planned run exactly once and
+reuse its returned handle; never rerun a successful configuration merely to repair a plot.
+
+Every physical model explicitly named in a comparison question must be accounted for. A
+paper in the literature corpus is not an executable model. If a named comparison model is
+absent from list_models and there is no queried reference dataset for its outputs, mark the
+plan and report as a partial reproduction: run only the available side, say which side was
+not run, omit cross-model error metrics, and do not attribute differences to an unavailable
+model's electromagnetic formulation or radiative-transfer solver. In SMRT, the selected
+electromagnetic formulation (such as IBA) supplies coefficients and the registered adapter
+couples it to DORT when output=tb; never describe SMRT/IBA brightness temperature as lacking
+radiative transfer.
+
+Stop after proposing the plan and wait for the user to approve or revise it. After approval,
+request the pseudo-data preview and wait for the user to choose a chart. Then wait for formal
+execution approval. You cannot approve either gate yourself: approval is a human UI action,
+not a research_plan tool action. Only after the recorded human approval may you call run_model
+and plot. Pseudo-data are a UI demonstration only and must never be presented as a physical
+result. After execution, report diagnostics, limitations, and whether the result is reproduced,
+partial, blocked, failed, or negative."""
+
 ONLINE_RULES = """\
 Beyond the bundled corpus you can reach the open-access literature of the field, in two
 steps that are deliberately separate.
@@ -204,6 +242,7 @@ def build(state=None):
             catalogue_section(),
             skills_section(),
             WORKFLOW,
+            RESEARCH_WORKFLOW,
         ]
         citations = CITATION_RULES
         if online_available():
@@ -218,6 +257,7 @@ def build(state=None):
             models_section(flags["capability"]),
             reference_section(),
             NO_CORPUS_WORKFLOW,
+            RESEARCH_WORKFLOW,
             untrusted.RULE,
             NO_CORPUS_CITATION_RULES,
             STYLE,

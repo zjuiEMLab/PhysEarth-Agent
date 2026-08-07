@@ -2,6 +2,10 @@ import os
 from pathlib import Path
 
 _DEFAULTS = {
+    "PHYSEARTH_LLM_API_KEY": "",
+    "PHYSEARTH_LLM_API_BASE": "",
+    "PHYSEARTH_LLM_MODEL": "",
+    "PHYSEARTH_LLM_MODELS": "",
     "MODELSCOPE_TOKEN": "",
     "MODELSCOPE_NAMESPACE": "",
     "MODELSCOPE_API_BASE": "https://api-inference.modelscope.cn/v1",
@@ -29,6 +33,30 @@ def get(name):
     return os.environ.get(name, _DEFAULTS.get(name, ""))
 
 
+def llm_api_key():
+    """Provider-neutral key, with the old ModelScope name kept for deployments."""
+    return get("PHYSEARTH_LLM_API_KEY") or get("MODELSCOPE_TOKEN")
+
+
+def llm_api_base():
+    return get("PHYSEARTH_LLM_API_BASE") or get("MODELSCOPE_API_BASE")
+
+
+def llm_model():
+    return get("PHYSEARTH_LLM_MODEL") or get("MODELSCOPE_MODEL")
+
+
+def llm_models():
+    raw = get("PHYSEARTH_LLM_MODELS")
+    if raw:
+        return [item.strip() for item in raw.split(",") if item.strip()]
+    return [
+        "Qwen/Qwen3.5-122B-A10B",
+        "deepseek-ai/DeepSeek-V4-Flash-0731",
+        "ZhipuAI/GLM-4.7-Flash",
+    ]
+
+
 def state_dir():
     path = Path(get("PHYSEARTH_STATE_DIR"))
     path.mkdir(parents=True, exist_ok=True)
@@ -36,4 +64,8 @@ def state_dir():
 
 
 def has_token():
-    return bool(get("MODELSCOPE_TOKEN"))
+    return bool(llm_api_key())
+
+
+# Load local provider selection before agent.py builds its model switcher catalogue.
+load_dotenv()

@@ -11,6 +11,12 @@ def test_answer_text_is_escaped_before_anything_else():
     assert "onerror" not in out or "&lt;img" in out
 
 
+def test_conversation_renders_markdown_headings_inside_the_message_body():
+    out = render.answer_html("## Convergence Range\n\nAll theories converge here.")
+    assert "<h2>Convergence Range</h2>" in out
+    assert "## Convergence Range" not in out
+
+
 def test_markers_become_chips_that_name_their_evidence():
     out = render.answer_html("a [smrt-v1#12] b [model:smrt@1.5.1] c [data:tvc-backscatter]")
     assert "data-jump='sec-smrt-v1#12'" in out
@@ -144,16 +150,22 @@ def test_a_spent_daily_quota_is_not_retried():
         status_code = 429
         body = {"message": "Too many requests, slow down"}
 
+    class EmptyBalance(Exception):
+        status_code = 429
+        body = {"message": "insufficient balance"}
+
     assert agent._dead_for_today(Spent()) == "quota"
     assert agent._dead_for_today(Busy()) == ""
-    assert agent._fault(Spent()) == "rate limited (HTTP 429)"
+    assert agent._fault(Spent()) == "model quota or balance exhausted (HTTP 429)"
+    assert agent._dead_for_today(EmptyBalance()) == "quota"
+    assert agent._fault(EmptyBalance()) == "model quota or balance exhausted (HTTP 429)"
 
 
 def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
     import app
 
     used_before = budget.used()
-    hero, head, history, live, trace, evidence, approve, turns, session, box = app.reset(
+    hero, head, history, live, trace, metrics, evidence, approve, turns, session, box = app.reset(
         agent.default_model()
     )
     assert turns == [] and box == ""
@@ -162,7 +174,7 @@ def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
     assert "msg--" not in history and "msg--" not in live
     assert "Nothing has run yet" in trace
     assert "No chart yet" in evidence
-    assert "%d / %d" % used_before in trace
+    assert "%d / %d" % used_before in metrics
 
 
 def test_the_opening_hint_belongs_to_the_empty_session_only():
@@ -220,7 +232,7 @@ def test_clearing_the_session_does_not_disarm_the_approval_gate():
     first = app._session(None, agent.default_model())
     assert approval.required(first)
 
-    session = app.reset(agent.default_model())[8]
+    session = app.reset(agent.default_model())[9]
     assert approval.required(session)
     assert app._session(session, agent.default_model()) is session
     assert approval.required(session)
@@ -257,6 +269,19 @@ def test_the_switcher_never_shows_nothing_selected():
     assert "data-model='%s' class='is-active'" % agent.default_model() in out
 
 
+def test_provider_neutral_llm_config_falls_back_to_modelscope(monkeypatch):
+    from physearth import config
+
+    monkeypatch.setenv("PHYSEARTH_LLM_API_KEY", "generic-key")
+    monkeypatch.setenv("PHYSEARTH_LLM_API_BASE", "https://generic.example/v1")
+    monkeypatch.setenv("PHYSEARTH_LLM_MODEL", "generic-model")
+    monkeypatch.setenv("PHYSEARTH_LLM_MODELS", "generic-model,second-model")
+    assert config.llm_api_key() == "generic-key"
+    assert config.llm_api_base() == "https://generic.example/v1"
+    assert config.llm_model() == "generic-model"
+    assert config.llm_models() == ["generic-model", "second-model"]
+
+
 def test_only_one_route_reaches_the_agent():
     """Two bindings would let a stray submit start a second run against one session."""
     import app
@@ -266,6 +291,45 @@ def test_only_one_route_reaches_the_agent():
         if getattr(dep, "name", None) == "respond" or getattr(getattr(dep, "fn", None), "__name__", "") == "respond"
     ]
     assert len(handlers) == 1
+
+
+def test_chart_click_records_the_human_choice_without_an_llm_turn():
+    import app
+    from physearth import research, session
+
+    box = session.new_session("m")
+    research.propose(
+        box,
+        question="q",
+        objective="compare model outputs",
+        hypothesis="the curves differ",
+        steps=["inspect", "run", "plot"],
+        parameters={"sweep_start": 1, "sweep_stop": 10},
+        runs=[
+            {
+                "id": "run_1",
+                "label": "SMRT run",
+                "model": "smrt",
+                "parameters": {
+                    "output": "tb",
+                    "sweep_parameter": "density_kg_m3",
+                    "sweep_start": 1,
+                    "sweep_stop": 10,
+                    "sweep_points": 5,
+                },
+            }
+        ],
+        charts=[{"id": "curve", "label": "Curve", "kind": "line", "x": "density_kg_m3", "y": "tb_v"}],
+    )
+    research.approve_plan(box)
+    research.pseudo_preview(box)
+
+    card, updated, cleared = app.select_chart_click(box, "curve")
+    assert updated["research"]["phase"] == "chart_selected"
+    assert updated["research"]["selected_chart"]["id"] == "curve"
+    assert "Approve execution" not in card  # Labels are synchronized by the client script.
+    assert "data-research-phase='chart_selected'" in card
+    assert cleared == ""
 
 
 def test_a_windowed_rate_limit_is_waited_out_not_reported_as_a_fault():

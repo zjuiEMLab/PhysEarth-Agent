@@ -14,11 +14,15 @@ from physearth import config
 
 _PACKAGES = ["gradio", "smrt", "numpy", "scipy", "pandas", "xarray", "numba"]
 _PROBES = [
-    ("api-inference", config.get("MODELSCOPE_API_BASE") + "/models"),
-    ("openalex", "https://api.openalex.org/works?per-page=1&select=id"),
-    ("europepmc", "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=test&format=json&pageSize=1"),
-    ("copernicus", "https://tc.copernicus.org/articles/18/3971/2024/tc-18-3971-2024.xml"),
-    ("zenodo", "https://zenodo.org/api/records/12750470"),
+    (
+        "llm-api",
+        config.llm_api_base().rstrip("/") + "/models",
+        {"Authorization": "Bearer %s" % config.llm_api_key()},
+    ),
+    ("openalex", "https://api.openalex.org/works?per-page=1&select=id", {}),
+    ("europepmc", "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=test&format=json&pageSize=1", {}),
+    ("copernicus", "https://tc.copernicus.org/articles/18/3971/2024/tc-18-3971-2024.xml", {}),
+    ("zenodo", "https://zenodo.org/api/records/12750470", {}),
 ]
 
 
@@ -82,11 +86,14 @@ def boot_record():
 def network_probes(timeout=6.0):
     ctx = ssl.create_default_context()
     results = []
-    for name, url in _PROBES:
+    for name, url, extra_headers in _PROBES:
         started = time.perf_counter()
         entry = {"name": name, "url": url}
         try:
-            request = urllib.request.Request(url, headers={"User-Agent": "physearth-diagnostics"})
+            request = urllib.request.Request(
+                url,
+                headers={"User-Agent": "physearth-diagnostics", **extra_headers},
+            )
             with urllib.request.urlopen(request, timeout=timeout, context=ctx) as response:
                 response.read(256)
                 entry["status"] = response.status

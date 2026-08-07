@@ -481,6 +481,29 @@ function peBoot() {
       return;
     }
 
+    var chart = event.target.closest ? event.target.closest("[data-chart-id]") : null;
+    if (chart) {
+      event.preventDefault();
+      var chartBridge = document.getElementById("pe-chart-bridge");
+      var chartInput = chartBridge ? chartBridge.querySelector("textarea, input") : null;
+      if (chartInput) {
+        var chartProto = chartInput.tagName === "TEXTAREA"
+          ? window.HTMLTextAreaElement.prototype
+          : window.HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(chartProto, "value").set.call(
+          chartInput,
+          chart.getAttribute("data-chart-id")
+        );
+        chartInput.dispatchEvent(new Event("input", { bubbles: true }));
+        chart.classList.add("is-selected");
+        setTimeout(function () {
+          var submitChart = document.getElementById("pe-chart-submit");
+          if (submitChart) submitChart.click();
+        }, 0);
+      }
+      return;
+    }
+
     var jump = event.target.closest ? event.target.closest("[data-jump]") : null;
     if (jump) {
       event.preventDefault();
@@ -577,11 +600,40 @@ function peBoot() {
       .replace(/\n/g, "<br>");
   }
 
+  function syncResearchControls() {
+    var card = document.querySelector(".approve--research[data-research-phase]");
+    if (!card) return;
+    var phase = card.getAttribute("data-research-phase");
+    var labels = {
+      plan_review: ["Approve plan", "Revise in chat", "Pause"],
+      plan_approved: ["Generate preview", "Revise in chat", "Pause"],
+      pseudo_preview: ["Select one option above ↑", "Regenerate preview", "Pause"],
+      chart_selected: ["Approve execution", "Change chart in chat", "Pause"]
+    }[phase];
+    if (!labels) return;
+    var buttons = [
+      document.getElementById("pe-approve-yes"),
+      document.getElementById("pe-approve-all"),
+      document.getElementById("pe-approve-no")
+    ];
+    for (var i = 0; i < buttons.length; i++) {
+      if (buttons[i] && buttons[i].textContent.trim() !== labels[i]) {
+        buttons[i].textContent = labels[i];
+      }
+    }
+    if (buttons[0]) buttons[0].disabled = phase === "pseudo_preview";
+  }
+
   document.addEventListener("click", function (event) {
     var target = event.target.closest ? event.target.closest("button") : null;
     if (!target) return;
     if (target.id === "pe-send") optimisticSend();
     if (target.id === "pe-clear") optimisticClear();
+    if (target.id === "pe-approve-all" ||
+        (target.id === "pe-approve-yes" && document.querySelector("[data-research-phase='pseudo_preview']"))) {
+      var researchInput = textarea();
+      if (researchInput) researchInput.focus();
+    }
   }, true);
 
   /* Enter sends, shift+Enter makes a new line.
@@ -615,6 +667,7 @@ function peBoot() {
         for (var i = 0; i < panels.length; i++) panelFrame(panels[i], fxT);
       }
       restoreState(document);
+      syncResearchControls();
       autoScroll();
       var running = !!document.querySelector("[data-running]");
       if (running) pendingUntil = 0;
@@ -629,17 +682,26 @@ function peBoot() {
   /* The model bridge is offscreen but still an editable textbox in the tab order.
      Keyboard users tabbing through the composer would land in an invisible field. */
   function silenceBridge() {
-    var bridge = document.getElementById("pe-model-bridge");
-    if (!bridge) return;
-    bridge.setAttribute("aria-hidden", "true");
-    var fields = bridge.querySelectorAll("textarea, input");
-    for (var i = 0; i < fields.length; i++) fields[i].setAttribute("tabindex", "-1");
+    var bridges = [
+      document.getElementById("pe-model-bridge"),
+      document.getElementById("pe-review-command"),
+      document.getElementById("pe-chart-bridge"),
+      document.getElementById("pe-chart-submit")
+    ];
+    for (var b = 0; b < bridges.length; b++) {
+      var bridge = bridges[b];
+      if (!bridge) continue;
+      bridge.setAttribute("aria-hidden", "true");
+      var fields = bridge.querySelectorAll("textarea, input");
+      for (var i = 0; i < fields.length; i++) fields[i].setAttribute("tabindex", "-1");
+    }
   }
 
   mountCanvases();
   buildLayoutControls();
   silenceBridge();
   restoreState(document);
+  syncResearchControls();
   resizeRing();
   window.addEventListener("resize", function () {
     resizeRing();

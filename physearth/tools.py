@@ -1,7 +1,7 @@
 import concurrent.futures
 import time
 
-from physearth import knowledge, live, plotting, reference, results, switches, validation
+from physearth import knowledge, live, plotting, reference, results, switches, validation, research
 from physearth.ingest import discover, fulltext, http
 from physearth.models import registry
 
@@ -276,6 +276,68 @@ SPECS.append(PLOT_SPEC)
 SPECS.append(DISCOVER_SPEC)
 SPECS.append(INGEST_SPEC)
 
+RESEARCH_PLAN_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "research_plan",
+        "description": (
+            "Submit and control a reviewed research workflow. Analyse the user's actual question "
+            "first, then call action=propose with your own structured plan. No question-specific "
+            "templates exist. The user must review or revise the plan, inspect pseudo-data, choose "
+            "a chart, and approve formal execution. Approval actions are deliberately unavailable "
+            "to the language model and are recorded only by the human UI. Pseudo-data are display "
+            "demonstrations only."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": ["propose", "status", "revise_plan", "preview", "choose_chart", "complete"]},
+                "question": {"type": "string"},
+                "objective": {"type": "string"},
+                "hypothesis": {"type": "string"},
+                "steps": {"type": "array", "items": {"type": "string"}},
+                "parameters": {"type": "object"},
+                "runs": {
+                    "type": "array",
+                    "description": "Every distinct registered physical-model run required by the plan.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "label": {"type": "string"},
+                            "model": {"type": "string"},
+                            "parameters": {"type": "object"},
+                        },
+                        "required": ["id", "label", "model", "parameters"],
+                    },
+                },
+                "charts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "label": {"type": "string"},
+                            "kind": {"type": "string"},
+                            "x": {"type": "string"},
+                            "y": {"type": "string"},
+                        },
+                        "required": ["id", "label", "x", "y"],
+                    },
+                },
+                "success_criteria": {"type": "array", "items": {"type": "string"}},
+                "assumptions": {"type": "array", "items": {"type": "string"}},
+                "limitations": {"type": "array", "items": {"type": "string"}},
+                "chart_id": {"type": "string"},
+                "note": {"type": "string"},
+                "changes": {"type": "object", "description": "User-requested parameter or step changes."},
+            },
+            "required": ["action"],
+        },
+    },
+}
+SPECS.append(RESEARCH_PLAN_SPEC)
+
 
 def _ok(summary, data, citations=None, qc=None, ui=None):
     """`ui` never reaches the language model; the agent strips it before serialising."""
@@ -514,7 +576,63 @@ def list_models(model=None, _switches=None):
     )
 
 
-def run_model(model, parameters=None, _owner=None, _switches=None, **extra):
+def research_plan(
+    action,
+    question="",
+    objective="",
+    hypothesis="",
+    steps=None,
+    parameters=None,
+    runs=None,
+    charts=None,
+    success_criteria=None,
+    assumptions=None,
+    limitations=None,
+    chart_id="",
+    changes=None,
+    note="",
+    _session=None,
+):
+    if _session is None:
+        return research._fail("research_plan requires a session.")
+    handlers = {
+        "propose": lambda: research.propose(
+            _session,
+            question,
+            objective,
+            hypothesis,
+            steps,
+            parameters,
+            runs,
+            charts,
+            success_criteria,
+            assumptions,
+            limitations,
+        ),
+        "status": lambda: research.status(_session),
+        "revise_plan": lambda: research.revise(_session, changes, note),
+        "preview": lambda: research.pseudo_preview(_session),
+        "choose_chart": lambda: research.choose_chart(_session, chart_id),
+        "complete": lambda: research.complete(_session),
+    }
+    handler = handlers.get(action)
+    if handler is None:
+        return research._fail("Unknown research_plan action %r." % action)
+    try:
+        return handler()
+    except ValueError as exc:
+        return research._fail(str(exc))
+
+
+def run_model(model, parameters=None, _owner=None, _switches=None, _session=None, **extra):
+    if _session is not None and _session.get("research_required") and not research.allow_model(_session):
+        return {
+            "status": "needs_input",
+            "summary": "Formal model execution is blocked until an LLM-authored plan, chart and execution are approved.",
+            "data": {"phase": (_session.get("research") or {}).get("phase", "idle"), "next": "research_plan"},
+            "citations": [], "qc": None, "ui": None,
+            "error": "research workflow approval required",
+        }
     guarded = switches.resolve(_switches)["harness"]
     parameters = dict(parameters or {})
     parameters.update(extra)
@@ -540,6 +658,15 @@ def run_model(model, parameters=None, _owner=None, _switches=None, **extra):
             "ui": None,
             "error": "; ".join(problems),
         }
+    if _session is not None and _session.get("research_required") and research.allow_model(_session):
+        plan_problem = research.planned_run_problem(_session, model, spec)
+        if plan_problem:
+            return {
+                "status": "needs_input",
+                "summary": plan_problem,
+                "data": {"model": model, "rejected_parameters": parameters or {}, "problems": [plan_problem]},
+                "citations": [], "qc": None, "ui": None, "error": plan_problem,
+            }
 
     started = time.perf_counter()
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
@@ -762,6 +889,7 @@ DISPATCH = {
     "plot": plot,
     "discover_literature": discover_literature,
     "ingest_paper": ingest_paper,
+    "research_plan": research_plan,
 }
 
 # Values supplied by the caller, never by the model. A leading underscore is stripped
@@ -770,6 +898,7 @@ DISPATCH = {
 OWNER_SCOPED = ("run_model", "read_reference_dataset", "plot")
 SWITCH_AWARE = ("run_model", "list_models")
 SESSION_SCOPED = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
+SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model")
 CORPUS_TOOLS = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
 ONLINE_TOOLS = ("discover_literature", "ingest_paper")
 

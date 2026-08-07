@@ -247,6 +247,7 @@ def test_switching_the_layer_off_leaves_the_offline_path_whole(monkeypatch):
         "run_model",
         "read_reference_dataset",
         "plot",
+        "research_plan",
     }
     box = session.new_session("m")
     assert tools.call("read_literature", {"slug": "smrt-v1", "section_id": "05"}, session=box)[

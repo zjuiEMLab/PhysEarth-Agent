@@ -14,9 +14,9 @@ serves every reviewer at once.
 import uuid
 
 MAX_MODEL_CALLS = 12
-MAX_TOOL_CALLS = 10
+MAX_TOOL_CALLS = 16
 MAX_SESSION_MODEL_CALLS = 72
-MAX_SESSION_TOOL_CALLS = 60
+MAX_SESSION_TOOL_CALLS = 80
 CONTEXT_CEILING_TOKENS = 96000
 MAX_HELD_HANDLES = 10
 MAX_KEPT_HANDLES = 40
@@ -46,9 +46,12 @@ def new_session(model=None):
         "skills_read": set(),
         "abstracts_seen": set(),
         "figures": [],
+        "successful_runs": [],
+        "evidence_revision": 0,
         "handles": [],
         "corpus": {},
         "abstracts": {},
+        "research": None,
         "max_model_calls": MAX_SESSION_MODEL_CALLS,
         "max_tool_calls": MAX_SESSION_TOOL_CALLS,
     }
@@ -79,10 +82,19 @@ def new_state(session=None, model=None):
 
 def bump(state, name, amount=1):
     """Move a counter in the turn and in the session it belongs to."""
-    state[name] = state.get(name, 0) + amount
+    # prompt_tokens is the size of one request, not a consumable conversation budget.
+    # Summing it across tool rounds made the UI report a fake context exhaustion even
+    # when every individual request was still within the model's context window.
+    if name == "prompt_tokens":
+        state[name] = max(state.get(name, 0), amount)
+    else:
+        state[name] = state.get(name, 0) + amount
     session = state.get("session")
     if session is not None:
-        session[name] = session.get(name, 0) + amount
+        if name == "prompt_tokens":
+            session[name] = max(session.get(name, 0), amount)
+        else:
+            session[name] = session.get(name, 0) + amount
 
 
 def remember_figure(state, figure):
@@ -90,6 +102,7 @@ def remember_figure(state, figure):
     session = state.get("session")
     if session is not None:
         session["figures"].append(figure)
+        session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
 
 
 def remember_handle(state, handle, line):
@@ -137,6 +150,33 @@ def held_block(session):
         lines.append(
             "Abstracts seen, citable as [abs:doi] and never for a value: %s."
             % ", ".join(sorted(session["abstracts_seen"])[:8])
+        )
+    if session.get("research"):
+        project = session["research"]
+        plan = project.get("plan") or {}
+        charts = plan.get("charts") or []
+        parameters = plan.get("parameters") or {}
+        parameter_text = ", ".join(
+            "%s=%s" % (key, parameters[key]) for key in sorted(parameters)[:16]
+        ) or "none recorded"
+        chart_text = "; ".join(
+            "%s: %s (%s -> %s)"
+            % (chart.get("id"), chart.get("label"), chart.get("x"), chart.get("y"))
+            for chart in charts[:8]
+        ) or "none recorded"
+        selected = project.get("selected_chart") or {}
+        lines.append(
+            "Research workflow: plan v%03d, phase %s. Objective: %s. Parameters: %s. "
+            "Chart choices: %s. Selected chart: %s. Formal model calls remain blocked until "
+            "the required human UI approvals are recorded; never approve a gate yourself."
+            % (
+                project.get("plan_version", 1),
+                project.get("phase"),
+                plan.get("objective") or "not recorded",
+                parameter_text,
+                chart_text,
+                selected.get("id") or "none",
+            )
         )
     handles = session["handles"][-MAX_HELD_HANDLES:]
     if handles:

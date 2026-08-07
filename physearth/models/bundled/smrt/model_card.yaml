@@ -139,10 +139,15 @@ combinations:
       DMRT is derived for sticky hard spheres only; pairing it with another microstructure
       representation has no analytical basis in SMRT.
   - when: {microstructure_model: [exponential, teubner_strey, gaussian_random_field]}
-    allow: {electromagnetic_model: [iba, iba_original, symsce_torquato21, rayleigh]}
+    allow: {electromagnetic_model: [iba, iba_original, symsce_torquato21]}
     reason: >-
-      Autocorrelation-function microstructures are used with IBA-family or Rayleigh theories,
-      not with the sphere-based DMRT formulation.
+      Autocorrelation-function microstructures do not expose the sphere radius required by
+      SMRT's Rayleigh implementation and are not valid for sphere-based DMRT formulations.
+  - when: {electromagnetic_model: [rayleigh]}
+    allow: {microstructure_model: [independent_sphere, sticky_hard_spheres]}
+    reason: >-
+      SMRT's Rayleigh implementation reads a particle radius, so it requires a sphere-based
+      microstructure rather than an autocorrelation-function microstructure.
 
 outputs:
   tb_v:
@@ -192,6 +197,13 @@ outputs:
     description: ks divided by the sum of ks and ka, the fraction of extinction that scatters.
     valid_min: 0.0
     valid_max: 1.0
+
+# The output selector is exclusive.  Publishing this mapping lets research-plan
+# validation reject a coefficients-only run that promises a brightness-temperature plot.
+output_groups:
+  tb: [tb_v, tb_h]
+  sigma: [sigma_vv_db, sigma_hh_db, sigma_hv_db]
+  coefficients: [ks_per_m, ka_per_m, effective_permittivity, single_scattering_albedo]
 
 resource_profile:
   typical_call_seconds: 0.05
