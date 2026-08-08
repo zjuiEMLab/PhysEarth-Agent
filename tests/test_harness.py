@@ -77,3 +77,18 @@ def test_the_deployment_budget_blocks_when_the_window_is_full():
     finally:
         budget.MAX_RUNS_PER_WINDOW = original
         budget._STARTS.clear()
+
+
+def test_the_deployment_budget_is_unlimited_when_cap_is_zero():
+    from physearth import budget
+
+    original = budget.MAX_RUNS_PER_WINDOW
+    budget._STARTS.clear()
+    budget.MAX_RUNS_PER_WINDOW = 0
+    try:
+        for _ in range(125):
+            assert budget.acquire()[0]
+        assert budget.used() == (125, 0)
+    finally:
+        budget.MAX_RUNS_PER_WINDOW = original
+        budget._STARTS.clear()

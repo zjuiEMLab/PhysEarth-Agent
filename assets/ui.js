@@ -607,7 +607,7 @@ function peBoot() {
     var labels = {
       plan_review: ["Approve plan", "Revise in chat", "Pause"],
       plan_approved: ["Generate preview", "Revise in chat", "Pause"],
-      pseudo_preview: ["Select one option above ↑", "Regenerate preview", "Pause"],
+      pseudo_preview: ["Confirm figure package", "Regenerate preview", "Pause"],
       chart_selected: ["Approve execution", "Change chart in chat", "Pause"]
     }[phase];
     if (!labels) return;
@@ -621,7 +621,10 @@ function peBoot() {
         buttons[i].textContent = labels[i];
       }
     }
-    if (buttons[0]) buttons[0].disabled = phase === "pseudo_preview";
+    if (buttons[0]) {
+      var selectedCount = Number(card.getAttribute("data-selected-count") || "0");
+      buttons[0].disabled = phase === "pseudo_preview" && selectedCount < 1;
+    }
   }
 
   document.addEventListener("click", function (event) {

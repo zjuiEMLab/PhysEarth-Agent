@@ -67,16 +67,21 @@ def test_the_model_cannot_claim_another_sessions_store():
     assert forged["status"] == "needs_input"
 
 
-def test_the_budget_has_a_turn_ceiling_and_a_session_ceiling():
+def test_call_budgets_are_unlimited_by_default_and_optional_when_configured():
     box = session.new_session("m")
     state = session.new_state(box)
-    state["model_calls"] = session.MAX_MODEL_CALLS
-    box["model_calls"] = session.MAX_MODEL_CALLS
+    state["model_calls"] = 1000
+    box["model_calls"] = 1000
+    assert harness.check_budget(state)["passed"]
+
+    state["max_model_calls"] = 3
+    state["model_calls"] = 3
     turn = harness.check_budget(state)
     assert not turn["passed"] and turn["scope"] == "turn"
 
     fresh = session.new_state(box)
-    box["model_calls"] = session.MAX_SESSION_MODEL_CALLS
+    box["max_model_calls"] = 4
+    box["model_calls"] = 4
     spent = harness.check_budget(fresh)
     assert not spent["passed"] and spent["scope"] == "session"
 
@@ -120,8 +125,8 @@ def test_the_trace_meters_report_the_session_not_the_turn():
     state = session.new_state(box)
     state["model_calls"] = 4
     out = render.trace([], state)
-    assert "20 / %d" % session.MAX_SESSION_MODEL_CALLS in out
-    assert "4 this question" in out
+    assert "20 / ∞" in out
+    assert "4 this question, no hard cap" in out
     assert "3 questions in this session" in out
 
 

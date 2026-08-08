@@ -12,6 +12,12 @@ _DEFAULTS = {
     "MODELSCOPE_MODEL": "Qwen/Qwen3.5-122B-A10B",
     "PHYSEARTH_ONLINE": "1",
     "PHYSEARTH_STATE_DIR": "_state",
+    # Zero means unlimited. Provider quotas and context checks remain independent.
+    "PHYSEARTH_MAX_MODEL_CALLS": "0",
+    "PHYSEARTH_MAX_TOOL_CALLS": "0",
+    "PHYSEARTH_MAX_SESSION_MODEL_CALLS": "0",
+    "PHYSEARTH_MAX_SESSION_TOOL_CALLS": "0",
+    "PHYSEARTH_MAX_QUESTIONS_PER_HOUR": "0",
     "PHYSEARTH_PORT": "7860",
     "PHYSEARTH_HOST": "0.0.0.0",
 }
@@ -65,6 +71,13 @@ def state_dir():
 
 def has_token():
     return bool(llm_api_key())
+
+
+def nonnegative_int(name, default=0):
+    try:
+        return max(0, int(get(name) or default))
+    except (TypeError, ValueError):
+        return max(0, int(default))
 
 
 # Load local provider selection before agent.py builds its model switcher catalogue.

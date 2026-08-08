@@ -432,10 +432,10 @@ The references are used as design guidance, not as a claim that there is one uni
 ### Key steps using SMRT
 
 1. **Construct the sparse-density experiment**
-   - Use a frequency of 37 GHz.
-   - Fix the ice-sphere radius at \(100\,\mu\text{m}\).
-   - Vary snow density from approximately 1 to 96 kg m\(^{-3}\), preferably in 5 kg m\(^{-3}\) increments.
-   - Define independent spheres, nearly non-sticky hard spheres, and sticky hard spheres.
+   - Use a frequency of 37 GHz. 
+   - Fix the ice-sphere radius at \(100\,\mu\text{m}\). 
+   - Vary snow density from approximately 1 to 96 kg m\(^{-3}\), preferably in 5 kg m\(^{-3}\) increments. 
+   - Define independent spheres, nearly non-sticky hard spheres, and sticky hard spheres. 
 
 2. **Calculate the electromagnetic scattering coefficients**
    - Run Rayleigh theory with independent spheres.

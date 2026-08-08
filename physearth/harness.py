@@ -169,7 +169,7 @@ def check_budget(state):
     session = state.get("session") or {}
     for name, label in (("model_calls", "model call"), ("tool_calls", "tool call")):
         cap = session.get("max_%s" % name)
-        if cap is not None and session.get(name, 0) >= cap:
+        if cap and session.get(name, 0) >= cap:
             return {
                 "rule": "budget",
                 "passed": False,
@@ -178,7 +178,8 @@ def check_budget(state):
                 % (label, session.get(name, 0), cap),
             }
     for name, label in (("model_calls", "model call"), ("tool_calls", "tool call")):
-        if state.get(name, 0) >= state["max_%s" % name]:
+        cap = state.get("max_%s" % name, 0)
+        if cap and state.get(name, 0) >= cap:
             return {
                 "rule": "budget",
                 "passed": False,

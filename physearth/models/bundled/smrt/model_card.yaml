@@ -102,11 +102,21 @@ parameters:
     maximum: 1000.0
     default: 0.2
     required: false
+  dort_streams:
+    type: integer
+    unit: count
+    description: >-
+      Maximum number of DORT streams. Sweep this parameter to verify numerical convergence
+      before attributing brightness-temperature differences to electromagnetic physics.
+    minimum: 4
+    maximum: 128
+    default: 32
+    required: false
   sweep_parameter:
     type: string
     unit: none
     description: Name of a numeric parameter to sweep instead of holding fixed.
-    enum: [none, frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, radius_m]
+    enum: [none, frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, radius_m, dort_streams]
     default: none
     required: false
   sweep_start:

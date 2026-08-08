@@ -128,6 +128,32 @@ def test_unrepairable_tool_arguments_are_not_replayed_to_provider(monkeypatch):
     assert any("strict JSON" in message.get("content", "") for message in second_request)
 
 
+def test_research_plan_gate_stops_after_three_no_progress_answers(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    script = [
+        [_Chunk(_Delta(content="I will answer without a plan."))],
+        [_Chunk(_Delta(content="Still no structured plan."))],
+        [_Chunk(_Delta(content="Again no tool call."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    answer, events, _ = agent.run("Run a scientific comparison", session=box)
+
+    assert len(sent) == 3
+    assert client.tool_choices[0] == "auto"
+    assert all(
+        choice == {"type": "function", "function": {"name": "research_plan"}}
+        for choice in client.tool_choices[1:]
+    )
+    assert "stopped after 3 no-progress attempts" in answer
+    assert any(
+        event["kind"] == "harness_stop" and event["rule"] == "plan_no_progress"
+        for event in events
+    )
+
+
 def test_citation_rewrite_discards_invalid_marker_from_pre_tool_narration(monkeypatch):
     box = _asking()
     script = [
@@ -177,9 +203,11 @@ def _fake_client(scripted):
     """A client that plays a fixed script, so the loop can be driven without an endpoint."""
     turns = iter(scripted)
     sent = []
+    tool_choices = []
 
     def create(**kwargs):
         sent.append(list(kwargs["messages"]))
+        tool_choices.append(kwargs.get("tool_choice"))
         return next(turns)
 
     client = type(
@@ -193,6 +221,7 @@ def _fake_client(scripted):
             )()
         },
     )()
+    client.tool_choices = tool_choices
     return client, sent
 
 

@@ -104,6 +104,29 @@ RUN_MODEL_SPEC = {
     },
 }
 
+RUN_PLANNED_MODEL_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "run_planned_model",
+        "description": (
+            "Execute one human-approved research-plan run by run_id. The backend uses the "
+            "exact validated model and parameters stored in the plan. Never reconstruct "
+            "those parameters. An already successful run is reused without recomputation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "run_id": {
+                    "type": "string",
+                    "description": "Exact id from the approved plan's runs list.",
+                }
+            },
+            "required": ["run_id"],
+        },
+    },
+}
+
+
 LIST_MODELS_SPEC = {
     "type": "function",
     "function": {
@@ -185,6 +208,7 @@ PLOT_SPEC = {
                 },
                 "kind": {"type": "string", "enum": list(plotting.KINDS)},
                 "title": {"type": "string"},
+                "subtitle": {"type": "string", "description": "Compact fixed experimental conditions shown below the title."},
                 "x_label": {"type": "string"},
                 "y_label": {"type": "string"},
                 "dry_run": {
@@ -271,6 +295,7 @@ INGEST_SPEC = {
 
 SPECS.append(LIST_MODELS_SPEC)
 SPECS.append(RUN_MODEL_SPEC)
+SPECS.append(RUN_PLANNED_MODEL_SPEC)
 SPECS.append(READ_REFERENCE_SPEC)
 SPECS.append(PLOT_SPEC)
 SPECS.append(DISCOVER_SPEC)
@@ -307,6 +332,10 @@ RESEARCH_PLAN_SPEC = {
                             "label": {"type": "string"},
                             "model": {"type": "string"},
                             "parameters": {"type": "object"},
+                            "stage": {
+                                "type": "string",
+                                "description": "baseline, main, diagnostic, sensitivity, or robustness.",
+                            },
                         },
                         "required": ["id", "label", "model", "parameters"],
                     },
@@ -321,11 +350,35 @@ RESEARCH_PLAN_SPEC = {
                             "kind": {"type": "string"},
                             "x": {"type": "string"},
                             "y": {"type": "string"},
+                            "ys": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Compatible output columns sharing one unit, e.g. tb_v and tb_h.",
+                            },
+                            "required": {
+                                "type": "boolean",
+                                "description": "True for a required scientific result or diagnostic figure.",
+                            },
+                            "purpose": {
+                                "type": "string",
+                                "description": "result, baseline, validation, diagnostic, sensitivity, or uncertainty.",
+                            },
+                            "x_label": {"type": "string"},
+                            "y_label": {"type": "string"},
                         },
                         "required": ["id", "label", "x", "y"],
                     },
                 },
                 "success_criteria": {"type": "array", "items": {"type": "string"}},
+                "quantities": {"type": "array", "items": {"type": "string"}},
+                "controls": {"type": "array", "items": {"type": "string"}},
+                "metrics": {"type": "array", "items": {"type": "string"}},
+                "diagnostics": {"type": "array", "items": {"type": "string"}},
+                "stop_conditions": {"type": "array", "items": {"type": "string"}},
+                "baseline_run_id": {
+                    "type": "string",
+                    "description": "ID of the planned run serving as the baseline/smoke validation.",
+                },
                 "assumptions": {"type": "array", "items": {"type": "string"}},
                 "limitations": {"type": "array", "items": {"type": "string"}},
                 "chart_id": {"type": "string"},
@@ -336,6 +389,35 @@ RESEARCH_PLAN_SPEC = {
         },
     },
 }
+
+PLOT_PLANNED_CHART_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "plot_planned_chart",
+        "description": (
+            "Render one selected human-approved research chart by chart_id. The backend "
+            "collects every compatible successful planned run, expands multi-output charts "
+            "such as V/H polarization, and supplies exact handles and axes to the renderer. "
+            "Use this after run_planned_model; do not manually rebuild its series list."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "chart_id": {
+                    "type": "string",
+                    "description": "Exact id from the approved selected chart package.",
+                },
+                "action": {
+                    "type": "string",
+                    "enum": ["render", "review"],
+                    "description": "Render first; after it is on screen, call again with review.",
+                },
+            },
+            "required": ["chart_id"],
+        },
+    },
+}
+SPECS.append(PLOT_PLANNED_CHART_SPEC)
 SPECS.append(RESEARCH_PLAN_SPEC)
 
 
@@ -588,6 +670,12 @@ def research_plan(
     success_criteria=None,
     assumptions=None,
     limitations=None,
+    quantities=None,
+    controls=None,
+    metrics=None,
+    diagnostics=None,
+    stop_conditions=None,
+    baseline_run_id="",
     chart_id="",
     changes=None,
     note="",
@@ -608,6 +696,12 @@ def research_plan(
             success_criteria,
             assumptions,
             limitations,
+            quantities,
+            controls,
+            metrics,
+            diagnostics,
+            stop_conditions,
+            baseline_run_id,
         ),
         "status": lambda: research.status(_session),
         "revise_plan": lambda: research.revise(_session, changes, note),
@@ -736,6 +830,68 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
     )
 
 
+def run_planned_model(run_id, _owner=None, _switches=None, _session=None):
+    if _session is None or not _session.get("research_required"):
+        return _fail("run_planned_model requires an active reviewed research session.")
+    if not research.allow_model(_session):
+        return {
+            "status": "needs_input",
+            "summary": "Formal execution has not been approved by the user.",
+            "data": {"phase": (_session.get("research") or {}).get("phase", "idle")},
+            "citations": [], "qc": None, "ui": None,
+            "error": "research workflow approval required",
+        }
+    planned = research.planned_run(_session, run_id)
+    if planned is None:
+        ids = research.planned_run_ids(_session)
+        return {
+            "status": "needs_input",
+            "summary": "Unknown planned run_id %r. Approved run IDs: %s." % (run_id, ", ".join(ids)),
+            "data": {"run_id": run_id, "approved_run_ids": ids, "problems": ["unknown planned run_id"]},
+            "citations": [], "qc": None, "ui": None,
+            "error": "unknown planned run_id",
+        }
+
+    for previous in _session.get("successful_runs") or []:
+        if previous.get("model") != planned["model"] or previous.get("spec") != planned["parameters"]:
+            continue
+        payload = results.get(previous.get("handle"), _owner)
+        if payload is None:
+            continue
+        axis = payload.get("axis")
+        points = payload.get("points") or []
+        units = payload.get("units") or {}
+        return _ok(
+            "Reused approved run %s from handle %s; no computation was repeated."
+            % (run_id, previous["handle"]),
+            {
+                "model": payload["model"],
+                "version": payload["version"],
+                "spec": payload["spec"],
+                "handle": previous["handle"],
+                "n_points": len(points),
+                "axis": {"name": axis["name"]} if axis else None,
+                "series_summary": results.summarise_series(payload.get("series"), units),
+                "units": units,
+                "planned_run_id": run_id,
+                "reused": True,
+            },
+        )
+
+    result = run_model(
+        planned["model"],
+        planned["parameters"],
+        _owner=_owner,
+        _switches=_switches,
+        _session=_session,
+    )
+    if result.get("status") == "success":
+        result["data"]["planned_run_id"] = run_id
+        result["data"]["reused"] = False
+        result["summary"] = "Approved run %s: %s" % (run_id, result["summary"])
+    return result
+
+
 def read_reference_dataset(dataset=None, filters=None, _owner=None):
     if dataset in (None, ""):
         return _ok(
@@ -796,6 +952,7 @@ def plot(
     series=None,
     kind="line",
     title=None,
+    subtitle=None,
     x_label=None,
     y_label=None,
     dry_run=False,
@@ -806,6 +963,7 @@ def plot(
         "series": series or [],
         "kind": kind,
         "title": title,
+        "subtitle": subtitle,
         "x_label": x_label,
         "y_label": y_label,
         "owner": _owner,
@@ -880,13 +1038,200 @@ def plot(
     return _ok(summary, data, ui={"figure": figure})
 
 
+def plot_planned_chart(chart_id, action="render", _owner=None, _session=None):
+    if action == "review":
+        return _review_planned_figure(chart_id, _owner=_owner, _session=_session)
+    if _session is None or not _session.get("research_required"):
+        return _fail("plot_planned_chart requires an active reviewed research session.")
+    if not research.allow_model(_session):
+        return _fail("Formal execution has not been approved by the user.")
+    requirement = research.planned_chart_series(_session, chart_id)
+    if requirement is None:
+        ids = research.planned_chart_ids(_session)
+        return {
+            "status": "needs_input",
+            "summary": "Unknown or unselected chart_id %r. Selected chart IDs: %s."
+            % (chart_id, ", ".join(ids)),
+            "data": {"chart_id": chart_id, "selected_chart_ids": ids},
+            "citations": [], "qc": None, "ui": None,
+            "error": "unknown planned chart_id",
+        }
+    if not requirement["series"]:
+        return {
+            "status": "needs_input",
+            "summary": "Chart %s has no successful compatible planned runs yet." % chart_id,
+            "data": {
+                "chart_id": chart_id,
+                "missing_run_ids": research.planned_run_ids(_session, missing_only=True),
+            },
+            "citations": [], "qc": None, "ui": None,
+            "error": "planned chart data missing",
+        }
+    chart = requirement["chart"]
+    series_specs = [
+        {
+            "handle": item["handle"],
+            "x": item["x"],
+            "y": item["y"],
+            "label": item["label"],
+        }
+        for item in requirement["series"]
+    ]
+    planned_runs = [
+        research.planned_run(_session, run_id)
+        for run_id in sorted({item["run_id"] for item in requirement["series"]})
+    ]
+    planned_runs = [run for run in planned_runs if run]
+    common = {}
+    if planned_runs:
+        first_spec = planned_runs[0].get("parameters") or {}
+        for key, value in first_spec.items():
+            if key in (
+                "output", "electromagnetic_model", "sweep_parameter", "sweep_start",
+                "sweep_stop", "sweep_points", chart.get("x"), "radius_m", "stickiness",
+            ):
+                continue
+            if all((run.get("parameters") or {}).get(key) == value for run in planned_runs[1:]):
+                common[key] = value
+    subtitle = _condition_subtitle(common)
+    selected_ids = research.planned_chart_ids(_session)
+    figure_number = selected_ids.index(chart_id) + 1
+    result = plot(
+        series=series_specs,
+        kind=chart.get("kind", "line"),
+        title="Figure %d. %s" % (figure_number, chart.get("label")),
+        subtitle=subtitle,
+        x_label=chart.get("x_label") or None,
+        y_label=chart.get("y_label") or None,
+        _owner=_owner,
+    )
+    if result.get("status") == "success":
+        resolved, comparison_problems = plotting.resolve({"series": series_specs}, _owner)
+        comparisons = []
+        if not comparison_problems:
+            for y_name in dict.fromkeys(item["y_name"] for item in resolved):
+                group = [item for item in resolved if item["y_name"] == y_name]
+                if len(group) < 2:
+                    continue
+                baseline = group[0]
+                for candidate in group[1:]:
+                    values, refusals = plotting.agreement(
+                        [candidate, baseline], ["bias", "rmse", "mae", "r"]
+                    )
+                    if not refusals:
+                        comparisons.append({"quantity": y_name, **values})
+        result["data"]["planned_chart_id"] = chart_id
+        result["data"]["comparisons"] = comparisons
+        result["summary"] = "Approved chart %s: %s" % (chart_id, result["summary"])
+        if result.get("ui") and result["ui"].get("figure"):
+            result["ui"]["figure"]["planned_chart_id"] = chart_id
+            result["ui"]["figure"]["purpose"] = chart.get("purpose", "result")
+            result["ui"]["figure"]["comparisons"] = comparisons
+            result["ui"]["figure"]["figure_number"] = figure_number
+            result["ui"]["figure"]["quality_review"] = {"reviewed": False, "passed": False}
+    return result
+
+
+def _review_planned_figure(chart_id, _owner=None, _session=None):
+    if _session is None or not _session.get("research_required"):
+        return _fail("Figure review requires an active reviewed research session.")
+    requirement = research.planned_chart_series(_session, chart_id)
+    if requirement is None:
+        return _fail("Unknown or unselected planned chart_id %r." % chart_id)
+    current = next(
+        (
+            figure for figure in reversed(_session.get("figures") or [])
+            if not figure.get("preview") and figure.get("planned_chart_id") == chart_id
+        ),
+        None,
+    )
+    if current is None:
+        return {
+            "status": "needs_input",
+            "summary": "Plot planned chart %s before reviewing it." % chart_id,
+            "data": {"chart_id": chart_id}, "citations": [], "qc": None, "ui": None,
+            "error": "formal figure missing",
+        }
+    series_specs = [
+        {"handle": item["handle"], "x": item["x"], "y": item["y"], "label": item["label"]}
+        for item in requirement["series"]
+    ]
+    resolved, problems = plotting.resolve({"series": series_specs}, _owner)
+    if problems:
+        return _fail("Figure quality review could not resolve its data: %s" % "; ".join(problems))
+    spec = {
+        "kind": requirement["chart"].get("kind", "line"),
+        "title": current.get("title"),
+        "subtitle": current.get("subtitle"),
+        "x_label": current.get("x_label"),
+        "y_label": current.get("y_label"),
+    }
+    review = plotting.review_quality(spec, resolved, current)
+    reviewed_figure = dict(current)
+    redrawn = False
+    if review["redraw_reasons"] and not review["issues"]:
+        reviewed_figure = plotting.render(
+            {**spec, "quality_profile": "publication"}, resolved, preview=False
+        )
+        reviewed_figure.update(
+            planned_chart_id=chart_id,
+            purpose=current.get("purpose", "result"),
+            comparisons=current.get("comparisons") or [],
+            figure_number=current.get("figure_number"),
+        )
+        redrawn = True
+        review = plotting.review_quality(spec, resolved, reviewed_figure)
+    review["redrawn"] = redrawn
+    reviewed_figure["quality_review"] = review
+    action = "redrawn with a publication layout and passed" if redrawn and review["passed"] else (
+        "passed" if review["passed"] else "failed"
+    )
+    return _ok(
+        "Figure %s quality review %s. %d series; point counts %s.%s"
+        % (
+            reviewed_figure.get("figure_number") or "?",
+            action,
+            review["n_series"],
+            review["point_counts"],
+            " Warnings: %s." % "; ".join(review["warnings"]) if review["warnings"] else "",
+        ),
+        {"chart_id": chart_id, "quality_review": review},
+        ui={"figure": reviewed_figure},
+    )
+
+
+def _condition_subtitle(values):
+    labels = {
+        "frequency_ghz": ("f", "GHz", 1.0),
+        "angle_deg": ("angle", "°", 1.0),
+        "density_kg_m3": ("density", "kg m⁻³", 1.0),
+        "temperature_k": ("T", "K", 1.0),
+        "thickness_m": ("thickness", "m", 1.0),
+        "corr_length_m": ("corr. length", "µm", 1e6),
+        "dort_streams": ("DORT", "streams", 1.0),
+    }
+    parts = []
+    for key in labels:
+        if key not in values:
+            continue
+        label, unit, scale = labels[key]
+        value = values[key] * scale if isinstance(values[key], (int, float)) else values[key]
+        shown = "%g" % value if isinstance(value, (int, float)) else str(value)
+        parts.append("%s %s %s" % (label, shown, unit))
+    if values.get("microstructure_model"):
+        parts.append(str(values["microstructure_model"]).replace("_", " "))
+    return " · ".join(parts)
+
+
 DISPATCH = {
     "list_literature": list_literature,
     "read_reference_dataset": read_reference_dataset,
     "read_literature": read_literature,
     "list_models": list_models,
     "run_model": run_model,
+    "run_planned_model": run_planned_model,
     "plot": plot,
+    "plot_planned_chart": plot_planned_chart,
     "discover_literature": discover_literature,
     "ingest_paper": ingest_paper,
     "research_plan": research_plan,
@@ -895,10 +1240,10 @@ DISPATCH = {
 # Values supplied by the caller, never by the model. A leading underscore is stripped
 # from whatever the model sent before dispatch, so none of these can be forged from a
 # tool call.
-OWNER_SCOPED = ("run_model", "read_reference_dataset", "plot")
-SWITCH_AWARE = ("run_model", "list_models")
+OWNER_SCOPED = ("run_model", "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart")
+SWITCH_AWARE = ("run_model", "run_planned_model", "list_models")
 SESSION_SCOPED = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
-SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model")
+SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model", "run_planned_model", "plot_planned_chart")
 CORPUS_TOOLS = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
 ONLINE_TOOLS = ("discover_literature", "ingest_paper")
 

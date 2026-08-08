@@ -174,7 +174,8 @@ def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
     assert "msg--" not in history and "msg--" not in live
     assert "Nothing has run yet" in trace
     assert "No chart yet" in evidence
-    assert "%d / %d" % used_before in metrics
+    expected_cap = used_before[1] if used_before[1] else "∞"
+    assert "%d / %s" % (used_before[0], expected_cap) in metrics
 
 
 def test_the_opening_hint_belongs_to_the_empty_session_only():
@@ -320,6 +321,10 @@ def test_chart_click_records_the_human_choice_without_an_llm_turn():
             }
         ],
         charts=[{"id": "curve", "label": "Curve", "kind": "line", "x": "density_kg_m3", "y": "tb_v"}],
+        quantities=["tb_v (K)"], controls=["frequency fixed"], metrics=["trend"],
+        diagnostics=["finite values"], success_criteria=["valid curve"],
+        stop_conditions=["baseline failure"], assumptions=["dry snow"],
+        limitations=["single model"], baseline_run_id="run_1",
     )
     research.approve_plan(box)
     research.pseudo_preview(box)
@@ -327,7 +332,6 @@ def test_chart_click_records_the_human_choice_without_an_llm_turn():
     card, updated, cleared = app.select_chart_click(box, "curve")
     assert updated["research"]["phase"] == "chart_selected"
     assert updated["research"]["selected_chart"]["id"] == "curve"
-    assert "Approve execution" not in card  # Labels are synchronized by the client script.
     assert "data-research-phase='chart_selected'" in card
     assert cleared == ""
 

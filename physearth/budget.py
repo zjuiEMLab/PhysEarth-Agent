@@ -1,14 +1,16 @@
-"""Process-wide rate limit.
+"""Optional process-wide rate limit.
 
-The Studio is public and every visitor shares one inference quota, so the cap has to
-live outside the session. Nothing here is per-user; it protects the quota as a whole.
+Public deployments may set a shared hourly cap. Local development and the default
+configuration leave it disabled so a scientific workflow is not stopped mid-run.
 """
 
 import threading
 import time
 
+from physearth import config
+
 WINDOW_SECONDS = 3600.0
-MAX_RUNS_PER_WINDOW = 120
+MAX_RUNS_PER_WINDOW = config.nonnegative_int("PHYSEARTH_MAX_QUESTIONS_PER_HOUR")
 
 _LOCK = threading.Lock()
 _STARTS = []
@@ -25,7 +27,7 @@ def acquire():
     now = time.time()
     with _LOCK:
         _prune(now)
-        if len(_STARTS) >= MAX_RUNS_PER_WINDOW:
+        if MAX_RUNS_PER_WINDOW and len(_STARTS) >= MAX_RUNS_PER_WINDOW:
             wait = int(WINDOW_SECONDS - (now - _STARTS[0]))
             return False, (
                 "This deployment has run %d questions in the last hour, which is its shared "

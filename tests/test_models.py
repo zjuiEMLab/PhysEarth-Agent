@@ -98,6 +98,26 @@ def test_run_model_returns_quality_controlled_output():
     assert set(result["data"]["series_summary"]) == {"tb_v", "tb_h"}
 
 
+def test_smrt_can_sweep_dort_stream_count_for_convergence():
+    result = tools.call(
+        "run_model",
+        {
+            "model": "smrt",
+            "parameters": {
+                "output": "tb",
+                "sweep_parameter": "dort_streams",
+                "sweep_start": 8,
+                "sweep_stop": 24,
+                "sweep_points": 3,
+            },
+        },
+    )
+    assert result["status"] == "success"
+    assert result["qc"]["passed"]
+    assert result["data"]["axis"]["name"] == "dort_streams"
+    assert result["data"]["n_points"] == 3
+
+
 def test_full_arrays_stay_out_of_the_message_but_remain_retrievable():
     from physearth import results
 

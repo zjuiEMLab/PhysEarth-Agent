@@ -2297,6 +2297,25 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   font-size: 11px;
 }
 
+.fig-quality {
+  margin: 8px 12px 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.fig-quality.is-passed {
+  border-color: var(--sage);
+  background: var(--sage-wash);
+}
+
+.fig-quality.is-failed {
+  border-color: var(--clay);
+  background: var(--clay-wash);
+}
+
 .research-steps {
   margin: 8px 0 10px 20px;
   padding: 0;
@@ -2312,6 +2331,29 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   line-height: 1.45;
 }
 
+.research-protocol {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--paper) 84%, transparent);
+  font-size: 11px;
+}
+
+.research-protocol__row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.research-protocol__row span {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
 .research-preview {
   width: 100%;
   margin: 7px 0;
@@ -2325,6 +2367,28 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   padding: 3px 5px;
   border-bottom: 1px solid var(--line);
   text-align: left;
+}
+
+.fig-comparisons {
+  margin: 8px 0;
+  overflow-x: auto;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.fig-comparisons table {
+  width: 100%;
+  margin-top: 4px;
+  border-collapse: collapse;
+  font-family: var(--mono);
+}
+
+.fig-comparisons th,
+.fig-comparisons td {
+  padding: 3px 5px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
 }
 
 .seg > *:first-child {

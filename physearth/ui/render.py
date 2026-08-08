@@ -482,6 +482,7 @@ def _event_card(event, index):
 
 def _meter(label, value, cap, tone="", note=""):
     pct = 0 if not cap else min(100, round(100.0 * value / cap))
+    cap_label = cap if cap else "∞"
     return (
         "<div class='meter'><div class='meter__head'><span>%s</span><b>%s / %s</b></div>"
         "<div class='meter__track'><div class='meter__fill %s' style='width:%d%%'></div></div>"
@@ -489,7 +490,7 @@ def _meter(label, value, cap, tone="", note=""):
         % (
             _e(label),
             value,
-            cap,
+            cap_label,
             tone,
             pct,
             "<div class='meter__note'>%s</div>" % _e(note) if note else "",
@@ -519,6 +520,38 @@ def approval_bar(session):
                 _e(" — unavailable locally: " + ", ".join(gaps)) if gaps else "",
             )
         )
+        repairs = plan.get("automatic_repairs") or []
+        if repairs:
+            scope_html += (
+                "<div class='approve__note'><b>Backend-safe repairs:</b> %s</div>"
+                % _e(
+                    "; ".join(
+                        "%s.%s: %s → %s (%s)"
+                        % (
+                            item.get("chart_id"), item.get("field"), item.get("from"),
+                            item.get("to"), item.get("reason"),
+                        )
+                        for item in repairs
+                    )
+                )
+            )
+        protocol_rows = "".join(
+            "<div class='research-protocol__row'><b>%s</b><span>%s</span></div>"
+            % (_e(label), _e("; ".join(plan.get(key) or []) or "not specified"))
+            for key, label in (
+                ("quantities", "Quantities"),
+                ("controls", "Controls"),
+                ("metrics", "Metrics"),
+                ("diagnostics", "Diagnostics"),
+                ("success_criteria", "Acceptance"),
+                ("stop_conditions", "Stop conditions"),
+                ("limitations", "Limitations"),
+            )
+        )
+        protocol_rows += (
+            "<div class='research-protocol__row'><b>Baseline</b><span>%s</span></div>"
+            % _e(plan.get("baseline_run_id") or "not specified")
+        )
         pseudo = project.get("pseudo") or {}
         pseudo_rows = pseudo.get("points") or []
         pseudo_html = ""
@@ -534,28 +567,41 @@ def approval_bar(session):
                 "<table class='research-preview'><thead><tr>%s</tr></thead><tbody>%s</tbody></table>"
                 % (_e(pseudo.get("label", "PSEUDO-DATA — demonstration only")), header, rows)
             )
-        chart_disabled = "" if project.get("phase") == "pseudo_preview" else " disabled"
+        selected_ids = set(project.get("selected_charts") or [])
         charts = "".join(
-            "<button type='button' class='approve__chart' data-chart-id='%s'%s>"
-            "<b>[%s]</b> %s <span>(%s: %s → %s)</span></button>"
-            % (_e(item.get("id")), chart_disabled, _e(item.get("id")), _e(item.get("label")), _e(item.get("kind")), _e(item.get("x")), _e(item.get("y")))
+            "<button type='button' class='approve__chart%s' data-chart-id='%s' data-required='%s'%s>"
+            "<b>[%s]</b> %s <span>(%s · %s: %s → %s%s)</span></button>"
+            % (
+                " is-selected" if item.get("id") in selected_ids else "",
+                _e(item.get("id")),
+                "true" if item.get("required", True) else "false",
+                " disabled" if project.get("phase") != "pseudo_preview" else "",
+                _e(item.get("id")),
+                _e(item.get("label")),
+                _e(item.get("purpose", "result")),
+                _e(item.get("kind")),
+                _e(item.get("x")),
+                _e(", ".join(item.get("ys") or [item.get("y")])),
+                " · required" if item.get("required", True) else " · optional",
+            )
             for item in (plan.get("charts") or [])
         )
         return (
-            "<div class='approve approve--research' data-research-phase='%s'>"
+            "<div class='approve approve--research' data-research-phase='%s' data-selected-count='%d'>"
             "<div class='approve__head'>Research review · <b>%s</b> · plan v%03d</div>"
             "<div class='approve__note'>Phase: %s. No formal physical result is authorized yet.</div>"
             "<div class='research-question'><b>Question:</b> %s<br><b>Hypothesis:</b> %s</div>"
             "%s"
+            "<div class='research-protocol'>%s</div>"
             "<ol class='research-steps'>%s</ol>"
             "<div class='approve__params'>%s</div>"
             "%s"
             "<div class='approve__note'><b>Chart options</b></div><div class='approve__charts'>%s</div>"
-            "<div class='approve__note'>直接点击一个图表选项；如需修改计划或参数，请在对话框中说明。</div>"
+            "<div class='approve__note'>必需科研图已锁定；可勾选其他可选图。确认整个图组后再批准正式计算。</div>"
             "</div>"
-            % (_e(project.get("phase")), _e(plan.get("title", "Research plan")), project.get("plan_version", 1),
+            % (_e(project.get("phase")), len(selected_ids), _e(plan.get("title", "Research plan")), project.get("plan_version", 1),
                _e(project.get("phase")), _e(plan.get("question", "")), _e(plan.get("hypothesis", "")),
-               scope_html, steps, params, pseudo_html, charts or "none")
+               scope_html, protocol_rows, steps, params, pseudo_html, charts or "none")
         )
 
     waiting = gate.pending(session)
@@ -590,14 +636,17 @@ def _trace_metrics(state):
         [
             _meter(
                 "model calls", session.get("model_calls", 0), session.get("max_model_calls", 1),
-                note="%d this question, cap %d" % (state.get("model_calls", 0), state.get("max_model_calls", 0)),
+                note=("%d this question, %s" % (state.get("model_calls", 0), "no hard cap" if not state.get("max_model_calls") else "cap %d" % state.get("max_model_calls"))),
             ),
             _meter(
                 "tool calls", session.get("tool_calls", 0), session.get("max_tool_calls", 1), "is-violet",
-                note="%d this question, cap %d" % (state.get("tool_calls", 0), state.get("max_tool_calls", 0)),
+                note=("%d this question, %s" % (state.get("tool_calls", 0), "no hard cap" if not state.get("max_tool_calls") else "cap %d" % state.get("max_tool_calls"))),
             ),
             _meter("context", state.get("prompt_tokens", 0), state.get("context_ceiling", 1), "is-ok"),
-            _meter("hourly quota", used, cap, "is-ok", note="shared by every visitor"),
+            _meter(
+                "hourly quota", used, cap, "is-ok",
+                note="shared by every visitor" if cap else "no hard cap",
+            ),
         ]
     )
     counters = "".join(
@@ -660,6 +709,29 @@ def _agreement_row(values):
         for name in ("bias", "rmse", "mae", "r")
         if values.get(name) is not None
     )
+
+
+def _comparison_table(rows):
+    if not rows:
+        return ""
+    body = "".join(
+        "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+        % (
+            _e(row.get("quantity", "")),
+            _e(row.get("of", "")),
+            _e(row.get("against", "")),
+            _e(row.get("bias", "")),
+            _e(row.get("rmse", "")),
+            _e(row.get("mae", "")),
+        )
+        for row in rows
+    )
+    return (
+        "<div class='fig-comparisons'><b>Pairwise diagnostics</b>"
+        "<table><thead><tr><th>quantity</th><th>series</th><th>baseline</th>"
+        "<th>bias</th><th>RMSE</th><th>MAE</th></tr></thead><tbody>%s</tbody></table></div>"
+        % body
+    )
     return (
         "<div class='fig-stats'>%s<span class='fig-stats__note'>%s against %s over %d "
         "overlapping point(s), %g to %g</span></div>"
@@ -685,10 +757,13 @@ def _figure_card(figure, index):
         else "fig-ribbon--computed"
     )
     label = (
-        "preview, no data"
+        "pseudo-data preview"
         if preview
         else " + ".join("model run" if s == "model_run" else s for s in sources)
     )
+    figure_number = figure.get("figure_number") or index
+    if not preview:
+        label = "Figure %d · %s" % (figure_number, label)
     legend = "".join(
         "<span class='badge badge--%s'>%s</span> %s "
         % (
@@ -706,10 +781,22 @@ def _figure_card(figure, index):
         for item in figure.get("series") or []
     )
     agreement = _agreement_row(figure["agreement"]) if figure.get("agreement") else ""
+    comparisons = _comparison_table(figure.get("comparisons") or [])
+    quality = figure.get("quality_review") or {}
+    quality_html = ""
+    if not preview and quality.get("reviewed"):
+        quality_html = (
+            "<div class='fig-quality %s'><b>Figure QA:</b> %s%s</div>"
+            % (
+                "is-passed" if quality.get("passed") else "is-failed",
+                "passed" if quality.get("passed") else "failed",
+                " · automatically redrawn for clarity" if quality.get("redrawn") else "",
+            )
+        )
     return (
         "<div class='fig-card%s' data-anchor='fig-%d'>"
         "<div class='fig-ribbon %s'>%s<span class='handle'>%s</span></div>"
-        "<div class='fig-body'><img alt='%s' src='%s'>%s"
+        "<div class='fig-body'><img alt='%s' src='%s'>%s%s%s"
         "<div class='fig-cap'>%s</div></div></div>"
         % (
             " fig-card--preview" if preview else "",
@@ -720,6 +807,8 @@ def _figure_card(figure, index):
             _e(figure.get("title") or "chart"),
             _e(figure.get("image_url") or figure.get("png", "")),
             agreement,
+            comparisons,
+            quality_html,
             legend or _e(figure.get("title") or ""),
         )
     )

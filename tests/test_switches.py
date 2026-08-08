@@ -52,7 +52,7 @@ def test_the_corpus_ablation_removes_every_literature_tool_and_the_catalogue():
     off = {"literature": False}
     names = [s["function"]["name"] for s in tools.specs(off)]
     assert not set(names) & set(tools.CORPUS_TOOLS)
-    assert set(names) == {"list_models", "run_model", "read_reference_dataset", "plot", "research_plan"}
+    assert set(names) == {"list_models", "run_model", "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart", "research_plan"}
     assert tools.call("read_literature", {"slug": "smrt-v1"}, switches_in=off)["status"] == (
         "terminal_error"
     )

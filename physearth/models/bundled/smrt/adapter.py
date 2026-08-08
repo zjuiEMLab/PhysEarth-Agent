@@ -1,4 +1,6 @@
 import math
+import importlib
+import sys
 import warnings
 
 MICROSTRUCTURE_ARGS = {
@@ -10,7 +12,37 @@ MICROSTRUCTURE_ARGS = {
 }
 
 
+def _ensure_smrt_importable():
+    """Load SMRT without Numba on Python versions where its cached ufunc cannot load.
+
+    SMRT 1.5.1 decorates ``abs2`` with ``cache=True``.  Numba cannot locate that
+    installed module under Python 3.13 and raises before a model can run.  SMRT already
+    supports a NumPy fallback when Numba is unavailable, so hide Numba only while SMRT's
+    optional dependency module is first imported.  Other application code keeps its
+    normal Numba module.
+    """
+    loaded_lib = sys.modules.get("smrt.core.lib")
+    if loaded_lib is not None and hasattr(loaded_lib, "abs2"):
+        return
+    if sys.version_info < (3, 13):
+        return
+    # A failed eager warm-up can leave partially initialized SMRT modules behind.
+    for module_name in [name for name in sys.modules if name == "smrt" or name.startswith("smrt.")]:
+        sys.modules.pop(module_name, None)
+    missing = object()
+    previous = sys.modules.get("numba", missing)
+    sys.modules["numba"] = None
+    try:
+        importlib.import_module("smrt.core.lib")
+    finally:
+        if previous is missing:
+            sys.modules.pop("numba", None)
+        else:
+            sys.modules["numba"] = previous
+
+
 def _snowpack(spec, overrides=None):
+    _ensure_smrt_importable()
     from smrt import make_snowpack
 
     values = dict(spec)
@@ -30,6 +62,7 @@ def _snowpack(spec, overrides=None):
 
 
 def _sensor(spec, overrides=None):
+    _ensure_smrt_importable()
     from smrt import sensor_list
 
     values = dict(spec)
@@ -69,6 +102,7 @@ def _coefficients(spec, overrides=None):
     solver has been run over them. Asking for the first should not require paying for,
     or being confounded by, the second.
     """
+    _ensure_smrt_importable()
     from smrt.core.plugin import import_class
 
     values = dict(spec)
@@ -91,22 +125,26 @@ def _coefficients(spec, overrides=None):
 
 
 def run(spec):
+    _ensure_smrt_importable()
     from smrt import make_model
 
     coefficients_only = spec["output"] == "coefficients"
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model = None if coefficients_only else make_model(
-            spec["electromagnetic_model"], "dort"
-        )
+        def model_for(values):
+            return make_model(
+                values["electromagnetic_model"],
+                "dort",
+                rtsolver_options={"n_max_stream": int(round(values["dort_streams"]))},
+            )
         swept = spec.get("sweep_parameter") or "none"
 
         if swept == "none":
             if coefficients_only:
                 values = _coefficients(spec)
             else:
-                result = model.run(_sensor(spec), _snowpack(spec))
+                result = model_for(spec).run(_sensor(spec), _snowpack(spec))
                 values = _extract(result, spec["output"])
             return {
                 "axis": None,
@@ -127,7 +165,11 @@ def run(spec):
             if coefficients_only:
                 values = _coefficients(spec, override)
             else:
-                result = model.run(_sensor(spec, override), _snowpack(spec, override))
+                values_for_run = dict(spec)
+                values_for_run.update(override)
+                result = model_for(values_for_run).run(
+                    _sensor(spec, override), _snowpack(spec, override)
+                )
                 values = _extract(result, spec["output"])
             points.append({"index": index, swept: value, **values})
             for key, item in values.items():

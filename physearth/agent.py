@@ -328,7 +328,7 @@ def _compact_messages(messages):
 
 def _handle_line(name, data):
     """One line describing a stored result, for the session's `already held` block."""
-    if name == "run_model":
+    if name in ("run_model", "run_planned_model"):
         axis = data.get("axis") or {}
         span = (
             "%d points over %s" % (data.get("n_points", 0), axis["name"])
@@ -426,20 +426,27 @@ def _record_tool_result(name, result, state, events):
             state["datasets_read"].add(data["dataset"])
         for row in data.get("datasets") or []:
             state["datasets_read"].add(row["slug"])
-    if name == "run_model":
+    if name in ("run_model", "run_planned_model"):
         if result["status"] == "success":
-            session_state.bump(state, "model_runs")
+            if not data.get("reused"):
+                session_state.bump(state, "model_runs")
             state["models_run"].add("%s@%s" % (data["model"], data["version"]))
-            state["session"]["successful_runs"].append(
-                {"model": data["model"], "spec": dict(data.get("spec") or {}), "handle": data.get("handle")}
-            )
+            if not data.get("reused"):
+                state["session"]["successful_runs"].append(
+                    {
+                        "model": data["model"],
+                        "spec": dict(data.get("spec") or {}),
+                        "handle": data.get("handle"),
+                        "planned_run_id": data.get("planned_run_id"),
+                    }
+                )
             if result.get("qc") and not result["qc"]["passed"]:
                 session_state.bump(state, "qc_failures")
         elif result["status"] == "needs_input":
             session_state.bump(state, "rejected_calls")
     if data.get("handle") and result["status"] == "success":
         session_state.remember_handle(state, data["handle"], _handle_line(name, data))
-    if name == "plot" and result["status"] == "success":
+    if name in ("plot", "plot_planned_chart") and result["status"] == "success":
         session_state.remember_figure(state, (result.get("ui") or {})["figure"])
 
 
@@ -462,6 +469,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
     events = []
     answer = ""
     review_attempts = {}
+    tool_failure_streak = {"name": None, "count": 0, "detail": ""}
+    last_plan_error = ""
+    forced_tool_name = None
     segments = []
 
     allowed, message = budget.acquire()
@@ -495,6 +505,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
         messages = _compact_messages(messages)
 
         completion = None
+        requested_tool = forced_tool_name
         last_fault = "no choices"
         last_upstream = ""
         model_dead = ""
@@ -508,7 +519,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     model=model_id,
                     messages=messages,
                     tools=tools.specs(state["switches"]),
-                    tool_choice="auto",
+                    tool_choice=(
+                        {"type": "function", "function": {"name": requested_tool}}
+                        if requested_tool else "auto"
+                    ),
                     parallel_tool_calls=False,
                     max_tokens=MAX_OUTPUT_TOKENS,
                     stream=True,
@@ -583,6 +597,11 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
             break
 
+        # A forced choice applies to one completed provider response. If that response
+        # still fails validation, the relevant gate below can force the corrective turn
+        # again with the exact error in context.
+        forced_tool_name = None
+
         session_state.bump(state, "model_calls")
         session_state.bump(state, "prompt_tokens", completion.prompt_tokens or 0)
         session_state.bump(state, "completion_tokens", completion.completion_tokens or 0)
@@ -611,6 +630,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 parsed_calls.append((call, arguments, canonical, repair_note))
             if invalid_call is not None:
                 call, detail = invalid_call
+                gate_key = "invalid_tool_json:%s" % (call.get("name") or "unknown")
+                attempts = review_attempts.get(gate_key, 0) + 1
+                review_attempts[gate_key] = attempts
                 events.append(
                     _event(
                         "tool_arguments_invalid",
@@ -619,6 +641,20 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         detail=detail,
                     )
                 )
+                if attempts >= harness.MAX_INTERVENTIONS:
+                    answer = (
+                        "Stopped after %d invalid %s tool calls with no progress: %s. "
+                        "Start a new turn with a simpler request or revise the plan explicitly."
+                        % (
+                            attempts,
+                            call.get("name") or "unknown",
+                            detail,
+                        )
+                    )
+                    events.append(
+                        _event("harness_stop", rule="no_progress", reason=answer)
+                    )
+                    break
                 # Crucially, do not append the malformed assistant tool call. DashScope
                 # validates historical function.arguments and would reject every retry.
                 if completion.content and completion.content.strip():
@@ -718,6 +754,31 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
 
+                human_wait = (
+                    name == "research_plan"
+                    and result["status"] == "needs_input"
+                    and bool(session.get("research"))
+                )
+                if result["status"] == "success" or human_wait:
+                    tool_failure_streak = {"name": None, "count": 0, "detail": ""}
+                else:
+                    failure_code = (result.get("data") or {}).get("error_code")
+                    failure_signature = "%s:%s" % (name, failure_code or (result.get("error") or result["summary"]))
+                    if tool_failure_streak.get("signature") == failure_signature:
+                        tool_failure_streak["count"] += 1
+                    else:
+                        tool_failure_streak = {
+                            "name": name,
+                            "signature": failure_signature,
+                            "count": 1,
+                            "detail": "",
+                        }
+                    tool_failure_streak["detail"] = result.get("error") or result["summary"]
+                    if name == "research_plan":
+                        last_plan_error = result["summary"]
+                        if not session.get("research"):
+                            forced_tool_name = "research_plan"
+
                 if result["status"] == "needs_input" and (
                     name == "research_plan"
                     or (name == "run_model" and result.get("error") == "research workflow approval required")
@@ -759,6 +820,28 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     )
                 yield answer, events, state
 
+                if tool_failure_streak["count"] >= harness.MAX_INTERVENTIONS:
+                    answer = (
+                        "Stopped after %d consecutive failed %s calls with no state progress. "
+                        "Last error: %s"
+                        % (
+                            tool_failure_streak["count"],
+                            name,
+                            tool_failure_streak["detail"],
+                        )
+                    )
+                    events.append(
+                        _event(
+                            "harness_stop",
+                            rule="no_progress",
+                            tool=name,
+                            reason=answer,
+                        )
+                    )
+                    state["phase"] = "done"
+                    yield answer, events, state
+                    return
+
                 payload = {k: v for k, v in result.items() if k not in ("qc", "ui")}
                 messages.append(
                     {
@@ -776,11 +859,28 @@ def stream(question, history=None, model=None, session=None, switches=None):
         # If the model tries to answer an executable question without proposing a plan,
         # return that attempt to the model and require a structured research_plan call.
         if session.get("research_required") and not session.get("research"):
+            gate_key = "research_gate:plan_required"
+            attempts = review_attempts.get(gate_key, 0) + 1
+            review_attempts[gate_key] = attempts
+            if attempts >= harness.MAX_INTERVENTIONS:
+                detail = last_plan_error or "the model did not submit a valid research_plan proposal"
+                answer = (
+                    "Research planning stopped after %d no-progress attempts. Last validation "
+                    "error: %s No model run or scientific result was produced. Revise the "
+                    "question/plan in a new message."
+                    % (attempts, detail)
+                )
+                events.append(
+                    _event("harness_stop", rule="plan_no_progress", reason=answer)
+                )
+                break
+            forced_tool_name = "research_plan"
             events.append(
                 _event(
                     "research_block",
                     rule="plan_required",
                     detail="No LLM-authored research proposal has been submitted.",
+                    intervention=attempts,
                 )
             )
             messages.append({"role": "assistant", "content": completion.content or ""})
@@ -788,8 +888,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 {
                     "role": "user",
                     "content": (
-                        "Do not answer yet. Analyse this specific research question, inspect the "
-                        "relevant literature/model declarations as needed, then call research_plan "
+                        "Your next response must be a research_plan function call, not prose. "
+                        "Analyse this specific research question from the evidence already read, "
+                        "then call research_plan "
                         "with action=propose and a question-specific objective, hypothesis, "
                         "executable steps, parameters, chart options, assumptions, limitations and "
                         "success criteria."
@@ -825,12 +926,26 @@ def stream(question, history=None, model=None, session=None, switches=None):
         if session.get("research_required") and research.allow_model(session):
             gaps = research.execution_gaps(session)
             if gaps["missing_runs"]:
+                gate_key = "research_gate:formal_model_required"
+                attempts = review_attempts.get(gate_key, 0) + 1
+                review_attempts[gate_key] = attempts
+                if attempts >= harness.MAX_INTERVENTIONS:
+                    answer = (
+                        "Research execution stopped after %d attempts with no progress on planned "
+                        "run IDs: %s. No completion claim was published."
+                        % (attempts, ", ".join(gaps["missing_run_ids"]))
+                    )
+                    events.append(
+                        _event("harness_stop", rule="model_run_no_progress", reason=answer)
+                    )
+                    break
                 events.append(
                     _event(
                         "research_block",
                         rule="formal_model_required",
                         detail="Approved research is missing planned model runs: %s."
                         % ", ".join(gaps["missing_runs"]),
+                        intervention=attempts,
                     )
                 )
                 messages.append(
@@ -839,27 +954,98 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 messages.append(
                     {
                         "role": "user",
-                        "content": "The approved protocol is still missing these successful planned runs: %s. Execute them with the declared compatible parameters before answering."
-                        % ", ".join(gaps["missing_runs"]),
+                        "content": "The approved protocol is still missing planned run IDs: %s. Call run_planned_model once for each exact run_id. Do not reconstruct or modify their parameters."
+                        % ", ".join(gaps["missing_run_ids"]),
                     }
                 )
                 yield transcript(segments), events, state
                 continue
             if gaps["figure_problem"]:
+                if gaps.get("failed_figure_reviews"):
+                    failed = gaps["failed_figure_reviews"][0]
+                    chart_id = failed["requirement"]["chart"].get("id")
+                    revision = research.revise_after_figure_quality(
+                        session, chart_id, failed["issues"]
+                    )
+                    if revision["status"] == "needs_input":
+                        answer = (
+                            "%s The failed formal figures were withdrawn. Review the revised "
+                            "sampling and axes, then approve the new plan; no scientific conclusion "
+                            "has been published yet."
+                            % revision["summary"]
+                        )
+                        events.append(
+                            _event(
+                                "research_revision",
+                                rule="figure_quality_repair",
+                                phase="plan_review",
+                                detail=revision["summary"],
+                            )
+                        )
+                    else:
+                        answer = (
+                            "Figure QA requires a scientific choice that cannot be changed safely: %s. "
+                            "Describe the desired sampling or axis in Conversation."
+                            % "; ".join(failed["issues"])
+                        )
+                        events.append(
+                            _event("research_wait", phase="plan_review", detail=answer)
+                        )
+                    break
+                gate_key = "research_gate:figure_required"
+                attempts = review_attempts.get(gate_key, 0)
+                if attempts >= harness.MAX_INTERVENTIONS:
+                    detail = (
+                        "%s Automatic correction stopped after %d attempts to prevent a loop."
+                        % (gaps["figure_problem"], harness.MAX_INTERVENTIONS)
+                    )
+                    events.append(_event("harness_stop", rule="figure_required", reason=detail))
+                    answer = (
+                        "Research execution paused because the selected result figure is incomplete. "
+                        "%s No scientific completion claim has been published." % detail
+                    )
+                    break
+                review_attempts[gate_key] = attempts + 1
+                session_state.bump(state, "interventions")
                 events.append(
                     _event(
                         "research_block",
                         rule="figure_required",
                         detail=gaps["figure_problem"],
+                        intervention=review_attempts[gate_key],
                     )
                 )
                 messages.append(
                     {"role": "assistant", "content": completion.content or ""}
                 )
+                if gaps.get("unreviewed_chart_ids"):
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "The formal plot exists but has not passed post-render quality "
+                                "review. Call plot_planned_chart(chart_id=%r, action='review') now. Inspect its "
+                                "point-count, finite-value, trend, label, legend and redraw report; "
+                                "only write the interpretation after every selected Figure passes."
+                                % gaps["unreviewed_chart_ids"][0]
+                            ),
+                        }
+                    )
+                    yield transcript(segments), events, state
+                    continue
                 messages.append(
                     {
                         "role": "user",
-                        "content": "Call plot using the successful result handle before writing the final answer. The final research result must include a figure.",
+                        "content": (
+                            "The approved figure package is incomplete. Call "
+                            "plot_planned_chart(chart_id=%r). It deterministically uses all approved "
+                            "series for this chart: %s. Then check whether another selected chart "
+                            "is still missing before writing the final report."
+                            % (
+                                gaps["selected_chart"].get("id"),
+                                json.dumps(gaps["expected_figure_series"], ensure_ascii=False),
+                            )
+                        ),
                     }
                 )
                 yield transcript(segments), events, state

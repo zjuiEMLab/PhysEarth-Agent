@@ -13,10 +13,12 @@ serves every reviewer at once.
 
 import uuid
 
-MAX_MODEL_CALLS = 12
-MAX_TOOL_CALLS = 16
-MAX_SESSION_MODEL_CALLS = 72
-MAX_SESSION_TOOL_CALLS = 80
+from physearth import config
+
+MAX_MODEL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_MODEL_CALLS")
+MAX_TOOL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_TOOL_CALLS")
+MAX_SESSION_MODEL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_SESSION_MODEL_CALLS")
+MAX_SESSION_TOOL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_SESSION_TOOL_CALLS")
 CONTEXT_CEILING_TOKENS = 96000
 MAX_HELD_HANDLES = 10
 MAX_KEPT_HANDLES = 40
@@ -98,11 +100,36 @@ def bump(state, name, amount=1):
 
 
 def remember_figure(state, figure):
-    state["figures"].append(figure)
     session = state.get("session")
-    if session is not None:
-        session["figures"].append(figure)
-        session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
+    if session is None:
+        state["figures"].append(figure)
+        return
+
+    figures = session["figures"]
+    chart_id = figure.get("planned_chart_id")
+    replace_at = next(
+        (
+            index for index, existing in enumerate(figures)
+            if chart_id and existing.get("planned_chart_id") == chart_id
+            and not existing.get("preview")
+        ),
+        None,
+    )
+    if replace_at is not None:
+        figure["figure_number"] = figures[replace_at].get("figure_number")
+        figures[replace_at] = figure
+    else:
+        if not figure.get("preview"):
+            figure["figure_number"] = figure.get("figure_number") or 1 + sum(
+                1 for existing in figures if not existing.get("preview")
+            )
+        figures.append(figure)
+    state["figures"] = [
+        existing for existing in state["figures"]
+        if not chart_id or existing.get("planned_chart_id") != chart_id
+    ]
+    state["figures"].append(figure)
+    session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
 
 
 def remember_handle(state, handle, line):
@@ -165,17 +192,22 @@ def held_block(session):
             for chart in charts[:8]
         ) or "none recorded"
         selected = project.get("selected_chart") or {}
+        selected_ids = project.get("selected_charts") or ([selected.get("id")] if selected else [])
+        run_ids = ", ".join(
+            str(run.get("id")) for run in (plan.get("runs") or []) if run.get("id")
+        ) or "none"
         lines.append(
             "Research workflow: plan v%03d, phase %s. Objective: %s. Parameters: %s. "
-            "Chart choices: %s. Selected chart: %s. Formal model calls remain blocked until "
+            "Approved run IDs: %s. Chart choices: %s. Confirmed chart package: %s. Formal model calls remain blocked until "
             "the required human UI approvals are recorded; never approve a gate yourself."
             % (
                 project.get("plan_version", 1),
                 project.get("phase"),
                 plan.get("objective") or "not recorded",
                 parameter_text,
+                run_ids,
                 chart_text,
-                selected.get("id") or "none",
+                ", ".join(selected_ids) or "none",
             )
         )
     handles = session["handles"][-MAX_HELD_HANDLES:]

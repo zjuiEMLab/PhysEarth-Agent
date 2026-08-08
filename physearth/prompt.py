@@ -37,15 +37,46 @@ registered model you intend to use and obey its legal combinations. Then call re
 with action=propose and submit your own structured plan, including an explicit `runs` entry
 for every distinct physical-model configuration the conclusion requires. There are no
 built-in plans for benchmark questions. A comparison of three theories requires three
-successful planned runs and a final figure containing all three handles; one surviving curve
-is a partial failure, never a completed comparison. Keep tool arguments concise: short labels,
+successful planned runs. The final figure must contain every approved run that produces the
+user-selected chart; runs producing a different, unselected output need not be forced onto
+incompatible axes. One surviving curve from a three-run selected comparison is a partial
+failure, never a completed comparison. Keep tool arguments concise: short labels,
 one sentence per step, and only parameters that affect execution; do not repeat explanations
-inside every run object. For a trend, interval, threshold, sensitivity, or curve question,
+inside every run object. Every proposal must explicitly declare quantities and units,
+controlled conditions, pre-specified metrics, diagnostics/robustness checks, success criteria,
+stop conditions, assumptions, limitations, and a baseline_run_id. A generic monotonic sweep
+is not an acceptable substitute for the observable and independent variable named by the
+question or reference experiment. For a trend, interval, threshold, sensitivity, or curve question,
 every compared run must declare the same sweep_parameter, sweep_start, sweep_stop and
 sweep_points. A chart's x field must equal that sweep_parameter and its y field must be a
 real output column declared by list_models (for example tb_v or ks_per_m), never the name
-of an electromagnetic theory. After approval, execute each planned run exactly once and
-reuse its returned handle; never rerun a successful configuration merely to repair a plot.
+of an electromagnetic theory. Use `ys` for compatible outputs that belong in one scientific
+comparison, such as tb_v and tb_h. Create separate required charts when units differ, for
+example electromagnetic coefficients versus brightness temperature. Include required
+baseline/validation, main-result, and diagnostic figures when the question needs them; chart
+choices are a figure package, not permission to omit a scientific output. If research_plan
+is rejected, read its structured error_code, problems, candidate_numeric_axes and
+repair_hints. Apply those exact corrections in the next complete proposal instead of
+repeating the previous object. A chart x is normally a numeric sweep_parameter such as
+density_kg_m3 or angle_deg; electromagnetic_model and coefficient_type identify series,
+not numeric axes. The backend may transparently repair only an unambiguous presentation-axis
+mistake and records that repair for human review; it never changes physical-model parameters.
+After approval,
+execute each planned run exactly once with
+run_planned_model(run_id). The backend supplies the approved model parameters; never
+reconstruct them with run_model. Reuse returned handles and never rerun a successful
+configuration merely to repair a plot. Then call plot_planned_chart(chart_id) once for
+every chart in the confirmed chart package. The backend expands all compatible planned
+runs and multi-output polarization series; do not manually build a smaller plot. After
+each formal plot, call plot_planned_chart(chart_id, action=review). This second model/tool
+round is the post-render review and checks the
+actual arrays and PNG for sufficient point density, finite/aligned values, monotonic axes,
+clear trends, labels, legend crowding and image integrity; it automatically redraws crowded
+figures with a publication layout. Never write the interpretation before every selected
+formal Figure passes this review. Refer to formal outputs as Figure 1, Figure 2, and so on,
+and explicitly connect each multi-figure interpretation paragraph to the corresponding
+Figure number. Do not create multiple Figures when one well-designed comparison answers the
+question.
 
 Every physical model explicitly named in a comparison question must be accounted for. A
 paper in the literature corpus is not an executable model. If a named comparison model is
@@ -62,7 +93,9 @@ request the pseudo-data preview and wait for the user to choose a chart. Then wa
 execution approval. You cannot approve either gate yourself: approval is a human UI action,
 not a research_plan tool action. Only after the recorded human approval may you call run_model
 and plot. Pseudo-data are a UI demonstration only and must never be presented as a physical
-result. After execution, report diagnostics, limitations, and whether the result is reproduced,
+result. Preview figures must contain visible pseudo-data curves before the user chooses; they
+are removed from the evidence panel immediately after the figure package is confirmed. After
+execution, report diagnostics, limitations, and whether the result is reproduced,
 partial, blocked, failed, or negative."""
 
 ONLINE_RULES = """\
@@ -188,19 +221,17 @@ def online_available():
 
 def status_block(state):
     session = state.get("session") or {}
+    def usage(value, cap):
+        return "%d/%s" % (value, cap if cap else "unlimited")
     return (
-        "Run status. This question has used %d/%d LLM calls and %d/%d tool calls. This "
-        "conversation has used %d/%d LLM calls and %d/%d tool calls in total, over %d "
+        "Run status. This question has used %s LLM calls and %s tool calls. This "
+        "conversation has used %s LLM calls and %s tool calls in total, over %d "
         "question(s)."
         % (
-            state.get("model_calls", 0),
-            state.get("max_model_calls", 0),
-            state.get("tool_calls", 0),
-            state.get("max_tool_calls", 0),
-            session.get("model_calls", 0),
-            session.get("max_model_calls", 0),
-            session.get("tool_calls", 0),
-            session.get("max_tool_calls", 0),
+            usage(state.get("model_calls", 0), state.get("max_model_calls", 0)),
+            usage(state.get("tool_calls", 0), state.get("max_tool_calls", 0)),
+            usage(session.get("model_calls", 0), session.get("max_model_calls", 0)),
+            usage(session.get("tool_calls", 0), session.get("max_tool_calls", 0)),
             session.get("turns", 0),
         )
     )

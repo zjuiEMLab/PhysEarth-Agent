@@ -15,7 +15,7 @@ from physearth import config, results
 
 FONT_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
 KINDS = ("line", "scatter", "line+markers")
-MAX_SERIES = 4
+MAX_SERIES = 8
 MAX_POINTS = 400
 
 PAPER = "#faf9f5"
@@ -316,30 +316,52 @@ def render(spec, series, preview=False):
 
 
 def _draw(plt, spec, series, kind, preview=False):
-    figure, axes = plt.subplots(figsize=(4.6, 2.9), dpi=170)
+    publication = spec.get("quality_profile") == "publication"
+    figure, axes = plt.subplots(
+        figsize=(7.2, 4.7) if publication else (5.8, 3.65),
+        dpi=170,
+    )
     figure.patch.set_facecolor(PAPER)
     axes.set_facecolor(PAPER)
 
     seen = {}
+    model_styles = ("-", "--", "-.", ":")
+    model_keys = []
     for index, item in enumerate(series):
-        colour = SOURCE_COLOURS.get(item["source"])
-        if seen.get(item["source"]):
-            colour = EXTRA_COLOURS[index % len(EXTRA_COLOURS)]
+        y_name = str(item.get("y_name") or "").lower()
+        if y_name.endswith(("_v", "_vv", "_vv_db")):
+            colour = "#2b7bba"
+        elif y_name.endswith(("_h", "_hh", "_hh_db")):
+            colour = "#e56b2f"
+        elif y_name.endswith(("_hv", "_hv_db")):
+            colour = "#4f7a48"
+        else:
+            colour = SOURCE_COLOURS.get(item["source"])
+            if seen.get(item["source"]):
+                colour = EXTRA_COLOURS[index % len(EXTRA_COLOURS)]
         seen[item["source"]] = True
-        style = "--" if item["source"] == "model_run" and len(series) > 1 else "-"
+        model_key = str(item.get("label") or "").rsplit(" · ", 1)[0]
+        if model_key not in model_keys:
+            model_keys.append(model_key)
+        style = model_styles[model_keys.index(model_key) % len(model_styles)]
         if preview:
             # An empty artist still earns its legend entry, which is the whole point: the
             # preview shows what will be drawn and in which style, and no values.
-            axes.plot([], [], style, color=colour, linewidth=2.0, label=item["label"])
+            axes.plot([], [], style, color=colour, linewidth=1.8, label=item["label"])
             continue
         if kind == "scatter" or (kind == "line+markers" and item["source"] == "measured"):
             axes.plot(
-                item["x"], item["y"], "o", color=colour, markersize=4.2, label=item["label"]
+                item["x"], item["y"], "*" if item["source"] == "measured" else "o",
+                color=colour, markersize=5.0, label=item["label"]
             )
             if kind == "line+markers":
                 axes.plot(item["x"], item["y"], style, color=colour, linewidth=1.4, alpha=0.55)
         else:
-            axes.plot(item["x"], item["y"], style, color=colour, linewidth=2.0, label=item["label"])
+            axes.plot(
+                item["x"], item["y"], style, color=colour, linewidth=1.8,
+                marker="o" if kind == "line+markers" else None,
+                markersize=2.8, label=item["label"],
+            )
 
     if preview:
         axes.text(
@@ -358,7 +380,15 @@ def _draw(plt, spec, series, kind, preview=False):
     axes.set_xlabel(spec.get("x_label") or _label(first, "x"), fontsize=8.5, color=INK_SOFT)
     axes.set_ylabel(spec.get("y_label") or _label(first, "y"), fontsize=8.5, color=INK_SOFT)
     if spec.get("title"):
-        axes.set_title(str(spec["title"])[:90], fontsize=9.5, color=INK, pad=8)
+        axes.set_title(
+            str(spec["title"])[:110], fontsize=9.2, color=INK,
+            pad=20 if spec.get("subtitle") else 8,
+        )
+        if spec.get("subtitle"):
+            axes.text(
+                0.5, 1.015, str(spec["subtitle"])[:140], transform=axes.transAxes,
+                ha="center", va="bottom", fontsize=6.8, color=INK_MUTE,
+            )
     axes.grid(True, color=LINE, linewidth=0.7, alpha=0.9)
     axes.set_axisbelow(True)
     for side in ("top", "right"):
@@ -370,10 +400,22 @@ def _draw(plt, spec, series, kind, preview=False):
         axes.set_xticks([])
         axes.set_yticks([])
     if len(series) > 1 or preview:
-        legend = axes.legend(fontsize=7.5, frameon=False, loc="best")
+        legend_options = {
+            "fontsize": 7.0,
+            "frameon": True,
+            "framealpha": 0.9,
+            "edgecolor": LINE,
+            "facecolor": PAPER,
+            "ncol": 2 if len(series) > 4 else 1,
+        }
+        if publication and len(series) > 3:
+            legend_options.update(loc="upper center", bbox_to_anchor=(0.5, -0.19))
+        else:
+            legend_options["loc"] = "best"
+        legend = axes.legend(**legend_options)
         for text in legend.get_texts():
             text.set_color(INK_SOFT)
-    figure.tight_layout(pad=0.6)
+    figure.tight_layout(pad=0.8, rect=(0, 0.12, 1, 1) if publication and len(series) > 3 else None)
 
     buffer = io.BytesIO()
     figure.savefig(buffer, format="png", facecolor=PAPER, bbox_inches="tight", pad_inches=0.08)
@@ -395,6 +437,9 @@ def _draw(plt, spec, series, kind, preview=False):
         "image_path": str(image_path),
         "image_url": image_url,
         "title": spec.get("title") or first["label"],
+        "subtitle": spec.get("subtitle") or "",
+        "x_label": spec.get("x_label") or _label(first, "x"),
+        "y_label": spec.get("y_label") or _label(first, "y"),
         "kind": "preview" if preview else kind,
         "preview": preview,
         "provenance": sources,
@@ -405,9 +450,52 @@ def _draw(plt, spec, series, kind, preview=False):
                 "origin": item["origin"],
                 "n_points": len(item["x"]),
                 "handle": item["handle"],
+                "x": item["x_name"],
+                "y": item["y_name"],
             }
             for item in series
         ],
+    }
+
+
+def review_quality(spec, series, figure):
+    """Review scientific and visual legibility from the exact plotted arrays and PNG."""
+    issues = []
+    warnings = []
+    redraw_reasons = []
+    kind = spec.get("kind", "line")
+    for item in series:
+        xs = list(item.get("x") or [])
+        ys = list(item.get("y") or [])
+        label = item.get("label") or item.get("y_name") or "series"
+        if len(xs) != len(ys) or not xs:
+            issues.append("%s has missing or misaligned x/y values" % label)
+            continue
+        if any(not isinstance(value, (int, float)) or not math.isfinite(value) for value in xs + ys):
+            issues.append("%s contains non-finite values" % label)
+        if kind in ("line", "line+markers") and len(set(xs)) < min(6, len(xs)):
+            issues.append("%s has too few distinct x values for a scientific trend" % label)
+        if kind in ("line", "line+markers") and len(xs) < 6:
+            issues.append("%s has only %d points; at least 6 are required for a trend plot" % (label, len(xs)))
+        if len(xs) > 1 and not all(xs[index] <= xs[index + 1] for index in range(len(xs) - 1)):
+            warnings.append("%s x values are not monotonic" % label)
+        if len(set(ys)) == 1:
+            warnings.append("%s is constant; verify this is physically expected" % label)
+    if len(series) > 4:
+        redraw_reasons.append("crowded legend with %d series" % len(series))
+    if any(len(str(item.get("label") or "")) > 48 for item in series):
+        redraw_reasons.append("long series labels need a wider publication layout")
+    image_path = Path(figure.get("image_path") or "")
+    if not image_path.is_file() or image_path.stat().st_size < 2000:
+        issues.append("rendered PNG is missing or unexpectedly small")
+    return {
+        "reviewed": True,
+        "passed": not issues,
+        "issues": issues,
+        "warnings": warnings,
+        "redraw_reasons": redraw_reasons,
+        "n_series": len(series),
+        "point_counts": [len(item.get("x") or []) for item in series],
     }
 
 

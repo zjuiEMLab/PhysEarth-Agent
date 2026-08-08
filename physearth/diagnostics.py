@@ -112,6 +112,9 @@ def network_probes(timeout=6.0):
 def smrt_warmup():
     entry = {"available": False}
     try:
+        from physearth.models.bundled.smrt.adapter import _ensure_smrt_importable
+
+        _ensure_smrt_importable()
         from smrt import make_model, make_snowpack, sensor_list
     except Exception as exc:
         entry["error"] = "%s: %s" % (type(exc).__name__, exc)
