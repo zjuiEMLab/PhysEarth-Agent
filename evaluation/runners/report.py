@@ -67,7 +67,8 @@ def tier0_section():
         lines.append(
             "\nThe three SMRT tasks compare the adapter against the upstream `smrt` package "
             "driven directly with its own documented recipe. Largest absolute disagreement "
-            "across %d compared outputs: %.2e." % (len(upstream), max(c["abs_error"] for c in upstream))
+            "across %d compared outputs: %.2e."
+            % (len(upstream), max(c["abs_error"] for c in upstream))
         )
     return "\n".join(lines) + "\n"
 
@@ -127,7 +128,14 @@ def false_premise_table(scored):
             ])),
         ])
     return common.table(
-        ["config", "runs", "handled", "ran the illegal call", "call refused", "answer names the limit"],
+        [
+            "config",
+            "runs",
+            "handled",
+            "ran the illegal call",
+            "call refused",
+            "answer names the limit",
+        ],
         rows,
     )
 
@@ -145,7 +153,11 @@ def tier1_table(scored):
                 task,
                 config_name,
                 str(len(subset)),
-                pct(scoring.mean([i["config_match"]["fraction"] for i in subset if i["config_match"]])),
+                pct(
+                    scoring.mean(
+                        [i["config_match"]["fraction"] for i in subset if i["config_match"]]
+                    )
+                ),
                 num(scoring.mean([n["error"] for n in numeric])),
                 numeric[0]["unit"] if numeric else "-",
                 pct(scoring.fraction([n["within"] for n in numeric])),
@@ -169,7 +181,15 @@ def per_task_table(scored):
             pct(scoring.mean([i["citations"]["resolved_fraction"] for i in items])),
         ])
     return common.table(
-        ["task", "suite", "question quality", "runs", "completed", "illegal calls", "citations resolve"],
+        [
+            "task",
+            "suite",
+            "question quality",
+            "runs",
+            "completed",
+            "illegal calls",
+            "citations resolve",
+        ],
         rows,
     )
 
@@ -293,7 +313,8 @@ def build():
 def main():
     text = build()
     path = common.ROOT / "REPORT.md"
-    path.write_text(text, encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(text)
     print("wrote %s (%d characters)" % (path, len(text)))
     return 0
 

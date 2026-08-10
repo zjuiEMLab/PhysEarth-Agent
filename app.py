@@ -1,6 +1,6 @@
 import gradio as gr
 
-from physearth import agent, approval, config, diagnostics, research
+from physearth import agent, approval, config, diagnostics, evals, research
 from physearth.ui import render, theme
 
 config.load_dotenv()
@@ -192,7 +192,11 @@ def review_click(box, action):
         if research.allow_model(session):
             # Formal execution approval is the run approval. Do not ask a second time.
             approval.set_mode(session, approval.ALWAYS)
-        if action == "primary" and phase_before == "chart_selected" and research.allow_model(session):
+        if (
+            action == "primary"
+            and phase_before == "chart_selected"
+            and research.allow_model(session)
+        ):
             command = (
                 "I approve formal execution of the reviewed research plan. Continue now: "
                 "run the registered physical model, create the selected plot from its actual "
@@ -221,48 +225,92 @@ def select_chart_click(box, chart_id):
 with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     turns_state = gr.State([])
     session_box = gr.State(None)
+    evaluation_cases = evals.demo_cases()
+    demo_buttons = []
 
     with gr.Column(elem_id="pe-app"):
         hero = gr.HTML(render.hero(), elem_classes=["pe-slot"])
 
-        with gr.Row(elem_classes=["stage"]):
-            with gr.Column(elem_id="pe-panel-chat", elem_classes=["pe-panel", "pe-panel--chat"]):
-                head_slot = gr.HTML(render.conversation_head(0), elem_classes=["pe-slot"])
-                with gr.Column(elem_id="pe-chat-scroll"):
-                    history_slot = gr.HTML(render.history([]), elem_classes=["pe-slot"])
-                    live_slot = gr.HTML(render.live("", ""), elem_classes=["pe-slot"])
-                with gr.Row(elem_classes=["composer__box"]):
-                    question = gr.Textbox(
-                        elem_id="pe-input",
-                        show_label=False,
-                        container=False,
-                        lines=3,
-                        placeholder=render.PLACEHOLDER,
+        with gr.Tabs(selected="evaluation", elem_id="pe-main-tabs") as main_tabs:
+            with gr.Tab("Evaluation", id="evaluation", elem_id="pe-evaluation-tab"):
+                with gr.Column(elem_id="pe-evaluation-page"):
+                    gr.HTML(evals.dashboard(), elem_classes=["pe-eval-slot"])
+                    gr.HTML(
+                        "<div class='eval-dashboard'><section "
+                        "class='eval-section eval-section--demos'>"
+                        "<div class='eval-section__head'><div><span class='eval-index'>02</span>"
+                        "<h2>Run a representative case</h2></div><p>Each button loads the "
+                        "exact evaluation prompt into the agent. Review it, then press Send.</p>"
+                        "</div></section></div>",
+                        elem_classes=["pe-eval-slot"],
                     )
-                    clear = gr.Button("Clear the session", elem_id="pe-clear")
-                    send = gr.Button("Send", variant="primary", elem_id="pe-send")
+                    with gr.Row(elem_classes=["eval-demo-grid"]):
+                        for case in evaluation_cases:
+                            with gr.Column(elem_classes=["eval-demo-cell"]):
+                                gr.HTML(evals.demo_card(case), elem_classes=["pe-eval-slot"])
+                                button = gr.Button(
+                                    "Try in Live Agent",
+                                    elem_classes=["eval-demo-button"],
+                                )
+                                demo_buttons.append((button, case["question"]))
+                    gr.HTML(evals.score_summary(), elem_classes=["pe-eval-slot"])
+                    gr.HTML(evals.score_details(), elem_classes=["pe-eval-slot"])
 
-            with gr.Column(elem_id="pe-panel-trace", elem_classes=["pe-panel", "pe-panel--trace"]):
-                with gr.Column(elem_id="pe-trace-stream"):
-                    trace_slot = gr.HTML(
-                        render.trace([], agent.new_state(), include_footer=False), elem_classes=["pe-slot"]
-                    )
-                    with gr.Column(elem_id="pe-approve"):
-                        approval_slot = gr.HTML(
-                            render.approval_bar(None), elem_classes=["pe-slot"]
+            with gr.Tab("Live Agent", id="agent", elem_id="pe-agent-tab"):
+                with gr.Row(elem_classes=["stage"]):
+                    with gr.Column(
+                        elem_id="pe-panel-chat",
+                        elem_classes=["pe-panel", "pe-panel--chat"],
+                    ):
+                        head_slot = gr.HTML(render.conversation_head(0), elem_classes=["pe-slot"])
+                        with gr.Column(elem_id="pe-chat-scroll"):
+                            history_slot = gr.HTML(render.history([]), elem_classes=["pe-slot"])
+                            live_slot = gr.HTML(render.live("", ""), elem_classes=["pe-slot"])
+                        with gr.Row(elem_classes=["composer__box"]):
+                            question = gr.Textbox(
+                                elem_id="pe-input",
+                                show_label=False,
+                                container=False,
+                                lines=3,
+                                placeholder=render.PLACEHOLDER,
+                            )
+                            clear = gr.Button("Clear the session", elem_id="pe-clear")
+                            send = gr.Button("Send", variant="primary", elem_id="pe-send")
+
+                    with gr.Column(
+                        elem_id="pe-panel-trace",
+                        elem_classes=["pe-panel", "pe-panel--trace"],
+                    ):
+                        with gr.Column(elem_id="pe-trace-stream"):
+                            trace_slot = gr.HTML(
+                                render.trace([], agent.new_state(), include_footer=False),
+                                elem_classes=["pe-slot"],
+                            )
+                            with gr.Column(elem_id="pe-approve"):
+                                approval_slot = gr.HTML(
+                                    render.approval_bar(None), elem_classes=["pe-slot"]
+                                )
+                                with gr.Row(elem_classes=["approve__row"]):
+                                    approve = gr.Button(
+                                        "Approve / Continue",
+                                        variant="primary",
+                                        elem_id="pe-approve-yes",
+                                    )
+                                    approve_all = gr.Button(
+                                        "Revise / Regenerate", elem_id="pe-approve-all"
+                                    )
+                                    decline = gr.Button("Pause", elem_id="pe-approve-no")
+                        trace_metrics_slot = gr.HTML(
+                            render.trace_metrics(agent.new_state()), elem_classes=["pe-slot"]
                         )
-                        with gr.Row(elem_classes=["approve__row"]):
-                            approve = gr.Button("Approve / Continue", variant="primary", elem_id="pe-approve-yes")
-                            approve_all = gr.Button("Revise / Regenerate", elem_id="pe-approve-all")
-                            decline = gr.Button("Pause", elem_id="pe-approve-no")
-                trace_metrics_slot = gr.HTML(
-                    render.trace_metrics(agent.new_state()), elem_classes=["pe-slot"]
-                )
 
-            with gr.Column(elem_id="pe-panel-evid", elem_classes=["pe-panel", "pe-panel--evid"]):
-                evidence_slot = gr.HTML(
-                    render.evidence({}, [], set(), set()), elem_classes=["pe-slot"]
-                )
+                    with gr.Column(
+                        elem_id="pe-panel-evid",
+                        elem_classes=["pe-panel", "pe-panel--evid"],
+                    ):
+                        evidence_slot = gr.HTML(
+                            render.evidence({}, [], set(), set()), elem_classes=["pe-slot"]
+                        )
 
         model_bridge = gr.Textbox(
             value=agent.default_model(), elem_id="pe-model-bridge", show_label=False,
@@ -297,6 +345,13 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     # twice.
     send.click(respond, inputs, outputs)
     clear.click(reset, [model_bridge], outputs)
+    for button, demo_question in demo_buttons:
+        button.click(
+            lambda text=demo_question: (text, gr.Tabs(selected="agent")),
+            inputs=None,
+            outputs=[question, main_tabs],
+            queue=False,
+        )
     chart_submit.click(
         select_chart_click,
         [session_box, chart_bridge],

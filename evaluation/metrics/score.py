@@ -169,7 +169,13 @@ def _run_spec(model_name, spec):
     if model is None:
         return None
     try:
-        return model.run({k: v for k, v in spec.items() if k != "model"})
+        resolved, _ = validation.resolve(
+            model.card, {k: v for k, v in spec.items() if k != "model"}
+        )
+        # Replay the call even when today's card classifies an old recorded spec as
+        # illegal. Legality is scored separately; this metric measures the numeric cost
+        # of the configuration the agent actually executed.
+        return model.run(resolved)
     except Exception:
         return None
 
