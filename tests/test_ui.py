@@ -1,7 +1,14 @@
 import re
+from pathlib import Path
 
 from physearth import agent, budget, knowledge
 from physearth.ui import render, theme
+
+
+def test_optimistic_ui_never_replaces_gradio_managed_html():
+    """Direct innerHTML writes detach streamed answer slots from Gradio updates."""
+    source = (Path(__file__).parents[1] / "assets" / "ui.js").read_text()
+    assert ".innerHTML =" not in source
 
 
 def test_answer_text_is_escaped_before_anything_else():
@@ -329,10 +336,11 @@ def test_chart_click_records_the_human_choice_without_an_llm_turn():
     research.approve_plan(box)
     research.pseudo_preview(box)
 
-    card, updated, cleared = app.select_chart_click(box, "curve")
+    card, evidence, updated, cleared = app.select_chart_click(box, "curve")
     assert updated["research"]["phase"] == "chart_selected"
     assert updated["research"]["selected_chart"]["id"] == "curve"
     assert "data-research-phase='chart_selected'" in card
+    assert "PSEUDO-DATA" not in evidence
     assert cleared == ""
 
 
@@ -407,11 +415,8 @@ def test_the_opening_hint_steps_aside_for_a_question_in_flight():
     assert "pane-empty" not in render.history([], pending=True)
 
 
-def test_the_optimistic_paint_covers_the_box_and_the_trace():
-    """The client paints the consequence of a click before the server answers. Whatever it
-    paints has to be a copy of what the server would have sent, or the two disagree for a
-    moment and the visitor sees a flicker."""
-    from physearth import session
+def test_the_optimistic_acknowledgement_leaves_output_slots_to_gradio():
+    """Client feedback must not detach streamed HTML components from Gradio."""
     from physearth.ui import theme
 
     js = theme.js()
@@ -421,12 +426,7 @@ def test_the_optimistic_paint_covers_the_box_and_the_trace():
     assert "setTimeout(function () {" in js
     assert 'box.value = ""' in js
 
-    # Clearing empties the transcript, the run trace and the approval bar at once.
-    assert ".pe-panel--trace .subpanel__scroll" in js
-    assert "TRACE_EMPTY" in js
-
-    empty_trace = render.trace([], agent.new_state("m", session.new_session("m")))
-    for phrase in ("Nothing has run yet",
-                   "Every model call, every tool call and every system refusal appears here"):
-        assert phrase in empty_trace, "the server no longer says this"
-        assert phrase.split(" refusal")[0] in js, "the client fake has drifted from the server"
+    # Transcript, trace and approval content are authoritative server outputs. Mutating
+    # their roots by hand makes later streamed frames invisible even though the run ends.
+    assert ".innerHTML =" not in js
+    assert "TRACE_EMPTY" not in js

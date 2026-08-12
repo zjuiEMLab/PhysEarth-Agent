@@ -242,6 +242,53 @@ def test_series_that_never_overlap_are_refused_rather_than_extrapolated():
     assert "do not overlap" in problems[0]
 
 
+def test_figure_quality_blocks_an_abrupt_internal_jump():
+    series = [
+        {
+            "label": "DMRT brightness temperature",
+            "x": [100, 150, 200, 250, 300, 350, 400, 450, 500],
+            "y": [90, 101, 112, 123, 134, 145, 156, 245, 248],
+            "x_name": "density_kg_m3",
+            "y_name": "tb_v",
+            "source": "model_run",
+            "origin": "test",
+            "handle": "res_test",
+            "units": {"density_kg_m3": "kg m-3", "tb_v": "K"},
+        }
+    ]
+    figure = plotting.render(
+        {"kind": "line+markers", "title": "stability check"}, series
+    )
+
+    review = plotting.review_quality({"kind": "line+markers"}, series, figure)
+
+    assert review["passed"] is False
+    assert any("abrupt adjacent jump" in issue for issue in review["issues"])
+
+
+def test_figure_quality_warns_but_does_not_fail_on_a_steep_endpoint():
+    series = [
+        {
+            "label": "angular brightness",
+            "x": [10, 20, 30, 40, 50, 60],
+            "y": [260.0, 260.2, 260.4, 260.6, 260.8, 257.0],
+            "x_name": "angle_deg",
+            "y_name": "tb_h",
+            "source": "model_run",
+            "origin": "test",
+            "handle": "res_endpoint",
+            "units": {"angle_deg": "degree", "tb_h": "K"},
+        }
+    ]
+    figure = plotting.render({"kind": "line", "title": "endpoint check"}, series)
+
+    review = plotting.review_quality({"kind": "line"}, series, figure)
+
+    assert review["passed"] is True
+    assert review["issues"] == []
+    assert any("endpoint behaviour" in warning for warning in review["warnings"])
+
+
 def test_the_tool_count_did_not_grow_for_either_increment():
     names = {s["function"]["name"] for s in tools.specs()}
     assert "compare" not in names

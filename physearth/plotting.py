@@ -327,6 +327,14 @@ def _draw(plt, spec, series, kind, preview=False):
     seen = {}
     model_styles = ("-", "--", "-.", ":")
     model_keys = []
+    categorical_singletons = bool(
+        not preview
+        and kind == "scatter"
+        and len(series) > 1
+        and all(len(item.get("x") or []) == 1 for item in series)
+        and len({item["x"][0] for item in series}) == 1
+    )
+    category_labels = []
     for index, item in enumerate(series):
         y_name = str(item.get("y_name") or "").lower()
         if y_name.endswith(("_v", "_vv", "_vv_db")):
@@ -350,12 +358,17 @@ def _draw(plt, spec, series, kind, preview=False):
             axes.plot([], [], style, color=colour, linewidth=1.8, label=item["label"])
             continue
         if kind == "scatter" or (kind == "line+markers" and item["source"] == "measured"):
+            plot_x = [index] if categorical_singletons else item["x"]
+            if categorical_singletons:
+                model_name = model_key.replace("SMRT ", "").replace(" coefficients", "")
+                quantity = str(item.get("y_name") or "").replace("_per_m", "")
+                category_labels.append("%s\n%s" % (model_name, quantity))
             axes.plot(
-                item["x"], item["y"], "*" if item["source"] == "measured" else "o",
+                plot_x, item["y"], "*" if item["source"] == "measured" else "o",
                 color=colour, markersize=5.0, label=item["label"]
             )
             if kind == "line+markers":
-                axes.plot(item["x"], item["y"], style, color=colour, linewidth=1.4, alpha=0.55)
+                axes.plot(plot_x, item["y"], style, color=colour, linewidth=1.4, alpha=0.55)
         else:
             axes.plot(
                 item["x"], item["y"], style, color=colour, linewidth=1.8,
@@ -396,10 +409,14 @@ def _draw(plt, spec, series, kind, preview=False):
     for side in ("left", "bottom"):
         axes.spines[side].set_color(LINE)
     axes.tick_params(colors=INK_MUTE, labelsize=7.5, length=3)
+    if categorical_singletons:
+        axes.set_xticks(list(range(len(category_labels))))
+        axes.set_xticklabels(category_labels, rotation=20, ha="right", fontsize=6.5)
+        axes.margins(x=0.08)
     if preview:
         axes.set_xticks([])
         axes.set_yticks([])
-    if len(series) > 1 or preview:
+    if (len(series) > 1 and not categorical_singletons) or preview:
         legend_options = {
             "fontsize": 7.0,
             "frameon": True,
@@ -481,6 +498,31 @@ def review_quality(spec, series, figure):
             warnings.append("%s x values are not monotonic" % label)
         if len(set(ys)) == 1:
             warnings.append("%s is constant; verify this is physically expected" % label)
+        if kind in ("line", "line+markers") and len(ys) >= 6:
+            deltas = [abs(ys[index + 1] - ys[index]) for index in range(len(ys) - 1)]
+            nonzero = sorted(value for value in deltas if value > 0)
+            if nonzero:
+                median_delta = nonzero[len(nonzero) // 2]
+                y_span = max(ys) - min(ys)
+                largest = max(deltas)
+                jump_index = deltas.index(largest)
+                if (
+                    y_span > 0
+                    and largest > 4.0 * median_delta
+                    and largest > 0.25 * y_span
+                ):
+                    message = (
+                        "%s has an abrupt adjacent jump between x=%s and x=%s"
+                        % (label, xs[jump_index], xs[jump_index + 1])
+                    )
+                    if jump_index in (0, len(deltas) - 1):
+                        warnings.append(
+                            message + "; endpoint behaviour should be noted in interpretation"
+                        )
+                    else:
+                        issues.append(
+                            message + "; inspect numerical stability or refine the sweep before interpretation"
+                        )
     if len(series) > 4:
         redraw_reasons.append("crowded legend with %d series" % len(series))
     if any(len(str(item.get("label") or "")) > 48 for item in series):

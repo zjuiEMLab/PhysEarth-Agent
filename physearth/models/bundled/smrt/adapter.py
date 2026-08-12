@@ -11,6 +11,55 @@ MICROSTRUCTURE_ARGS = {
     "sticky_hard_spheres": ("radius_m", "radius"),
 }
 
+DORT_DIAGONALIZATION_METHODS = (None, "shur", "shur_forcedtriu")
+
+
+def _is_dort_diagonalization_error(exc):
+    """Whether SMRT explicitly says DORT's eigensolver was numerically unstable."""
+    text = str(exc).lower()
+    return (
+        "diagonalization failed in dort" in text
+        or "eigen vectors are complex" in text
+        or "almost diagonal matrix" in text
+    )
+
+
+def _run_with_dort_recovery(values, sensor, snowpack):
+    """Retry numerical diagonalization without changing any physical parameter.
+
+    SMRT itself recommends Schur decomposition for the active-mode failure handled here.
+    These fallbacks change only the matrix algorithm.  Physical repairs such as changing
+    grain radius or stickiness must go back through human plan review instead.
+    """
+    from smrt import make_model
+
+    failures = []
+    for method in DORT_DIAGONALIZATION_METHODS:
+        options = {"n_max_stream": int(round(values["dort_streams"]))}
+        if method is not None:
+            options["diagonalization_method"] = method
+        try:
+            model = make_model(
+                values["electromagnetic_model"],
+                "dort",
+                rtsolver_options=options,
+            )
+            return model.run(sensor, snowpack), method, failures
+        except Exception as exc:
+            if not _is_dort_diagonalization_error(exc):
+                raise
+            failures.append(
+                {
+                    "method": method or "default",
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                }
+            )
+    raise RuntimeError(
+        "DORT numerical recovery exhausted after default, shur and "
+        "shur_forcedtriu diagonalization: %s" % failures[-1]["message"]
+    )
+
 
 def _ensure_smrt_importable():
     """Load SMRT without Numba on Python versions where its cached ufunc cannot load.
@@ -126,30 +175,31 @@ def _coefficients(spec, overrides=None):
 
 def run(spec):
     _ensure_smrt_importable()
-    from smrt import make_model
 
     coefficients_only = spec["output"] == "coefficients"
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        def model_for(values):
-            return make_model(
-                values["electromagnetic_model"],
-                "dort",
-                rtsolver_options={"n_max_stream": int(round(values["dort_streams"]))},
-            )
         swept = spec.get("sweep_parameter") or "none"
+        recoveries = []
 
         if swept == "none":
             if coefficients_only:
                 values = _coefficients(spec)
             else:
-                result = model_for(spec).run(_sensor(spec), _snowpack(spec))
+                result, method, failures = _run_with_dort_recovery(
+                    spec, _sensor(spec), _snowpack(spec)
+                )
+                if method is not None:
+                    recoveries.append(
+                        {"axis": None, "value": None, "method": method, "attempts": failures}
+                    )
                 values = _extract(result, spec["output"])
             return {
                 "axis": None,
                 "points": [{"index": 0, **values}],
                 "series": {key: [value] for key, value in values.items()},
+                "diagnostics": {"solver_recoveries": recoveries},
             }
 
         start = spec["sweep_start"]
@@ -167,9 +217,25 @@ def run(spec):
             else:
                 values_for_run = dict(spec)
                 values_for_run.update(override)
-                result = model_for(values_for_run).run(
-                    _sensor(spec, override), _snowpack(spec, override)
-                )
+                try:
+                    result, method, failures = _run_with_dort_recovery(
+                        values_for_run,
+                        _sensor(spec, override),
+                        _snowpack(spec, override),
+                    )
+                except RuntimeError as exc:
+                    raise RuntimeError(
+                        "SMRT sweep failed at %s=%s. %s" % (swept, value, exc)
+                    ) from exc
+                if method is not None:
+                    recoveries.append(
+                        {
+                            "axis": swept,
+                            "value": value,
+                            "method": method,
+                            "attempts": failures,
+                        }
+                    )
                 values = _extract(result, spec["output"])
             points.append({"index": index, swept: value, **values})
             for key, item in values.items():
@@ -179,4 +245,5 @@ def run(spec):
             "axis": {"name": swept, "values": axis_values},
             "points": points,
             "series": series,
+            "diagnostics": {"solver_recoveries": recoveries},
         }

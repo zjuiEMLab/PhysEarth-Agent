@@ -680,31 +680,95 @@ def research_plan(
     changes=None,
     note="",
     _session=None,
+    **supplemental_metadata,
 ):
     if _session is None:
         return research._fail("research_plan requires a session.")
+
+    def propose_with_recovery_draft():
+        draft = {
+            "question": question,
+            "objective": objective,
+            "hypothesis": hypothesis,
+            "steps": list(steps or []),
+            "parameters": dict(parameters or {}),
+            "runs": list(runs or []),
+            "charts": list(charts or []),
+            "success_criteria": list(success_criteria or []),
+            "assumptions": list(assumptions or []),
+            "limitations": list(limitations or []),
+            "quantities": list(quantities or []),
+            "controls": list(controls or []),
+            "metrics": list(metrics or []),
+            "diagnostics": list(diagnostics or []),
+            "stop_conditions": list(stop_conditions or []),
+            "baseline_run_id": baseline_run_id,
+        }
+        result = research.propose(
+            _session, question, objective, hypothesis, steps, parameters, runs, charts,
+            success_criteria, assumptions, limitations, quantities, controls, metrics,
+            diagnostics, stop_conditions, baseline_run_id,
+        )
+        if result.get("status") in ("success", "needs_input") and _session.get("research"):
+            if supplemental_metadata:
+                # Some OpenAI-compatible providers emit useful protocol annotations such
+                # as ``units`` or ``variables`` even when they are not part of the strict
+                # function schema.  They must not bypass validation, but neither should
+                # they crash an otherwise complete plan before validation starts.
+                _session["research"]["plan"]["supplemental_metadata"] = {
+                    str(key): value for key, value in supplemental_metadata.items()
+                }
+            _session.pop("research_draft", None)
+        else:
+            _session["research_draft"] = {
+                "proposal": draft,
+                "error": result.get("error") or result.get("summary"),
+                "data": dict(result.get("data") or {}),
+            }
+            result.setdefault("data", {})["recovery"] = (
+                "The rejected proposal is retained. Submit a corrected complete proposal; "
+                "research_plan(action='status') can retrieve its structured failure context."
+            )
+        return result
+
+    def status_with_draft():
+        if _session.get("research"):
+            return research.status(_session)
+        draft = _session.get("research_draft")
+        if draft:
+            return research._needs(
+                "No approved proposal exists yet; the most recent rejected draft and validation error are retained.",
+                {"phase": "draft_recovery", **draft},
+            )
+        return research.status(_session)
+
+    def revise_with_recovery_draft():
+        """Revise a rejected proposal without requiring an approved project first.
+
+        Providers commonly respond to a validation error with ``revise_plan``.  Before
+        approval there is no ``session['research']`` yet, so routing that action through
+        ``research.revise`` used to discard an otherwise complete retained proposal and
+        trigger repeated full-plan regeneration.  Merge the supplied fields into the
+        retained proposal and run the normal proposal validator again instead.
+        """
+        if _session.get("research"):
+            return research.revise(_session, changes, note)
+        retained = (_session.get("research_draft") or {}).get("proposal")
+        if not retained:
+            return research._fail("No LLM-authored research proposal exists yet.")
+        corrected = dict(retained)
+        supplied = dict(changes or {})
+        for key, value in supplied.items():
+            if key == "parameters" and isinstance(value, dict):
+                corrected[key] = {**dict(corrected.get(key) or {}), **value}
+            elif value is not None:
+                corrected[key] = value
+        return research_plan(action="propose", _session=_session, **corrected)
+
     handlers = {
-        "propose": lambda: research.propose(
-            _session,
-            question,
-            objective,
-            hypothesis,
-            steps,
-            parameters,
-            runs,
-            charts,
-            success_criteria,
-            assumptions,
-            limitations,
-            quantities,
-            controls,
-            metrics,
-            diagnostics,
-            stop_conditions,
-            baseline_run_id,
-        ),
-        "status": lambda: research.status(_session),
-        "revise_plan": lambda: research.revise(_session, changes, note),
+        "propose": propose_with_recovery_draft,
+        "status": status_with_draft,
+        "revise_plan": revise_with_recovery_draft,
         "preview": lambda: research.pseudo_preview(_session),
         "choose_chart": lambda: research.choose_chart(_session, chart_id),
         "complete": lambda: research.complete(_session),
@@ -716,6 +780,38 @@ def research_plan(
         return handler()
     except ValueError as exc:
         return research._fail(str(exc))
+
+
+def _model_failure(model, spec, exc):
+    """Turn opaque executor exceptions into recovery information for the workflow."""
+    message = str(exc)
+    lowered = message.lower()
+    data = {
+        "model": model,
+        "spec": spec,
+        "error_type": type(exc).__name__,
+        "error_code": "model_execution_error",
+        "recoverable": False,
+        "repair_hints": [],
+    }
+    if model == "smrt" and (
+        "diagonalization failed in dort" in lowered
+        or "dort numerical recovery exhausted" in lowered
+        or "eigen vectors are complex" in lowered
+    ):
+        data.update(
+            error_code="dort_diagonalization",
+            recoverable=True,
+            repair_hints=[
+                "The adapter already retried default, shur and shur_forcedtriu numerical diagonalization without changing the physics.",
+                "Create a new human-reviewed plan version before changing radius_m, stickiness, frequency, density range or angular sampling.",
+                "Keep successful runs and identify the exact failed sweep coordinate from the error before narrowing a range.",
+            ],
+        )
+    return _fail(
+        "%s raised %s: %s" % (model, type(exc).__name__, message),
+        data,
+    )
 
 
 def run_model(model, parameters=None, _owner=None, _switches=None, _session=None, **extra):
@@ -773,10 +869,7 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
             {"model": model, "spec": spec},
         )
     except Exception as exc:
-        return _fail(
-            "%s raised %s: %s" % (model, type(exc).__name__, exc),
-            {"model": model, "spec": spec},
-        )
+        return _model_failure(model, spec, exc)
     finally:
         executor.shutdown(wait=False)
     elapsed = time.perf_counter() - started
@@ -784,6 +877,7 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
     qc = validation.quality_control(entry.card, result)
     axis = result.get("axis")
     points = result.get("points") or []
+    diagnostics = result.get("diagnostics") or {}
     units = {name: item["unit"] for name, item in entry.card["outputs"].items()}
     handle = results.put(
         {
@@ -794,6 +888,7 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
             "series": result.get("series"),
             "points": points,
             "units": units,
+            "diagnostics": diagnostics,
         },
         _owner,
     )
@@ -804,6 +899,9 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
         " over %s" % axis["name"] if axis else "",
         "passed" if qc["passed"] else "FAILED",
     )
+    recovered = diagnostics.get("solver_recoveries") or []
+    if recovered:
+        summary += " DORT numerical recovery was used at %d point(s)." % len(recovered)
     return _ok(
         summary,
         {
@@ -819,6 +917,7 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
             "preview": results.preview(points),
             "units": units,
             "elapsed_s": round(elapsed, 3),
+            "diagnostics": diagnostics,
             "note": (
                 "The full arrays are held under handle %s and deliberately kept out of this "
                 "message. The preview is evenly spaced and always includes the first and last "
@@ -885,8 +984,8 @@ def run_planned_model(run_id, _owner=None, _switches=None, _session=None):
         _switches=_switches,
         _session=_session,
     )
+    result.setdefault("data", {})["planned_run_id"] = run_id
     if result.get("status") == "success":
-        result["data"]["planned_run_id"] = run_id
         result["data"]["reused"] = False
         result["summary"] = "Approved run %s: %s" % (run_id, result["summary"])
     return result

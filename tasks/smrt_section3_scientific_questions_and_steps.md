@@ -427,7 +427,7 @@ The references are used as design guidance, not as a claim that there is one uni
 
 ### Scientific question
 
-**Under what snow-density range do Rayleigh theory, IBA, and DMRT converge to the same first-order scattering behavior, and at what density do particle correlation and dense-medium effects cause their predictions to diverge?**
+Under what snow-density range do 1) Rayleigh theory, 2) DMRT-QCA-CP sticky and 3) DMRT-QCA-CP non-sticky hard sphere converge to the same first-order scattering behavior, and at what density do particle correlation and dense-medium effects cause their predictions to diverge?
 
 ### Key steps using SMRT
 
@@ -481,7 +481,7 @@ The references are used as design guidance, not as a claim that there is one uni
 
 1. **Reconstruct the common reference configuration**
    - Create a homogeneous snow layer approximately 200 m thick to represent a semi-infinite medium.
-   - Use a density of 300 kg m\(^{-3}\), temperature of 265 K, sphere radius of \(100\,\mu\text{m}\), and stickiness \(\tau=0.5\).
+   - Use a density of 300 kg m\(^{-3}\), temperature of 256 K, sphere radius of \(100\,\mu\text{m}\), and stickiness \(\tau=0.5\), matching Section 3.1.2 of the paper.
    - Use 37 GHz and incidence angles from approximately \(10^\circ\) to \(60^\circ\).
    - Match the substrate, atmosphere, dielectric model, and interface assumptions used in the reference models.
 

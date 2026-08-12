@@ -523,16 +523,38 @@ def approval_bar(session):
         repairs = plan.get("automatic_repairs") or []
         if repairs:
             scope_html += (
-                "<div class='approve__note'><b>Backend-safe repairs:</b> %s</div>"
+                "<div class='approve__note'><b>Proposed plan repairs — review required:</b> %s</div>"
                 % _e(
                     "; ".join(
                         "%s.%s: %s → %s (%s)"
                         % (
-                            item.get("chart_id"), item.get("field"), item.get("from"),
+                            item.get("chart_id") or item.get("run_id") or "plan",
+                            item.get("field"), item.get("from"),
                             item.get("to"), item.get("reason"),
                         )
                         for item in repairs
                     )
+                )
+            )
+        recovery = project.get("recovery") or {}
+        if recovery:
+            proposed = recovery.get("repairs") or []
+            scope_html += (
+                "<div class='approve__note approve__note--warning'>"
+                "<b>Recovery review required:</b> failed runs %s. %s</div>"
+                % (
+                    _e(", ".join(recovery.get("failed_run_ids") or []) or "unknown"),
+                    _e(
+                        "; ".join(
+                            "%s: %s %s → %s"
+                            % (
+                                item.get("run_id"), item.get("field"),
+                                item.get("from"), item.get("to"),
+                            )
+                            for item in proposed
+                        )
+                        or "No automatic physical change was applied; revise the plan in chat."
+                    ),
                 )
             )
         protocol_rows = "".join(

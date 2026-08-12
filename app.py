@@ -1,9 +1,13 @@
+import time
+
 import gradio as gr
 
-from physearth import agent, approval, config, diagnostics, evals, research
+from physearth import agent, approval, audit, config, diagnostics, evals, research
 from physearth.ui import render, theme
 
 config.load_dotenv()
+audit.configure()
+audit.runtime("service_initializing", state_dir=str(config.state_dir().resolve()))
 
 # Collected here, at import, so no visitor ever waits for five network probes on the
 # request path. Every later reader, including the evidence panel, shares this one result.
@@ -22,6 +26,8 @@ def _new_session(model_id):
     session = agent.new_session(model_id)
     approval.set_mode(session, approval.ASK)
     session["research_required"] = True
+    audit.bind(session)
+    audit.emit("session_created", session=session, research_required=True)
     return session
 
 
@@ -75,6 +81,7 @@ def respond(question, turns, box, model_id):
     question = (question or "").strip()
     turns = list(turns or [])
     session = _session(box, model_id)
+    audit.bind(session, ui_turn=len(turns) + 1)
     if not question:
         yield (
             gr.update(),
@@ -92,6 +99,13 @@ def respond(question, turns, box, model_id):
         return
 
     index = len(turns) + 1
+    audit.emit(
+        "ui_turn_submitted",
+        session=session,
+        ui_turn=index,
+        question=question,
+        archived_turns=len(turns),
+    )
     # A turn that died upstream produced no answer, only an apology. Replaying it as an
     # assistant message would teach the model that such text is a valid reply.
     seen = [
@@ -117,8 +131,21 @@ def respond(question, turns, box, model_id):
 
     answer, events, state = "", [], agent.new_state(model_id, session)
     evidence_key = _evidence_key(session)
+    logged_agent_events = 0
     try:
         for answer, events, state in agent.stream(question, seen, model_id, session):
+            # Gradio may resume a streaming generator in a fresh context, so ContextVar
+            # bindings made inside agent.stream are not guaranteed to reach every event.
+            # Mirror each newly visible trace event with an explicit session reference.
+            for event in events[logged_agent_events:]:
+                audit.emit(
+                    "agent_trace_event",
+                    session=session,
+                    ui_turn=index,
+                    trace_index=logged_agent_events + 1,
+                    agent_event=event,
+                )
+                logged_agent_events += 1
             running = state.get("phase") != "done"
             # The evidence panel is the most expensive thing on the page and the only one
             # holding scroll position, an open tab and decoded figure images. Pushing it
@@ -144,8 +171,31 @@ def respond(question, turns, box, model_id):
         answer = "The run failed: %s: %s" % (type(exc).__name__, exc)
         events = events or []
         state = state or agent.new_state(model_id, session)
+        failure = {
+            "kind": "harness_stop",
+            "at": time.strftime("%H:%M:%S"),
+            "rule": "unhandled_exception",
+            "reason": answer,
+        }
+        events.append(failure)
+        audit.exception("ui_turn_exception", exc, session=session, ui_turn=index)
 
     turns = turns + [_archive(index, state, events, question, answer)]
+    audit.emit(
+        "ui_turn_finished",
+        session=session,
+        ui_turn=index,
+        answer=answer,
+        event_count=len(events),
+        final_agent_event=(events[-1] if events else None),
+        state_phase=state.get("phase"),
+        counters={
+            "model_calls": state.get("model_calls", 0),
+            "tool_calls": state.get("tool_calls", 0),
+            "model_runs": state.get("model_runs", 0),
+            "interventions": state.get("interventions", 0),
+        },
+    )
     yield (
         render.hero(model_id, running=False, status="Idle - %d events last run" % len(events)),
         render.conversation_head(len(turns)),
@@ -167,6 +217,7 @@ def reset(model_id):
     """Clearing the conversation drops the evidence and the session budget with it. The
     hourly deployment quota is shared across visitors and deliberately survives."""
     session = _new_session(model_id)
+    audit.emit("ui_session_reset", session=session)
     return (
         render.hero(model_id, running=False, status="Idle"),
         render.conversation_head(0),
@@ -188,7 +239,17 @@ def review_click(box, action):
     command = ""
     if session and session.get("research"):
         phase_before = session["research"].get("phase")
-        research.review_action(session, action)
+        result = research.review_action(session, action)
+        audit.bind(session)
+        audit.emit(
+            "human_research_review",
+            session=session,
+            action=action,
+            phase_before=phase_before,
+            phase_after=session["research"].get("phase"),
+            result_status=(result or {}).get("status"),
+            result_summary=(result or {}).get("summary"),
+        )
         if research.allow_model(session):
             # Formal execution approval is the run approval. Do not ask a second time.
             approval.set_mode(session, approval.ALWAYS)
@@ -205,7 +266,10 @@ def review_click(box, action):
     else:
         decision = {"primary": "approve", "secondary": approval.ALWAYS, "pause": "reject"}[action]
         approval.decide(session, decision)
-    return render.approval_bar(session), session, command
+    # Review actions can create or remove pseudo figures.  Refresh evidence in the same
+    # click response; waiting for a later agent stream left the Figures badge at zero and
+    # made a valid preview look empty to the user.
+    return render.approval_bar(session), render.evidence(session), session, command
 
 
 def resume_after_review(command, turns, box, model_id):
@@ -218,8 +282,18 @@ def select_chart_click(box, chart_id):
     session = box if isinstance(box, dict) else None
     chart_id = str(chart_id or "").strip()
     if session and session.get("research") and chart_id:
-        research.choose_chart(session, chart_id)
-    return render.approval_bar(session), session, ""
+        result = research.choose_chart(session, chart_id)
+        audit.bind(session)
+        audit.emit(
+            "human_chart_selected",
+            session=session,
+            chart_id=chart_id,
+            result_status=result.get("status"),
+            result_summary=result.get("summary"),
+        )
+    # Selecting the final package clears pseudo figures, so evidence must be refreshed
+    # here as well rather than retaining stale preview cards until formal execution.
+    return render.approval_bar(session), render.evidence(session), session, ""
 
 
 with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
@@ -355,7 +429,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     chart_submit.click(
         select_chart_click,
         [session_box, chart_bridge],
-        [approval_slot, session_box, chart_bridge],
+        [approval_slot, evidence_slot, session_box, chart_bridge],
         concurrency_limit=None,
         queue=False,
     )
@@ -371,7 +445,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         review_event = button.click(
             lambda box, verdict=decision: review_click(box, verdict),
             [session_box],
-            [approval_slot, session_box, review_command],
+            [approval_slot, evidence_slot, session_box, review_command],
             concurrency_limit=None,
             queue=False,
         )
@@ -388,11 +462,20 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
 demo.queue(default_concurrency_limit=4)
 
 if __name__ == "__main__":
-    demo.launch(
-        server_name=config.get("PHYSEARTH_HOST"),
-        server_port=int(config.get("PHYSEARTH_PORT")),
-        css=theme.css(),
-        js=theme.js(),
-        head=theme.head(),
-        allowed_paths=[str(config.state_dir().resolve())],
-    )
+    try:
+        audit.runtime(
+            "service_launch",
+            host=config.get("PHYSEARTH_HOST"),
+            port=int(config.get("PHYSEARTH_PORT")),
+        )
+        demo.launch(
+            server_name=config.get("PHYSEARTH_HOST"),
+            server_port=int(config.get("PHYSEARTH_PORT")),
+            css=theme.css(),
+            js=theme.js(),
+            head=theme.head(),
+            allowed_paths=[str(config.state_dir().resolve())],
+        )
+    except Exception as exc:
+        audit.exception("service_crash", exc)
+        raise

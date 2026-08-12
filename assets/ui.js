@@ -526,13 +526,13 @@ function peBoot() {
     }
   });
 
-  /* ---------- answer the click before the server can ----------
+  /* ---------- acknowledge the click before the server can ----------
 
-     The server does 0.2 ms of work to build the first frame; everything the visitor
-     experiences as lag is the round trip to it. So the click paints its own consequence
-     immediately -- the running glow, the question in the transcript, the emptied box --
-     and the first real frame replaces that a moment later with the authoritative version.
-     Nothing here decides anything; it only shows sooner what is already going to happen. */
+     Only change UI state that is outside Gradio-managed output components here. Writing
+     innerHTML into a gr.HTML root destroys the DOM node that Gradio/Svelte owns. The run
+     then continues normally on the server, but later answer frames can no longer replace
+     the hand-written "Waiting for the first token" placeholder. The authoritative first
+     frame is fast enough to render the question and placeholder itself. */
 
   var pendingUntil = 0;
 
@@ -542,20 +542,6 @@ function peBoot() {
     if (!text) return;
     pendingUntil = Date.now() + 20000;
     document.body.classList.add("is-reasoning");
-    var live = document.querySelector("#pe-chat-scroll .pe-slot:last-child");
-    if (live) {
-      live.innerHTML =
-        "<div class='msg-group'><div class='msg msg--user'><div class='msg__head'>" +
-        "<span class='msg__who'>you</span><span class='msg__rule'></span></div>" +
-        "<div class='msg__body'>" + escapeHtml(text) + "</div></div>" +
-        "<div class='msg msg--agent'><div class='msg__head'>" +
-        "<span class='msg__who'>physearth</span><span class='msg__rule'></span></div>" +
-        "<div class='msg__body'><p class='hint'>Waiting for the first token.</p>" +
-        "<span class='caret'></span></div></div></div>";
-    }
-    var hint = document.querySelector("#pe-chat-scroll .pane-empty");
-    if (hint && hint.parentNode) hint.parentNode.removeChild(hint);
-    autoScroll();
 
     /* Empty the box on the next turn of the event loop, not now. Gradio reads the value
        during its own bubble-phase handler for this same click; clearing it here, in the
@@ -569,35 +555,11 @@ function peBoot() {
     }, 0);
   }
 
-  var TRACE_EMPTY =
-    "<div class='pane-empty'><div class='pane-empty__title'>Nothing has run yet</div>" +
-    "<div class='pane-empty__hint'>Every model call, every tool call and every system " +
-    "refusal appears here as it happens.</div></div>";
-
   function optimisticClear() {
     pendingUntil = 0;
     document.body.classList.remove("is-reasoning");
-    var slots = document.querySelectorAll("#pe-chat-scroll .pe-slot");
-    for (var i = 0; i < slots.length; i++) slots[i].innerHTML = "<div class='msg-group'></div>";
-    /* The run trace is the panel the visitor is watching, so it has to empty with the
-       conversation rather than a round trip later. Its meters keep their last values for
-       that moment; the frame coming back replaces the whole panel. */
-    var trace = document.querySelector(".pe-panel--trace .subpanel__scroll");
-    if (trace) trace.innerHTML = TRACE_EMPTY;
-    var approve = document.querySelector(".approve");
-    if (approve) approve.setAttribute("hidden", "");
     var box = textarea();
     if (box) box.value = "";
-  }
-
-  function escapeHtml(value) {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;")
-      .replace(/\n/g, "<br>");
   }
 
   function syncResearchControls() {
