@@ -568,7 +568,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 for chunk in chunks:
                     if candidate.feed(chunk) and candidate.content:
-                        yield transcript(segments, candidate.content), events, state
+                        # Keep the authoritative answer in sync with the streamed frame.
+                        # Several lifecycle events are yielded immediately after streaming
+                        # finishes (model_call, tool_start, validation gates).  If ``answer``
+                        # still contains the previous block, those frames briefly replace the
+                        # visible response with stale or empty text before it comes back on the
+                        # next token, which looks like the Conversation panel is flashing.
+                        answer = transcript(segments, candidate.content)
+                        yield answer, events, state
             except Exception as exc:
                 last_fault = _fault(exc)
                 last_upstream = _upstream_text(exc)

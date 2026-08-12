@@ -11,6 +11,37 @@ def test_optimistic_ui_never_replaces_gradio_managed_html():
     assert ".innerHTML =" not in source
 
 
+def test_trace_cards_do_not_replay_an_entry_animation_on_every_gradio_frame():
+    """The entire trace subtree is replaced; :last-child animation would keep restarting."""
+    source = (Path(__file__).parents[1] / "assets" / "ui.css").read_text()
+    assert ".step-card:last-child {\n  animation:" not in source
+
+
+def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypatch):
+    """A tool lifecycle event must not remount the unchanged streamed transcript."""
+    import app
+    from physearth import session as session_state
+
+    box = session_state.new_session(agent.default_model())
+    state = session_state.new_state(box)
+    state["phase"] = "calling_model"
+    first_events = []
+    second_events = [{"kind": "model_call", "at": "00:00:00", "index": 1}]
+
+    def fake_stream(*_args, **_kwargs):
+        yield "stable answer", first_events, state
+        yield "stable answer", second_events, state
+
+    monkeypatch.setattr(app.agent, "stream", fake_stream)
+    frames = list(app.respond("question", [], box, agent.default_model()))
+
+    # Frame 1 is the initial pending layout; frame 2 adds the transcript.  Frame 3 only
+    # adds a trace event, so its Conversation output must be Gradio's no-op update.
+    assert "stable answer" in frames[1][3]
+    assert frames[2][3].get("__type__") == "update"
+    assert "MODEL CALL" in frames[2][4]
+
+
 def test_answer_text_is_escaped_before_anything_else():
     out = render.answer_html("<script>alert(1)</script> and <img onerror=x>")
     assert "<script>" not in out

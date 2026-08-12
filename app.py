@@ -131,6 +131,16 @@ def respond(question, turns, box, model_id):
 
     answer, events, state = "", [], agent.new_state(model_id, session)
     evidence_key = _evidence_key(session)
+    # Gradio replaces the complete subtree of every HTML output it receives.  A model token
+    # changes Conversation, while a tool lifecycle event changes Trace; sending both trees on
+    # every frame made unchanged content disappear and reappear dozens of times per second.
+    # Remember the authoritative HTML already on screen and update each panel independently.
+    live_html = render.live(question, "", running=True)
+    trace_html = render.trace(
+        [], agent.new_state(model_id, session), running=True, include_footer=False
+    )
+    metrics_html = render.trace_metrics(agent.new_state(model_id, session))
+    approval_html = render.approval_bar(session)
     logged_agent_events = 0
     try:
         for answer, events, state in agent.stream(question, seen, model_id, session):
@@ -154,15 +164,31 @@ def respond(question, turns, box, model_id):
             key = _evidence_key(session)
             changed = key != evidence_key
             evidence_key = key
+            next_live = render.live(question, answer, running=running)
+            next_trace = render.trace(
+                events, state, running=running, include_footer=False
+            )
+            next_metrics = render.trace_metrics(state)
+            next_approval = render.approval_bar(session)
+            live_update = next_live if next_live != live_html else gr.update()
+            trace_update = next_trace if next_trace != trace_html else gr.update()
+            metrics_update = next_metrics if next_metrics != metrics_html else gr.update()
+            approval_update = (
+                next_approval if next_approval != approval_html else gr.update()
+            )
+            live_html = next_live
+            trace_html = next_trace
+            metrics_html = next_metrics
+            approval_html = next_approval
             yield (
                 gr.update(),
                 gr.update(),
                 gr.update(),
-                render.live(question, answer, running=running),
-                render.trace(events, state, running=running, include_footer=False),
-                render.trace_metrics(state),
+                live_update,
+                trace_update,
+                metrics_update,
                 render.evidence(session) if changed else gr.update(),
-                render.approval_bar(session),
+                approval_update,
                 gr.update(),
                 session,
                 gr.update(),
