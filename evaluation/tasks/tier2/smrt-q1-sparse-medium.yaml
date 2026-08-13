@@ -1,0 +1,52 @@
+id: t1-smrt-fig4-passive
+suite: tier2
+tier: 2
+legacy_id: t1-smrt-fig4-passive
+evaluation_kind: scientific_question_demo
+figure_target: none
+title: SMRT scientific question 1, sparse-medium approximation
+source:
+  document: tasks/smrt_section3_scientific_questions_and_steps.md
+  section: "3.1.1"
+  paper: smrt-v1
+  doi: 10.5194/gmd-11-2763-2018
+quality: complete
+shape: research_demo
+observable: scattering_coefficient
+models: [smrt]
+question: >-
+  Use the SMRT Section 3 scientific-question demo on the sparse-medium approximation. Do not
+  regenerate a paper figure. Instead, translate the question into a small, executable pilot
+  and explain what would be required for the full study. The scientific question is: under
+  what snow-density range do Rayleigh theory, DMRT-QCA-CP with sticky hard spheres, and
+  DMRT-QCA-CP with non-sticky hard spheres converge to the same first-order scattering
+  behavior, and at what density do particle correlation and dense-medium effects cause their
+  predictions to diverge? Use 37 GHz and a 100 micrometre ice-sphere radius. Start with a
+  small density pilot, compare legal SMRT configurations, report the scattering coefficient
+  and finite-output checks, and state which conclusions are only hypotheses until the full
+  density sweep is run.
+demo:
+  source_question: >-
+    Under what snow-density range do Rayleigh theory, DMRT-QCA-CP sticky and DMRT-QCA-CP
+    non-sticky hard sphere converge to the same first-order scattering behavior, and when do
+    particle-correlation and dense-medium effects cause divergence?
+  fixed_parameters:
+    frequency_ghz: 37.0
+    radius_m: 0.0001
+  pilot:
+    density_kg_m3: [1.0, 25.0, 50.0, 75.0, 96.0]
+    output: ks
+    comparison: legal_theory_and_microstructure_configurations
+  expected_outputs:
+    - scattering coefficient against density
+    - low-density agreement or disagreement with the Rayleigh reference
+    - finite-value and unit checks
+    - explicit distinction between observed pilot behavior and full-sweep claims
+  required_behaviors:
+    - read and cite the source section before fixing paper parameters
+    - compare only combinations declared legal by the SMRT model card
+    - preserve failed or unsupported configurations instead of silently dropping them
+    - do not claim a breakdown density from the five-point pilot alone
+  limitations:
+    - this task is a scientific-question demo, not a digitized paper-figure reproduction
+    - the pilot does not establish the full validity range or causal attribution

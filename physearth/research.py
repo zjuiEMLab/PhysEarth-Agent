@@ -5,6 +5,7 @@ enters this module only after the language model has analysed the user's questio
 submitted a structured proposal through the research_plan tool.
 """
 
+import copy
 import math
 import re
 
@@ -380,46 +381,74 @@ def status(session):
 
 def revise(session, changes=None, note=""):
     project = _require(session)
-    changes = changes or {}
-    plan = project["plan"]
+    changes = dict(changes or {})
+    plan = copy.deepcopy(project["plan"])
+    known_fields = {
+        "objective", "hypothesis", "steps", "charts", "runs", "parameters",
+        "quantities", "controls", "metrics", "diagnostics", "success_criteria",
+        "stop_conditions", "assumptions", "limitations", "baseline_run_id",
+    }
     for key in ("objective", "hypothesis"):
-        if changes.get(key):
+        if key in changes and changes[key] is not None:
             plan[key] = str(changes[key]).strip()
             if key == "objective":
                 plan["title"] = plan[key]
     if isinstance(changes.get("parameters"), dict):
-        plan["parameters"].update(changes["parameters"])
-    # Also accept parameter keys directly for concise model tool calls.
+        plan.setdefault("parameters", {}).update(changes["parameters"])
+    # Also accept parameter keys directly for concise model tool calls. Explicit plan
+    # fields remain reserved, so they cannot be confused with model parameters.
     for key, value in changes.items():
-        if key not in ("objective", "hypothesis", "steps", "charts", "runs", "parameters", "quantities", "controls", "metrics", "diagnostics", "success_criteria", "stop_conditions", "assumptions", "limitations", "baseline_run_id"):
-            plan["parameters"][key] = value
-    if changes.get("steps"):
+        if key not in known_fields and key not in {"note", "reason"}:
+            plan.setdefault("parameters", {})[key] = value
+    if "steps" in changes and changes["steps"] is not None:
         plan["steps"] = _clean_list(changes["steps"])
-    if changes.get("charts"):
+    if "charts" in changes and changes["charts"] is not None:
         charts = _clean_charts(changes["charts"])
-        if charts:
-            plan["charts"] = charts
-    if changes.get("runs"):
-        runs, problems, _repairs = _clean_runs(changes["runs"])
+        if not charts:
+            raise ValueError("A revised plan requires at least one chart option.")
+        plan["charts"] = charts
+    if "runs" in changes and changes["runs"] is not None:
+        runs, problems, repairs = _clean_runs(changes["runs"])
         if problems or not runs:
             raise ValueError("Invalid revised runs: %s" % "; ".join(problems or ["none supplied"]))
         plan["runs"] = runs
+        if repairs:
+            plan.setdefault("automatic_repairs", []).extend(
+                {"run_id": repair.get("run_id"), **{k: v for k, v in repair.items() if k != "run_id"}}
+                for repair in repairs
+            )
     for key in ("quantities", "controls", "metrics", "diagnostics", "success_criteria", "stop_conditions", "assumptions", "limitations"):
-        if changes.get(key):
+        if key in changes and changes[key] is not None:
             plan[key] = _clean_list(changes[key], 12)
-    if changes.get("baseline_run_id"):
+    if "baseline_run_id" in changes and changes["baseline_run_id"] is not None:
         wanted = str(changes["baseline_run_id"]).strip()
         if wanted not in [run["id"] for run in plan.get("runs") or []]:
             raise ValueError("baseline_run_id must name a planned run")
         plan["baseline_run_id"] = wanted
+    chart_problems = _validate_chart_runs(plan.get("charts") or [], plan.get("runs") or [])
+    if chart_problems:
+        raise ValueError(
+            "The revised chart cannot be produced by the planned runs: %s"
+            % "; ".join(chart_problems)
+        )
+    if not plan.get("objective") or not plan.get("hypothesis"):
+        raise ValueError("A revised plan must keep both an objective and a hypothesis.")
+    if not plan.get("steps") or len(plan["steps"]) < 3:
+        raise ValueError("A revised plan requires at least three executable research steps.")
     project["plan_version"] += 1
+    project["plan"] = plan
     project["review_log"].append(
-        {"version": project["plan_version"], "note": note or "user-requested revision", "changes": changes}
+        {
+            "version": project["plan_version"],
+            "note": note or changes.get("reason") or "user-requested revision",
+            "changes": changes,
+        }
     )
     project["phase"] = "plan_review"
     project["selected_chart"] = None
     project["selected_charts"] = []
     project["pseudo"] = None
+    _clear_previews(session)
     return _needs("Plan revised to v%03d. Review it again." % project["plan_version"], _public(project))
 
 
@@ -789,7 +818,10 @@ def approve_plan(session):
     if project["phase"] != "plan_review":
         return _fail("The plan cannot be approved in phase %s." % project["phase"])
     project["phase"] = "plan_approved"
-    return _needs("Plan approved. Generate a pseudo-data chart preview next.", _public(project))
+    return _needs(
+        "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next.",
+        _public(project),
+    )
 
 
 def pseudo_preview(session):
@@ -882,7 +914,7 @@ def pseudo_preview(session):
                 row["%s_%s" % (series_index + 1, item["y_name"])] = item["y"][index]
             points.append(row)
     project["pseudo"] = {
-        "label": "PSEUDO-DATA — layout demonstration only · preview v%03d" % preview_version,
+        "label": "PSEUDO-DATA - layout demonstration only - preview v%03d" % preview_version,
         "points": points,
     }
     session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
@@ -894,7 +926,7 @@ def pseudo_preview(session):
         None,
     )
     return _needs(
-        "Pseudo-data preview v%03d is ready. Ask the user which chart design to use."
+        "Pseudo-data preview v%03d is ready for layout review only. It is not model output and must not support a scientific conclusion. Confirm the figure package, or revise the plan in chat."
         % preview_version,
         _public(project),
     )
@@ -967,7 +999,7 @@ def choose_chart(session, chart_id):
         project["phase"] = "chart_selected"
         _clear_previews(session)
         return _needs(
-            "%d required chart(s) confirmed. Ask the user to approve formal execution."
+            "%d required chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution of the real runs."
             % len(project["selected_charts"]),
             _public(project),
         )
@@ -986,7 +1018,7 @@ def confirm_charts(session):
     project["phase"] = "chart_selected"
     _clear_previews(session)
     return _needs(
-        "%d chart(s) confirmed. Ask the user to approve formal execution."
+        "%d chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution."
         % len(project["selected_charts"]),
         _public(project),
     )
@@ -998,7 +1030,10 @@ def approve_execution(session):
         return _needs("Select a chart after the pseudo-data preview first.", _public(project))
     project["phase"] = "approved"
     _clear_previews(session)
-    return _ok("Formal execution approved. The agent may now call registered physical models.", _public(project))
+    return _ok(
+        "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs.",
+        _public(project),
+    )
 
 
 def _clear_previews(session):
@@ -1656,8 +1691,14 @@ def review_action(session, choice):
             return confirm_charts(session)
     if choice == "secondary":
         if phase == "pseudo_preview":
-            return pseudo_preview(session)
-        return _needs("Describe the requested revision in Conversation so the agent can update the plan.", _public(project))
+            return _needs(
+                "To change the pseudo-data axes, range, variables, or figure design, describe the requested plan revision in Conversation. The next revision becomes a new plan version and returns to plan review. To redraw the same layout only, ask the agent to regenerate the preview.",
+                _public(project),
+            )
+        return _needs(
+            "Describe the requested revision in Conversation. The agent will update the plan, create a new version, clear any preview, and return it to plan review.",
+            _public(project),
+        )
     if choice == "pause":
         project["review_log"].append(
             {"version": project["plan_version"], "note": "user paused at %s" % phase, "changes": {}}

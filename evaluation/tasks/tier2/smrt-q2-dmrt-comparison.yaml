@@ -1,0 +1,55 @@
+id: t1-smrt-fig4-active
+suite: tier2
+tier: 2
+legacy_id: t1-smrt-fig4-active
+evaluation_kind: scientific_question_demo
+figure_target: none
+title: SMRT scientific question 2, comparison with DMRT-based models
+source:
+  document: tasks/smrt_section3_scientific_questions_and_steps.md
+  section: "3.1.2"
+  paper: smrt-v1
+  doi: 10.5194/gmd-11-2763-2018
+quality: complete
+shape: research_demo
+observable: passive_and_active
+models: [smrt]
+question: >-
+  Use the SMRT Section 3 scientific-question demo on comparison with DMRT-based models. Do
+  not regenerate a paper figure or substitute one SMRT configuration for DMRT-ML or DMRT-QMS.
+  Demonstrate a small, executable pilot under the common reference conditions and clearly
+  separate what can be run locally from what remains an external dependency. The scientific
+  question is: can SMRT reproduce the passive brightness temperatures and active backscatter
+  predicted by DMRT-ML and DMRT-QMS under identical snow and observation conditions, and can
+  remaining discrepancies be attributed to electromagnetic formulation, short-range
+  approximation, or radiative-transfer solver? Use a 300 kg/m3 snowpack, 256 K, 100
+  micrometre radius, stickiness 0.5, 37 GHz, and a few incidence angles for the pilot.
+demo:
+  source_question: >-
+    Can SMRT reproduce the passive and active observables of DMRT-ML and DMRT-QMS under
+    identical conditions, and what component could explain any discrepancy?
+  fixed_parameters:
+    frequency_ghz: 37.0
+    density_kg_m3: 300.0
+    temperature_k: 256.0
+    radius_m: 0.0001
+    stickiness: 0.5
+  pilot:
+    angle_deg: [10.0, 35.0, 60.0]
+    observables: [tb_v, tb_h, sigma_vv_db, sigma_hh_db]
+    local_configurations:
+      - dmrt_qcacp_shortrange
+      - dmrt_qca_shortrange
+  expected_outputs:
+    - local SMRT passive and active pilot outputs where supported
+    - a capability check for DMRT-ML and DMRT-QMS
+    - coefficient-level and solver-level comparison plan
+    - explicit partial or blocked status when an external reference model is unavailable
+  required_behaviors:
+    - do not label two SMRT configurations as independent DMRT implementations
+    - do not infer attribution from a curve difference without controlled inputs
+    - preserve native angle grids, units, polarization, and unsupported outputs
+    - report what would be needed for the full cross-model comparison
+  limitations:
+    - this task is a scientific-question demo, not a digitized paper-figure reproduction
+    - DMRT-ML and DMRT-QMS are not assumed to be registered local models

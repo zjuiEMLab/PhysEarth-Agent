@@ -311,7 +311,10 @@ RESEARCH_PLAN_SPEC = {
             "templates exist. The user must review or revise the plan, inspect pseudo-data, choose "
             "a chart, and approve formal execution. Approval actions are deliberately unavailable "
             "to the language model and are recorded only by the human UI. Pseudo-data are display "
-            "demonstrations only."
+            "demonstrations only, never scientific evidence. When the user requests a revision, "
+            "call action=revise_plan with changes that update every affected run and chart, not "
+            "only the pseudo-preview labels; the backend creates a new plan version and returns "
+            "to human plan review."
         ),
         "parameters": {
             "type": "object",
@@ -383,7 +386,14 @@ RESEARCH_PLAN_SPEC = {
                 "limitations": {"type": "array", "items": {"type": "string"}},
                 "chart_id": {"type": "string"},
                 "note": {"type": "string"},
-                "changes": {"type": "object", "description": "User-requested parameter or step changes."},
+                "changes": {
+                    "type": "object",
+                    "description": (
+                        "User-requested plan changes. Include complete affected runs and charts "
+                        "when changing a sweep, output, axis, or figure; do not edit pseudo-data "
+                        "as if it were a model result."
+                    ),
+                },
             },
             "required": ["action"],
         },

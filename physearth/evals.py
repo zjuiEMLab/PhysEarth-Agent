@@ -16,49 +16,11 @@ TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
 
-DEMO_CASES = (
-    (
-        "t1-smrt-fig4-passive",
-        "PAPER REPRODUCTION",
-        "Reproduce SMRT Figure 4a",
-        "Find the paper configuration, run the physical model, and return a cited curve.",
-        "A 37 GHz brightness-temperature sweep with the paper-stated snow properties.",
-    ),
-    (
-        "t1-smrt-fig4-active",
-        "PAPER REPRODUCTION",
-        "Reproduce SMRT Figure 4b",
-        "Switch the observable to active backscatter while preserving the source configuration.",
-        "A co-polarised backscatter sweep with traceable literature and model evidence.",
-    ),
-    (
-        "p-smrt-density-above-ice",
-        "PHYSICAL REFUSAL",
-        "Reject impossible snow density",
-        "Tests whether a plausible-looking but physically impossible request reaches a model.",
-        "No model execution; the answer should identify the 917 kg/m3 physical limit.",
-    ),
-    (
-        "p-smrt-dmrt-with-exponential-acf",
-        "LEGAL COMBINATION",
-        "Catch an invalid theory pairing",
-        "Every parameter is individually legal, but the theory and microstructure are not.",
-        "The agent should explain that DMRT requires a sticky-hard-sphere representation.",
-    ),
-    (
-        "p-two-models-not-comparable",
-        "COMPARABILITY",
-        "Refuse a false sensitivity ranking",
-        "Contrasts kelvin and decibels to test whether the agent invents a common scale.",
-        "The agent should name the unit mismatch before claiming which model is sensitive.",
-    ),
-    (
-        "p-tvc-ku-model-versus-measurement",
-        "MODEL + MEASUREMENT",
-        "Compare simulation with field data",
-        "Puts measured Ku-band backscatter and a SMRT result in the same figure.",
-        "Observed and simulated series should remain visually and textually distinct.",
-    ),
+REPRESENTATIVE_TASK_IDS = (
+    "t1-smrt-fig4-passive",
+    "t1-smrt-fig4-active",
+    "t1-smrt-fig5-iba-shs",
+    "t1-smrt-fig6-memls-iba",
 )
 
 
@@ -104,6 +66,8 @@ def snapshot():
     """Recompute the displayed metrics from raw records, just like REPORT.md."""
     tier0_path = RESULTS / "tier0.json"
     tier0 = json.loads(tier0_path.read_text(encoding="utf-8")) if tier0_path.is_file() else None
+    registry_path = RESULTS / "registry_contract.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8")) if registry_path.is_file() else None
     tasks = {task["id"]: task for suite in ("tier2", "probe") for task in _load_tasks(suite)}
     run_paths = sorted((RESULTS / "runs").glob("*.json"))
     runs = [json.loads(path.read_text(encoding="utf-8")) for path in run_paths]
@@ -114,6 +78,7 @@ def snapshot():
     ]
     return {
         "tier0": tier0,
+        "registry": registry,
         "tasks": tasks,
         "runs": runs,
         "scored": scored,
@@ -126,15 +91,24 @@ def snapshot():
 def demo_cases():
     tasks = snapshot()["tasks"]
     cases = []
-    for task_id, eyebrow, title, summary, expected in DEMO_CASES:
+    for task_id in REPRESENTATIVE_TASK_IDS:
         task = tasks[task_id]
+        source = task.get("source") or {}
+        demo = task.get("demo") or {}
+        expected_outputs = demo.get("expected_outputs") or []
         cases.append(
             {
                 "id": task_id,
-                "eyebrow": eyebrow,
-                "title": title,
-                "summary": summary,
-                "expected": expected,
+                "eyebrow": "SCIENTIFIC QUESTION DEMO · SECTION %s"
+                % source.get("section", "3"),
+                "title": task.get("title", task_id),
+                "summary": demo.get("source_question") or task["question"],
+                "expected": "; ".join(expected_outputs[:2])
+                or "A bounded pilot with explicit limitations.",
+                "pilot": demo.get("pilot") or {},
+                # Keep the evaluation prompt for scoring, but expose the source
+                # question separately for the public Live Agent prefill.
+                "live_question": demo.get("source_question") or task["question"],
                 "question": task["question"],
             }
         )
@@ -146,8 +120,16 @@ def demo_card(case):
         "<article class='eval-demo-card'>"
         "<div class='eval-demo-card__eyebrow'>%s</div>"
         "<h3>%s</h3><p>%s</p>"
+        "<div class='eval-demo-card__pilot'><span>PILOT</span>%s</div>"
         "<div class='eval-demo-card__expect'><span>EXPECTED</span>%s</div>"
-        "</article>" % tuple(_e(case[key]) for key in ("eyebrow", "title", "summary", "expected"))
+        "</article>"
+        % (
+            _e(case["eyebrow"]),
+            _e(case["title"]),
+            _e(case["summary"]),
+            _e(json.dumps(case["pilot"], ensure_ascii=False, sort_keys=True)),
+            _e(case["expected"]),
+        )
     )
 
 
@@ -377,59 +359,63 @@ def dashboard():
     )
 
 
+def _scientific_question_table():
+    rows = []
+    for case in demo_cases():
+        rows.append(
+            [
+                case["id"],
+                case["title"],
+                "Not executed",
+                "No fixed-figure score; pilot evidence will be recorded after execution.",
+            ]
+        )
+    return _table(["Task", "Scientific question", "Status", "Public result rule"], rows)
+
+
 def score_summary():
-    """The compact, decision-useful scorecard shown after the runnable cases."""
+    """Show completed deterministic evidence and the current Tier 2 status."""
     data = snapshot()
     tier0 = data["tier0"] or {"n_passed": 0, "n_tasks": 0, "n_checks": 0, "records": []}
+    registry = data["registry"] or {"n_models": 0, "n_passed": 0}
     passed_checks = sum(
         1 for record in tier0["records"] for check in record["checks"] if check["passed"]
-    )
-    full = [item for item in data["scored"] if item["config"] == "full"]
-    citation_rate = _mean([item["citations"]["resolved_fraction"] for item in full])
-    self_correction = _fraction([item["self_corrected"] for item in full])
-    provenance = "Builds %s | Models %s | %d repeat(s)" % (
-        ", ".join(data["builds"]),
-        ", ".join(data["models"]),
-        len(data["repeats"]),
     )
     return (
         "<div class='eval-dashboard'>"
         "<section class='eval-section eval-section--scores'>"
         "<div class='eval-section__head'><div><span class='eval-index'>03</span>"
         "<h2>What the evaluation shows</h2></div>"
-        "<p>Recorded evidence, recomputed from raw runs by the same independent scorer.</p>"
-        "</div><div class='eval-provenance'>%s</div>"
+        "<p>Completed registration evidence is shown separately from the four scientific-question "
+        "demos, which have not been executed yet.</p>"
+        "</div>"
         "<section class='eval-kpis'>"
+        "<article><strong>%d / %d</strong><span>registered models</span>"
+        "<small>contract checks</small></article>"
         "<article><strong>%d / %d</strong><span>deterministic tasks</span>"
-        "<small>physical regression net</small></article>"
+        "<small>adapter checks</small></article>"
         "<article><strong>%d / %d</strong><span>deterministic checks</span>"
         "<small>no language model</small></article>"
-        "<article><strong>%d</strong><span>recorded agent runs</span>"
-        "<small>%d tasks x %d configurations</small></article>"
-        "<article><strong>%s</strong><span>citations resolve</span>"
-        "<small>full configuration</small></article>"
-        "<article><strong>%s</strong><span>self-corrected</span>"
-        "<small>after a refused call</small></article>"
+        "<article><strong>0</strong><span>LLM calls</span>"
+        "<small>registration evaluation</small></article>"
+        "<article><strong>NOT EXECUTED</strong><span>scientific-question demos</span>"
+        "<small>four SMRT pilots</small></article>"
         "</section></section>"
         "<section class='eval-section eval-section--ablation'><div class='eval-section__head'>"
-        "<div><span class='eval-subindex'>ABLATION</span>"
-        "<h2>Remove a safeguard; measure the cost</h2></div>"
-        "<p>The four variants are judged by the same scorer, never by their own "
-        "runtime verdict.</p>"
+        "<div><span class='eval-subindex'>PAPER-GROUNDED DEMOS</span>"
+        "<h2>Four SMRT scientific questions</h2></div>"
+        "<p>These cases assess research planning, legal execution, source linkage, pilot "
+        "diagnostics, and limitation reporting. They do not regenerate fixed paper figures.</p>"
         "</div>%s</section>"
         "</div>"
         % (
-            _e(provenance),
+            registry["n_passed"],
+            registry["n_models"],
             tier0["n_passed"],
             tier0["n_tasks"],
             passed_checks,
             tier0["n_checks"],
-            len(data["scored"]),
-            len({item["task"] for item in data["scored"]}),
-            len({item["config"] for item in data["scored"]}),
-            _pct(citation_rate),
-            _pct(self_correction),
-            _config_table(data["scored"]),
+            _scientific_question_table(),
         )
     )
 
@@ -440,23 +426,18 @@ def score_details():
         "<div class='eval-dashboard eval-dashboard--details'>"
         "<section class='eval-section eval-section--full-results'>"
         "<div class='eval-section__head'><div><span class='eval-subindex'>FULL RESULTS</span>"
-        "<h2>Inspect the recorded score tables</h2></div>"
-        "<p>Expanded on demand so judges can audit every score without crowding the demo.</p>"
+        "<h2>Inspect the completed registration evidence</h2></div>"
+        "<p>Scientific-question runs will be added here only after their raw records and "
+        "pilot evidence are available.</p>"
         "</div>"
-        "<details class='eval-suite-details'><summary><span>Tier 0</span> "
-        "Deterministic physics checks <b>9 / 9 pass</b></summary>%s</details>"
-        "<details class='eval-suite-details'><summary><span>Probe</span> "
-        "False-premise handling across ablations</summary>%s</details>"
-        "<details class='eval-suite-details'><summary><span>Tier 2</span> "
-        "SMRT paper figure reproduction</summary>%s</details>"
-        "<details class='eval-suite-details'><summary><span>All tasks</span> "
-        "Twelve natural-language cases / four configurations</summary>%s</details>"
+        "<details class='eval-suite-details'><summary><span>Model registration tests</span> "
+        "Deterministic physics and replay evidence <b>completed</b></summary>%s</details>"
+        "<details class='eval-suite-details'><summary><span>Scientific-question demos</span> "
+        "Four SMRT pilots <b>not executed</b></summary>%s</details>"
         "</section>"
         "</div>"
         % (
             _tier0_tables(data["tier0"]),
-            _false_premise_table(data["scored"]),
-            _tier2_table(data["scored"]),
-            _per_task_table(data),
+            _scientific_question_table(),
         )
     )

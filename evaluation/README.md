@@ -14,7 +14,7 @@ evaluation/
 |-- tiers/
 |   |-- t0_registry_integrity/       # REQUIRED
 |   |-- t1_model_onboarding/         # optional/design-only
-|   |-- t2_paper_reconstruction/     # REQUIRED; includes independent oracle
+|   |-- t2_paper_reconstruction/     # REQUIRED; scientific-question demos
 |   `-- t3_independent_reproduction/ # compatibility alias only
 |-- tasks/{tier0,tier2,probe}/        # executable task bank
 |-- configs/                         # legacy ablation conditions
@@ -31,9 +31,10 @@ evaluation/
 ```
 
 The capability taxonomy is fixed: Tier 0 checks registered models and deterministic physics;
-Tier 1 is new-model onboarding; Tier 2 is LLM-assisted paper reproduction. Independent
-upstream-package agreement is a Tier 2 metric, not a fourth capability tier. Open-ended
-independent research remains outside the competition scope.
+Tier 1 is new-model onboarding; Tier 2 is LLM-assisted scientific-question demonstration
+for paper-grounded research. Independent upstream-package agreement is a Tier 2 metric when
+a fixed oracle is explicitly approved, not a fourth capability tier. Open-ended independent
+research remains outside the competition scope.
 
 ## Running it
 
@@ -59,14 +60,15 @@ catalogue.
 `competition.py` is the workflow-faithful path. It enables the same `research_required`
 gate as the application, records the LLM-authored plan, scripts an accept-without-editing
 human review, requires exact `run_planned_model` / `plot_planned_chart` calls, and stores
-figure quality review plus the final parameter-provenance appendix. Its default is plan-only;
+pilot quality review plus the final parameter-provenance appendix. Its default is plan-only;
 paid inference requires the explicit `--execute` flag. False-premise probes are the one
 intentional exception: they may terminate safely before planning and must never execute an
 impossible physical configuration.
 
-The frozen Tier 2 main matrix uses four OpenRouter models, five tasks, three research-plan
-prompt profiles and two repeats: 120 cells. Each record stores billable prompt/completion
-tokens, provider-reported USD cost and per-call latency. A separate 15-cell, single-repeat
+The frozen Tier 2 main matrix uses four OpenRouter models, four scientific-question demos plus
+one safety-boundary probe, three research-plan prompt profiles and two repeats: 120 cells.
+Each record stores billable prompt/completion tokens, provider-reported USD cost and per-call
+latency. A separate 15-cell, single-repeat
 ModelScope provider-diversity track uses `Shanghai_AI_Laboratory/Intern-S2-Preview` on the
 same task × prompt scenarios; it is shown alongside the main matrix but excluded from the
 four-model ranking.
@@ -83,14 +85,17 @@ makes zero LLM calls; tokens and cost are N/A rather than zero-valued performanc
 validation, minimal run, output contract and registry discovery. `examples/toy_model` is the
 public fixture; hidden mutation cases remain design-only for this competition window.
 
-**Tier 2** asks the agent to reproduce existing-paper results through the reviewed research
-workflow. The four SMRT paper tasks live under `tasks/tier2`; their historical `t1-*` IDs are
-retained so committed raw records remain addressable. Only fields fixed by the source are
-graded. Safety and underspecification probes live in `tasks/probe`. Direct upstream SMRT
-agreement is reported inside Tier 2 as an independent adapter oracle.
+**Tier 2** asks the agent to turn four existing SMRT scientific questions into bounded,
+reviewed demonstrations through the research workflow. The tasks live under `tasks/tier2`;
+their historical `t1-*` IDs are retained so committed raw records remain addressable, while
+the task filenames now identify the four questions. These demos do not regenerate four fixed
+paper figures and do not use a digitized-figure oracle. They assess source linkage, legal
+configuration, pilot execution, limitation reporting, and whether unavailable external models
+are kept separate from local SMRT runs. Safety and underspecification probes live in
+`tasks/probe`.
 
 
-**The probe set** is where the ablations separate. Five of its questions carry a false
+**The supplemental probe set** is where the safety ablations separate. Its questions carry a false
 premise: a snow density above solid ice, a theory paired with a microstructure it has no
 derivation for, a liquid-water dielectric model asked about frozen ground, a fitted
 operator asked outside the angles it was fitted over, and two models asked which is more
@@ -121,10 +126,6 @@ citation gate was there to check. Scoring a run by its own configuration's verdi
 make every configuration look perfect, which is the one result an ablation must not be
 able to produce.
 
-The numeric column in the Tier 2 table needs the same care and gets it differently. It
-does not compare the agent's curve with the fully specified reference configuration,
-because that would measure the fields the paper never states: for Figure 6 the paper fixes
-the theory, the microstructure and the correlation length but not the snow depth, and over
-a vacuum background depth moves brightness temperature by more than a hundred kelvin. The
-target is instead the agent's own configuration with the graded fields corrected, so the
-number reports the cost of the mistakes the task is actually about.
+Fixed-figure numeric error is not reported for these scientific-question demos. A future
+fixed experiment may add an independent numeric oracle as a separate task version, but it
+must not be inferred from a pilot or from an old cached fixed-figure run.

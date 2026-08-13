@@ -1,0 +1,53 @@
+id: t1-smrt-fig6-memls-iba
+suite: tier2
+tier: 2
+legacy_id: t1-smrt-fig6-memls-iba
+evaluation_kind: scientific_question_demo
+figure_target: none
+title: SMRT scientific question 4, microstructure equivalence
+source:
+  document: tasks/smrt_section3_scientific_questions_and_steps.md
+  section: "3.1.4"
+  paper: smrt-v1
+  doi: 10.5194/gmd-11-2763-2018
+quality: complete
+shape: research_demo
+observable: equivalence_mapping
+models: [smrt]
+question: >-
+  Use the SMRT Section 3 scientific-question demo on microstructure equivalence. Do not
+  regenerate a paper figure. Demonstrate the equivalence workflow on one carefully declared
+  calibration case before discussing transferability. The scientific question is: can sticky
+  hard spheres, scaled non-sticky spheres, and exponential autocorrelation functions be
+  parameterized to produce equivalent microwave brightness temperatures for snow with the
+  same density and specific surface area, and is that equivalence unique and transferable
+  across densities, frequencies, incidence angles, and polarizations? Use SMRT IBA with DORT,
+  a 265 K homogeneous snow layer, a 100 micrometre reference radius, 37 GHz, and 55 degrees
+  for the initial calibration. Check root bracketing, residuals, and multiple solutions.
+demo:
+  source_question: >-
+    Can different snow microstructure representations be mapped to equivalent brightness
+    temperatures, and is the mapping unique and transferable?
+  fixed_parameters:
+    frequency_ghz: 37.0
+    temperature_k: 265.0
+    reference_radius_m: 0.0001
+    calibration_angle_deg: 55.0
+  pilot:
+    density_kg_m3: [300.0]
+    scaled_radius_m: [0.00008, 0.0001, 0.00012]
+    calibration_observable: tb_v
+    required_diagnostics: [bracket, residual, root_count]
+  expected_outputs:
+    - one reproducible calibration mapping or a documented inability to solve it
+    - bracket and residual diagnostics for every attempted root
+    - explicit treatment of multiple roots and missing brackets
+    - a follow-up plan for density, frequency, angle, polarization, and active transfer tests
+  required_behaviors:
+    - do not call one-point agreement general equivalence
+    - keep the calibration channel distinct from transferability tests
+    - report solver failures and non-unique solutions as results
+    - cite and apply the source relation for exponential correlation length
+  limitations:
+    - this task is a scientific-question demo, not a digitized paper-figure reproduction
+    - the one-density pilot cannot establish uniqueness or transferability

@@ -389,6 +389,60 @@ def test_plan_revision_preview_chart_and_execution_gate():
     assert research.allow_model(box)
 
 
+def test_revision_after_preview_creates_new_version_and_clears_stale_preview():
+    box = session.new_session("m")
+    _proposal(box)
+    research.approve_plan(box)
+    research.pseudo_preview(box)
+    assert box["figures"]
+
+    result = research.revise(
+        box,
+        {
+            "charts": [
+                {
+                    "id": "density_curve",
+                    "label": "Absorption response",
+                    "kind": "line",
+                    "x": "density_kg_m3",
+                    "y": "ka_per_m",
+                }
+            ]
+        },
+        "change the plotted observable",
+    )
+
+    assert result["status"] == "needs_input"
+    assert box["research"]["phase"] == "plan_review"
+    assert box["research"]["plan_version"] == 2
+    assert box["research"]["pseudo"] is None
+    assert not any(figure.get("research_preview") for figure in box["figures"])
+    assert box["research"]["review_log"][-1]["note"] == "change the plotted observable"
+    assert box["research"]["plan"]["charts"][0]["y"] == "ka_per_m"
+
+
+def test_revision_rejects_chart_not_produced_by_planned_runs_without_mutation():
+    box = session.new_session("m")
+    _proposal(box)
+    with pytest.raises(ValueError, match="cannot be produced"):
+        research.revise(
+            box,
+            {
+                "charts": [
+                    {
+                        "id": "bad_chart",
+                        "label": "Unsupported chart",
+                        "kind": "line",
+                        "x": "angle_deg",
+                        "y": "ks_per_m",
+                    }
+                ]
+            },
+        )
+    assert box["research"]["plan_version"] == 1
+    assert box["research"]["plan"]["charts"][0]["id"] == "density_curve"
+
+
 def test_ui_session_cannot_run_model_before_research_approval():
     box = session.new_session("m")
     box["research_required"] = True
@@ -410,12 +464,16 @@ def test_research_review_card_exposes_agent_plan_and_pseudo_data():
     card = render.approval_bar(box)
     assert "Research review" in card
     assert "research-steps" in card
+    assert "Research plan flow" in card
+    assert "How to edit this plan" in card
     assert "data-research-phase='plan_review'" in card
     assert "data-chart-id='density_curve'" in card and "disabled" in card
     research.approve_plan(box)
     research.pseudo_preview(box)
     card = render.approval_bar(box)
     assert "PSEUDO-DATA" in card
+    assert "Pseudo-data are deterministic layout demonstrations" in card
+    assert "Revise plan in chat" in card
     assert "Chart options" in card
     assert "data-chart-id='density_curve' disabled" not in card
 

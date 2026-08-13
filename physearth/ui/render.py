@@ -27,8 +27,8 @@ SECTION_PREVIEW_CHARS = 620
 # not editing an instruction. It shows without being told that a question here names a
 # configuration and asks for a run rather than for an explanation.
 PLACEHOLDER = (
-    "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes from "
-    "100 to 700 kg/m3 for a 1 m layer, plot it, and explain the trend."
+    "Run a small SMRT pilot at 37 GHz for snow densities 1, 25, 50, 75 and 96 kg/m3, "
+    "compare legal scattering configurations, and explain what the pilot cannot establish."
 )
 
 ICONS = {
@@ -505,6 +505,57 @@ def approval_bar(session):
     project = (session or {}).get("research") or {}
     if project and project.get("phase") not in ("approved", "completed"):
         plan = project.get("plan") or {}
+        phase = project.get("phase", "plan_review")
+        phase_labels = {
+            "plan_review": "Review and revise the plan",
+            "plan_approved": "Plan approved for preview",
+            "pseudo_preview": "Review pseudo-data layout",
+            "chart_selected": "Review final figure package",
+        }
+        phase_label = phase_labels.get(phase, phase)
+        phase_index = {
+            "plan_review": 0,
+            "plan_approved": 1,
+            "pseudo_preview": 2,
+            "chart_selected": 3,
+        }.get(phase, 0)
+        flow_html = (
+            "<div class='research-flow'><b>Research plan flow</b>"
+            + "".join(
+                "<span class='research-flow__step%s'>%d. %s</span>"
+                % (" is-current" if index == phase_index else "", index + 1, label)
+                for index, label in enumerate(
+                    ("Review plan", "Preview layout", "Confirm figures", "Approve execution", "Run real model")
+                )
+            )
+            + "</div>"
+        )
+        review_guidance = {
+            "plan_review": (
+                "Approve plan reviews the method, variables, runs, and acceptance criteria. "
+                "It does not approve pseudo-data or a final scientific figure."
+            ),
+            "plan_approved": (
+                "The plan is approved only far enough to generate a display-only preview. "
+                "No physical model call has been authorized."
+            ),
+            "pseudo_preview": (
+                "Pseudo-data are deterministic layout demonstrations, not model results. "
+                "If the axes, range, variables, or figure design are wrong, choose "
+                "'Revise plan in chat' and describe the change."
+            ),
+            "chart_selected": (
+                "The selected figure package is ready for final execution approval. "
+                "Changing it requires a new plan revision."
+            ),
+        }.get(phase, "Review the current research decision before continuing.")
+        revision_html = (
+            "<div class='approve__note approve__note--guide'><b>How to edit this plan:</b> "
+            "use Conversation to state the change, for example: "
+            "'remove the optional chart', 'change the density range to 10-500 kg/m3', "
+            "or 'plot tb_v and tb_h against angle'. The agent records a new plan version, "
+            "clears stale pseudo-data, and returns the plan to review.</div>"
+        )
         steps = "".join(
             "<li>%s</li>" % _e(step) for step in (plan.get("steps") or [])
         )
@@ -557,6 +608,13 @@ def approval_bar(session):
                     ),
                 )
             )
+        scope_html = (
+            flow_html
+            + "<div class='approve__note approve__note--guide'><b>Current stage:</b> %s. %s</div>"
+            % (_e(phase_label), _e(review_guidance))
+            + revision_html
+            + scope_html
+        )
         protocol_rows = "".join(
             "<div class='research-protocol__row'><b>%s</b><span>%s</span></div>"
             % (_e(label), _e("; ".join(plan.get(key) or []) or "not specified"))

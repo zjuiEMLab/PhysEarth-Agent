@@ -32,7 +32,7 @@ def test_every_tier0_task_declares_tier_kind_and_executable_checks():
     assert len(tasks) == 9
 
 
-def test_paper_tasks_are_tier2_while_historical_ids_remain_stable():
+def test_scientific_question_demos_are_tier2_and_not_figure_targets():
     paths = sorted((EVALUATION / "tasks" / "tier2").glob("*.yaml"))
     assert len(paths) == 4
     assert not list((EVALUATION / "tasks" / "tier1").glob("*.yaml"))
@@ -41,6 +41,18 @@ def test_paper_tasks_are_tier2_while_historical_ids_remain_stable():
         assert task["tier"] == 2
         assert task["suite"] == "tier2"
         assert task["legacy_id"] == task["id"]
+        assert task["evaluation_kind"] == "scientific_question_demo"
+        assert task["figure_target"] == "none"
+        assert task["source"]["document"] == "tasks/smrt_section3_scientific_questions_and_steps.md"
+        assert task["demo"]["pilot"]
+        assert task["demo"]["expected_outputs"]
+        assert task["demo"]["required_behaviors"]
+    assert [yaml.safe_load(path.read_text(encoding="utf-8"))["id"] for path in paths] == [
+        "t1-smrt-fig4-passive",
+        "t1-smrt-fig4-active",
+        "t1-smrt-fig5-iba-shs",
+        "t1-smrt-fig6-memls-iba",
+    ]
 
 
 def test_tier0_records_are_versioned_replayable_and_have_no_llm_cost():

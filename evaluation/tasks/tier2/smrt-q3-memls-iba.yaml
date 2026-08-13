@@ -1,0 +1,52 @@
+id: t1-smrt-fig5-iba-shs
+suite: tier2
+tier: 2
+legacy_id: t1-smrt-fig5-iba-shs
+evaluation_kind: scientific_question_demo
+figure_target: none
+title: SMRT scientific question 3, comparison with MEMLS-IBA
+source:
+  document: tasks/smrt_section3_scientific_questions_and_steps.md
+  section: "3.1.3"
+  paper: smrt-v1
+  doi: 10.5194/gmd-11-2763-2018
+quality: complete
+shape: research_demo
+observable: passive_brightness_temperature
+models: [smrt]
+question: >-
+  Use the SMRT Section 3 scientific-question demo on comparison with MEMLS-IBA. Do not
+  regenerate a paper figure or present SMRT as MEMLS. Demonstrate a small pilot with an exponential
+  microstructure, first checking whether MEMLS is available, then running the two local SMRT
+  IBA variants that can be compared. The scientific question is: when SMRT and MEMLS use the
+  same exponential microstructure and snowpack properties, how closely do they reproduce the
+  same electromagnetic coefficients and brightness temperatures, and how much of the
+  difference is caused by the IBA absorption formulation versus the DORT and six-flux
+  radiative-transfer solvers? Use 37 GHz, 265 K, density 300 kg/m3, correlation length 100
+  micrometres, and a few incidence angles for the pilot.
+demo:
+  source_question: >-
+    When SMRT and MEMLS use the same exponential microstructure and snowpack properties, how
+    much of their difference is electromagnetic formulation versus radiative-transfer solver?
+  fixed_parameters:
+    frequency_ghz: 37.0
+    density_kg_m3: 300.0
+    temperature_k: 265.0
+    corr_length_m: 0.0001
+  pilot:
+    angle_deg: [10.0, 35.0, 60.0]
+    observables: [ks_per_m, ka_per_m, tb_v, tb_h]
+    local_configurations: [iba_original, iba]
+  expected_outputs:
+    - capability result for MEMLS rather than an invented substitute
+    - SMRT electromagnetic coefficients and brightness temperatures
+    - a comparison of IBA formulation effects within SMRT
+    - a controlled plan for separating electromagnetic and solver contributions
+  required_behaviors:
+    - distinguish unavailable MEMLS execution from a negative scientific result
+    - cite the source for the exponential representation and correlation length
+    - keep density, temperature, boundary, and angle conventions explicit
+    - avoid claiming equivalence from one pilot channel
+  limitations:
+    - this task is a scientific-question demo, not a digitized paper-figure reproduction
+    - no MEMLS result may be fabricated when the external package is unavailable

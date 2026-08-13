@@ -25,6 +25,11 @@ def _same_or_range(value, rule):
 
 
 def provenance_score(record, task):
+    # Scientific-question demos deliberately do not use the old fixed-figure provenance
+    # gold. Applying Figure 4/5/6 field gold here would silently turn a demo back into a
+    # figure-reproduction task.
+    if task.get("evaluation_kind") == "scientific_question_demo":
+        return None
     block = _gold().get(task["id"])
     if not block:
         return None
@@ -238,6 +243,8 @@ def expected_outcomes(task):
         return ["not_identifiable", "failed"]
     if task.get("quality") == "underspecified":
         return ["partial", "not_identifiable"]
+    if task.get("evaluation_kind") == "scientific_question_demo":
+        return ["reproduced", "partial", "not_identifiable"]
     return ["reproduced"]
 
 

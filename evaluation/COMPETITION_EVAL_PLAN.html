@@ -25,8 +25,8 @@
     <section class="slide hero" id="scope">
       <div class="eyebrow">Competition plan · two-day execution window</div>
       <h1>Two clear questions, with auditable evidence.</h1>
-      <p class="lead">This plan evaluates whether PhysEarth-Agent can register physical models and whether it can reproduce an existing paper through a controlled workflow. Open-ended independent research is outside the current competition.</p>
-      <div class="chips"><span class="chip">Model registration tests</span><span class="chip">SMRT paper reproduction</span><span class="chip">Replayable records</span><span class="chip">English public reporting</span></div>
+      <p class="lead">This plan evaluates whether PhysEarth-Agent can register physical models and turn four paper-grounded SMRT scientific questions into controlled, auditable pilot studies. Open-ended independent research is outside the current competition.</p>
+      <div class="chips"><span class="chip">Model registration tests</span><span class="chip">Four SMRT scientific-question demos</span><span class="chip">Replayable records</span><span class="chip">English public reporting</span></div>
       <div class="callout good"><strong>Public reporting rule</strong>The dashboard uses the user-facing names “Model registration tests” and “Paper reproduction results”. Internal runner names and operational metadata are not used as public evaluation categories.</div>
       <div class="priority"><div class="m"><b>REQUIRED</b><span>Registration checks and deterministic adapter evidence.</span></div><div class="s"><b>NEXT</b><span>SMRT reproduction after the registration path is stable.</span></div><div class="f"><b>OUT OF SCOPE</b><span>Independent research and novel discovery.</span></div></div>
     </section>
@@ -43,11 +43,13 @@
 │   ├── Default demo runs
 │   └── Versioned replay records
 ├── <span class="root">Paper reproduction results</span> <span class="should">[NOT EXECUTED]</span>
-│   └── SMRT paper cases, provenance, legal execution, and comparison
+│   ├── Four SMRT scientific-question demos
+│   ├── Pilot plans, provenance, legal execution, and limitations
+│   └── One safety-boundary probe in the main matrix
 ├── <span class="root">Internal experiment factors</span>
 │   ├── Research-plan prompt profiles
 │   ├── Multiple language models and repeats
-│   └── Independent upstream oracle metric
+│   └── Future fixed-oracle metric (not used for demos)
 └── <span class="root">Out of scope</span>
     └── Open-ended independent research and novel discovery</pre>
     </section>
@@ -68,23 +70,23 @@
 
     <section class="slide" id="reproduction">
       <div class="eyebrow">Planned evidence</div><h2>Paper reproduction results</h2>
-      <p>The current paper target is SMRT only. The work is intentionally not executed yet, so the page must not imply a reproduction score.</p>
-      <div class="callout warn"><strong>Current status: not executed</strong>No figure comparison, provenance score, outcome classification, or independent-reference result is available yet.</div>
+      <p>The current paper-grounded target is four SMRT scientific-question demos. The work is intentionally not executed yet, so the page must not imply a reproduction score.</p>
+      <div class="callout warn"><strong>Current status: not executed</strong>No scientific-question pilot result, provenance score, outcome classification, or independent-reference result is available yet.</div>
       <table><thead><tr><th>Planned case</th><th>Evidence required</th><th>Status</th></tr></thead><tbody>
-        <tr><td>SMRT Figure 4 passive</td><td>Paper facts, source spans, legal configuration, and passive result comparison.</td><td>Not executed</td></tr>
-        <tr><td>SMRT Figure 4 active</td><td>Paper facts, source spans, legal configuration, and active result comparison.</td><td>Not executed</td></tr>
-        <tr><td>SMRT Figure 5 IBA / sticky hard spheres</td><td>Method and parameter reconstruction with explicit assumptions.</td><td>Not executed</td></tr>
-        <tr><td>SMRT Figure 6 MEMLS / IBA</td><td>Underspecified-parameter handling and provenance gate.</td><td>Not executed</td></tr>
-        <tr><td>Safety and underspecification probes</td><td>Refuse invalid configurations and request missing information without unsafe execution.</td><td>Not executed</td></tr>
+        <tr><td>Q1 · Sparse-medium approximation</td><td>Low-density pilot, legal scattering configurations, finite outputs, and limits on breakdown claims.</td><td>Not executed</td></tr>
+        <tr><td>Q2 · DMRT-based comparison</td><td>Local SMRT pilot, capability check for DMRT-ML/DMRT-QMS, and explicit external-dependency boundary.</td><td>Not executed</td></tr>
+        <tr><td>Q3 · MEMLS-IBA comparison</td><td>MEMLS availability check, SMRT IBA variants, coefficient/solver comparison plan, and provenance.</td><td>Not executed</td></tr>
+        <tr><td>Q4 · Microstructure equivalence</td><td>Calibration pilot, root brackets, residuals, multiple-solution handling, and transferability limits.</td><td>Not executed</td></tr>
+        <tr><td>Safety-boundary probe</td><td>Refuse an impossible density without unsafe model execution.</td><td>Not executed</td></tr>
       </tbody></table>
-      <div class="grid"><div class="card"><h3>Paper facts</h3><p>Parameters, units, figures, and conditions explicitly stated in the source.</p></div><div class="card"><h3>Assumptions</h3><p>Values not fixed by the paper must be labeled, justified, and kept separate from paper facts.</p></div><div class="card"><h3>Reproduction outcome</h3><p>Report reproduced, partial, not identifiable, or failed only after the evidence gates pass.</p></div></div>
+      <div class="grid"><div class="card"><h3>Paper facts</h3><p>Parameters, units, methods, and conditions explicitly stated in the source.</p></div><div class="card"><h3>Assumptions</h3><p>Values not fixed by the paper must be labeled, justified, and kept separate from source facts.</p></div><div class="card"><h3>Research outcome</h3><p>Report reproduced, partial, not identifiable, or failed only after the evidence gates pass.</p></div></div>
     </section>
 
     <section class="slide" id="matrix">
       <div class="eyebrow">Internal execution design</div><h2>Planned language-model comparison</h2>
       <p>This is an execution plan, not a completed result. The public dashboard does not expose operational source details.</p>
       <table><thead><tr><th>Factor</th><th>Plan</th><th>Purpose</th></tr></thead><tbody>
-        <tr><td>Cases</td><td>Five SMRT cases and probes</td><td>Cover valid reproduction, false premises, and underspecification.</td></tr>
+        <tr><td>Cases</td><td>Four scientific-question demos + one safety-boundary probe</td><td>Cover bounded pilots, external-model boundaries, and safe refusal.</td></tr>
         <tr><td>Prompt methods</td><td>Explore–Refine–Produce, reproduction-first, uncertainty-aware</td><td>Measure how research-plan methodology changes reproduction behavior.</td></tr>
         <tr><td>Model set</td><td>Four primary language models</td><td>Separate model effects from prompt and task effects.</td></tr>
         <tr><td>Repeats</td><td>Two repeats for the primary matrix</td><td>Expose instability instead of relying on a single successful run.</td></tr>
@@ -95,13 +97,13 @@
 
     <section class="slide" id="commands">
       <div class="eyebrow">Reproducible commands</div><h2>Execution order</h2>
-      <ol><li>Run the registry contract checks.</li><li>Run the deterministic adapter checks.</li><li>Run the registered-model demos.</li><li>Regenerate the dashboard.</li><li>Only after the registration evidence is stable, explicitly execute paper reproduction.</li></ol>
+      <ol><li>Run the registry contract checks.</li><li>Run the deterministic adapter checks.</li><li>Run the registered-model demos.</li><li>Regenerate the dashboard.</li><li>Only after the registration evidence is stable, explicitly execute the four scientific-question demos and the safety-boundary probe.</li></ol>
       <pre>python evaluation/runners/registry_contract.py
 python evaluation/runners/tier0.py
 python evaluation/runners/registration_demo.py
 python evaluation/runners/dashboard.py
 
-# Future paper-reproduction execution; not part of the current completed result:
+# Future scientific-question execution; not part of the current completed result:
 python evaluation/runners/competition.py --execute</pre>
       <div class="callout good"><strong>Completion rule</strong>A completed public result must point to a raw record, a scoring record, and enough resolved configuration to replay or explain the result. Planned work remains explicitly marked as not executed.</div>
     </section>

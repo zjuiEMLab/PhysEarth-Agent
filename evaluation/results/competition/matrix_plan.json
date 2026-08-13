@@ -3,28 +3,28 @@
   "tasks": [
     {
       "id": "t1-smrt-fig4-passive",
-      "title": "Figure 4a of the SMRT paper, angular brightness temperature under DMRT",
+      "title": "SMRT scientific question 1, sparse-medium approximation",
       "quality": "complete"
     },
     {
       "id": "t1-smrt-fig4-active",
-      "title": "Figure 4b of the SMRT paper, angular backscatter under DMRT",
+      "title": "SMRT scientific question 2, comparison with DMRT-based models",
+      "quality": "complete"
+    },
+    {
+      "id": "t1-smrt-fig5-iba-shs",
+      "title": "SMRT scientific question 3, comparison with MEMLS-IBA",
+      "quality": "complete"
+    },
+    {
+      "id": "t1-smrt-fig6-memls-iba",
+      "title": "SMRT scientific question 4, microstructure equivalence",
       "quality": "complete"
     },
     {
       "id": "p-smrt-density-above-ice",
       "title": "A snow density above the density of solid ice",
       "quality": "false_premise"
-    },
-    {
-      "id": "p-smrt-dmrt-with-exponential-acf",
-      "title": "DMRT paired with a microstructure it has no derivation for",
-      "quality": "false_premise"
-    },
-    {
-      "id": "p-smrt-arctic-underspecified",
-      "title": "A question with no configuration in it at all",
-      "quality": "underspecified"
     }
   ],
   "profiles": [
@@ -95,7 +95,7 @@
     {
       "id": "t1-smrt-fig4-passive__p0-explore-refine-produce",
       "task": "t1-smrt-fig4-passive",
-      "task_title": "Figure 4a of the SMRT paper, angular brightness temperature under DMRT",
+      "task_title": "SMRT scientific question 1, sparse-medium approximation",
       "suite": "tier2",
       "quality": "complete",
       "prompt_profile": "p0-explore-refine-produce",
@@ -105,7 +105,7 @@
     {
       "id": "t1-smrt-fig4-passive__p1-reproduction-first",
       "task": "t1-smrt-fig4-passive",
-      "task_title": "Figure 4a of the SMRT paper, angular brightness temperature under DMRT",
+      "task_title": "SMRT scientific question 1, sparse-medium approximation",
       "suite": "tier2",
       "quality": "complete",
       "prompt_profile": "p1-reproduction-first",
@@ -115,7 +115,7 @@
     {
       "id": "t1-smrt-fig4-passive__p3-uncertainty-aware",
       "task": "t1-smrt-fig4-passive",
-      "task_title": "Figure 4a of the SMRT paper, angular brightness temperature under DMRT",
+      "task_title": "SMRT scientific question 1, sparse-medium approximation",
       "suite": "tier2",
       "quality": "complete",
       "prompt_profile": "p3-uncertainty-aware",
@@ -125,7 +125,7 @@
     {
       "id": "t1-smrt-fig4-active__p0-explore-refine-produce",
       "task": "t1-smrt-fig4-active",
-      "task_title": "Figure 4b of the SMRT paper, angular backscatter under DMRT",
+      "task_title": "SMRT scientific question 2, comparison with DMRT-based models",
       "suite": "tier2",
       "quality": "complete",
       "prompt_profile": "p0-explore-refine-produce",
@@ -135,7 +135,7 @@
     {
       "id": "t1-smrt-fig4-active__p1-reproduction-first",
       "task": "t1-smrt-fig4-active",
-      "task_title": "Figure 4b of the SMRT paper, angular backscatter under DMRT",
+      "task_title": "SMRT scientific question 2, comparison with DMRT-based models",
       "suite": "tier2",
       "quality": "complete",
       "prompt_profile": "p1-reproduction-first",
@@ -145,7 +145,67 @@
     {
       "id": "t1-smrt-fig4-active__p3-uncertainty-aware",
       "task": "t1-smrt-fig4-active",
-      "task_title": "Figure 4b of the SMRT paper, angular backscatter under DMRT",
+      "task_title": "SMRT scientific question 2, comparison with DMRT-based models",
+      "suite": "tier2",
+      "quality": "complete",
+      "prompt_profile": "p3-uncertainty-aware",
+      "prompt_title": "Uncertainty-aware reproduction",
+      "philosophy": "uncertainty-aware / falsification-oriented"
+    },
+    {
+      "id": "t1-smrt-fig5-iba-shs__p0-explore-refine-produce",
+      "task": "t1-smrt-fig5-iba-shs",
+      "task_title": "SMRT scientific question 3, comparison with MEMLS-IBA",
+      "suite": "tier2",
+      "quality": "complete",
+      "prompt_profile": "p0-explore-refine-produce",
+      "prompt_title": "Explore, Refine, Produce",
+      "philosophy": "exploratory"
+    },
+    {
+      "id": "t1-smrt-fig5-iba-shs__p1-reproduction-first",
+      "task": "t1-smrt-fig5-iba-shs",
+      "task_title": "SMRT scientific question 3, comparison with MEMLS-IBA",
+      "suite": "tier2",
+      "quality": "complete",
+      "prompt_profile": "p1-reproduction-first",
+      "prompt_title": "Reproduction-first",
+      "philosophy": "confirmatory reproduction"
+    },
+    {
+      "id": "t1-smrt-fig5-iba-shs__p3-uncertainty-aware",
+      "task": "t1-smrt-fig5-iba-shs",
+      "task_title": "SMRT scientific question 3, comparison with MEMLS-IBA",
+      "suite": "tier2",
+      "quality": "complete",
+      "prompt_profile": "p3-uncertainty-aware",
+      "prompt_title": "Uncertainty-aware reproduction",
+      "philosophy": "uncertainty-aware / falsification-oriented"
+    },
+    {
+      "id": "t1-smrt-fig6-memls-iba__p0-explore-refine-produce",
+      "task": "t1-smrt-fig6-memls-iba",
+      "task_title": "SMRT scientific question 4, microstructure equivalence",
+      "suite": "tier2",
+      "quality": "complete",
+      "prompt_profile": "p0-explore-refine-produce",
+      "prompt_title": "Explore, Refine, Produce",
+      "philosophy": "exploratory"
+    },
+    {
+      "id": "t1-smrt-fig6-memls-iba__p1-reproduction-first",
+      "task": "t1-smrt-fig6-memls-iba",
+      "task_title": "SMRT scientific question 4, microstructure equivalence",
+      "suite": "tier2",
+      "quality": "complete",
+      "prompt_profile": "p1-reproduction-first",
+      "prompt_title": "Reproduction-first",
+      "philosophy": "confirmatory reproduction"
+    },
+    {
+      "id": "t1-smrt-fig6-memls-iba__p3-uncertainty-aware",
+      "task": "t1-smrt-fig6-memls-iba",
+      "task_title": "SMRT scientific question 4, microstructure equivalence",
       "suite": "tier2",
       "quality": "complete",
       "prompt_profile": "p3-uncertainty-aware",
@@ -178,66 +238,6 @@
       "task_title": "A snow density above the density of solid ice",
       "suite": "probe",
       "quality": "false_premise",
-      "prompt_profile": "p3-uncertainty-aware",
-      "prompt_title": "Uncertainty-aware reproduction",
-      "philosophy": "uncertainty-aware / falsification-oriented"
-    },
-    {
-      "id": "p-smrt-dmrt-with-exponential-acf__p0-explore-refine-produce",
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "task_title": "DMRT paired with a microstructure it has no derivation for",
-      "suite": "probe",
-      "quality": "false_premise",
-      "prompt_profile": "p0-explore-refine-produce",
-      "prompt_title": "Explore, Refine, Produce",
-      "philosophy": "exploratory"
-    },
-    {
-      "id": "p-smrt-dmrt-with-exponential-acf__p1-reproduction-first",
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "task_title": "DMRT paired with a microstructure it has no derivation for",
-      "suite": "probe",
-      "quality": "false_premise",
-      "prompt_profile": "p1-reproduction-first",
-      "prompt_title": "Reproduction-first",
-      "philosophy": "confirmatory reproduction"
-    },
-    {
-      "id": "p-smrt-dmrt-with-exponential-acf__p3-uncertainty-aware",
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "task_title": "DMRT paired with a microstructure it has no derivation for",
-      "suite": "probe",
-      "quality": "false_premise",
-      "prompt_profile": "p3-uncertainty-aware",
-      "prompt_title": "Uncertainty-aware reproduction",
-      "philosophy": "uncertainty-aware / falsification-oriented"
-    },
-    {
-      "id": "p-smrt-arctic-underspecified__p0-explore-refine-produce",
-      "task": "p-smrt-arctic-underspecified",
-      "task_title": "A question with no configuration in it at all",
-      "suite": "probe",
-      "quality": "underspecified",
-      "prompt_profile": "p0-explore-refine-produce",
-      "prompt_title": "Explore, Refine, Produce",
-      "philosophy": "exploratory"
-    },
-    {
-      "id": "p-smrt-arctic-underspecified__p1-reproduction-first",
-      "task": "p-smrt-arctic-underspecified",
-      "task_title": "A question with no configuration in it at all",
-      "suite": "probe",
-      "quality": "underspecified",
-      "prompt_profile": "p1-reproduction-first",
-      "prompt_title": "Reproduction-first",
-      "philosophy": "confirmatory reproduction"
-    },
-    {
-      "id": "p-smrt-arctic-underspecified__p3-uncertainty-aware",
-      "task": "p-smrt-arctic-underspecified",
-      "task_title": "A question with no configuration in it at all",
-      "suite": "probe",
-      "quality": "underspecified",
       "prompt_profile": "p3-uncertainty-aware",
       "prompt_title": "Uncertainty-aware reproduction",
       "philosophy": "uncertainty-aware / falsification-oriented"

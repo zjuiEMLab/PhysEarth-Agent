@@ -1,33 +1,40 @@
 tier: T2
-goal: "Can the agent recover and execute the paper-stated configuration through the deployed workflow?"
+goal: "Can the agent turn four SMRT scientific questions into reviewed, bounded, executable demonstrations?"
 task_sources:
   core: evaluation/tasks/tier2
   probes: evaluation/tasks/probe
 competition_tasks:
   - t1-smrt-fig4-passive
   - t1-smrt-fig4-active
+  - t1-smrt-fig5-iba-shs
+  - t1-smrt-fig6-memls-iba
   - p-smrt-density-above-ice
+supplemental_probe_tasks:
   - p-smrt-dmrt-with-exponential-acf
   - p-smrt-arctic-underspecified
+scientific_question_demos:
+  - t1-smrt-fig4-passive
+  - t1-smrt-fig4-active
+  - t1-smrt-fig5-iba-shs
+  - t1-smrt-fig6-memls-iba
 metrics:
   - workflow_completion
-  - configuration_match
   - capability_safety
-  - parameter_provenance
+  - source_linkage
+  - pilot_contract
+  - limitation_reporting
   - citation_integrity
-  - self_correction
 independent_oracle:
-  role: metric
-  type: upstream_package
-  package: smrt
-  adapter_independent: true
-  paper_digitization: false
-  tasks:
-    - t1-smrt-fig4-passive
-    - t1-smrt-fig4-active
+  role: not_used_for_scientific_question_demos
+  status: not_executed
+  type: no_fixed_figure_target
+  tasks: []
   metrics:
-    - curve_rmse
-    - tolerance_pass
-    - reproduction_outcome_calibration
+    - workflow_completion
+    - source_linkage
+    - capability_boundary
+    - limitation_reporting
   warning: >-
-    This detects adapter and configuration failures but is not digitized paper data.
+    The four tasks are bounded scientific-question demonstrations. They intentionally do not
+    claim fixed-paper-result agreement; an upstream numeric oracle can be added only after a
+    separate fixed experiment is approved.

@@ -56,16 +56,17 @@ competition_required:
     core_tasks:
       - t1-smrt-fig4-passive
       - t1-smrt-fig4-active
+      - t1-smrt-fig5-iba-shs
+      - t1-smrt-fig6-memls-iba
     probe_tasks:
       - p-smrt-density-above-ice
+    supplemental_probe_tasks:
       - p-smrt-dmrt-with-exponential-acf
       - p-smrt-arctic-underspecified
   t2_independent_oracle:
-    role: metric
-    tasks:
-      - t1-smrt-fig4-passive
-      - t1-smrt-fig4-active
-    oracle: upstream_smrt_direct
+    role: not_used_for_scientific_question_demos
+    tasks: []
+    oracle: not_executed_no_fixed_figure_target
 
 competition_optional:
   t1_model_onboarding:

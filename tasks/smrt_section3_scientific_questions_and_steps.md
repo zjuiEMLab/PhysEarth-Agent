@@ -236,6 +236,38 @@ The Agent should present the plan as a concise decision table, not ask the user 
 
 **Gate 3:** No irreversible or expensive main run begins until required choices are approved or explicitly defaulted.
 
+#### UI operating rule for plan approval
+
+The user-facing review card follows this sequence:
+
+```text
+Review plan
+  -> Approve plan (method only; no physical run)
+  -> Generate pseudo-data preview (layout demonstration only)
+  -> Confirm the figure package
+  -> Approve formal execution
+  -> Run the registered model and render figures from real outputs
+```
+
+Approving the plan does **not** approve the pseudo-data or the final figure. Pseudo-data
+exist only to make axes, labels, ranges, and series layout reviewable before a model run.
+They must be visibly labelled and are discarded when the figure package is confirmed or
+when the plan is revised.
+
+If the user does not agree with the pseudo-data or figure, the user should choose **Revise
+plan in chat** and state the scientific change in plain language, for example:
+
+- `Remove the optional chart and keep the required brightness-temperature chart.`
+- `Change the density sweep to 10-500 kg/m3 with 12 points.`
+- `Plot tb_v and tb_h against incidence angle; keep frequency fixed at 37 GHz.`
+
+The Agent converts that request into `research_plan(action="revise_plan", changes=...)`.
+The backend validates the revised runs and chart axes, increments the plan version, records
+the reason in the review log, clears stale pseudo-data, and returns to **Review plan**.
+The user must approve the new plan before a new preview is generated. If only the visual
+layout needs another draw and the scientific plan is unchanged, the user may ask for a
+preview regeneration instead; that action must not be treated as plan approval.
+
 ### Stage 5: Lock environment, inputs, and provenance
 
 Before execution, create a run manifest containing:

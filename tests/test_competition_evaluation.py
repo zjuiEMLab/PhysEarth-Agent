@@ -28,6 +28,13 @@ def test_frozen_competition_matrix_is_four_llms_three_prompts_two_repeats():
         type("Args", (), {"tasks": None, "profiles": None, "llm": None, "repeats": None})()
     )
     assert len(cells) == 5 * 3 * 1 * 4 * 2
+    assert {cell[0]["id"] for cell in cells} == {
+        "t1-smrt-fig4-passive",
+        "t1-smrt-fig4-active",
+        "t1-smrt-fig5-iba-shs",
+        "t1-smrt-fig6-memls-iba",
+        "p-smrt-density-above-ice",
+    }
     assert {cell[1]["id"] for cell in cells} == {
         "p0-explore-refine-produce",
         "p1-reproduction-first",

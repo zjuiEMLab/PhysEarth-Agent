@@ -339,8 +339,10 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                         "<div class='eval-dashboard'><section "
                         "class='eval-section eval-section--demos'>"
                         "<div class='eval-section__head'><div><span class='eval-index'>02</span>"
-                        "<h2>Run a representative case</h2></div><p>Each button loads the "
-                        "exact evaluation prompt into the agent. Review it, then press Send.</p>"
+                        "<h2>Run representative scientific-question demos</h2></div><p>Each "
+                        "button loads the scientific question. The cases use "
+                        "small pilots to test research planning, legal execution, evidence, "
+                        "and limitations; review the prompt, then press Send.</p>"
                         "</div></section></div>",
                         elem_classes=["pe-eval-slot"],
                     )
@@ -352,7 +354,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                                     "Try in Live Agent",
                                     elem_classes=["eval-demo-button"],
                                 )
-                                demo_buttons.append((button, case["question"]))
+                                demo_buttons.append((button, case["live_question"]))
                     gr.HTML(evals.score_summary(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.score_details(), elem_classes=["pe-eval-slot"])
 

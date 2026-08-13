@@ -569,8 +569,8 @@ function peBoot() {
     var labels = {
       plan_review: ["Approve plan", "Revise in chat", "Pause"],
       plan_approved: ["Generate preview", "Revise in chat", "Pause"],
-      pseudo_preview: ["Confirm figure package", "Regenerate preview", "Pause"],
-      chart_selected: ["Approve execution", "Change chart in chat", "Pause"]
+      pseudo_preview: ["Confirm figure package", "Revise plan in chat", "Pause"],
+      chart_selected: ["Approve execution", "Revise plan in chat", "Pause"]
     }[phase];
     if (!labels) return;
     var buttons = [
