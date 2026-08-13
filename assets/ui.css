@@ -1305,23 +1305,10 @@ body:not(.is-reasoning) .caret {
   margin-bottom: 10px;
 }
 
-/* Only the newest card animates in. The trace panel is replaced wholesale on every
-   stream chunk, so animating every card restarted all of them many times a second
-   and left the column the reviewer is meant to watch permanently translucent. */
-.step-card:last-child {
-  animation: rise 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
+/* Trace HTML is replaced as one Gradio output whenever a new lifecycle event arrives.
+   Animating :last-child therefore restarts on every replacement, including when the
+   newest event itself did not change, and makes the panel visibly pulse and jump.  Event
+   ordering is already clear from its index, so trace cards deliberately remain static. */
 
 .step-card::before {
   content: "";
@@ -2261,6 +2248,12 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   margin-top: 14px;
   padding-top: 13px;
   border-top: 1px dashed var(--line);
+}
+
+.approve__note--warning {
+  border-left: 3px solid var(--orange, #d97757);
+  padding-left: 0.65rem;
+  color: var(--ink, #2b2926);
 }
 
 .approve__charts {

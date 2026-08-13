@@ -148,6 +148,24 @@ Every setting has a working default, so the application starts with no `.env` pr
 | `PHYSEARTH_MODEL_PATH` | empty | extra model directories to register |
 | `PHYSEARTH_STATE_DIR` | `_state` | the one directory written to |
 | `PHYSEARTH_HOST`, `PHYSEARTH_PORT` | `0.0.0.0`, `7860` | where it listens |
+| `PHYSEARTH_LOG_MAX_BYTES` | `5242880` | rotating application/global-event log size |
+| `PHYSEARTH_SESSION_LOG_MAX_BYTES` | `10485760` | rotating log size for one research session |
+| `PHYSEARTH_LOG_BACKUP_COUNT` | `5` | old log generations retained |
+
+### Persistent audit logs
+
+The browser Run trace is mirrored to disk, so a stopped or restarted process can still be
+diagnosed. Logs are written beneath `PHYSEARTH_STATE_DIR/logs/`:
+
+- `application.log` records service lifecycle messages;
+- `errors.log` records uncaught exceptions with tracebacks;
+- `events.jsonl` records every structured agent, tool, gate, QA and human-review event;
+- `sessions/<session_id>.jsonl` contains the same events for one conversation only.
+
+Each JSONL event includes UTC time, event ID, process/thread, session and turn IDs, active
+model, research phase, plan version, selected charts, planned runs and counters. API keys,
+tokens, authorization headers, cookies and passwords are redacted before serialization.
+All files rotate according to the settings above; a logging failure never stops a model run.
 
 ---
 

@@ -8,7 +8,7 @@ submitted a structured proposal through the research_plan tool.
 import math
 import re
 
-from physearth import knowledge, plotting, validation
+from physearth import audit, knowledge, plotting, reproduction, validation
 from physearth.models import registry
 
 
@@ -23,7 +23,50 @@ PHASES = (
 
 
 def _clean_list(values, limit=20):
+    if isinstance(values, str):
+        # Some OpenAI-compatible providers occasionally serialize an array as a
+        # numbered multi-line string.  Treat it as prose/list items instead of
+        # iterating over individual characters.
+        parts = re.split(r"(?:\r?\n)+|\s*;\s*", values)
+        values = [re.sub(r"^\s*(?:[-*]|\d+[.)])\s*", "", item) for item in parts]
+    elif isinstance(values, dict):
+        values = list(values.values())
     return [str(value).strip() for value in (values or []) if str(value).strip()][:limit]
+
+
+def _repair_missing_protocol_steps(steps, runs, charts):
+    """Recover a semantically complete plan whose optional ``steps`` field was omitted.
+
+    The executable run and chart declarations are the authoritative workflow.  Rejecting
+    five valid runs merely because a provider omitted a redundant prose field turns a
+    harmless formatting error into a planning loop.  We preserve any authored steps and
+    append only the missing workflow stages, recording the change for human review.
+    """
+    if len(steps) >= 3 or not runs or not charts:
+        return steps, []
+
+    before = list(steps)
+    defaults = [
+        "Verify the cited reference protocol, registered-model capabilities, controlled conditions, and baseline configuration.",
+        "Execute every declared baseline, main, and diagnostic physical-model run with output and numerical quality control.",
+        "Render the required figures from actual outputs, calculate the declared comparison metrics, review figure quality, and report conclusions and limitations.",
+    ]
+    for item in defaults:
+        if len(steps) >= 3:
+            break
+        if item not in steps:
+            steps.append(item)
+    return steps, [
+        {
+            "field": "steps",
+            "from": before,
+            "to": list(steps),
+            "reason": (
+                "the proposal already declared executable runs and charts; missing prose "
+                "workflow stages were reconstructed for human review"
+            ),
+        }
+    ]
 
 
 def _clean_charts(charts):
@@ -52,9 +95,42 @@ def _clean_charts(charts):
     return cleaned[:8]
 
 
+def _repair_sweep_bounds(model, parameters, card):
+    """Clamp only sweep bounds to an already-declared physical parameter range.
+
+    This does not invent physics: the model chose the parameter and interval, while the
+    registered capability declaration supplies the hard legal bounds. The exact change is
+    retained for human review. Ordinary fixed parameter values remain strict failures.
+    """
+    repaired = dict(parameters)
+    sweep = repaired.get("sweep_parameter")
+    target = (card.get("parameters") or {}).get(sweep)
+    if sweep in (None, "none") or not target or target.get("type") not in ("number", "integer"):
+        return repaired, []
+    changes = []
+    low, high = target.get("minimum"), target.get("maximum")
+    for field in ("sweep_start", "sweep_stop"):
+        value = repaired.get(field)
+        if not isinstance(value, (int, float)):
+            continue
+        bounded = max(low, min(high, value))
+        if bounded != value:
+            repaired[field] = int(bounded) if target.get("type") == "integer" else float(bounded)
+            changes.append(
+                {
+                    "field": field,
+                    "from": value,
+                    "to": repaired[field],
+                    "reason": "%s sweep bound was clamped to the declared %s range" % (model, sweep),
+                }
+            )
+    return repaired, changes
+
+
 def _clean_runs(runs):
     cleaned = []
     problems = []
+    repairs = []
     for index, run in enumerate(runs or []):
         if not isinstance(run, dict):
             problems.append("planned run %d is not an object" % (index + 1))
@@ -64,7 +140,11 @@ def _clean_runs(runs):
         if entry is None:
             problems.append("planned run %d uses unknown model %r" % (index + 1, model))
             continue
-        parameters = dict(run.get("parameters") or {})
+        parameters, bound_repairs = _repair_sweep_bounds(
+            model, dict(run.get("parameters") or {}), entry.card
+        )
+        for repair in bound_repairs:
+            repairs.append({"run_id": str(run.get("id") or "run_%d" % (index + 1)), **repair})
         resolved, run_problems = validation.resolve(entry.card, parameters, enforce=True)
         if run_problems:
             problems.extend("planned run %d: %s" % (index + 1, item) for item in run_problems)
@@ -78,7 +158,13 @@ def _clean_runs(runs):
                 "stage": str(run.get("stage") or "main").strip(),
             }
         )
-    return cleaned[:8], problems
+    # A multi-density/multi-microstructure experiment can legitimately require more than
+    # eight configurations (Q4 uses a baseline plus two five-density families). Silently
+    # dropping later runs changes the reviewed experiment and makes chart validation
+    # inexplicable. Keep a generous explicit ceiling instead.
+    if len(cleaned) > 24:
+        problems.append("a proposal may contain at most 24 physical-model runs")
+    return cleaned[:24], problems, repairs
 
 
 def propose(
@@ -102,11 +188,14 @@ def propose(
 ):
     """Store an LLM-authored proposal; never infer one from a question template."""
     question = str(question or "").strip()
+    read_problem = reproduction.required_read_problem(session, question)
+    if read_problem:
+        return _fail(read_problem["message"], read_problem)
     objective = str(objective or "").strip()
     hypothesis = str(hypothesis or "").strip()
     steps = _clean_list(steps)
     charts = _clean_charts(charts)
-    runs, run_problems = _clean_runs(runs)
+    runs, run_problems, run_repairs = _clean_runs(runs)
     quantities = _clean_list(quantities, 12)
     controls = _clean_list(controls, 12)
     metrics = _clean_list(metrics, 12)
@@ -118,8 +207,6 @@ def propose(
     baseline_run_id = str(baseline_run_id or "").strip()
     if not question or not objective or not hypothesis:
         return _fail("A proposal requires question, objective and hypothesis.")
-    if len(steps) < 3:
-        return _fail("A proposal requires at least three executable research steps.")
     if not charts:
         return _fail("A proposal requires at least one chart option with x and y fields.")
     if run_problems:
@@ -136,6 +223,38 @@ def propose(
         )
     if not runs:
         return _fail("A proposal requires at least one explicit registered physical-model run.")
+    steps, structural_repairs = _repair_missing_protocol_steps(steps, runs, charts)
+    if len(steps) < 3:
+        return _fail(
+            "A proposal requires at least three executable research steps.",
+            {
+                "error_code": "steps_missing",
+                "repair_hints": [
+                    "Describe model validation, formal execution, and figure/metric review as separate steps.",
+                    "Keep the already declared runs and charts; this is a plan-format correction, not a new experiment.",
+                ],
+            },
+        )
+    reference_repairs = reproduction.repair(question, runs, charts)
+    reproduction_case, reproduction_problems = reproduction.validate(
+        question, runs, charts, limitations
+    )
+    if reproduction_problems:
+        return _fail(
+            "The proposed plan does not reproduce the paper's %s protocol: %s"
+            % (reproduction_case.upper(), "; ".join(reproduction_problems)),
+            {
+                "error_code": "reference_protocol_mismatch",
+                "case_id": reproduction_case,
+                "reference_section": reproduction.CASES[reproduction_case]["section"],
+                "problems": reproduction_problems,
+                "repair_hints": [
+                    "Keep the independent variable and common physical conditions from the paper section.",
+                    "Use separate passive, active, coefficient, and solver-diagnostic runs when their outputs differ.",
+                    "Declare unavailable external reference models as a partial reproduction; never replace them with another SMRT run.",
+                ],
+            },
+        )
     quality_problems = []
     for label, values in (
         ("quantities of interest", quantities),
@@ -157,7 +276,11 @@ def propose(
             "The proposal is a computation checklist, not yet a scientific protocol. Add: %s."
             % ", ".join(quality_problems)
         )
-    automatic_repairs = _repair_sampling_density(charts, runs)
+    automatic_repairs = list(run_repairs)
+    automatic_repairs.extend(structural_repairs)
+    automatic_repairs.extend(reference_repairs)
+    automatic_repairs.extend(_repair_required_companion_outputs(question, charts, runs))
+    automatic_repairs.extend(_repair_sampling_density(charts, runs))
     automatic_repairs.extend(_repair_chart_axes(charts, runs))
     dependency_problems = _output_dependency_problems(charts, runs)
     if dependency_problems:
@@ -222,6 +345,9 @@ def propose(
         "baseline_run_id": baseline_run_id,
         "automatic_repairs": automatic_repairs,
         "capability_gaps": _capability_gaps(question),
+        "reproduction_case": reproduction_case,
+        "reference_sections": [reproduction.CASES[reproduction_case]["section"]]
+        if reproduction_case else [],
     }
     plan["outcome_scope"] = "partial" if plan["capability_gaps"] else "full"
     session["research"] = {
@@ -238,7 +364,10 @@ def propose(
     }
     summary = "LLM-authored research plan v001 is ready for human review."
     if automatic_repairs:
-        summary += " Backend repaired %d chart axis declaration(s); review them explicitly." % len(automatic_repairs)
+        summary += (
+            " Backend applied %d auditable reference/presentation repair(s); review them explicitly."
+            % len(automatic_repairs)
+        )
     return _needs(summary, _public(session["research"]))
 
 
@@ -271,7 +400,7 @@ def revise(session, changes=None, note=""):
         if charts:
             plan["charts"] = charts
     if changes.get("runs"):
-        runs, problems = _clean_runs(changes["runs"])
+        runs, problems, _repairs = _clean_runs(changes["runs"])
         if problems or not runs:
             raise ValueError("Invalid revised runs: %s" % "; ".join(problems or ["none supplied"]))
         plan["runs"] = runs
@@ -298,6 +427,13 @@ def revise_after_figure_quality(session, chart_id, issues=None):
     """Prepare a scientifically reviewable revision instead of terminating on Figure QA."""
     project = _require(session)
     plan = project["plan"]
+    issues = list(issues or [])
+    audit.emit(
+        "figure_qa_repair_started",
+        session=session,
+        chart_id=chart_id,
+        issues=issues,
+    )
     chart = next((item for item in plan.get("charts") or [] if item.get("id") == chart_id), None)
     if chart is None:
         return _fail("Cannot revise unknown chart %r after Figure QA." % chart_id)
@@ -309,15 +445,40 @@ def revise_after_figure_quality(session, chart_id, issues=None):
         chart.get("x") == "dort_streams"
         and bool(coefficient_outputs.intersection(_chart_y_names(chart)))
     )
+    abrupt_jump = any("abrupt adjacent jump" in str(issue) for issue in issues)
+    under_sampled = any(
+        phrase in str(issue)
+        for issue in issues
+        for phrase in ("has only", "too few distinct x values")
+    )
     for run in plan.get("runs") or []:
         if not _run_produces_chart(run, chart):
             continue
         spec = run.get("parameters") or {}
         old_points = int(spec.get("sweep_points") or 0)
-        if old_points < 8:
-            spec["sweep_points"] = 10
+        if abrupt_jump and old_points < 40:
+            new_points = min(40, max(20, old_points * 2))
+            spec["sweep_points"] = new_points
             repairs.append(
-                {"run_id": run.get("id"), "field": "sweep_points", "from": old_points, "to": 10}
+                {
+                    "run_id": run.get("id"),
+                    "field": "sweep_points",
+                    "from": old_points,
+                    "to": new_points,
+                    "reason": "refine the grid around a possible numerical discontinuity",
+                }
+            )
+        elif (under_sampled or old_points < 8) and old_points < 20:
+            new_points = max(10, min(20, max(old_points * 2, 10)))
+            spec["sweep_points"] = new_points
+            repairs.append(
+                {
+                    "run_id": run.get("id"),
+                    "field": "sweep_points",
+                    "from": old_points,
+                    "to": new_points,
+                    "reason": "increase resolution after figure-quality review",
+                }
             )
         if coefficient_solver_axis and spec.get("output") == "coefficients":
             entry = registry.get(run.get("model"))
@@ -349,45 +510,278 @@ def revise_after_figure_quality(session, chart_id, issues=None):
             }
         )
     if not repairs:
-        project["plan_version"] += 1
-        project["review_log"].append(
-            {
-                "version": project["plan_version"],
-                "note": "Figure QA requires a user-selected scientific revision",
-                "changes": {"chart_id": chart_id, "issues": list(issues or [])},
-            }
+        only_persistent_jumps = bool(issues) and all(
+            "abrupt adjacent jump" in str(issue) for issue in issues
         )
-        project["phase"] = "plan_review"
-        project["selected_chart"] = None
-        project["selected_charts"] = []
-        project["pseudo"] = None
-        session["figures"] = []
-        session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
-        return _needs(
-            "Figure QA reopened plan v%03d for a user-selected sampling/axis revision."
-            % project["plan_version"],
-            _public(project),
+        matching_figure = next(
+            (
+                figure for figure in reversed(session.get("figures") or [])
+                if not figure.get("preview")
+                and figure.get("planned_chart_id") == chart_id
+            ),
+            None,
+        )
+        if only_persistent_jumps and matching_figure is not None:
+            review = dict(matching_figure.get("quality_review") or {})
+            review.update(
+                reviewed=True,
+                passed=True,
+                passed_with_warning=True,
+                scientific_anomaly=True,
+                issues=[],
+                warnings=list(dict.fromkeys((review.get("warnings") or []) + issues)),
+            )
+            matching_figure["quality_review"] = review
+            anomaly = {
+                "chart_id": chart_id,
+                "kind": "persistent_discontinuity",
+                "issues": issues,
+                "sampling_points": max(
+                    [
+                        int((run.get("parameters") or {}).get("sweep_points") or 0)
+                        for run in plan.get("runs") or []
+                        if _run_produces_chart(run, chart)
+                    ]
+                    or [0]
+                ),
+                "interpretation_constraint": (
+                    "Treat the persistent jump as a model-validity or numerical diagnostic, "
+                    "not as a verified physical transition; report it explicitly."
+                ),
+            }
+            project.setdefault("scientific_anomalies", []).append(anomaly)
+            limitation = anomaly["interpretation_constraint"]
+            if limitation not in plan.setdefault("limitations", []):
+                plan["limitations"].append(limitation)
+            project["qa_recovery"] = {
+                **anomaly,
+                "status": "accepted_with_scientific_warning",
+                "automatic_attempts": int(
+                    (project.get("qa_recovery") or {}).get("automatic_attempts", 0)
+                ),
+            }
+            session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
+            audit.emit(
+                "figure_qa_persistent_anomaly",
+                session=session,
+                level="WARNING",
+                anomaly=anomaly,
+            )
+            return _ok(
+                "Figure QA found a persistent discontinuity after maximum safe grid refinement. "
+                "The Figure is retained as a qualified scientific diagnostic; the report must "
+                "describe the discontinuity and may not call it a verified physical threshold.",
+                {
+                    **_public(project),
+                    "next": "continue_with_qualified_figure",
+                    "scientific_anomaly": anomaly,
+                },
+            )
+        project["qa_recovery"] = {
+            "chart_id": chart_id,
+            "issues": issues,
+            "status": "unresolved",
+            "automatic_attempts": int((project.get("qa_recovery") or {}).get("automatic_attempts", 0)),
+        }
+        summary = (
+            "Figure QA remains unresolved after safe automatic repair was exhausted for %s: %s. "
+            "Execution is paused without reopening or regenerating the research plan."
+            % (chart_id, "; ".join(issues) or "unspecified quality failure")
+        )
+        audit.emit(
+            "figure_qa_repair_exhausted",
+            session=session,
+            level="WARNING",
+            chart_id=chart_id,
+            issues=issues,
+        )
+        return _fail(
+            summary,
+            {
+                "error_code": "figure_quality_unresolved",
+                "chart_id": chart_id,
+                "issues": issues,
+                "requires_user_revision": True,
+            },
         )
     project["plan_version"] += 1
     plan.setdefault("automatic_repairs", []).extend(repairs)
+    requires_human_review = coefficient_solver_axis
     project["review_log"].append(
         {
             "version": project["plan_version"],
-            "note": "automatic revision after Figure QA; human re-approval required",
-            "changes": {"chart_id": chart_id, "repairs": repairs, "issues": list(issues or [])},
+            "note": (
+                "automatic scientific-axis revision after Figure QA"
+                if requires_human_review
+                else "automatic in-plan sampling repair after Figure QA"
+            ),
+            "changes": {"chart_id": chart_id, "repairs": repairs, "issues": issues},
         }
     )
+    affected_run_ids = sorted({item.get("run_id") for item in repairs if item.get("run_id")})
+    previous_attempts = int((project.get("qa_recovery") or {}).get("automatic_attempts", 0))
+    project["qa_recovery"] = {
+        "chart_id": chart_id,
+        "issues": issues,
+        "repairs": repairs,
+        "affected_run_ids": affected_run_ids,
+        "automatic_attempts": previous_attempts + (0 if requires_human_review else 1),
+        "status": "awaiting_human_review" if requires_human_review else "rerun_required",
+    }
+    project["pseudo"] = None
+    # Any formal figure can contain a repaired run, so withdraw the package and recreate
+    # it from the denser outputs. Old successful handles remain as provenance but no longer
+    # match the revised exact run specification and therefore cannot satisfy execution_gaps.
+    session["figures"] = []
+    session["failed_runs"] = [
+        item for item in session.get("failed_runs") or []
+        if item.get("run_id") not in affected_run_ids
+    ]
+    session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
+    if requires_human_review:
+        project["phase"] = "plan_review"
+        project["selected_chart"] = None
+        project["selected_charts"] = []
+        summary = (
+            "Figure QA generated plan v%03d with %d scientific-axis repair(s). Human review "
+            "is required because the independent variable changed."
+            % (project["plan_version"], len(repairs))
+        )
+        audit.emit(
+            "figure_qa_scientific_revision_required",
+            session=session,
+            level="WARNING",
+            chart_id=chart_id,
+            repairs=repairs,
+        )
+        return _needs(summary, _public(project))
+
+    # Increasing resolution does not alter the approved question, controls, model, range,
+    # or output. Keep formal execution approved and let the agent rerun only changed specs.
+    project["phase"] = "approved"
+    summary = (
+        "Figure QA applied %d safe sampling repair(s) in plan v%03d. Formal execution remains "
+        "approved; rerun affected run IDs and regenerate/review the selected figure package."
+        % (len(repairs), project["plan_version"])
+    )
+    audit.emit(
+        "figure_qa_auto_repair_applied",
+        session=session,
+        chart_id=chart_id,
+        repairs=repairs,
+        affected_run_ids=affected_run_ids,
+    )
+    return _ok(
+        summary,
+        {
+            **_public(project),
+            "next": "rerun_repaired_runs",
+            "affected_run_ids": affected_run_ids,
+            "repairs": repairs,
+        },
+    )
+
+
+def revise_after_run_failures(session, failures):
+    """Create a reviewable recovery plan instead of retrying a broken run forever.
+
+    The SMRT adapter exhausts numerical DORT alternatives first. Reaching this function
+    means the next remedy changes the physical experiment, so it becomes a new plan version
+    and cannot execute until the user reviews it again.
+    """
+    project = _require(session)
+    plan = project["plan"]
+    failures = list(failures or [])
+    repairs = []
+    recovery_rounds = sum(
+        1 for item in project.get("review_log") or []
+        if item.get("note") == "automatic recovery proposal after model failure"
+    )
+
+    if recovery_rounds < 2:
+        unstable = [
+            item for item in failures
+            if item.get("error_code") == "dort_diagonalization" and item.get("recoverable")
+        ]
+        affected_radii = {
+            (item.get("spec") or {}).get("radius_m")
+            for item in unstable
+            if isinstance((item.get("spec") or {}).get("radius_m"), (int, float))
+        }
+        for old_radius in sorted(affected_radii):
+            new_radius = max(1.0e-6, float(old_radius) * 0.8)
+            if new_radius == old_radius:
+                continue
+            # Keep the controlled comparison consistent: all sticky-sphere runs that
+            # shared the failed radius receive the same proposed radius.
+            for run in plan.get("runs") or []:
+                spec = run.get("parameters") or {}
+                if (
+                    run.get("model") == "smrt"
+                    and spec.get("microstructure_model") == "sticky_hard_spheres"
+                    and spec.get("radius_m") == old_radius
+                ):
+                    spec["radius_m"] = new_radius
+                    repairs.append(
+                        {
+                            "run_id": run.get("id"),
+                            "field": "radius_m",
+                            "from": old_radius,
+                            "to": new_radius,
+                            "reason": (
+                                "DORT remained unstable after all numerical fallbacks; "
+                                "a smaller sphere radius is proposed across the whole comparison"
+                            ),
+                        }
+                    )
+            if plan.get("parameters", {}).get("radius_m") == old_radius:
+                plan["parameters"]["radius_m"] = new_radius
+
+    project["plan_version"] += 1
+    if repairs:
+        plan.setdefault("automatic_repairs", []).extend(repairs)
+        note = "automatic recovery proposal after model failure"
+        summary = (
+            "Model failure generated plan v%03d with %d controlled repair(s). "
+            "Human review is required before rerunning."
+            % (project["plan_version"], len(repairs))
+        )
+    else:
+        note = "model failure requires a user-selected recovery"
+        limitation = (
+            "Execution failed after numerical recovery; choose a revised physical range "
+            "or parameter set before continuing."
+        )
+        if limitation not in plan.setdefault("limitations", []):
+            plan["limitations"].append(limitation)
+        summary = (
+            "Model failure reopened plan v%03d. No safe automatic physical repair remains; "
+            "review the failure and revise the plan before rerunning."
+            % project["plan_version"]
+        )
+    project.setdefault("review_log", []).append(
+        {
+            "version": project["plan_version"],
+            "note": note,
+            "changes": {
+                "failed_run_ids": [item.get("run_id") for item in failures],
+                "repairs": repairs,
+                "errors": [item.get("error") for item in failures],
+            },
+        }
+    )
+    project["recovery"] = {
+        "failed_run_ids": [item.get("run_id") for item in failures],
+        "repairs": repairs,
+        "requires_human_review": True,
+    }
     project["phase"] = "plan_review"
     project["selected_chart"] = None
     project["selected_charts"] = []
     project["pseudo"] = None
     session["figures"] = []
     session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
-    return _needs(
-        "Figure QA generated plan v%03d with %d repair(s). Human review is required before rerunning."
-        % (project["plan_version"], len(repairs)),
-        _public(project),
-    )
+    return _needs(summary, _public(project))
 
 
 def approve_plan(session):
@@ -642,22 +1036,31 @@ def execution_gaps(session):
     project = session.get("research") or {}
     planned = (project.get("plan") or {}).get("runs") or []
     successful = session.get("successful_runs") or []
+    failed = session.get("failed_runs") or []
     matched = []
+    matched_success_indexes = set()
     matched_runs = []
     missing = []
     missing_ids = []
+    current_failures = []
     for wanted in planned:
-        found = next(
-            (
-                actual
-                for actual in successful
-                if actual.get("model") == wanted.get("model")
-                and all(actual.get("spec", {}).get(key) == value for key, value in wanted.get("parameters", {}).items())
-                and actual.get("handle") not in matched
-            ),
-            None,
-        )
+        candidates = [
+            (index, actual)
+            for index, actual in enumerate(successful)
+            if index not in matched_success_indexes
+            and actual.get("model") == wanted.get("model")
+            and all(
+                actual.get("spec", {}).get(key) == value
+                for key, value in wanted.get("parameters", {}).items()
+            )
+        ]
+        # Prefer the explicit plan association written by run_planned_model.  The fallback
+        # keeps older sessions and direct test fixtures compatible.
+        exact = [item for item in candidates if item[1].get("planned_run_id") == wanted.get("id")]
+        selected = (exact or candidates)
+        found_index, found = selected[0] if selected else (None, None)
         if found:
+            matched_success_indexes.add(found_index)
             matched.append(found.get("handle"))
             matched_runs.append(
                 {
@@ -670,6 +1073,11 @@ def execution_gaps(session):
         else:
             missing.append(wanted.get("label") or wanted.get("id") or wanted.get("model"))
             missing_ids.append(wanted.get("id"))
+            current_failures.extend(
+                item for item in failed
+                if item.get("run_id") == wanted.get("id")
+                and item.get("spec") == wanted.get("parameters")
+            )
     figures = [figure for figure in session.get("figures") or [] if not figure.get("preview")]
     charts = (project.get("plan") or {}).get("charts") or []
     selected_ids = list(project.get("selected_charts") or [])
@@ -685,15 +1093,23 @@ def execution_gaps(session):
         for item in matched_runs:
             for y_name in _chart_y_names(chart):
                 if _run_produces_chart(item["run"], chart, y_name):
-                    expected.append(
-                        {
-                            "run_id": item["run_id"],
-                            "label": "%s · %s" % (item["label"], y_name),
-                            "handle": item["handle"],
-                            "x": chart.get("x"),
-                            "y": y_name,
-                        }
-                    )
+                    series = {
+                        "run_id": item["run_id"],
+                        "label": "%s · %s" % (item["label"], y_name),
+                        "handle": item["handle"],
+                        "x": chart.get("x"),
+                        "y": y_name,
+                    }
+                    # Two plan roles may intentionally share one cached physical run (for
+                    # example a separately named validation baseline).  It satisfies both
+                    # run IDs but should appear only once in the figure.
+                    if not any(
+                        row["handle"] == series["handle"]
+                        and row["x"] == series["x"]
+                        and row["y"] == series["y"]
+                        for row in expected
+                    ):
+                        expected.append(series)
         requirement = {"chart": chart, "series": expected}
         chart_requirements.append(requirement)
         matching_figure = next(
@@ -757,7 +1173,12 @@ def execution_gaps(session):
     return {
         "missing_runs": missing,
         "missing_run_ids": missing_ids,
+        "failed_runs": current_failures,
+        "failed_run_ids": sorted(
+            {item.get("run_id") for item in current_failures if item.get("run_id")}
+        ),
         "matched_handles": matched,
+        "matched_runs": matched_runs,
         "expected_figure_handles": expected_handles,
         "expected_figure_series": expected_series,
         "missing_figure_series": missing_figure_series,
@@ -907,7 +1328,48 @@ def _repair_chart_axes(charts, runs):
     return repairs
 
 
+def _repair_required_companion_outputs(question, charts, runs):
+    """Add a declared same-unit companion output omitted from presentation metadata.
+
+    SMRT ``output=tb`` already computes both polarizations. When a question asks for
+    brightness temperature/polarization but the planner puts only ``tb_v`` on a required
+    chart, adding ``tb_h`` changes neither the experiment nor its cost. Rejecting the whole
+    plan and asking the LLM to reproduce a large JSON object is both fragile and wasteful.
+    """
+    text = str(question or "").lower()
+    if not ("brightness temperature" in text or re.search(r"\btb\b", text)):
+        return []
+    repairs = []
+    for chart in charts:
+        if not chart.get("required", True) or "tb_v" not in _chart_y_names(chart):
+            continue
+        if "tb_h" in _chart_y_names(chart):
+            continue
+        if not any(_run_produces_chart(run, chart, "tb_h") for run in runs):
+            continue
+        before = list(chart.get("ys") or [chart.get("y")])
+        chart["ys"] = before + ["tb_h"]
+        repairs.append(
+            {
+                "chart_id": chart.get("id"),
+                "field": "ys",
+                "from": before,
+                "to": list(chart["ys"]),
+                "reason": "the planned tb runs already produce both polarizations requested by the question",
+            }
+        )
+        break
+    return repairs
+
+
 def _validate_chart_runs(charts, runs):
+    """Validate figure producibility without confusing computation with presentation.
+
+    Main/sensitivity/robustness runs carry scientific curves and must contribute to a
+    required figure. A baseline may instead provide a scalar inversion target, and a
+    diagnostic may only check solver convergence or numerical stability. Those auxiliary
+    runs remain mandatory in ``execution_gaps`` but need not share a main plot's sweep axis.
+    """
     problems = []
     for chart in charts:
         units = set()
@@ -929,12 +1391,18 @@ def _validate_chart_runs(charts, runs):
                 % (chart["label"], ", ".join(sorted(units)))
             )
     for run in runs:
+        stage = str(run.get("stage") or "main").strip().lower()
+        auxiliary = stage in ("baseline", "diagnostic")
         if not any(_run_produces_chart(run, chart) for chart in charts):
+            if auxiliary:
+                continue
             problems.append("%s contributes to none of the proposed charts" % run["label"])
         elif not any(
             chart.get("required", True) and _run_produces_chart(run, chart)
             for chart in charts
         ):
+            if auxiliary:
+                continue
             problems.append(
                 "%s contributes only to optional layouts; add a required result or diagnostic chart"
                 % run["label"]
@@ -1024,7 +1492,6 @@ def _capability_gaps(question):
             normalized = _normal_name(alias)
             if normalized and normalized in text and normalized not in registered:
                 gaps.append(str(alias))
-                break
     return sorted(set(gaps))
 
 
@@ -1032,9 +1499,46 @@ def report_problem(session, answer):
     plan = ((session.get("research") or {}).get("plan") or {})
     gaps = plan.get("capability_gaps") or []
     problems = []
+    anomalies = ((session.get("research") or {}).get("scientific_anomalies") or [])
+    if anomalies:
+        normalized_answer = str(answer or "").lower()
+        if not any(
+            word in normalized_answer
+            for word in (
+                "discontinuity", "abrupt jump", "numerical", "validity", "不连续", "突变", "数值", "适用范围"
+            )
+        ):
+            problems.append(
+                "Figure QA retained a persistent discontinuity as a qualified diagnostic. "
+                "The report must identify it and state that it may be numerical or a model-validity "
+                "boundary rather than a verified physical transition."
+            )
     formal_figures = [
         figure for figure in session.get("figures") or [] if not figure.get("preview")
     ]
+    normalized_report = str(answer or "").strip()
+    lowered_report = normalized_report.lower()
+    # A workflow-status message is not a scientific report.  Models sometimes stop after
+    # QA with "the report can now be delivered"; previously that passed citation checks
+    # and marked the project complete despite containing no interpretation or conclusion.
+    status_only_phrases = (
+        "can now be delivered", "will now be delivered", "ready to deliver",
+        "final report can", "final report will", "正式报告现在可以", "可以交付最终",
+    )
+    conclusion_signals = (
+        "therefore", "we conclude", "the results show", "indicates that",
+        "supports the hypothesis", "does not support", "conclusion", "结论",
+        "因此", "结果表明", "说明了", "支持假设", "不支持",
+    )
+    if formal_figures and (
+        any(phrase in lowered_report for phrase in status_only_phrases)
+        or not any(signal in lowered_report for signal in conclusion_signals)
+    ):
+        problems.append(
+            "The response is only a workflow/QA status update, not the final scientific report. "
+            "Interpret the plotted trends and comparisons, relate them to the hypothesis and "
+            "success criteria, state limitations, and give an explicit scientific conclusion."
+        )
     if len(formal_figures) > 1:
         missing_numbers = []
         for index, figure in enumerate(formal_figures, 1):
@@ -1049,7 +1553,7 @@ def report_problem(session, answer):
             )
     if not gaps:
         return " ".join(problems)
-    lowered = str(answer or "").lower()
+    lowered = lowered_report
     names_present = all(_normal_name(name) in _normal_name(answer) for name in gaps)
     limitation_present = any(
         phrase in lowered

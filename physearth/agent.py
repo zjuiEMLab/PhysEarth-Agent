@@ -4,7 +4,7 @@ import time
 
 from openai import OpenAI
 
-from physearth import approval, budget, config, harness, prompt, tools, research
+from physearth import audit, approval, budget, config, harness, prompt, tools, research
 from physearth import session as session_state
 from physearth import switches as switch_flags
 
@@ -97,7 +97,9 @@ def _client():
 
 
 def _event(kind, **fields):
-    return dict(kind=kind, at=time.strftime("%H:%M:%S"), **fields)
+    event = dict(kind=kind, at=time.strftime("%H:%M:%S"), **fields)
+    audit.emit("agent_event", agent_event=event)
+    return event
 
 
 def _fault(exc):
@@ -441,19 +443,59 @@ def _record_tool_result(name, result, state, events):
             if not data.get("reused"):
                 session_state.bump(state, "model_runs")
             state["models_run"].add("%s@%s" % (data["model"], data["version"]))
-            if not data.get("reused"):
-                state["session"]["successful_runs"].append(
-                    {
-                        "model": data["model"],
-                        "spec": dict(data.get("spec") or {}),
-                        "handle": data.get("handle"),
-                        "planned_run_id": data.get("planned_run_id"),
-                    }
-                )
+            # A cached physical result still fulfils the *current* planned run.  Previously
+            # reused results were deliberately not counted as new computations, but their
+            # planned_run_id was never registered either.  execution_gaps then requested the
+            # same run forever: run -> reuse -> still missing.  Store one lightweight plan
+            # association per run ID while keeping model_runs limited to real executions.
+            successful = state["session"].setdefault("successful_runs", [])
+            record = {
+                "model": data["model"],
+                "spec": dict(data.get("spec") or {}),
+                "handle": data.get("handle"),
+                "planned_run_id": data.get("planned_run_id"),
+            }
+            if not any(
+                item.get("model") == record["model"]
+                and item.get("spec") == record["spec"]
+                and item.get("handle") == record["handle"]
+                and item.get("planned_run_id") == record["planned_run_id"]
+                for item in successful
+            ):
+                successful.append(record)
+            planned_id = data.get("planned_run_id")
+            if planned_id:
+                state["session"]["failed_runs"] = [
+                    item for item in state["session"].setdefault("failed_runs", [])
+                    if item.get("run_id") != planned_id
+                    or item.get("spec") != dict(data.get("spec") or {})
+                ]
             if result.get("qc") and not result["qc"]["passed"]:
                 session_state.bump(state, "qc_failures")
         elif result["status"] == "needs_input":
             session_state.bump(state, "rejected_calls")
+        elif name == "run_planned_model" and data.get("planned_run_id"):
+            failures = state["session"].setdefault("failed_runs", [])
+            run_id = data["planned_run_id"]
+            spec = dict(data.get("spec") or {})
+            previous = next(
+                (
+                    item for item in failures
+                    if item.get("run_id") == run_id and item.get("spec") == spec
+                ),
+                None,
+            )
+            if previous is None:
+                previous = {"run_id": run_id, "spec": spec, "attempts": 0}
+                failures.append(previous)
+            previous.update(
+                attempts=int(previous.get("attempts", 0)) + 1,
+                model=data.get("model"),
+                error_code=data.get("error_code") or "model_execution_error",
+                recoverable=bool(data.get("recoverable")),
+                repair_hints=list(data.get("repair_hints") or []),
+                error=result.get("error") or result.get("summary"),
+            )
     if data.get("handle") and result["status"] == "success":
         session_state.remember_handle(state, data["handle"], _handle_line(name, data))
     if name in ("plot", "plot_planned_chart") and result["status"] == "success":
@@ -474,6 +516,13 @@ def stream(question, history=None, model=None, session=None, switches=None):
         model or session.get("model"), session.get("unrestricted", False)
     )
     session["turns"] = session.get("turns", 0) + 1
+    audit.bind(session, turn=session["turns"])
+    audit.emit(
+        "agent_turn_started",
+        session=session,
+        question=question,
+        history_messages=len(history or []),
+    )
     state = session_state.new_state(session, session["model"])
     state["switches"] = switch_flags.resolve(switches)
     events = []
@@ -540,7 +589,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 for chunk in chunks:
                     if candidate.feed(chunk) and candidate.content:
-                        yield transcript(segments, candidate.content), events, state
+                        # Keep the authoritative answer in sync with the streamed frame.
+                        # Several lifecycle events are yielded immediately after streaming
+                        # finishes (model_call, tool_start, validation gates).  If ``answer``
+                        # still contains the previous block, those frames briefly replace the
+                        # visible response with stale or empty text before it comes back on the
+                        # next token, which looks like the Conversation panel is flashing.
+                        answer = transcript(segments, candidate.content)
+                        yield answer, events, state
             except Exception as exc:
                 last_fault = _fault(exc)
                 last_upstream = _upstream_text(exc)
@@ -766,6 +822,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
 
+                # Successful execution is state progress. Do not let an intervention count
+                # from an earlier stage leak into a later QA repair and cause a premature
+                # three-attempt stop.
+                if name == "run_planned_model" and result["status"] == "success":
+                    review_attempts.pop("research_gate:formal_model_required", None)
+                if name == "plot_planned_chart" and result["status"] == "success":
+                    review_attempts.pop("research_gate:figure_required", None)
+
                 human_wait = (
                     name == "research_plan"
                     and result["status"] == "needs_input"
@@ -774,8 +838,22 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 if result["status"] == "success" or human_wait:
                     tool_failure_streak = {"name": None, "count": 0, "detail": ""}
                 else:
-                    failure_code = (result.get("data") or {}).get("error_code")
-                    failure_signature = "%s:%s" % (name, failure_code or (result.get("error") or result["summary"]))
+                    failure_data = result.get("data") or {}
+                    failure_code = failure_data.get("error_code")
+                    # A broad error code is not a complete no-progress signature. If the
+                    # planner removes invalid relationships between retries, its structured
+                    # problem list shrinks and it is making progress rather than looping.
+                    structured_problems = failure_data.get("problems") or []
+                    failure_detail = (
+                        json.dumps(sorted(map(str, structured_problems)), ensure_ascii=False)
+                        if structured_problems
+                        else (result.get("error") or result["summary"])
+                    )
+                    failure_signature = "%s:%s:%s" % (
+                        name,
+                        failure_code or "unclassified",
+                        failure_detail,
+                    )
                     if tool_failure_streak.get("signature") == failure_signature:
                         tool_failure_streak["count"] += 1
                     else:
@@ -789,7 +867,15 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     if name == "research_plan":
                         last_plan_error = result["summary"]
                         if not session.get("research"):
-                            forced_tool_name = "research_plan"
+                            # A recognised paper reproduction must gather the exact bundled
+                            # section before planning. Forcing research_plan again here would
+                            # create a deterministic plan_required loop because no new evidence
+                            # could enter the session.
+                            forced_tool_name = (
+                                "read_literature"
+                                if failure_code == "reference_read_required"
+                                else "research_plan"
+                            )
 
                 if result["status"] == "needs_input" and (
                     name == "research_plan"
@@ -831,6 +917,34 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         )
                     )
                 yield answer, events, state
+
+                if (
+                    name == "run_planned_model"
+                    and result["status"] == "terminal_error"
+                    and (result.get("data") or {}).get("planned_run_id")
+                ):
+                    gaps = research.execution_gaps(session)
+                    failed = gaps.get("failed_runs") or []
+                    if failed:
+                        revision = research.revise_after_run_failures(session, failed)
+                        answer = (
+                            "%s The failed run was not repeated. Successful outputs were retained, "
+                            "formal figures from the old plan were withdrawn, and no completion "
+                            "claim was published."
+                            % revision["summary"]
+                        )
+                        events.append(
+                            _event(
+                                "research_revision",
+                                rule="model_failure_recovery",
+                                phase="plan_review",
+                                detail=revision["summary"],
+                                failed_run_ids=gaps.get("failed_run_ids") or [],
+                            )
+                        )
+                        state["phase"] = "done"
+                        yield answer, events, state
+                        return
 
                 if tool_failure_streak["count"] >= harness.MAX_INTERVENTIONS:
                     answer = (
@@ -938,6 +1052,26 @@ def stream(question, history=None, model=None, session=None, switches=None):
         if session.get("research_required") and research.allow_model(session):
             gaps = research.execution_gaps(session)
             if gaps["missing_runs"]:
+                if gaps.get("failed_runs"):
+                    revision = research.revise_after_run_failures(
+                        session, gaps["failed_runs"]
+                    )
+                    answer = (
+                        "%s Successful outputs were retained, but formal figures from the old "
+                        "plan were withdrawn. Review and approve the recovery plan before any rerun; "
+                        "no completion claim has been published."
+                        % revision["summary"]
+                    )
+                    events.append(
+                        _event(
+                            "research_revision",
+                            rule="model_failure_recovery",
+                            phase="plan_review",
+                            detail=revision["summary"],
+                            failed_run_ids=gaps.get("failed_run_ids") or [],
+                        )
+                    )
+                    break
                 gate_key = "research_gate:formal_model_required"
                 attempts = review_attempts.get(gate_key, 0) + 1
                 review_attempts[gate_key] = attempts
@@ -970,6 +1104,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         % ", ".join(gaps["missing_run_ids"]),
                     }
                 )
+                forced_tool_name = "run_planned_model"
                 yield transcript(segments), events, state
                 continue
             if gaps["figure_problem"]:
@@ -979,6 +1114,66 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     revision = research.revise_after_figure_quality(
                         session, chart_id, failed["issues"]
                     )
+                    if revision["status"] == "success":
+                        next_action = (revision.get("data") or {}).get("next")
+                        if next_action == "continue_with_qualified_figure":
+                            events.append(
+                                _event(
+                                    "research_revision",
+                                    rule="figure_quality_scientific_anomaly",
+                                    phase="approved",
+                                    detail=revision["summary"],
+                                    anomaly=(revision.get("data") or {}).get("scientific_anomaly"),
+                                )
+                            )
+                            messages.append(
+                                {"role": "assistant", "content": completion.content or ""}
+                            )
+                            messages.append(
+                                {
+                                    "role": "user",
+                                    "content": (
+                                        "Maximum safe sampling refinement confirmed a persistent "
+                                        "Figure discontinuity. It is retained as a qualified "
+                                        "scientific diagnostic. Continue to research_plan(action='complete') "
+                                        "and report it explicitly as a possible numerical or model-validity "
+                                        "boundary, not a verified physical transition. Do not regenerate "
+                                        "the plan or rerun the same model configuration."
+                                    ),
+                                }
+                            )
+                            yield transcript(segments), events, state
+                            continue
+                        rerun_ids = (revision.get("data") or {}).get("affected_run_ids") or []
+                        events.append(
+                            _event(
+                                "research_revision",
+                                rule="figure_quality_auto_repair",
+                                phase="approved",
+                                detail=revision["summary"],
+                                affected_run_ids=rerun_ids,
+                            )
+                        )
+                        messages.append(
+                            {"role": "assistant", "content": completion.content or ""}
+                        )
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": (
+                                    "Figure QA safely increased sampling without changing the "
+                                    "approved scientific question or controls. Continue the same "
+                                    "execution now. Call run_planned_model once for each exact "
+                                    "affected run_id: %s. Then regenerate every selected chart and "
+                                    "call plot_planned_chart(action='review') for each. Do not call "
+                                    "research_plan and do not publish a conclusion until QA passes."
+                                    % ", ".join(rerun_ids)
+                                ),
+                            }
+                        )
+                        forced_tool_name = "run_planned_model"
+                        yield transcript(segments), events, state
+                        continue
                     if revision["status"] == "needs_input":
                         answer = (
                             "%s The failed formal figures were withdrawn. Review the revised "
@@ -996,12 +1191,18 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         )
                     else:
                         answer = (
-                            "Figure QA requires a scientific choice that cannot be changed safely: %s. "
-                            "Describe the desired sampling or axis in Conversation."
-                            % "; ".join(failed["issues"])
+                            "%s No new research plan was generated. Describe a deliberate sampling, "
+                            "model, or axis revision in Conversation before resuming."
+                            % revision["summary"]
                         )
                         events.append(
-                            _event("research_wait", phase="plan_review", detail=answer)
+                            _event(
+                                "harness_stop",
+                                rule="figure_quality_unresolved",
+                                reason=answer,
+                                chart_id=chart_id,
+                                issues=failed["issues"],
+                            )
                         )
                     break
                 gate_key = "research_gate:figure_required"

@@ -49,6 +49,7 @@ def new_session(model=None):
         "abstracts_seen": set(),
         "figures": [],
         "successful_runs": [],
+        "failed_runs": [],
         "evidence_revision": 0,
         "handles": [],
         "corpus": {},

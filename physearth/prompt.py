@@ -53,8 +53,12 @@ real output column declared by list_models (for example tb_v or ks_per_m), never
 of an electromagnetic theory. Use `ys` for compatible outputs that belong in one scientific
 comparison, such as tb_v and tb_h. Create separate required charts when units differ, for
 example electromagnetic coefficients versus brightness temperature. Include required
-baseline/validation, main-result, and diagnostic figures when the question needs them; chart
-choices are a figure package, not permission to omit a scientific output. If research_plan
+main-result figures and any baseline/validation or diagnostic figures the question actually
+needs. A scalar baseline used as an inversion target and a diagnostic run used only for
+numerical or solver QA remain mandatory computations but do not need to be forced onto an
+incompatible main-figure sweep axis. Main, sensitivity and robustness runs must still
+contribute to a required chart. Chart choices are a figure package, not permission to omit a
+scientific output. If research_plan
 is rejected, read its structured error_code, problems, candidate_numeric_axes and
 repair_hints. Apply those exact corrections in the next complete proposal instead of
 repeating the previous object. A chart x is normally a numeric sweep_parameter such as
@@ -65,7 +69,11 @@ After approval,
 execute each planned run exactly once with
 run_planned_model(run_id). The backend supplies the approved model parameters; never
 reconstruct them with run_model. Reuse returned handles and never rerun a successful
-configuration merely to repair a plot. Then call plot_planned_chart(chart_id) once for
+configuration merely to repair a plot. If a planned model reports a numerical failure,
+do not repeat the same run in a loop: the backend first tries declared numerical solver
+fallbacks, then opens a new human-reviewed recovery plan before any physical parameter is
+changed. Successful results remain available but cannot satisfy a revised configuration.
+Then call plot_planned_chart(chart_id) once for
 every chart in the confirmed chart package. The backend expands all compatible planned
 runs and multi-output polarization series; do not manually build a smaller plot. After
 each formal plot, call plot_planned_chart(chart_id, action=review). This second model/tool
@@ -77,6 +85,25 @@ formal Figure passes this review. Refer to formal outputs as Figure 1, Figure 2,
 and explicitly connect each multi-figure interpretation paragraph to the corresponding
 Figure number. Do not create multiple Figures when one well-designed comparison answers the
 question.
+
+The four scientific questions from Section 3 of the bundled SMRT paper are paper
+reproductions. For those questions, read the relevant full-text slice before proposing a
+plan: smrt-v1#08 for the sparse-medium, DMRT-model-comparison and MEMLS comparisons, and
+smrt-v1#09 for microstructure equivalence. Preserve the paper's independent variable and
+common reference conditions. The backend validates these conditions and rejects a density
+sweep substituted for an angular comparison, changed frequency/temperature/grain parameters,
+or a plan that silently treats an unavailable external model as an executable SMRT variant.
+Use the task description as an experimental checklist, but use the opened paper section as
+the source of truth when a numerical value differs.
+
+Q4 is an inversion: registered SMRT runs output TB/coefficient arrays, not optimized input
+parameters. Plan radius_m and corr_length_m sweeps and chart their actual tb_v/tb_h outputs.
+SMRT also supports a stickiness sweep only with sticky_hard_spheres; use it as the target
+baseline family, never with independent_sphere or exponential microstructures.
+Derive equivalent radius/correlation length, residual, root/bracket status and uniqueness
+from those arrays in the analysis; never declare stickiness, radius_m, corr_length_m or an
+``optimal_*`` name as a model-output y column. The scalar SHS target is a baseline run and
+does not need to share either sweep axis.
 
 Every physical model explicitly named in a comparison question must be accounted for. A
 paper in the literature corpus is not an executable model. If a named comparison model is

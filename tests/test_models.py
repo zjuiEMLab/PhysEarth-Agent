@@ -67,6 +67,44 @@ def test_sweep_bounds_are_checked_against_the_swept_parameter(card):
     assert problems and "physical range of density_kg_m3" in problems[0]
 
 
+def test_smrt_declares_stickiness_as_a_sweepable_shs_parameter(card):
+    spec, problems = validation.resolve(
+        card,
+        {
+            "output": "tb",
+            "electromagnetic_model": "iba",
+            "microstructure_model": "sticky_hard_spheres",
+            "sweep_parameter": "stickiness",
+            "sweep_start": 0.1,
+            "sweep_stop": 1.0,
+            "sweep_points": 6,
+        },
+    )
+    assert not problems
+    assert spec["sweep_parameter"] == "stickiness"
+
+
+def test_smrt_executes_a_stickiness_sweep():
+    result = tools.call(
+        "run_model",
+        {
+            "model": "smrt",
+            "parameters": {
+                "output": "tb",
+                "electromagnetic_model": "iba",
+                "microstructure_model": "sticky_hard_spheres",
+                "sweep_parameter": "stickiness",
+                "sweep_start": 0.1,
+                "sweep_stop": 0.5,
+                "sweep_points": 3,
+            },
+        },
+    )
+    assert result["status"] == "success"
+    assert result["data"]["axis"]["name"] == "stickiness"
+    assert result["data"]["n_points"] == 3
+
+
 def test_defaults_are_filled_from_the_card(card):
     spec, problems = validation.resolve(card, {})
     assert not problems
@@ -308,6 +346,34 @@ def test_a_runaway_model_is_stopped_by_the_wall_clock_limit(monkeypatch):
     result = tools.call("run_model", {"model": "smrt", "parameters": {}})
     assert result["status"] == "terminal_error"
     assert "did not finish" in result["error"]
+
+
+def test_dort_failure_is_classified_for_recovery(monkeypatch):
+    entry = registry.get("smrt")
+
+    def fail(_spec):
+        raise RuntimeError(
+            "SMRT sweep failed at density_kg_m3=450. "
+            "DORT numerical recovery exhausted after default, shur and shur_forcedtriu"
+        )
+
+    monkeypatch.setattr(entry, "run", fail)
+    result = tools.call(
+        "run_model",
+        {
+            "model": "smrt",
+            "parameters": {
+                "electromagnetic_model": "dmrt_qca_shortrange",
+                "microstructure_model": "sticky_hard_spheres",
+                "output": "sigma",
+            },
+        },
+    )
+
+    assert result["status"] == "terminal_error"
+    assert result["data"]["error_code"] == "dort_diagonalization"
+    assert result["data"]["recoverable"] is True
+    assert len(result["data"]["repair_hints"]) == 3
 
 
 def test_paper_text_arrives_inside_an_external_source_boundary():
