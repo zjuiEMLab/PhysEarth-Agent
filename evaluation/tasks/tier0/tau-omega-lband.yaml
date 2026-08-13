@@ -1,5 +1,14 @@
 id: t0-tau-omega-lband
 suite: tier0
+tier: 0
+kind: [identity, monotonic, quality_control]
+checks:
+  - identity:bare_soil_tb_is_soil_temperature_times_emissivity
+  - identity:emissivity_stays_between_zero_and_one
+  - monotonic:soil_moisture:tb_v:decreasing
+  - monotonic:soil_moisture:tb_h:decreasing
+  - monotonic:soil_moisture:emissivity_v:decreasing
+  - quality_control
 model: tau_omega
 title: L-band emission of a vegetated soil surface
 rationale: >-

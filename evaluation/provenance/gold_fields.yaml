@@ -1,0 +1,33 @@
+version: "1.0"
+source_kinds: [paper, user, derived, model_default, assumption, unknown]
+tasks:
+  t1-smrt-fig4-passive: &fig4
+    fields:
+      electromagnetic_model: {value: dmrt_qcacp_shortrange, accepted_kinds: [paper, user], source_refs: ["smrt-v1#08", question]}
+      microstructure_model: {value: sticky_hard_spheres, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      output: {value: tb, accepted_kinds: [paper, user], source_refs: ["smrt-v1#08", question]}
+      frequency_ghz: {value: 37.0, accepted_kinds: [paper, user], source_refs: ["smrt-v1#08", question]}
+      density_kg_m3: {value: 300.0, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      temperature_k: {value: 256.0, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      radius_m: {value: 0.0001, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      stickiness: {value: 0.5, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      thickness_m: {value: 10.0, accepted_kinds: [derived, assumption], source_ref: "semi-infinite approximation"}
+      sweep_parameter: {value: angle_deg, accepted_kinds: [user], source_ref: question}
+      sweep_start: {value: 0.0, accepted_kinds: [user], source_ref: question}
+      sweep_stop: {value: 60.0, accepted_kinds: [user], source_ref: question}
+      sweep_points: {accepted_kinds: [model_default, assumption], source_ref: "implementation choice", value_range: [6, 61]}
+  t1-smrt-fig4-active:
+    fields:
+      electromagnetic_model: {value: dmrt_qcacp_shortrange, accepted_kinds: [paper, user], source_refs: ["smrt-v1#08", question]}
+      microstructure_model: {value: sticky_hard_spheres, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      output: {value: sigma, accepted_kinds: [paper, user], source_refs: ["smrt-v1#08", question]}
+      frequency_ghz: {value: 37.0, accepted_kinds: [paper, user], source_refs: ["smrt-v1#08", question]}
+      density_kg_m3: {value: 300.0, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      temperature_k: {value: 256.0, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      radius_m: {value: 0.0001, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      stickiness: {value: 0.5, accepted_kinds: [paper], source_ref: "smrt-v1#08"}
+      thickness_m: {value: 10.0, accepted_kinds: [derived, assumption], source_ref: "semi-infinite approximation"}
+      sweep_parameter: {value: angle_deg, accepted_kinds: [user], source_ref: question}
+      sweep_start: {value: 15.0, accepted_kinds: [user], source_ref: question}
+      sweep_stop: {value: 60.0, accepted_kinds: [user], source_ref: question}
+      sweep_points: {accepted_kinds: [model_default, assumption], source_ref: "implementation choice", value_range: [6, 61]}

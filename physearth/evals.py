@@ -104,7 +104,7 @@ def snapshot():
     """Recompute the displayed metrics from raw records, just like REPORT.md."""
     tier0_path = RESULTS / "tier0.json"
     tier0 = json.loads(tier0_path.read_text(encoding="utf-8")) if tier0_path.is_file() else None
-    tasks = {task["id"]: task for suite in ("tier1", "probe") for task in _load_tasks(suite)}
+    tasks = {task["id"]: task for suite in ("tier2", "probe") for task in _load_tasks(suite)}
     run_paths = sorted((RESULTS / "runs").glob("*.json"))
     runs = [json.loads(path.read_text(encoding="utf-8")) for path in run_paths]
     scored = [
@@ -262,10 +262,10 @@ def _false_premise_table(scored):
     )
 
 
-def _tier1_table(scored):
+def _tier2_table(scored):
     rows = []
-    tier1 = [item for item in scored if item["suite"] == "tier1"]
-    for task_id, items in sorted(_group(tier1, "task").items()):
+    tier2 = [item for item in scored if item.get("config_match") is not None]
+    for task_id, items in sorted(_group(tier2, "task").items()):
         for config_name in CONFIG_ORDER:
             subset = [item for item in items if item["config"] == config_name]
             if not subset:
@@ -447,7 +447,7 @@ def score_details():
         "Deterministic physics checks <b>9 / 9 pass</b></summary>%s</details>"
         "<details class='eval-suite-details'><summary><span>Probe</span> "
         "False-premise handling across ablations</summary>%s</details>"
-        "<details class='eval-suite-details'><summary><span>Tier 1</span> "
+        "<details class='eval-suite-details'><summary><span>Tier 2</span> "
         "SMRT paper figure reproduction</summary>%s</details>"
         "<details class='eval-suite-details'><summary><span>All tasks</span> "
         "Twelve natural-language cases / four configurations</summary>%s</details>"
@@ -456,7 +456,7 @@ def score_details():
         % (
             _tier0_tables(data["tier0"]),
             _false_premise_table(data["scored"]),
-            _tier1_table(data["scored"]),
+            _tier2_table(data["scored"]),
             _per_task_table(data),
         )
     )

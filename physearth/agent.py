@@ -164,6 +164,8 @@ class _Completion:
         self.calls = {}
         self.prompt_tokens = None
         self.completion_tokens = None
+        self.cost_usd = None
+        self.cost_details = None
 
     def feed(self, chunk):
         usage = getattr(chunk, "usage", None)
@@ -172,6 +174,14 @@ class _Completion:
             self.completion_tokens = (
                 getattr(usage, "completion_tokens", None) or self.completion_tokens
             )
+            cost = getattr(usage, "cost", None)
+            if cost is not None:
+                self.cost_usd = float(cost)
+            details = getattr(usage, "cost_details", None)
+            if details is not None:
+                self.cost_details = (
+                    details.model_dump() if hasattr(details, "model_dump") else details
+                )
         if not chunk.choices:
             return False
         delta = chunk.choices[0].delta
@@ -612,6 +622,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 elapsed_s=round(time.perf_counter() - started, 2),
                 prompt_tokens=completion.prompt_tokens,
                 completion_tokens=completion.completion_tokens,
+                cost_usd=completion.cost_usd,
+                cost_details=completion.cost_details,
                 reasoning_chars=completion.reasoning,
             )
         )

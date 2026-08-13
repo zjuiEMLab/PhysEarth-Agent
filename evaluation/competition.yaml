@@ -1,0 +1,79 @@
+version: "2026-08-12"
+name: PhysEarth competition evaluation
+scope: "Model registration and paper reproduction only; independent research is out of scope."
+
+execution:
+  configs: [full]
+  provider: openrouter
+  llms:
+    - qwen/qwen3.5-122b-a10b
+    - deepseek/deepseek-v4-flash-0731
+    - openai/gpt-5.6-luna
+    - z-ai/glm-4.7-flash
+  prompt_profiles:
+    - p0-explore-refine-produce
+    - p1-reproduction-first
+    - p3-uncertainty-aware
+  repeats: 2
+  approval_policy: scripted_accept_unmodified_plan
+  results_dir: evaluation/results/competition/runs
+
+model_candidates:
+  openrouter_selected:
+    status: confirmed
+    models:
+      - qwen/qwen3.5-122b-a10b
+      - deepseek/deepseek-v4-flash-0731
+      - openai/gpt-5.6-luna
+      - z-ai/glm-4.7-flash
+  modelscope_provider_diversity:
+    status: confirmed_provider_diversity
+    note: "Separate provider-diversity track; excluded from the four-model main ranking."
+    models:
+      - Shanghai_AI_Laboratory/Intern-S2-Preview
+
+provider_diversity:
+  provider: modelscope
+  status: selected_not_executed
+  llms:
+    - Shanghai_AI_Laboratory/Intern-S2-Preview
+  prompt_profiles:
+    - p0-explore-refine-produce
+    - p1-reproduction-first
+    - p3-uncertainty-aware
+  repeats: 1
+  task_source: competition_required.t2_paper_reconstruction
+  results_dir: evaluation/results/competition/modelscope_runs
+  include_in_main_ranking: false
+
+competition_required:
+  t0_registry_integrity:
+    runners:
+      - evaluation/runners/registry_contract.py
+      - evaluation/runners/tier0.py
+    status: existing
+  t2_paper_reconstruction:
+    core_tasks:
+      - t1-smrt-fig4-passive
+      - t1-smrt-fig4-active
+    probe_tasks:
+      - p-smrt-density-above-ice
+      - p-smrt-dmrt-with-exponential-acf
+      - p-smrt-arctic-underspecified
+  t2_independent_oracle:
+    role: metric
+    tasks:
+      - t1-smrt-fig4-passive
+      - t1-smrt-fig4-active
+    oracle: upstream_smrt_direct
+
+competition_optional:
+  t1_model_onboarding:
+    fixture: examples/toy_model
+    status: design_only
+  human_review:
+    sample_per_llm_prompt: 1
+
+reporting:
+  dashboard: evaluation/results/competition/dashboard.html
+  scored_records: evaluation/results/competition/scored_runs.json

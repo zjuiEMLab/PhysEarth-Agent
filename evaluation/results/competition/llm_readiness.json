@@ -1,0 +1,69 @@
+{
+  "schema_version": "llm-readiness-v1",
+  "generated_at": "2026-08-13T04:53:38.061633+00:00",
+  "inference_executed": true,
+  "providers": [
+    {
+      "provider": "openrouter",
+      "base_url": "https://openrouter.ai/api/v1/",
+      "selection_status": "confirmed",
+      "credential_present": true,
+      "connected": true,
+      "visible_model_count": 410,
+      "models": [
+        {
+          "id": "qwen/qwen3.5-122b-a10b",
+          "available": true
+        },
+        {
+          "id": "deepseek/deepseek-v4-flash-0731",
+          "available": true
+        },
+        {
+          "id": "openai/gpt-5.6-luna",
+          "available": true
+        },
+        {
+          "id": "z-ai/glm-4.7-flash",
+          "available": true
+        }
+      ]
+    },
+    {
+      "provider": "modelscope",
+      "base_url": "https://api-inference.modelscope.cn/v1",
+      "selection_status": "confirmed_provider_diversity",
+      "note": "Separate provider-diversity track; excluded from the four-model main ranking.",
+      "credential_present": true,
+      "connected": true,
+      "visible_model_count": 43,
+      "models": [
+        {
+          "id": "Shanghai_AI_Laboratory/Intern-S2-Preview",
+          "available": true
+        }
+      ]
+    }
+  ],
+  "smoke": {
+    "provider": "openrouter",
+    "requested_model": "qwen/qwen3.5-122b-a10b",
+    "response_model": "qwen/qwen3.5-122b-a10b",
+    "response_id_present": true,
+    "content": "CONNECTED",
+    "semantic_pass": true,
+    "elapsed_s": 2.749,
+    "llm_usage": {
+      "prompt_tokens": 33,
+      "completion_tokens": 3,
+      "total_tokens": 36,
+      "reasoning_tokens": 0,
+      "cost_usd": 1.482e-05,
+      "cost_details": {
+        "upstream_inference_cost": 1.482e-05,
+        "upstream_inference_prompt_cost": 8.58e-06,
+        "upstream_inference_completions_cost": 6.24e-06
+      }
+    }
+  }
+}

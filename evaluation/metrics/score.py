@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from physearth import harness, validation  # noqa: E402
 from physearth.models import registry  # noqa: E402
 
-NUMERIC_TOOLS = ("run_model",)
+NUMERIC_TOOLS = ("run_model", "run_planned_model")
 
 
 def call_problems(entry):
@@ -28,11 +28,14 @@ def call_problems(entry):
     if entry["name"] not in NUMERIC_TOOLS:
         return None
     arguments = entry.get("arguments") or {}
-    name = arguments.get("model") or (entry.get("spec") or {}).get("model")
-    parameters = dict(arguments.get("parameters") or {})
-    parameters.update({k: v for k, v in arguments.items() if k not in ("model", "parameters")})
-    if not parameters and entry.get("spec"):
-        parameters = dict(entry["spec"])
+    name = entry.get("model") or arguments.get("model") or (entry.get("spec") or {}).get("model")
+    if entry["name"] == "run_planned_model":
+        parameters = dict(entry.get("spec") or {})
+    else:
+        parameters = dict(arguments.get("parameters") or {})
+        parameters.update({k: v for k, v in arguments.items() if k not in ("model", "parameters")})
+        if not parameters and entry.get("spec"):
+            parameters = dict(entry["spec"])
     model = registry.get(name)
     if model is None:
         return ["unknown model %r" % name]
@@ -103,10 +106,11 @@ def self_corrected(record):
 def _successful_specs(record, model_name=None):
     out = []
     for entry in record["tool_log"]:
-        if entry["name"] != "run_model" or entry.get("status") != "success":
+        if entry["name"] not in NUMERIC_TOOLS or entry.get("status") != "success":
             continue
         spec = entry.get("spec") or {}
-        if model_name and (entry.get("arguments") or {}).get("model") != model_name:
+        name = entry.get("model") or (entry.get("arguments") or {}).get("model") or spec.get("model")
+        if model_name and name != model_name:
             continue
         out.append(spec)
     return out
@@ -184,10 +188,10 @@ def _agent_run(record, model_name):
     """The last successful run of the graded model, with the spec that produced it."""
     chosen = None
     for entry in record["tool_log"]:
-        if entry["name"] != "run_model" or entry.get("status") != "success":
+        if entry["name"] not in NUMERIC_TOOLS or entry.get("status") != "success":
             continue
         spec = dict(entry.get("spec") or {})
-        name = (entry.get("arguments") or {}).get("model") or spec.get("model")
+        name = entry.get("model") or (entry.get("arguments") or {}).get("model") or spec.get("model")
         if name != model_name:
             continue
         chosen = (name, spec)

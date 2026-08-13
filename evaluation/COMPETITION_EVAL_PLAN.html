@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PhysEarth-Agent Evaluation Plan</title>
+  <style>
+    :root{--ink:#17202a;--muted:#5c6975;--paper:#f5f7fa;--card:#fff;--line:#dce3ea;--blue:#2468a8;--blue-soft:#e9f3fb;--green:#13795b;--green-soft:#e8f6f0;--amber:#936500;--amber-soft:#fff5d9;--red:#b42318;--red-soft:#fff0ee;--shadow:0 10px 26px rgba(23,32,42,.07)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.58 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+    .top{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:11px 5vw;background:#fffffff5;border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}.brand{font-weight:800}.nav{display:flex;flex-wrap:wrap;gap:11px;font-size:12px}.nav a{color:var(--muted)}
+    main{max-width:1180px;margin:auto}.slide{padding:58px 5vw 68px;border-bottom:1px solid var(--line)}.hero{min-height:72vh;display:flex;flex-direction:column;justify-content:center}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue)}h1{max-width:900px;margin:12px 0 16px;font-size:clamp(38px,6vw,72px);line-height:1.04;letter-spacing:-.045em}h2{margin:0 0 18px;font-size:clamp(27px,4vw,43px);line-height:1.1;letter-spacing:-.03em}h3{margin:0 0 8px;font-size:18px;line-height:1.25}p{max-width:900px;margin:0 0 12px}.lead{max-width:840px;color:var(--muted);font-size:clamp(18px,2vw,23px)}
+    .chips{display:flex;flex-wrap:wrap;gap:7px;margin:20px 0}.chip,.tag{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800}.chip{background:var(--blue-soft);color:var(--blue)}.tag.must{background:var(--red-soft);color:var(--red)}.tag.should{background:var(--amber-soft);color:var(--amber)}.tag.done{background:var(--green-soft);color:var(--green)}
+    .callout{margin:18px 0;padding:16px 18px;border-left:4px solid var(--blue);border-radius:9px;background:var(--blue-soft)}.callout.warn{border-color:var(--amber);background:var(--amber-soft)}.callout.good{border-color:var(--green);background:var(--green-soft)}.callout strong{display:block;margin-bottom:3px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:20px}.card{grid-column:span 4;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}.card.wide{grid-column:span 8}.card.full{grid-column:1/-1}.card p,.card li{color:var(--muted)}.card ul,.card ol{margin:8px 0 0;padding-left:20px}
+    table{width:100%;margin:15px 0 3px;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}th,td{padding:9px 10px;vertical-align:top;text-align:left;border-bottom:1px solid var(--line)}th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#edf2f6;color:#33424f}tr:last-child td{border-bottom:0}.small{color:var(--muted);font-size:12px}
+    .priority{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}.priority>div{padding:16px;border-radius:12px;border:1px solid var(--line);background:var(--card)}.priority b{display:block;font-size:27px}.priority .m b{color:var(--red)}.priority .s b{color:var(--amber)}.priority .f b{color:var(--blue)}
+    .tree-terminal{margin:18px 0 0;padding:18px 20px;overflow:auto;border:1px solid #344653;border-radius:10px;background:#17232d;color:#d9e6ed;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;white-space:pre}.tree-terminal .must{color:#ff9b91}.tree-terminal .should{color:#ffd47a}.tree-terminal .done{color:#8fe0bc}.tree-terminal .root{color:#8dccff;font-weight:800}
+    pre{max-width:100%;overflow:auto;padding:14px;border-radius:8px;background:#192630;color:#eaf2f7;font-size:12px;line-height:1.5}code{padding:2px 4px;background:#edf1f4;border-radius:4px;font-size:.9em}.footer{padding:25px 5vw 45px;color:var(--muted);font-size:12px}
+    @media(max-width:800px){.top{align-items:flex-start;flex-direction:column}.slide{padding:44px 6vw}.card,.card.wide{grid-column:1/-1}.priority{grid-template-columns:1fr}table{display:block;overflow-x:auto}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="brand">PhysEarth-Agent · Evaluation Plan</div><nav class="nav"><a href="#scope">Scope</a><a href="#tree">Evaluation tree</a><a href="#registration">Registration</a><a href="#reproduction">Reproduction</a><a href="#matrix">Matrix</a><a href="#commands">Commands</a></nav></header>
+  <main>
+    <section class="slide hero" id="scope">
+      <div class="eyebrow">Competition plan · two-day execution window</div>
+      <h1>Two clear questions, with auditable evidence.</h1>
+      <p class="lead">This plan evaluates whether PhysEarth-Agent can register physical models and whether it can reproduce an existing paper through a controlled workflow. Open-ended independent research is outside the current competition.</p>
+      <div class="chips"><span class="chip">Model registration tests</span><span class="chip">SMRT paper reproduction</span><span class="chip">Replayable records</span><span class="chip">English public reporting</span></div>
+      <div class="callout good"><strong>Public reporting rule</strong>The dashboard uses the user-facing names “Model registration tests” and “Paper reproduction results”. Internal runner names and operational metadata are not used as public evaluation categories.</div>
+      <div class="priority"><div class="m"><b>REQUIRED</b><span>Registration checks and deterministic adapter evidence.</span></div><div class="s"><b>NEXT</b><span>SMRT reproduction after the registration path is stable.</span></div><div class="f"><b>OUT OF SCOPE</b><span>Independent research and novel discovery.</span></div></div>
+    </section>
+
+    <section class="slide" id="tree">
+      <div class="eyebrow">Evaluation dictionary tree</div>
+      <h2>Compact evaluation map</h2>
+      <p>Use this tree to locate each artifact and to distinguish completed evidence from planned work.</p>
+      <pre class="tree-terminal" aria-label="Evaluation dictionary tree"><span class="root">PhysEarth-Agent Evaluation</span>
+├── <span class="root">Model registration tests</span> <span class="done">[COMPLETED]</span>
+│   ├── Model-card schema and parameter domains
+│   ├── Registry discovery and entrypoint validation
+│   ├── Deterministic adapter checks
+│   ├── Default demo runs
+│   └── Versioned replay records
+├── <span class="root">Paper reproduction results</span> <span class="should">[NOT EXECUTED]</span>
+│   └── SMRT paper cases, provenance, legal execution, and comparison
+├── <span class="root">Internal experiment factors</span>
+│   ├── Research-plan prompt profiles
+│   ├── Multiple language models and repeats
+│   └── Independent upstream oracle metric
+└── <span class="root">Out of scope</span>
+    └── Open-ended independent research and novel discovery</pre>
+    </section>
+
+    <section class="slide" id="registration">
+      <div class="eyebrow">Completed evidence</div><h2>Model registration tests</h2>
+      <p>The registration path asks whether a model is declared completely, rejects invalid configurations, can be discovered, and can run a minimal bundled example. These checks establish operational readiness, not scientific truth by themselves.</p>
+      <div class="grid"><div class="card"><h3>Registry contract</h3><p>All six registered models are inspected. Every numeric minimum and maximum, enum, combination rule, and sweep contract is exercised.</p><p><strong>Result: 6 / 6 models; 191 / 191 checks.</strong></p></div><div class="card"><h3>Deterministic adapters</h3><p>Nine tasks cover upstream agreement, published values, identities, monotonic behavior, output quality, and alignment.</p><p><strong>Result: 9 / 9 tasks; 38 checks.</strong></p></div><div class="card"><h3>Replay evidence</h3><p>Successful records retain the model version, resolved specification, output arrays, check configuration, and a replay key.</p><p><strong>No language-model calls or cost.</strong></p></div></div>
+      <table><thead><tr><th>Model</th><th>Purpose</th><th>Version</th><th>Default demo</th></tr></thead><tbody>
+        <tr><td>ProSAIL</td><td>Optical canopy reflectance and NDVI</td><td>2.0.5</td><td>Passed</td></tr>
+        <tr><td>PyET</td><td>Reference evapotranspiration</td><td>1.5.0</td><td>Passed</td></tr>
+        <tr><td>pywatershed</td><td>Catchment hydrology</td><td>3.0.0</td><td>Attention: local dependency metadata issue</td></tr>
+        <tr><td>SMRT</td><td>Snow microwave radiative transfer</td><td>1.5.1</td><td>Passed</td></tr>
+        <tr><td>tau-omega</td><td>Passive microwave emission from vegetated soil</td><td>1.0.0</td><td>Passed</td></tr>
+        <tr><td>water-cloud</td><td>Active microwave backscatter from vegetated soil</td><td>1.0.0</td><td>Passed</td></tr>
+      </tbody></table>
+    </section>
+
+    <section class="slide" id="reproduction">
+      <div class="eyebrow">Planned evidence</div><h2>Paper reproduction results</h2>
+      <p>The current paper target is SMRT only. The work is intentionally not executed yet, so the page must not imply a reproduction score.</p>
+      <div class="callout warn"><strong>Current status: not executed</strong>No figure comparison, provenance score, outcome classification, or independent-reference result is available yet.</div>
+      <table><thead><tr><th>Planned case</th><th>Evidence required</th><th>Status</th></tr></thead><tbody>
+        <tr><td>SMRT Figure 4 passive</td><td>Paper facts, source spans, legal configuration, and passive result comparison.</td><td>Not executed</td></tr>
+        <tr><td>SMRT Figure 4 active</td><td>Paper facts, source spans, legal configuration, and active result comparison.</td><td>Not executed</td></tr>
+        <tr><td>SMRT Figure 5 IBA / sticky hard spheres</td><td>Method and parameter reconstruction with explicit assumptions.</td><td>Not executed</td></tr>
+        <tr><td>SMRT Figure 6 MEMLS / IBA</td><td>Underspecified-parameter handling and provenance gate.</td><td>Not executed</td></tr>
+        <tr><td>Safety and underspecification probes</td><td>Refuse invalid configurations and request missing information without unsafe execution.</td><td>Not executed</td></tr>
+      </tbody></table>
+      <div class="grid"><div class="card"><h3>Paper facts</h3><p>Parameters, units, figures, and conditions explicitly stated in the source.</p></div><div class="card"><h3>Assumptions</h3><p>Values not fixed by the paper must be labeled, justified, and kept separate from paper facts.</p></div><div class="card"><h3>Reproduction outcome</h3><p>Report reproduced, partial, not identifiable, or failed only after the evidence gates pass.</p></div></div>
+    </section>
+
+    <section class="slide" id="matrix">
+      <div class="eyebrow">Internal execution design</div><h2>Planned language-model comparison</h2>
+      <p>This is an execution plan, not a completed result. The public dashboard does not expose operational source details.</p>
+      <table><thead><tr><th>Factor</th><th>Plan</th><th>Purpose</th></tr></thead><tbody>
+        <tr><td>Cases</td><td>Five SMRT cases and probes</td><td>Cover valid reproduction, false premises, and underspecification.</td></tr>
+        <tr><td>Prompt methods</td><td>Explore–Refine–Produce, reproduction-first, uncertainty-aware</td><td>Measure how research-plan methodology changes reproduction behavior.</td></tr>
+        <tr><td>Model set</td><td>Four primary language models</td><td>Separate model effects from prompt and task effects.</td></tr>
+        <tr><td>Repeats</td><td>Two repeats for the primary matrix</td><td>Expose instability instead of relying on a single successful run.</td></tr>
+        <tr><td>Accounting</td><td>Tokens, latency, and reported cost in raw records</td><td>Support reproducibility and operational comparisons.</td></tr>
+      </tbody></table>
+      <div class="callout"><strong>Scoring principle</strong>Do not rank models by completion rate alone. Report outcome validity, safety, provenance, human correction burden, and operational cost separately.</div>
+    </section>
+
+    <section class="slide" id="commands">
+      <div class="eyebrow">Reproducible commands</div><h2>Execution order</h2>
+      <ol><li>Run the registry contract checks.</li><li>Run the deterministic adapter checks.</li><li>Run the registered-model demos.</li><li>Regenerate the dashboard.</li><li>Only after the registration evidence is stable, explicitly execute paper reproduction.</li></ol>
+      <pre>python evaluation/runners/registry_contract.py
+python evaluation/runners/tier0.py
+python evaluation/runners/registration_demo.py
+python evaluation/runners/dashboard.py
+
+# Future paper-reproduction execution; not part of the current completed result:
+python evaluation/runners/competition.py --execute</pre>
+      <div class="callout good"><strong>Completion rule</strong>A completed public result must point to a raw record, a scoring record, and enough resolved configuration to replay or explain the result. Planned work remains explicitly marked as not executed.</div>
+    </section>
+  </main>
+  <footer class="footer">PhysEarth-Agent evaluation plan · English public version · generated evidence and plans are kept separate.</footer>
+</body>
+</html>

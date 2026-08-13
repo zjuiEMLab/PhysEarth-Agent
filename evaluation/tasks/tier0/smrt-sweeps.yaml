@@ -1,5 +1,14 @@
 id: t0-smrt-sweeps
 suite: tier0
+tier: 0
+kind: [monotonic, quality_control]
+checks:
+  - monotonic:temperature_k:tb_v:increasing
+  - monotonic:temperature_k:tb_h:increasing
+  - axis_length:temperature_k:8
+  - monotonic:thickness_m:tb_v:increasing
+  - monotonic:thickness_m:tb_h:increasing
+  - quality_control
 model: smrt
 title: Two sweeps whose direction is fixed by physics, not by implementation
 rationale: >-

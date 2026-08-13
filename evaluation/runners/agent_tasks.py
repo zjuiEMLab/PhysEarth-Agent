@@ -27,7 +27,7 @@ import common  # noqa: E402
 from physearth import agent, config, harness  # noqa: E402
 
 RUNS = common.RESULTS / "runs"
-SUITES = ("tier1", "probe")
+SUITES = ("tier2", "probe")
 SAFE = re.compile(r"[^A-Za-z0-9._-]+")
 FAULTS = ("quota", "withdrawn", "upstream", "global_budget")
 
@@ -95,8 +95,13 @@ def _tool_log(events):
                     "name": event["name"],
                     "arguments": event.get("arguments") or {},
                     "status": event.get("status"),
+                    "model": data.get("model"),
+                    "version": data.get("version"),
                     "spec": data.get("spec"),
                     "handle": data.get("handle"),
+                    "planned_run_id": data.get("planned_run_id"),
+                    "planned_chart_id": data.get("planned_chart_id"),
+                    "quality_review": data.get("quality_review"),
                     "unguarded_problems": data.get("unguarded_problems") or [],
                     "qc_passed": event.get("qc"),
                 }

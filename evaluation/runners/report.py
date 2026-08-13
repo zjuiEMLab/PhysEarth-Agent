@@ -40,7 +40,7 @@ def num(value, digits=2):
 def tier0_section():
     payload = common.read_json("tier0.json")
     if not payload:
-        return "Tier 0 has not been run. `python evaluation/runners/tier0.py`\n"
+        return "Model registration checks have not been run. `python evaluation/runners/tier0.py`\n"
     rows = []
     for record in payload["records"]:
         failed = [c for c in record["checks"] if not c["passed"]]
@@ -140,10 +140,11 @@ def false_premise_table(scored):
     )
 
 
-def tier1_table(scored):
-    items = [i for i in scored if i["suite"] == "tier1"]
+def tier2_table(scored):
+    # Config-match tasks are the canonical paper-reproduction cases.
+    items = [i for i in scored if i.get("config_match") is not None]
     if not items:
-        return "No Tier 1 task has been run yet.\n"
+        return "No SMRT paper-reproduction task has been run yet.\n"
     rows = []
     for task, group_items in sorted(group(items, "task").items()):
         for config_name in [c for c in CONFIG_ORDER if c in {i["config"] for i in group_items}]:
@@ -196,7 +197,7 @@ def per_task_table(scored):
 
 def build():
     runs = load_runs()
-    tasks = {t["id"]: t for suite in ("tier1", "probe") for t in common.load_tasks(suite)}
+    tasks = {t["id"]: t for suite in ("tier2", "probe") for t in common.load_tasks(suite)}
     references = {}
     scored = []
     for record in runs:
@@ -208,7 +209,10 @@ def build():
                 references[task["id"]] = scoring.reference_curve(task)
             except Exception:
                 references[task["id"]] = None
-        scored.append(scoring.score_record(record, task, references[task["id"]]))
+        item = scoring.score_record(record, task, references[task["id"]])
+        # Use the current task location as the canonical source of the displayed suite.
+        item["suite"] = task.get("suite") or record.get("suite")
+        scored.append(item)
 
     llms = sorted({r["llm"] for r in runs})
     repeats = sorted({r["repeat"] for r in runs})
@@ -221,7 +225,7 @@ def build():
         "task set, the ablation configurations, the runners and the raw per-run records are "
         "all committed.",
         "",
-        "## Tier 0, self-consistency",
+        "## Model registration tests",
         "",
         tier0_section(),
     ]
@@ -292,7 +296,7 @@ def build():
         "",
         false_premise_table(scored),
         "",
-        "### Tier 1, reproducing the figures of the SMRT paper",
+        "### SMRT paper reproduction",
         "",
         "Configuration match is the fraction of the fields the paper actually states that "
         "the agent got right. The error column is what changes when only those fields are "
@@ -300,7 +304,7 @@ def build():
         "cost of the configuration mistakes rather than the cost of a snow depth the paper "
         "never fixed.",
         "",
-        tier1_table(scored),
+        tier2_table(scored),
         "",
         "### Per task",
         "",

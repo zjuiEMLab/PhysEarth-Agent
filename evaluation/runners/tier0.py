@@ -11,6 +11,8 @@ regression net under everything else. Three kinds of check, declared per task:
 Run it with:  python evaluation/runners/tier0.py
 """
 
+import json
+import math
 import sys
 import warnings
 from pathlib import Path
@@ -24,6 +26,17 @@ from physearth.models import registry  # noqa: E402
 
 sys.path.insert(0, str(common.ROOT))
 from metrics import identities  # noqa: E402
+
+SCHEMA_VERSION = "tier0-adapter-record-v2"
+CHECK_FIELDS = (
+    "upstream",
+    "published",
+    "contrast",
+    "identities",
+    "monotonic",
+    "axis_length",
+    "monotonic_sweep",
+)
 
 
 def run_model(name, parameters):
@@ -125,7 +138,7 @@ def _direction(values):
     return "not monotonic"
 
 
-def check_monotonic(task, series, expected):
+def check_monotonic(task, series, expected, parameter=None):
     checks = []
     for name, wanted in (expected or {}).items():
         values = series.get(name) or []
@@ -133,6 +146,7 @@ def check_monotonic(task, series, expected):
         checks.append(
             {
                 "check": "monotonic",
+                "parameter": parameter,
                 "output": name,
                 "passed": got == wanted,
                 "expected": wanted,
@@ -146,7 +160,71 @@ def check_monotonic(task, series, expected):
     return checks
 
 
+def _check_id(item):
+    kind = item["check"]
+    if kind == "identity":
+        return "identity:%s" % item["name"]
+    if kind == "monotonic":
+        return "monotonic:%s:%s:%s" % (
+            item.get("parameter"), item["output"], item["expected"]
+        )
+    if kind == "axis_length":
+        return "axis_length:%s:%s" % (item.get("parameter"), item["expected"])
+    if kind == "published, contrast":
+        return "published_contrast:%s" % item["output"]
+    if kind == "published":
+        return "published:%s" % item["output"]
+    if kind == "upstream":
+        return "upstream:%s:%s" % (item.get("oracle_kind", "smrt_direct"), item["output"])
+    return kind
+
+
+def _check_configuration(task):
+    return {field: task[field] for field in CHECK_FIELDS if field in task}
+
+
+def _results_equal(first, second):
+    if isinstance(first, dict) and isinstance(second, dict):
+        return first.keys() == second.keys() and all(
+            _results_equal(first[key], second[key]) for key in first
+        )
+    if isinstance(first, list) and isinstance(second, list):
+        return len(first) == len(second) and all(
+            _results_equal(left, right) for left, right in zip(first, second, strict=True)
+        )
+    if isinstance(first, (int, float)) and isinstance(second, (int, float)):
+        return math.isclose(first, second, rel_tol=1.0e-12, abs_tol=1.0e-12)
+    return first == second
+
+
+def replay_record(record):
+    """Re-run the frozen resolved spec and compare its complete arrays with the record."""
+    entry = registry.get(record["model"])
+    if entry is None:
+        return False, "model is no longer registered"
+    if entry.card["version"] != record["model_version"]:
+        return False, "registered version changed from %s to %s" % (
+            record["model_version"], entry.card["version"]
+        )
+    spec, problems = validation.resolve(entry.card, record["resolved_spec"])
+    if problems:
+        return False, "; ".join(problems)
+    try:
+        result = entry.run(spec)
+    except Exception as exc:
+        return False, "%s: %s" % (type(exc).__name__, exc)
+    replayed = {"axis": result.get("axis"), "outputs": result.get("series") or {}}
+    wanted = {"axis": record.get("axis"), "outputs": record.get("outputs") or {}}
+    return _results_equal(replayed, wanted), (
+        "resolved spec reproduces the complete output arrays"
+        if _results_equal(replayed, wanted)
+        else "replayed arrays differ from the recorded arrays"
+    )
 def run_task(task):
+    if task.get("tier") != 0 or task.get("suite") != "tier0":
+        raise ValueError("Tier 0 task %s must declare tier: 0 and suite: tier0" % task.get("id"))
+    if not task.get("kind") or not task.get("checks"):
+        raise ValueError("Tier 0 task %s must declare kind and checks" % task.get("id"))
     spec, result = run_model(task["model"], task["parameters"])
     series = result["series"]
     checks = []
@@ -160,16 +238,27 @@ def run_task(task):
             check_published(block["published"], other["series"], "published, contrast")
         )
     if task.get("upstream"):
-        checks.extend(check_upstream(task, series))
+        upstream_checks = check_upstream(task, series)
+        for item in upstream_checks:
+            item["oracle_kind"] = task["upstream"]["kind"]
+        checks.extend(upstream_checks)
     if task.get("identities"):
         checks.extend(check_identities(task, spec, series))
     if task.get("monotonic"):
-        checks.extend(check_monotonic(task, series, task["monotonic"]))
+        checks.extend(
+            check_monotonic(
+                task,
+                series,
+                task["monotonic"],
+                (spec.get("sweep_parameter") or "none"),
+            )
+        )
     if task.get("axis_length"):
         axis = (result.get("axis") or {}).get("values") or []
         checks.append(
             {
                 "check": "axis_length",
+                "parameter": spec.get("sweep_parameter"),
                 "passed": len(axis) == task["axis_length"],
                 "expected": task["axis_length"],
                 "got": len(axis),
@@ -186,7 +275,7 @@ def run_task(task):
             sweep_points=sweep["points"],
         )
         _, swept = run_model(task["model"], parameters)
-        checks.extend(check_monotonic(task, swept["series"], sweep["expect"]))
+        checks.extend(check_monotonic(task, swept["series"], sweep["expect"], sweep["parameter"]))
 
     quality = validation.quality_control(registry.get(task["model"]).card, result)
     checks.append(
@@ -196,16 +285,52 @@ def run_task(task):
             "detail": "%d declared-output checks" % len(quality["checks"]),
         }
     )
-    return {
+    actual_check_ids = [_check_id(item) for item in checks]
+    if actual_check_ids != task["checks"]:
+        raise ValueError(
+            "declared checks do not match executable checks: declared=%s actual=%s"
+            % (task["checks"], actual_check_ids)
+        )
+    entry = registry.get(task["model"])
+    record = {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": task["id"],
         "id": task["id"],
         "model": task["model"],
+        "model_version": entry.card["version"],
         "title": task["title"],
         "path": task["_path"],
+        "kind": list(task["kind"]),
+        "resolved_spec": spec,
         "spec": spec,
+        "axis": result.get("axis"),
+        "outputs": series,
         "values": {name: values[0] for name, values in series.items()},
+        "check_configuration": _check_configuration(task),
+        "declared_checks": list(task["checks"]),
         "checks": checks,
-        "passed": all(c["passed"] for c in checks),
+        "llm_usage": {"calls": 0, "tokens": None, "cost_usd": None},
     }
+    replayable, replay_detail = replay_record(record)
+    record["replayable"] = replayable
+    record["replay_detail"] = replay_detail
+    record["replay_key"] = "%s@%s:%s" % (
+        record["model"],
+        record["model_version"],
+        __import__("hashlib").sha256(
+            json.dumps(
+                {
+                    "spec": spec,
+                    "checks": record["check_configuration"],
+                },
+                sort_keys=True,
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest(),
+    )
+    record["passed"] = all(c["passed"] for c in checks) and replayable
+    return record
 
 
 def main():
@@ -216,6 +341,9 @@ def main():
             record = run_task(task)
         except Exception as exc:
             record = {
+                "tier": 0,
+                "suite": "tier0",
+                "task_id": task["id"],
                 "id": task["id"],
                 "model": task.get("model"),
                 "title": task.get("title"),
@@ -223,6 +351,8 @@ def main():
                 "checks": [
                     {"check": "ran", "passed": False, "detail": "%s: %s" % (type(exc).__name__, exc)}
                 ],
+                "replayable": False,
+                "llm_usage": {"calls": 0, "tokens": None, "cost_usd": None},
                 "passed": False,
             }
         records.append(record)
@@ -237,10 +367,15 @@ def main():
                 print("       %s" % check)
 
     payload = {
+        "schema_version": SCHEMA_VERSION,
+        "tier": 0,
         "suite": "tier0",
+        "execution": "deterministic",
         "n_tasks": len(records),
         "n_checks": sum(len(r["checks"]) for r in records),
         "n_passed": sum(1 for r in records if r["passed"]),
+        "n_replayable": sum(1 for r in records if r.get("replayable")),
+        "llm_usage": {"calls": 0, "tokens": None, "cost_usd": None},
         "records": records,
     }
     path = common.write_json("tier0.json", payload)

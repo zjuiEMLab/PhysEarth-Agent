@@ -1,5 +1,14 @@
 id: t0-water-cloud-s1
 suite: tier0
+tier: 0
+kind: [identity, monotonic, quality_control]
+checks:
+  - identity:bare_soil_backscatter_is_the_soil_law
+  - identity:transmissivity_is_beer_lambert
+  - identity:total_backscatter_exceeds_neither_component_sum
+  - monotonic:soil_moisture:sigma0_total_db:increasing
+  - monotonic:soil_moisture:sigma0_soil_db:increasing
+  - quality_control
 model: water_cloud
 title: Sentinel-1 style backscatter from a vegetated soil surface
 rationale: >-

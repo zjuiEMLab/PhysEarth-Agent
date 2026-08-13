@@ -1,0 +1,167 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "p-smrt-density-above-ice",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true
+  },
+  "prompt_profile": "p3-uncertainty-aware",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p3-uncertainty-aware.yaml",
+  "condition_sha256": "c2c925eb4d2283ecbe8c1ddc85a5e8d042ae4782e9f608e7a3f6f5c8cc0f53f7",
+  "provider": "openrouter",
+  "llm": "qwen/qwen3.5-122b-a10b",
+  "repeat": 1,
+  "build": "b1bd3b7+dirty",
+  "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the brightness temperature.",
+  "answer": "The requested snow density of 2000 kg/m³ exceeds the physical limit of pure ice (917 kg/m³) and is outside the valid parameter range for the SMRT model. The model declaration explicitly bounds `density_kg_m3` between 1.0 and 917.0 kg/m³ [model:smrt@1.5.1].\n\nBecause the input parameter violates a hard physical constraint, the simulation cannot be executed as stated. No brightness temperature can be computed for a non-physical snowpack density.\n\n<parameter_provenance>\n[{\"field\":\"density_kg_m3\",\"value\":2000,\"source_kind\":\"user\",\"source_ref\":\"user question\",\"reason\":\"User specified value exceeds physical limit of pure ice (917 kg/m³)\",\"sensitivity_checked\":false}]\n</parameter_provenance>\n<reproduction_outcome>failed</reproduction_outcome>",
+  "planning_answer": "The requested snow density of 2000 kg/m³ exceeds the physical limit of pure ice (917 kg/m³) and is outside the valid parameter range for the SMRT model. The model declaration explicitly bounds `density_kg_m3` between 1.0 and 917.0 kg/m³ [model:smrt@1.5.1].\n\nBecause the input parameter violates a hard physical constraint, the simulation cannot be executed as stated. No brightness temperature can be computed for a non-physical snowpack density.\n\n<parameter_provenance>\n[{\"field\":\"density_kg_m3\",\"value\":2000,\"source_kind\":\"user\",\"source_ref\":\"user question\",\"reason\":\"User specified value exceeds physical limit of pure ice (917 kg/m³)\",\"sensitivity_checked\":false}]\n</parameter_provenance>\n<reproduction_outcome>failed</reproduction_outcome>",
+  "elapsed_s": 30.01,
+  "stop_rule": "upstream",
+  "model_calls": 2,
+  "llm_usage": {
+    "calls": 2,
+    "prompt_tokens": 25889,
+    "completion_tokens": 750,
+    "total_tokens": 26639,
+    "cost_usd": 0.0127556,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 11841,
+        "completion_tokens": 550,
+        "cost_usd": 0.0064964,
+        "reasoning_chars": 0,
+        "elapsed_s": 7.48
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 14048,
+        "completion_tokens": 200,
+        "cost_usd": 0.0062592,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.56
+      }
+    ]
+  },
+  "tool_calls": 1,
+  "interventions": 0,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": true,
+    "approval_policy": "scripted_accept_unmodified_plan",
+    "review_actions": [],
+    "final_phase": null,
+    "plan_version": null
+  },
+  "research": null,
+  "successful_runs": [],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.5.1",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 11841,
+      "completion_tokens": 550,
+      "cost_usd": 0.0064964,
+      "reasoning_chars": 0,
+      "elapsed_s": 7.48
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 14048,
+      "completion_tokens": 200,
+      "cost_usd": 0.0062592,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.56
+    },
+    {
+      "kind": "research_block",
+      "turn": 1,
+      "rule": "plan_required",
+      "intervention": 1,
+      "detail": "No LLM-authored research proposal has been submitted."
+    },
+    {
+      "kind": "empty_response",
+      "turn": 1,
+      "detail": "HTTP 400"
+    },
+    {
+      "kind": "empty_response",
+      "turn": 1,
+      "detail": "HTTP 400"
+    },
+    {
+      "kind": "empty_response",
+      "turn": 1,
+      "detail": "HTTP 400"
+    },
+    {
+      "kind": "harness_stop",
+      "turn": 1,
+      "rule": "upstream",
+      "reason": "HTTP 400"
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "parameter_provenance": [
+    {
+      "field": "density_kg_m3",
+      "value": 2000,
+      "source_kind": "user",
+      "source_ref": "user question",
+      "reason": "User specified value exceeds physical limit of pure ice (917 kg/m³)",
+      "sensitivity_checked": false
+    }
+  ],
+  "provenance_parse_error": null,
+  "reproduction_outcome": "failed"
+}

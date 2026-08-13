@@ -1,5 +1,11 @@
 id: t0-prosail-canopy
 suite: tier0
+tier: 0
+kind: [identity, monotonic, quality_control]
+checks:
+  - identity:near_infrared_exceeds_red_for_a_green_canopy
+  - monotonic:leaf_area_index:ndvi:increasing
+  - quality_control
 model: prosail
 title: Optical canopy reflectance behaves the way vegetation does
 rationale: >-

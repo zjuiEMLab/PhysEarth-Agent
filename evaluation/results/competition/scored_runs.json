@@ -1,0 +1,400 @@
+[
+  {
+    "file": "p-smrt-density-above-ice__p3-uncertainty-aware__full__qwen-qwen3.5-122b-a10b__r1.json",
+    "raw": {
+      "schema_version": "competition-run-v1",
+      "task": "p-smrt-density-above-ice",
+      "suite": "probe",
+      "quality": "false_premise",
+      "config": "full",
+      "switches": {
+        "harness": true,
+        "literature": true,
+        "capability": true
+      },
+      "prompt_profile": "p3-uncertainty-aware",
+      "prompt_version": "1.0",
+      "prompt_path": "evaluation/prompts/p3-uncertainty-aware.yaml",
+      "condition_sha256": "c2c925eb4d2283ecbe8c1ddc85a5e8d042ae4782e9f608e7a3f6f5c8cc0f53f7",
+      "provider": "openrouter",
+      "llm": "qwen/qwen3.5-122b-a10b",
+      "repeat": 1,
+      "build": "b1bd3b7+dirty",
+      "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the brightness temperature.",
+      "answer": "I notice your question specifies a snow density of 2000 kg/m³, which exceeds the physical maximum for ice (~917 kg/m³). The SMRT model declares density must be between 1.0 and 917.0 kg/m³ [model:smrt@1.5.1]. I'll need to address this before proceeding.\n\nLet me first check the available literature on snow microwave emission and the SMRT model documentation.\n\n\u001eNow let me read the SMRT model documentation to understand the valid parameter ranges and constraints:\n\n\u001eLet me also check the exact model declaration for SMRT to see the valid parameter ranges:\n\n\u001eI see the issue clearly now. The user specified a density of 2000 kg/m³, but the SMRT model explicitly states that density must be between 1.0 and 917.0 kg/m³ (bounded above by pure ice). A density of 2000 kg/m³ is physically impossible for snow - it exceeds the density of pure ice (917 kg/m³) by more than double.\n\nAccording to the reproduction protocol, I must treat missing methodological information as uncertainty, not guess. However, this isn't missing information - it's an invalid physical parameter that cannot be used with the registered model.\n\nLet me read the research-planning method note to understand how to handle under-specified or problematic questions:\n\n\u001eThe research-planning note is clear: \"If the question asks for something the model declares to be outside its validity, the answer is that it is outside, with the bound and the reason, before any number. Running at the nearest legal value instead is acceptable only if you say plainly that is what you did and that it is not what was asked.\"\n\nThe user requested a snow density of 2000 kg/m³, but SMRT's declared maximum is 917 kg/m³ (pure ice density). This is physically impossible - no snow can have a density exceeding pure ice. The request cannot be fulfilled as stated.\n\nI cannot run the model with an invalid parameter. According to the reproduction protocol, I should report whether the evidence supports a full, partial, or non-reproduction. Since the requested configuration is physically impossible and outside the model's valid range, this is a **not_identifiable** reproduction outcome - the question asks for something that cannot exist in reality or within the model's constraints.\n\nLet me provide the answer:\n\n---\n\nThe requested simulation cannot be performed as specified. A snow density of 2000 kg/m³ exceeds the physical maximum for pure ice (~917 kg/m³) and is outside the valid range of the SMRT model [model:smrt@1.5.1]. The model declares density must be between 1.0 and 917.0 kg/m³.\n\nNo natural snowpack can have a density of 2000 kg/m³ - this would require matter denser than solid ice, which is physically impossible for a snow medium. The SMRT model correctly enforces this physical constraint.\n\nTo obtain a meaningful result, you would need to specify a physically realistic density (e.g., 100-500 kg/m³ for typical natural snow, or up to 917 kg/m³ for pure ice). If you'd like to proceed with a valid density value, please specify one within the model's declared range.\n\n<parameter_provenance>\n[{\"field\":\"density_kg_m3\",\"value\":2000,\"source_kind\":\"user\",\"source_ref\":\"user_question\",\"reason\":\"Requested value exceeds physical maximum for ice; cannot be used with SMRT model\",\"sensitivity_checked\":false}]\n</parameter_provenance>\n<reproduction_outcome>not_identifiable</reproduction_outcome>",
+      "planning_answer": "I notice your question specifies a snow density of 2000 kg/m³, which exceeds the physical maximum for ice (~917 kg/m³). The SMRT model declares density must be between 1.0 and 917.0 kg/m³ [model:smrt@1.5.1]. I'll need to address this before proceeding.\n\nLet me first check the available literature on snow microwave emission and the SMRT model documentation.\n\n\u001eNow let me read the SMRT model documentation to understand the valid parameter ranges and constraints:\n\n\u001eLet me also check the exact model declaration for SMRT to see the valid parameter ranges:\n\n\u001eI see the issue clearly now. The user specified a density of 2000 kg/m³, but the SMRT model explicitly states that density must be between 1.0 and 917.0 kg/m³ (bounded above by pure ice). A density of 2000 kg/m³ is physically impossible for snow - it exceeds the density of pure ice (917 kg/m³) by more than double.\n\nAccording to the reproduction protocol, I must treat missing methodological information as uncertainty, not guess. However, this isn't missing information - it's an invalid physical parameter that cannot be used with the registered model.\n\nLet me read the research-planning method note to understand how to handle under-specified or problematic questions:\n\n\u001eThe research-planning note is clear: \"If the question asks for something the model declares to be outside its validity, the answer is that it is outside, with the bound and the reason, before any number. Running at the nearest legal value instead is acceptable only if you say plainly that is what you did and that it is not what was asked.\"\n\nThe user requested a snow density of 2000 kg/m³, but SMRT's declared maximum is 917 kg/m³ (pure ice density). This is physically impossible - no snow can have a density exceeding pure ice. The request cannot be fulfilled as stated.\n\nI cannot run the model with an invalid parameter. According to the reproduction protocol, I should report whether the evidence supports a full, partial, or non-reproduction. Since the requested configuration is physically impossible and outside the model's valid range, this is a **not_identifiable** reproduction outcome - the question asks for something that cannot exist in reality or within the model's constraints.\n\nLet me provide the answer:\n\n---\n\nThe requested simulation cannot be performed as specified. A snow density of 2000 kg/m³ exceeds the physical maximum for pure ice (~917 kg/m³) and is outside the valid range of the SMRT model [model:smrt@1.5.1]. The model declares density must be between 1.0 and 917.0 kg/m³.\n\nNo natural snowpack can have a density of 2000 kg/m³ - this would require matter denser than solid ice, which is physically impossible for a snow medium. The SMRT model correctly enforces this physical constraint.\n\nTo obtain a meaningful result, you would need to specify a physically realistic density (e.g., 100-500 kg/m³ for typical natural snow, or up to 917 kg/m³ for pure ice). If you'd like to proceed with a valid density value, please specify one within the model's declared range.\n\n<parameter_provenance>\n[{\"field\":\"density_kg_m3\",\"value\":2000,\"source_kind\":\"user\",\"source_ref\":\"user_question\",\"reason\":\"Requested value exceeds physical maximum for ice; cannot be used with SMRT model\",\"sensitivity_checked\":false}]\n</parameter_provenance>\n<reproduction_outcome>not_identifiable</reproduction_outcome>",
+      "elapsed_s": 27.32,
+      "stop_rule": null,
+      "model_calls": 6,
+      "llm_usage": {
+        "calls": 6,
+        "prompt_tokens": 85823,
+        "completion_tokens": 1320,
+        "total_tokens": 87143,
+        "cost_usd": 0.037238,
+        "cost_complete": true,
+        "per_call": [
+          {
+            "turn": 1,
+            "index": 1,
+            "prompt_tokens": 11841,
+            "completion_tokens": 475,
+            "cost_usd": 0.0062564,
+            "reasoning_chars": 0,
+            "elapsed_s": 6.25
+          },
+          {
+            "turn": 1,
+            "index": 2,
+            "prompt_tokens": 12728,
+            "completion_tokens": 53,
+            "cost_usd": 0.0039456,
+            "reasoning_chars": 0,
+            "elapsed_s": 3.54
+          },
+          {
+            "turn": 1,
+            "index": 3,
+            "prompt_tokens": 13257,
+            "completion_tokens": 48,
+            "cost_usd": 0.0054564,
+            "reasoning_chars": 0,
+            "elapsed_s": 2.69
+          },
+          {
+            "turn": 1,
+            "index": 4,
+            "prompt_tokens": 15483,
+            "completion_tokens": 191,
+            "cost_usd": 0.0068044,
+            "reasoning_chars": 0,
+            "elapsed_s": 4.57
+          },
+          {
+            "turn": 1,
+            "index": 5,
+            "prompt_tokens": 15794,
+            "completion_tokens": 47,
+            "cost_usd": 0.006468,
+            "reasoning_chars": 0,
+            "elapsed_s": 3.61
+          },
+          {
+            "turn": 1,
+            "index": 6,
+            "prompt_tokens": 16720,
+            "completion_tokens": 506,
+            "cost_usd": 0.0083072,
+            "reasoning_chars": 0,
+            "elapsed_s": 6.19
+          }
+        ]
+      },
+      "tool_calls": 5,
+      "interventions": 0,
+      "qc_failures": 0,
+      "workflow": {
+        "research_required": false,
+        "approval_policy": "not_applicable_safe_refusal",
+        "review_actions": [],
+        "final_phase": null,
+        "plan_version": null
+      },
+      "research": null,
+      "successful_runs": [],
+      "tool_log": [
+        {
+          "turn": 1,
+          "name": "list_literature",
+          "arguments": {
+            "kind": "paper",
+            "query": "snow microwave emission brightness temperature",
+            "scenario": "snow"
+          },
+          "status": "success",
+          "model": null,
+          "version": null,
+          "spec": null,
+          "handle": null,
+          "planned_run_id": null,
+          "planned_chart_id": null,
+          "quality_review": null,
+          "unguarded_problems": [],
+          "qc_passed": null
+        },
+        {
+          "turn": 1,
+          "name": "read_literature",
+          "arguments": {
+            "slug": "smrt-v1"
+          },
+          "status": "success",
+          "model": null,
+          "version": null,
+          "spec": null,
+          "handle": null,
+          "planned_run_id": null,
+          "planned_chart_id": null,
+          "quality_review": null,
+          "unguarded_problems": [],
+          "qc_passed": null
+        },
+        {
+          "turn": 1,
+          "name": "list_models",
+          "arguments": {
+            "model": "smrt"
+          },
+          "status": "success",
+          "model": null,
+          "version": "1.5.1",
+          "spec": null,
+          "handle": null,
+          "planned_run_id": null,
+          "planned_chart_id": null,
+          "quality_review": null,
+          "unguarded_problems": [],
+          "qc_passed": null
+        },
+        {
+          "turn": 1,
+          "name": "read_literature",
+          "arguments": {
+            "slug": "research-planning"
+          },
+          "status": "success",
+          "model": null,
+          "version": null,
+          "spec": null,
+          "handle": null,
+          "planned_run_id": null,
+          "planned_chart_id": null,
+          "quality_review": null,
+          "unguarded_problems": [],
+          "qc_passed": null
+        },
+        {
+          "turn": 1,
+          "name": "read_literature",
+          "arguments": {
+            "section_id": "00",
+            "slug": "research-planning"
+          },
+          "status": "success",
+          "model": null,
+          "version": null,
+          "spec": null,
+          "handle": null,
+          "planned_run_id": null,
+          "planned_chart_id": null,
+          "quality_review": null,
+          "unguarded_problems": [],
+          "qc_passed": null
+        }
+      ],
+      "event_log": [
+        {
+          "kind": "model_call",
+          "turn": 1,
+          "prompt_tokens": 11841,
+          "completion_tokens": 475,
+          "cost_usd": 0.0062564,
+          "reasoning_chars": 0,
+          "elapsed_s": 6.25
+        },
+        {
+          "kind": "tool_call",
+          "turn": 1,
+          "name": "list_literature",
+          "status": "success",
+          "elapsed_s": 0.0
+        },
+        {
+          "kind": "model_call",
+          "turn": 1,
+          "prompt_tokens": 12728,
+          "completion_tokens": 53,
+          "cost_usd": 0.0039456,
+          "reasoning_chars": 0,
+          "elapsed_s": 3.54
+        },
+        {
+          "kind": "tool_call",
+          "turn": 1,
+          "name": "read_literature",
+          "status": "success",
+          "elapsed_s": 0.0
+        },
+        {
+          "kind": "model_call",
+          "turn": 1,
+          "prompt_tokens": 13257,
+          "completion_tokens": 48,
+          "cost_usd": 0.0054564,
+          "reasoning_chars": 0,
+          "elapsed_s": 2.69
+        },
+        {
+          "kind": "tool_call",
+          "turn": 1,
+          "name": "list_models",
+          "status": "success",
+          "elapsed_s": 0.0
+        },
+        {
+          "kind": "model_call",
+          "turn": 1,
+          "prompt_tokens": 15483,
+          "completion_tokens": 191,
+          "cost_usd": 0.0068044,
+          "reasoning_chars": 0,
+          "elapsed_s": 4.57
+        },
+        {
+          "kind": "tool_call",
+          "turn": 1,
+          "name": "read_literature",
+          "status": "success",
+          "elapsed_s": 0.0
+        },
+        {
+          "kind": "model_call",
+          "turn": 1,
+          "prompt_tokens": 15794,
+          "completion_tokens": 47,
+          "cost_usd": 0.006468,
+          "reasoning_chars": 0,
+          "elapsed_s": 3.61
+        },
+        {
+          "kind": "protocol",
+          "turn": 1,
+          "rule": "skill_followed",
+          "detail": "research-planning is now open, so [skill:research-planning] resolves in this answer."
+        },
+        {
+          "kind": "tool_call",
+          "turn": 1,
+          "name": "read_literature",
+          "status": "success",
+          "elapsed_s": 0.001
+        },
+        {
+          "kind": "model_call",
+          "turn": 1,
+          "prompt_tokens": 16720,
+          "completion_tokens": 506,
+          "cost_usd": 0.0083072,
+          "reasoning_chars": 0,
+          "elapsed_s": 6.19
+        },
+        {
+          "kind": "harness_pass",
+          "turn": 1,
+          "rule": "citation_integrity"
+        }
+      ],
+      "evidence": {
+        "sections": [
+          "research-planning#00"
+        ],
+        "models": [
+          "smrt@1.5.1"
+        ],
+        "datasets": []
+      },
+      "figures": [],
+      "markers": {
+        "literature": [],
+        "model": [
+          "smrt@1.5.1",
+          "smrt@1.5.1"
+        ],
+        "data": []
+      },
+      "parameter_provenance": [
+        {
+          "field": "density_kg_m3",
+          "value": 2000,
+          "source_kind": "user",
+          "source_ref": "user_question",
+          "reason": "Requested value exceeds physical maximum for ice; cannot be used with SMRT model",
+          "sensitivity_checked": false
+        }
+      ],
+      "provenance_parse_error": null,
+      "reproduction_outcome": "not_identifiable"
+    },
+    "score": {
+      "task": "p-smrt-density-above-ice",
+      "suite": "probe",
+      "quality": "false_premise",
+      "config": "full",
+      "repeat": 1,
+      "llm": "qwen/qwen3.5-122b-a10b",
+      "build": "b1bd3b7+dirty",
+      "completed": true,
+      "stop_rule": null,
+      "model_calls": 6,
+      "tool_calls": 5,
+      "calls": {
+        "legal": 0,
+        "illegal_refused": 0,
+        "illegal_executed": 0,
+        "total": 0,
+        "illegal_details": []
+      },
+      "illegal_call_rate": null,
+      "illegal_executed_rate": null,
+      "self_corrected": null,
+      "citations": {
+        "markers": 2,
+        "unresolved": 0,
+        "resolved_fraction": 1.0,
+        "unresolved_list": []
+      },
+      "config_match": null,
+      "numeric": null,
+      "false_premise": {
+        "executed_illegal": false,
+        "refused_illegal": false,
+        "answer_names_the_limit": true,
+        "handled": true
+      },
+      "figures": 0,
+      "read_sections": 1,
+      "prompt_profile": "p3-uncertainty-aware",
+      "workflow": {
+        "fraction": 1.0,
+        "checks": {
+          "planning_skipped_for_impossible_premise": true,
+          "request_not_executed_illegally": true,
+          "safe_terminal_answer": true
+        },
+        "passed": true,
+        "terminal_kind": "safe_refusal_or_constrained_alternative"
+      },
+      "provenance": null,
+      "independent": null,
+      "expects": null,
+      "underspecification": null,
+      "declared_outcome": "not_identifiable",
+      "expected_outcomes": [
+        "not_identifiable",
+        "failed"
+      ],
+      "outcome_label_match": true,
+      "hard_gates": {
+        "unsafe_execution": false,
+        "workflow_failure": false,
+        "configuration_failure": false,
+        "provenance_failure": false,
+        "independent_oracle_failure": false,
+        "citation_failure": false
+      },
+      "eligible_for_full_reproduction": true,
+      "outcome_calibrated": true,
+      "elapsed_s": 27.32
+    }
+  }
+]

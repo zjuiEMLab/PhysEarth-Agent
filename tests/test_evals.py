@@ -46,7 +46,7 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
 
 
 def test_old_recorded_specs_receive_new_model_defaults_when_replayed():
-    task_path = Path("evaluation/tasks/tier1/smrt-fig4-passive.yaml")
+    task_path = Path("evaluation/tasks/tier2/smrt-fig4-passive.yaml")
     task = yaml.safe_load(task_path.read_text(encoding="utf-8"))
     names = (
         "t1-smrt-fig4-passive__full__Qwen-Qwen3.5-35B-A3B__r1.json",

@@ -1,0 +1,33 @@
+tier: T2
+goal: "Can the agent recover and execute the paper-stated configuration through the deployed workflow?"
+task_sources:
+  core: evaluation/tasks/tier2
+  probes: evaluation/tasks/probe
+competition_tasks:
+  - t1-smrt-fig4-passive
+  - t1-smrt-fig4-active
+  - p-smrt-density-above-ice
+  - p-smrt-dmrt-with-exponential-acf
+  - p-smrt-arctic-underspecified
+metrics:
+  - workflow_completion
+  - configuration_match
+  - capability_safety
+  - parameter_provenance
+  - citation_integrity
+  - self_correction
+independent_oracle:
+  role: metric
+  type: upstream_package
+  package: smrt
+  adapter_independent: true
+  paper_digitization: false
+  tasks:
+    - t1-smrt-fig4-passive
+    - t1-smrt-fig4-active
+  metrics:
+    - curve_rmse
+    - tolerance_pass
+    - reproduction_outcome_calibration
+  warning: >-
+    This detects adapter and configuration failures but is not digitized paper data.

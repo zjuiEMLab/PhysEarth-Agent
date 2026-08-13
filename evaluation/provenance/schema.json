@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://physearth.local/evaluation/parameter-provenance.schema.json",
+  "title": "PhysEarth parameter provenance appendix",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["field", "value", "source_kind", "source_ref"],
+    "properties": {
+      "field": {"type": "string", "minLength": 1},
+      "value": {},
+      "source_kind": {
+        "enum": ["paper", "user", "derived", "model_default", "assumption", "unknown"]
+      },
+      "source_ref": {"type": "string"},
+      "source_span": {"type": "string"},
+      "reason": {"type": "string"},
+      "sensitivity_checked": {"type": "boolean"}
+    },
+    "additionalProperties": true
+  }
+}
