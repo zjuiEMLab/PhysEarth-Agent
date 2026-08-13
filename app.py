@@ -325,6 +325,7 @@ def select_chart_click(box, chart_id):
 with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     turns_state = gr.State([])
     session_box = gr.State(None)
+    basic_evaluation_cases = evals.basic_cases()
     evaluation_cases = evals.demo_cases()
     demo_buttons = []
 
@@ -339,10 +340,27 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                         "<div class='eval-dashboard'><section "
                         "class='eval-section eval-section--demos'>"
                         "<div class='eval-section__head'><div><span class='eval-index'>02</span>"
-                        "<h2>Run representative scientific-question demos</h2></div><p>Each "
-                        "button loads the scientific question. The cases use "
-                        "small pilots to test research planning, legal execution, evidence, "
-                        "and limitations; review the prompt, then press Send.</p>"
+                        "<h2>Run a basic case</h2></div><p>Six short checks show direct model "
+                        "execution, sensitivity analysis, observations, comparability, and "
+                        "scientific refusal.</p></div></section></div>",
+                        elem_classes=["pe-eval-slot"],
+                    )
+                    with gr.Row(elem_classes=["eval-demo-grid"]):
+                        for case in basic_evaluation_cases:
+                            with gr.Column(elem_classes=["eval-demo-cell"]):
+                                gr.HTML(evals.demo_card(case), elem_classes=["pe-eval-slot"])
+                                button = gr.Button(
+                                    "Try in Live Agent",
+                                    elem_classes=["eval-demo-button"],
+                                )
+                                demo_buttons.append((button, case["question"]))
+                    gr.HTML(
+                        "<div class='eval-dashboard'><section "
+                        "class='eval-section eval-section--demos'>"
+                        "<div class='eval-section__head'><div><span class='eval-index'>03</span>"
+                        "<h2>Run a representative case</h2></div><p>Each button loads the "
+                        "paper-derived scientific question into the agent. Review the plan, "
+                        "preview, execution, figures, and conclusion.</p>"
                         "</div></section></div>",
                         elem_classes=["pe-eval-slot"],
                     )
@@ -354,7 +372,8 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                                     "Try in Live Agent",
                                     elem_classes=["eval-demo-button"],
                                 )
-                                demo_buttons.append((button, case["live_question"]))
+                                demo_buttons.append((button, case["question"]))
+                    gr.HTML(evals.required_evaluations(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.score_summary(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.score_details(), elem_classes=["pe-eval-slot"])
 
