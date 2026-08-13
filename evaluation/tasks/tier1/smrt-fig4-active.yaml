@@ -1,0 +1,55 @@
+id: t1-smrt-fig4-active
+suite: tier1
+title: Figure 4b of the SMRT paper, angular backscatter under DMRT
+source:
+  paper: smrt-v1
+  section: "08"
+  figure: Figure 4b
+  doi: 10.5194/gmd-11-2763-2018
+  quote: >-
+    In active mode (Fig. 4b), the difference is small as well, 0.65 dB RMS at HH and VV
+    polarizations and 1.4 dB RMS at HV polarization.
+quality: complete
+shape: sweep
+observable: active
+models: [smrt]
+question: >-
+  The SMRT paper reports its active-mode comparison in Figure 4b for the same snowpack as the
+  passive panel. Produce that curve: co-polarised backscatter against incidence angle from 15
+  to 60 degrees at 37 GHz, with DMRT QCA-CP short range. Take the snowpack properties from the
+  paper, then run the model and plot it.
+reference:
+  model: smrt
+  parameters:
+    electromagnetic_model: dmrt_qcacp_shortrange
+    microstructure_model: sticky_hard_spheres
+    output: sigma
+    frequency_ghz: 37.0
+    thickness_m: 10.0
+    density_kg_m3: 300.0
+    temperature_k: 256.0
+    radius_m: 0.0001
+    stickiness: 0.5
+    sweep_parameter: angle_deg
+    sweep_start: 15.0
+    sweep_stop: 60.0
+    sweep_points: 10
+  graded_fields:
+    - electromagnetic_model
+    - microstructure_model
+    - output
+    - frequency_ghz
+    - density_kg_m3
+    - temperature_k
+    - radius_m
+    - stickiness
+    - sweep_parameter
+  curve:
+    axis: angle_deg
+    series: sigma_vv_db
+    tolerance_rmse: 1.0
+    unit: dB
+notes: >-
+  The single field that separates this task from the passive one is `output`. A run that gets
+  every snowpack property right and still returns brightness temperature scores zero on the
+  observable the question asked for, which is the point of grading them separately.
