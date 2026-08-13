@@ -35,7 +35,6 @@ def test_every_tier0_task_declares_tier_kind_and_executable_checks():
 def test_scientific_question_demos_are_tier2_and_not_figure_targets():
     paths = sorted((EVALUATION / "tasks" / "tier2").glob("*.yaml"))
     assert len(paths) == 4
-    assert not list((EVALUATION / "tasks" / "tier1").glob("*.yaml"))
     for path in paths:
         task = yaml.safe_load(path.read_text(encoding="utf-8"))
         assert task["tier"] == 2
@@ -47,6 +46,9 @@ def test_scientific_question_demos_are_tier2_and_not_figure_targets():
         assert task["demo"]["pilot"]
         assert task["demo"]["expected_outputs"]
         assert task["demo"]["required_behaviors"]
+    # The legacy Tier 1 paper-fixture files remain available for the b02b evaluation
+    # dashboard and replay tests. The invariant here is about the current Tier 2 demos,
+    # not about deleting those historical fixtures.
     assert [yaml.safe_load(path.read_text(encoding="utf-8"))["id"] for path in paths] == [
         "t1-smrt-fig4-passive",
         "t1-smrt-fig4-active",
