@@ -134,10 +134,38 @@
     "checks": 38,
     "records": [
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-prosail-canopy",
         "id": "t0-prosail-canopy",
         "model": "prosail",
+        "model_version": "2.0.5",
         "title": "Optical canopy reflectance behaves the way vegetation does",
         "path": "evaluation/tasks/tier0/prosail-canopy.yaml",
+        "kind": [
+          "identity",
+          "monotonic",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "leaf_structure": 1.5,
+          "chlorophyll_ug_cm2": 40.0,
+          "carotenoid_ug_cm2": 8.0,
+          "anthocyanin_ug_cm2": 0.0,
+          "brown_pigment": 0.0,
+          "equivalent_water_thickness_cm": 0.01,
+          "dry_matter_g_cm2": 0.009,
+          "leaf_area_index": 3.0,
+          "average_leaf_angle_deg": 50.0,
+          "hot_spot": 0.01,
+          "solar_zenith_deg": 30.0,
+          "view_zenith_deg": 10.0,
+          "relative_azimuth_deg": 0.0,
+          "soil_brightness": 1.0,
+          "soil_moisture_fraction": 1.0,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "leaf_structure": 1.5,
           "chlorophyll_ug_cm2": 40.0,
@@ -157,6 +185,24 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "reflectance_green": [
+            0.05833952322187055
+          ],
+          "reflectance_red": [
+            0.023343884754454473
+          ],
+          "reflectance_nir": [
+            0.44648578316204524
+          ],
+          "reflectance_swir": [
+            0.23441951953774764
+          ],
+          "ndvi": [
+            0.9006283070289071
+          ]
+        },
         "values": {
           "reflectance_green": 0.05833952322187055,
           "reflectance_red": 0.023343884754454473,
@@ -164,6 +210,25 @@
           "reflectance_swir": 0.23441951953774764,
           "ndvi": 0.9006283070289071
         },
+        "check_configuration": {
+          "identities": [
+            "near_infrared_exceeds_red_for_a_green_canopy"
+          ],
+          "monotonic_sweep": {
+            "parameter": "leaf_area_index",
+            "start": 0.1,
+            "stop": 7.0,
+            "points": 8,
+            "expect": {
+              "ndvi": "increasing"
+            }
+          }
+        },
+        "declared_checks": [
+          "identity:near_infrared_exceeds_red_for_a_green_canopy",
+          "monotonic:leaf_area_index:ndvi:increasing",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "identity",
@@ -173,6 +238,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "leaf_area_index",
             "output": "ndvi",
             "passed": true,
             "expected": "increasing",
@@ -185,13 +251,43 @@
             "detail": "5 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "prosail@2.0.5:3f0de1ba646d8a48680e3c5ef462161e9cbc9a46d50b7676be71789352d67904",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-pyet-et0",
         "id": "t0-pyet-et0",
         "model": "pyet",
+        "model_version": "1.5.0",
         "title": "Reference evapotranspiration responds to energy and temperature",
         "path": "evaluation/tasks/tier0/pyet-evapotranspiration.yaml",
+        "kind": [
+          "monotonic",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "method": "pm",
+          "air_temperature_c": 20.0,
+          "tmax_c": 28.0,
+          "tmin_c": 12.0,
+          "latitude_deg": 40.0,
+          "net_radiation_mj_m2_day": 12.0,
+          "solar_radiation_mj_m2_day": 20.0,
+          "wind_speed_m_s": 2.0,
+          "relative_humidity_pct": 60.0,
+          "air_pressure_kpa": 101.3,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "method": "pm",
           "air_temperature_c": 20.0,
@@ -206,12 +302,34 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "et0_mm_day": [
+            4.24846342722995
+          ]
+        },
         "values": {
           "et0_mm_day": 4.24846342722995
         },
+        "check_configuration": {
+          "monotonic_sweep": {
+            "parameter": "net_radiation_mj_m2_day",
+            "start": 1.0,
+            "stop": 25.0,
+            "points": 8,
+            "expect": {
+              "et0_mm_day": "increasing"
+            }
+          }
+        },
+        "declared_checks": [
+          "monotonic:net_radiation_mj_m2_day:et0_mm_day:increasing",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "monotonic",
+            "parameter": "net_radiation_mj_m2_day",
             "output": "et0_mm_day",
             "passed": true,
             "expected": "increasing",
@@ -224,13 +342,45 @@
             "detail": "1 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "pyet@1.5.0:1192824ae54ea2668b455138af3930e14f88d8078725b42cfbfa650852c6877d",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-smrt-active",
         "id": "t0-smrt-active",
         "model": "smrt",
+        "model_version": "1.5.1",
         "title": "SMRT in active mode, backscatter from the Figure 4 snowpack",
         "path": "evaluation/tasks/tier0/smrt-active-backscatter.yaml",
+        "kind": [
+          "upstream",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "sigma",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 10.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 256.0,
+          "corr_length_m": 0.00015,
+          "radius_m": 0.0001,
+          "stickiness": 0.5,
+          "dort_streams": 32,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "electromagnetic_model": "dmrt_qcacp_shortrange",
           "microstructure_model": "sticky_hard_spheres",
@@ -247,11 +397,62 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "sigma_vv_db": [
+            -20.41233610121291
+          ],
+          "sigma_hh_db": [
+            -20.92388015273003
+          ],
+          "sigma_hv_db": [
+            -44.98812859163135
+          ]
+        },
         "values": {
           "sigma_vv_db": -20.41233610121291,
           "sigma_hh_db": -20.92388015273003,
           "sigma_hv_db": -44.98812859163135
         },
+        "check_configuration": {
+          "upstream": {
+            "kind": "smrt_direct",
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "snowpack": {
+              "thickness": [
+                10.0
+              ],
+              "microstructure_model": "sticky_hard_spheres",
+              "density": [
+                300.0
+              ],
+              "temperature": [
+                256.0
+              ],
+              "radius": [
+                0.0001
+              ],
+              "stickiness": [
+                0.5
+              ]
+            },
+            "sensor": {
+              "mode": "active",
+              "frequency_hz": 37000000000.0,
+              "angle_deg": 55.0
+            },
+            "outputs": {
+              "sigma_vv_db": "sigmaVV_dB",
+              "sigma_hh_db": "sigmaHH_dB"
+            },
+            "tolerance": 1e-09
+          }
+        },
+        "declared_checks": [
+          "upstream:smrt_direct:sigma_vv_db",
+          "upstream:smrt_direct:sigma_hh_db",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "upstream",
@@ -261,7 +462,8 @@
             "got": -20.412336101,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT sigma_vv_db"
+            "detail": "upstream SMRT sigma_vv_db",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "upstream",
@@ -271,7 +473,8 @@
             "got": -20.923880153,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT sigma_hh_db"
+            "detail": "upstream SMRT sigma_hh_db",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "quality_control",
@@ -279,13 +482,45 @@
             "detail": "3 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "smrt@1.5.1:c6767ffe3d371aef9b41e632572e66113897eab4b2b308fb5e05b5a61a097874",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-smrt-dmrt-shs",
         "id": "t0-smrt-dmrt-shs",
         "model": "smrt",
+        "model_version": "1.5.1",
         "title": "SMRT DMRT QCA-CP short range with sticky hard spheres",
         "path": "evaluation/tasks/tier0/smrt-dmrt-sticky-hard-spheres.yaml",
+        "kind": [
+          "upstream",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "tb",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 10.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 256.0,
+          "corr_length_m": 0.00015,
+          "radius_m": 0.0001,
+          "stickiness": 0.5,
+          "dort_streams": 32,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "electromagnetic_model": "dmrt_qcacp_shortrange",
           "microstructure_model": "sticky_hard_spheres",
@@ -302,10 +537,58 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "tb_v": [
+            251.37977396087388
+          ],
+          "tb_h": [
+            236.90075257524407
+          ]
+        },
         "values": {
           "tb_v": 251.37977396087388,
           "tb_h": 236.90075257524407
         },
+        "check_configuration": {
+          "upstream": {
+            "kind": "smrt_direct",
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "snowpack": {
+              "thickness": [
+                10.0
+              ],
+              "microstructure_model": "sticky_hard_spheres",
+              "density": [
+                300.0
+              ],
+              "temperature": [
+                256.0
+              ],
+              "radius": [
+                0.0001
+              ],
+              "stickiness": [
+                0.5
+              ]
+            },
+            "sensor": {
+              "mode": "passive",
+              "frequency_hz": 37000000000.0,
+              "angle_deg": 55.0
+            },
+            "outputs": {
+              "tb_v": "TbV",
+              "tb_h": "TbH"
+            },
+            "tolerance": 1e-09
+          }
+        },
+        "declared_checks": [
+          "upstream:smrt_direct:tb_v",
+          "upstream:smrt_direct:tb_h",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "upstream",
@@ -315,7 +598,8 @@
             "got": 251.379773961,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_v"
+            "detail": "upstream SMRT tb_v",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "upstream",
@@ -325,7 +609,8 @@
             "got": 236.900752575,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_h"
+            "detail": "upstream SMRT tb_h",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "quality_control",
@@ -333,13 +618,45 @@
             "detail": "2 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "smrt@1.5.1:fdaf916bf4e4c57ecde4e4d7bb777e450dee604515f562a0d55bba2062b799aa",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-smrt-iba-exponential-37",
         "id": "t0-smrt-iba-exponential-37",
         "model": "smrt",
+        "model_version": "1.5.1",
         "title": "SMRT IBA with an exponential autocorrelation function at 37 GHz",
         "path": "evaluation/tasks/tier0/smrt-iba-exponential-37.yaml",
+        "kind": [
+          "upstream",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "exponential",
+          "output": "tb",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 265.0,
+          "corr_length_m": 0.00015,
+          "radius_m": 0.0002,
+          "stickiness": 0.2,
+          "dort_streams": 32,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "electromagnetic_model": "iba",
           "microstructure_model": "exponential",
@@ -356,10 +673,55 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "tb_v": [
+            127.22782412519265
+          ],
+          "tb_h": [
+            112.43873316839228
+          ]
+        },
         "values": {
           "tb_v": 127.22782412519265,
           "tb_h": 112.43873316839228
         },
+        "check_configuration": {
+          "upstream": {
+            "kind": "smrt_direct",
+            "electromagnetic_model": "iba",
+            "snowpack": {
+              "thickness": [
+                1.0
+              ],
+              "microstructure_model": "exponential",
+              "density": [
+                300.0
+              ],
+              "temperature": [
+                265.0
+              ],
+              "corr_length": [
+                0.00015
+              ]
+            },
+            "sensor": {
+              "mode": "passive",
+              "frequency_hz": 37000000000.0,
+              "angle_deg": 55.0
+            },
+            "outputs": {
+              "tb_v": "TbV",
+              "tb_h": "TbH"
+            },
+            "tolerance": 1e-09
+          }
+        },
+        "declared_checks": [
+          "upstream:smrt_direct:tb_v",
+          "upstream:smrt_direct:tb_h",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "upstream",
@@ -369,7 +731,8 @@
             "got": 127.227824125,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_v"
+            "detail": "upstream SMRT tb_v",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "upstream",
@@ -379,7 +742,8 @@
             "got": 112.438733168,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_h"
+            "detail": "upstream SMRT tb_h",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "quality_control",
@@ -387,13 +751,46 @@
             "detail": "2 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "smrt@1.5.1:c12fb0ff131ce180b50acc431365c768decaf9bab872962dd4510aa6f1004633",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-smrt-published-coefficients",
         "id": "t0-smrt-published-coefficients",
         "model": "smrt",
+        "model_version": "1.5.1",
         "title": "The electromagnetic coefficients printed in the SMRT paper",
         "path": "evaluation/tasks/tier0/smrt-published-coefficients.yaml",
+        "kind": [
+          "published",
+          "identity",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "electromagnetic_model": "iba_original",
+          "microstructure_model": "exponential",
+          "output": "coefficients",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 10.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 265.0,
+          "corr_length_m": 0.0001,
+          "radius_m": 0.0002,
+          "stickiness": 0.2,
+          "dort_streams": 32,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "electromagnetic_model": "iba_original",
           "microstructure_model": "exponential",
@@ -410,12 +807,70 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "ks_per_m": [
+            0.20570654743561653
+          ],
+          "ka_per_m": [
+            0.30888501185354406
+          ],
+          "effective_permittivity": [
+            1.5238598740331406
+          ],
+          "single_scattering_albedo": [
+            0.3997472242253111
+          ]
+        },
         "values": {
           "ks_per_m": 0.20570654743561653,
           "ka_per_m": 0.30888501185354406,
           "effective_permittivity": 1.5238598740331406,
           "single_scattering_albedo": 0.3997472242253111
         },
+        "check_configuration": {
+          "published": {
+            "ks_per_m": {
+              "value": 0.2056,
+              "tolerance": 0.002,
+              "unit": "m-1"
+            },
+            "ka_per_m": {
+              "value": 0.3087,
+              "tolerance": 0.002,
+              "unit": "m-1"
+            },
+            "effective_permittivity": {
+              "value": 1.5236,
+              "tolerance": 0.002,
+              "unit": "none"
+            }
+          },
+          "contrast": {
+            "description": "The paper's other stated result: the default IBA absorbs more than the original, which is why it predicts a warmer brightness temperature.",
+            "override": {
+              "electromagnetic_model": "iba"
+            },
+            "published": {
+              "ka_per_m": {
+                "value": 0.3426,
+                "tolerance": 0.002,
+                "unit": "m-1"
+              }
+            }
+          },
+          "identities": [
+            "albedo_is_scattering_over_extinction"
+          ]
+        },
+        "declared_checks": [
+          "published:ks_per_m",
+          "published:ka_per_m",
+          "published:effective_permittivity",
+          "published_contrast:ka_per_m",
+          "identity:albedo_is_scattering_over_extinction",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "published",
@@ -469,13 +924,47 @@
             "detail": "4 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "smrt@1.5.1:1c1f72119f4d20c07483cfcfdc5fb9dfff2f5ed041ca2863289e9e02b2d79862",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-smrt-sweeps",
         "id": "t0-smrt-sweeps",
         "model": "smrt",
+        "model_version": "1.5.1",
         "title": "Two sweeps whose direction is fixed by physics, not by implementation",
         "path": "evaluation/tasks/tier0/smrt-sweeps.yaml",
+        "kind": [
+          "monotonic",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "exponential",
+          "output": "tb",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 265.0,
+          "corr_length_m": 0.00015,
+          "radius_m": 0.0002,
+          "stickiness": 0.2,
+          "dort_streams": 32,
+          "sweep_parameter": "temperature_k",
+          "sweep_start": 240.0,
+          "sweep_stop": 272.0,
+          "sweep_points": 8
+        },
         "spec": {
           "electromagnetic_model": "iba",
           "microstructure_model": "exponential",
@@ -494,13 +983,74 @@
           "sweep_stop": 272.0,
           "sweep_points": 8
         },
+        "axis": {
+          "name": "temperature_k",
+          "values": [
+            240.0,
+            244.57142857142858,
+            249.14285714285714,
+            253.71428571428572,
+            258.2857142857143,
+            262.85714285714283,
+            267.42857142857144,
+            272.0
+          ]
+        },
+        "outputs": {
+          "tb_v": [
+            88.47945052030838,
+            94.24364074826042,
+            100.52977112575833,
+            107.39755048790148,
+            114.90788194389724,
+            123.12048449573065,
+            132.0906536326215,
+            141.86504975428176
+          ],
+          "tb_h": [
+            76.94164155133485,
+            82.15743457403197,
+            87.87224028880163,
+            94.14696587202073,
+            101.04490445323985,
+            108.62959422470877,
+            116.9617673504813,
+            126.09523053199466
+          ]
+        },
         "values": {
           "tb_v": 88.47945052030838,
           "tb_h": 76.94164155133485
         },
+        "check_configuration": {
+          "monotonic": {
+            "tb_v": "increasing",
+            "tb_h": "increasing"
+          },
+          "axis_length": 8,
+          "monotonic_sweep": {
+            "parameter": "thickness_m",
+            "start": 0.1,
+            "stop": 2.0,
+            "points": 6,
+            "expect": {
+              "tb_v": "increasing",
+              "tb_h": "increasing"
+            }
+          }
+        },
+        "declared_checks": [
+          "monotonic:temperature_k:tb_v:increasing",
+          "monotonic:temperature_k:tb_h:increasing",
+          "axis_length:temperature_k:8",
+          "monotonic:thickness_m:tb_v:increasing",
+          "monotonic:thickness_m:tb_h:increasing",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "monotonic",
+            "parameter": "temperature_k",
             "output": "tb_v",
             "passed": true,
             "expected": "increasing",
@@ -509,6 +1059,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "temperature_k",
             "output": "tb_h",
             "passed": true,
             "expected": "increasing",
@@ -517,6 +1068,7 @@
           },
           {
             "check": "axis_length",
+            "parameter": "temperature_k",
             "passed": true,
             "expected": 8,
             "got": 8,
@@ -524,6 +1076,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "thickness_m",
             "output": "tb_v",
             "passed": true,
             "expected": "increasing",
@@ -532,6 +1085,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "thickness_m",
             "output": "tb_h",
             "passed": true,
             "expected": "increasing",
@@ -544,13 +1098,44 @@
             "detail": "3 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "smrt@1.5.1:818e0332ca63e4424f5e1dd5015e791ea72f7ce9e85b3231b93998f44564ac5b",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-tau-omega-lband",
         "id": "t0-tau-omega-lband",
         "model": "tau_omega",
+        "model_version": "1.0.0",
         "title": "L-band emission of a vegetated soil surface",
         "path": "evaluation/tasks/tier0/tau-omega-lband.yaml",
+        "kind": [
+          "identity",
+          "monotonic",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "frequency_ghz": 1.41,
+          "angle_deg": 40.0,
+          "soil_moisture": 0.25,
+          "bulk_density_g_cm3": 1.3,
+          "soil_temperature_k": 293.0,
+          "canopy_temperature_k": 293.0,
+          "vegetation_optical_depth": 0.3,
+          "single_scattering_albedo": 0.05,
+          "roughness_h": 0.3,
+          "cross_q": 0.0,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "frequency_ghz": 1.41,
           "angle_deg": 40.0,
@@ -565,12 +1150,52 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "tb_h": [
+            224.80441221818447
+          ],
+          "tb_v": [
+            246.43581601380535
+          ],
+          "emissivity_h": [
+            0.5371663352397188
+          ],
+          "emissivity_v": [
+            0.6949598001337605
+          ]
+        },
         "values": {
           "tb_h": 224.80441221818447,
           "tb_v": 246.43581601380535,
           "emissivity_h": 0.5371663352397188,
           "emissivity_v": 0.6949598001337605
         },
+        "check_configuration": {
+          "identities": [
+            "bare_soil_tb_is_soil_temperature_times_emissivity",
+            "emissivity_stays_between_zero_and_one"
+          ],
+          "monotonic_sweep": {
+            "parameter": "soil_moisture",
+            "start": 0.05,
+            "stop": 0.45,
+            "points": 9,
+            "expect": {
+              "tb_v": "decreasing",
+              "tb_h": "decreasing",
+              "emissivity_v": "decreasing"
+            }
+          }
+        },
+        "declared_checks": [
+          "identity:bare_soil_tb_is_soil_temperature_times_emissivity",
+          "identity:emissivity_stays_between_zero_and_one",
+          "monotonic:soil_moisture:tb_v:decreasing",
+          "monotonic:soil_moisture:tb_h:decreasing",
+          "monotonic:soil_moisture:emissivity_v:decreasing",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "identity",
@@ -586,6 +1211,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "tb_v",
             "passed": true,
             "expected": "decreasing",
@@ -594,6 +1220,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "tb_h",
             "passed": true,
             "expected": "decreasing",
@@ -602,6 +1229,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "emissivity_v",
             "passed": true,
             "expected": "decreasing",
@@ -614,13 +1242,41 @@
             "detail": "4 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "tau_omega@1.0.0:2ae69b2290eb8e2b7d1e05891acbc3017f62ce420007d83f61984b6e9388e2d9",
         "passed": true
       },
       {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-water-cloud-s1",
         "id": "t0-water-cloud-s1",
         "model": "water_cloud",
+        "model_version": "1.0.0",
         "title": "Sentinel-1 style backscatter from a vegetated soil surface",
         "path": "evaluation/tasks/tier0/water-cloud-sentinel1.yaml",
+        "kind": [
+          "identity",
+          "monotonic",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "angle_deg": 37.0,
+          "soil_moisture": 0.25,
+          "vegetation_water_kg_m2": 1.0,
+          "coefficient_a": 0.09,
+          "coefficient_b": 0.12,
+          "coefficient_c": -22.0,
+          "coefficient_d": 30.0,
+          "sweep_parameter": "none",
+          "sweep_points": 10
+        },
         "spec": {
           "angle_deg": 37.0,
           "soil_moisture": 0.25,
@@ -632,12 +1288,52 @@
           "sweep_parameter": "none",
           "sweep_points": 10
         },
+        "axis": null,
+        "outputs": {
+          "sigma0_total_db": [
+            -13.474800303156298
+          ],
+          "sigma0_vegetation_db": [
+            -17.29168775654675
+          ],
+          "sigma0_soil_db": [
+            -14.5
+          ],
+          "two_way_transmissivity": [
+            0.7404386057033007
+          ]
+        },
         "values": {
           "sigma0_total_db": -13.474800303156298,
           "sigma0_vegetation_db": -17.29168775654675,
           "sigma0_soil_db": -14.5,
           "two_way_transmissivity": 0.7404386057033007
         },
+        "check_configuration": {
+          "identities": [
+            "bare_soil_backscatter_is_the_soil_law",
+            "transmissivity_is_beer_lambert",
+            "total_backscatter_exceeds_neither_component_sum"
+          ],
+          "monotonic_sweep": {
+            "parameter": "soil_moisture",
+            "start": 0.05,
+            "stop": 0.45,
+            "points": 9,
+            "expect": {
+              "sigma0_total_db": "increasing",
+              "sigma0_soil_db": "increasing"
+            }
+          }
+        },
+        "declared_checks": [
+          "identity:bare_soil_backscatter_is_the_soil_law",
+          "identity:transmissivity_is_beer_lambert",
+          "identity:total_backscatter_exceeds_neither_component_sum",
+          "monotonic:soil_moisture:sigma0_total_db:increasing",
+          "monotonic:soil_moisture:sigma0_soil_db:increasing",
+          "quality_control"
+        ],
         "checks": [
           {
             "check": "identity",
@@ -659,6 +1355,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "sigma0_total_db",
             "passed": true,
             "expected": "increasing",
@@ -667,6 +1364,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "sigma0_soil_db",
             "passed": true,
             "expected": "increasing",
@@ -679,6 +1377,14 @@
             "detail": "4 declared-output checks"
           }
         ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "water_cloud@1.0.0:f208cb45fbc4a3c64beafa09e4c98aa10cc3b4a6b573158617a7504ea89e3283",
         "passed": true
       }
     ],
@@ -697,6 +1403,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "leaf_area_index",
             "output": "ndvi",
             "passed": true,
             "expected": "increasing",
@@ -718,6 +1425,7 @@
         "checks": [
           {
             "check": "monotonic",
+            "parameter": "net_radiation_mj_m2_day",
             "output": "et0_mm_day",
             "passed": true,
             "expected": "increasing",
@@ -745,7 +1453,8 @@
             "got": -20.412336101,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT sigma_vv_db"
+            "detail": "upstream SMRT sigma_vv_db",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "upstream",
@@ -755,7 +1464,8 @@
             "got": -20.923880153,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT sigma_hh_db"
+            "detail": "upstream SMRT sigma_hh_db",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "quality_control",
@@ -778,7 +1488,8 @@
             "got": 251.379773961,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_v"
+            "detail": "upstream SMRT tb_v",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "upstream",
@@ -788,7 +1499,8 @@
             "got": 236.900752575,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_h"
+            "detail": "upstream SMRT tb_h",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "quality_control",
@@ -811,7 +1523,8 @@
             "got": 127.227824125,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_v"
+            "detail": "upstream SMRT tb_v",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "upstream",
@@ -821,7 +1534,8 @@
             "got": 112.438733168,
             "abs_error": 0.0,
             "tolerance": 1e-09,
-            "detail": "upstream SMRT tb_h"
+            "detail": "upstream SMRT tb_h",
+            "oracle_kind": "smrt_direct"
           },
           {
             "check": "quality_control",
@@ -897,6 +1611,7 @@
         "checks": [
           {
             "check": "monotonic",
+            "parameter": "temperature_k",
             "output": "tb_v",
             "passed": true,
             "expected": "increasing",
@@ -905,6 +1620,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "temperature_k",
             "output": "tb_h",
             "passed": true,
             "expected": "increasing",
@@ -913,6 +1629,7 @@
           },
           {
             "check": "axis_length",
+            "parameter": "temperature_k",
             "passed": true,
             "expected": 8,
             "got": 8,
@@ -920,6 +1637,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "thickness_m",
             "output": "tb_v",
             "passed": true,
             "expected": "increasing",
@@ -928,6 +1646,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "thickness_m",
             "output": "tb_h",
             "passed": true,
             "expected": "increasing",
@@ -961,6 +1680,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "tb_v",
             "passed": true,
             "expected": "decreasing",
@@ -969,6 +1689,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "tb_h",
             "passed": true,
             "expected": "decreasing",
@@ -977,6 +1698,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "emissivity_v",
             "passed": true,
             "expected": "decreasing",
@@ -1016,6 +1738,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "sigma0_total_db",
             "passed": true,
             "expected": "increasing",
@@ -1024,6 +1747,7 @@
           },
           {
             "check": "monotonic",
+            "parameter": "soil_moisture",
             "output": "sigma0_soil_db",
             "passed": true,
             "expected": "increasing",
@@ -1057,7 +1781,7 @@
         "sweep_parameter": "none",
         "sweep_points": 10
       },
-      "handle": "res_49780226b084",
+      "handle": "res_715c347f1fa9",
       "qc": {
         "passed": true,
         "checks": [
@@ -1102,7 +1826,7 @@
       "output_sha256": "7556040eb8ac50e592051a81c03a71d35b6537a53b95a59bfd2fba27f83ca4fc"
     },
     "replay": {
-      "handle": "res_bf9a34e5ed0e",
+      "handle": "res_d2ed92df0b21",
       "output_sha256": "7556040eb8ac50e592051a81c03a71d35b6537a53b95a59bfd2fba27f83ca4fc",
       "matches": true
     },

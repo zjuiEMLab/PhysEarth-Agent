@@ -5,11 +5,19 @@ different kind of sensor. Nothing here imports prosail at module level, so a hos
 it registers the model and reports the absence rather than rejecting the whole card.
 """
 
+import os
+from pathlib import Path
+
 BANDS = tuple(range(400, 2501))
 INDEX = {wavelength: n for n, wavelength in enumerate(BANDS)}
 
 
 def _require():
+    # Numba otherwise tries to place compiled cache files beside the installed package.
+    # That location is read-only in containers and managed evaluation sandboxes.
+    cache = Path(__file__).resolve().parents[4] / "_state" / "numba_cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("NUMBA_CACHE_DIR", str(cache))
     try:
         import prosail
     except ImportError as exc:

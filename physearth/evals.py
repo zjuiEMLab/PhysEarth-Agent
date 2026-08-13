@@ -240,10 +240,26 @@ def _registration_panel(registration):
         ["refused", refused["model"], "-", refused["status"], "; ".join(refused["problems"])],
         ["approval gate", successful["model"], "-", trace["approval_gate"]["status"], trace["approval_gate"]["phase"]],
     ]
+    model_rows = [
+        [card["name"], card["version"], card["parameters"], card["outputs"],
+         card["combination_rules"], "READY" if card["runnable"] and not card["problems"] else "FAIL"]
+        for card in registration["A1_model_card_schema"]["cards"]
+    ]
+    invalid = registration["A1_model_card_schema"]["checks"][-1]
     return (
         "<div class='eval-ad-cards'>%s</div>"
+        "<div class='eval-a-proof'><div><span>REGISTERED MODELS</span><strong>%d</strong>"
+        "<small>all cards executable</small></div><div><span>DECLARATION ERRORS CAUGHT</span>"
+        "<strong>%d</strong><small>before registration</small></div><div><span>ADAPTER TASKS</span>"
+        "<strong>%d</strong><small>%d deterministic checks</small></div></div>"
+        "<details class='eval-details'><summary>Inspect model-card coverage</summary>%s</details>"
         "<details class='eval-details'><summary>Inspect success, refusal, approval and replay evidence</summary>%s</details>"
-        % ("".join(cards), _table(["Trace", "Model", "Version", "Verdict", "Evidence"], rows))
+        % (
+            "".join(cards), len(model_rows), len(invalid.get("problems") or []),
+            registration["A2_adapter_truth"]["tasks"], registration["A2_adapter_truth"]["checks"],
+            _table(["Model", "Version", "Parameters", "Outputs", "Rules", "Status"], model_rows),
+            _table(["Trace", "Model", "Version", "Verdict", "Evidence"], rows),
+        )
     )
 
 
@@ -251,48 +267,48 @@ def _robustness_panel(robustness):
     if not robustness:
         return "<p class='eval-empty'>D has not been recorded. Run llm_robustness.py.</p>"
     coverage = robustness["coverage"]
-    rows = []
-    for cell in robustness["expected_cells"]:
-        rows.append(
-            [
-                cell["task"],
-                cell["prompt_profile"],
-                cell["llm"],
-                cell["provider"],
-                cell["repeat"],
-                "RECORDED" if cell["recorded"] else "N/A",
-            ]
-        )
-    raw_rows = [
-        [
-            run["task"],
-            run["prompt_profile"],
-            run["llm"],
-            run["provider"],
-            run["build"],
-            run["configuration"],
-            run["repeat"],
-            run["score"] if run["score"] is not None else "N/A",
-            "yes" if run["completed"] else "no",
-        ]
-        for run in robustness["raw_runs"]
+    model_rows = [
+        [item["llm"], item["provider"], "%d / %d" % (item["recorded"] - item["failures"], item["recorded"]),
+         _pct(item["success_rate"]), _pct(item["mean_protocol_similarity"]),
+         "%ss" % _num(item["median_elapsed_s"], 0), item["total_tokens"],
+         item["peak_context"], item["failures"]]
+        for item in robustness["model_summary"]
     ]
+    task_rows = [
+        [item["task"], "%d / %d" % (item["recorded"], item["expected"]),
+         "YES" if item["comparable"] else "NO", _pct(item["success_rate"]),
+         _pct(item["mean_protocol_similarity"]), "%ss" % _num(item["median_elapsed_s"], 0), item["build"]]
+        for item in robustness["task_summary"]
+    ]
+    cell_rows = [
+        [cell["task"], cell["llm"], cell["prompt_profile"], cell["build"] or "-",
+         "PASS" if cell["completed"] else "FAILED" if cell["recorded"] else "N/A",
+         cell["figures"], _pct(cell["protocol_similarity"]), "%ss" % _num(cell["elapsed_s"], 0),
+         cell["tokens"] or "-", cell["stop_reason"] or "-", cell["root_cause"] or "-"]
+        for cell in robustness["cells"]
+    ]
+    limitations = "".join("<li>%s</li>" % _e(item) for item in robustness.get("limitations") or [])
     return (
         "<div class='eval-robustness-head'><div><strong>%d / %d</strong>"
-        "<span>planned comparison cells recorded</span></div><p>%s</p></div>"
-        "%s"
-        "<details class='eval-details'><summary>Open the planned LLM × prompt × task matrix</summary>%s</details>"
-        "<details class='eval-details'><summary>Inspect %d legacy/raw runs</summary>%s</details>"
+        "<span>like-for-like cells recorded</span></div><div><strong>%s</strong>"
+        "<span>successful end-to-end research cells</span></div><p>%s</p></div>"
+        "<div class='eval-d-models'>%s</div>"
+        "<details class='eval-details' open><summary>Compare the three LLMs</summary>%s</details>"
+        "<details class='eval-details'><summary>Compare robustness by scientific question</summary>%s</details>"
+        "<details class='eval-details'><summary>Inspect every task × LLM cell</summary>%s</details>"
+        "<div class='eval-limitations'><b>Interpretation limits</b><ul>%s</ul></div>"
         % (
-            coverage["recorded"],
-            coverage["expected"],
+            coverage["recorded"], coverage["expected"], _pct(robustness.get("success_rate")),
             _e(robustness["comparison_rule"]),
-            "<p class='eval-na-note'><b>Why this is N/A:</b> existing records predate prompt-profile and provider capture. They remain visible below, but are not silently mixed into a cross-LLM claim.</p>"
-            if robustness["status"] == "insufficient_data"
-            else "",
-            _table(["Task", "Prompt", "LLM", "Provider", "Repeat", "Evidence"], rows, "eval-table--matrix"),
-            len(raw_rows),
-            _table(["Task", "Prompt", "LLM", "Provider", "Build", "Config", "Repeat", "Score", "Complete"], raw_rows),
+            "".join(
+                "<article><span>%s</span><strong>%s</strong><small>%d recorded · %d failure(s)</small></article>"
+                % (_e(item["llm"]), _pct(item["success_rate"]), item["recorded"], item["failures"])
+                for item in robustness["model_summary"]
+            ),
+            _table(["LLM", "Provider", "Completed", "Success", "Protocol", "Median time", "API tokens", "Peak context", "Failures"], model_rows),
+            _table(["Question", "Coverage", "Comparable", "Success", "Protocol", "Median time", "Build"], task_rows),
+            _table(["Question", "LLM", "Prompt", "Build", "Result", "Figures", "Protocol", "Time", "Tokens", "Terminal stop", "Root cause"], cell_rows, "eval-table--matrix"),
+            limitations,
         )
     )
 

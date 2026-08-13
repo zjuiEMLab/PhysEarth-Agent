@@ -1,1728 +1,354 @@
 {
+  "schema_version": "llm-robustness-v2",
   "suite": "D_LLM_robustness",
-  "status": "insufficient_data",
+  "status": "passed",
   "comparison_rule": "Same task, prompt profile, build and system configuration within a comparison.",
+  "prompt_profile": "P1_reproduction_first",
   "coverage": {
-    "recorded": 0,
-    "expected": 16
+    "recorded": 12,
+    "expected": 12
   },
-  "comparable_groups": 0,
-  "expected_cells": [
+  "completed": 11,
+  "success_rate": 0.9167,
+  "comparable_groups": 4,
+  "models": 3,
+  "tasks": 4,
+  "repeats": 1,
+  "same_build": true,
+  "limitations": [
+    "One repeat per cell: stochastic repeatability and within-model IQR are not estimated.",
+    "Protocol similarity measures workflow coverage; it is not a physical curve-error metric.",
+    "A recorded physical-model failure remains a failed outcome, not missing data; the terminal stop and root cause are both shown."
+  ],
+  "model_summary": [
     {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "P0_direct",
       "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
+      "provider": "Alibaba Cloud Model Studio",
+      "recorded": 4,
+      "success_rate": 0.75,
+      "mean_protocol_similarity": 0.8359,
+      "median_elapsed_s": 172.57,
+      "total_tokens": 1541209,
+      "peak_context": 31198,
+      "failures": 1
     },
     {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "P0_direct",
       "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
+      "provider": "Alibaba Cloud Model Studio",
+      "recorded": 4,
+      "success_rate": 1.0,
+      "mean_protocol_similarity": 1.0,
+      "median_elapsed_s": 352.81,
+      "total_tokens": 1479227,
+      "peak_context": 28622,
+      "failures": 0
     },
     {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "P0_direct",
-      "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "P0_direct",
-      "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "P0_direct",
-      "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "P0_direct",
-      "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "P0_direct",
-      "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "P0_direct",
-      "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-plus",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "P1_reproduction_first",
-      "llm": "qwen-max",
-      "provider": "DashScope compatible API",
-      "repeat": 1,
-      "recorded": false
+      "llm": "qwen-turbo",
+      "provider": "Alibaba Cloud Model Studio",
+      "recorded": 4,
+      "success_rate": 1.0,
+      "mean_protocol_similarity": 1.0,
+      "median_elapsed_s": 275.1,
+      "total_tokens": 3298018,
+      "peak_context": 26350,
+      "failures": 0
     }
   ],
-  "comparisons": [
+  "task_summary": [
     {
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
+      "task": "q1-sparse-medium",
+      "recorded": 3,
+      "expected": 3,
+      "comparable": true,
+      "success_rate": 1.0,
+      "mean_protocol_similarity": 1.0,
+      "median_elapsed_s": 335.26,
+      "build": "b02b901"
     },
     {
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
+      "task": "q2-dmrt-comparison",
+      "recorded": 3,
+      "expected": 3,
+      "comparable": true,
+      "success_rate": 1.0,
+      "mean_protocol_similarity": 1.0,
+      "median_elapsed_s": 370.35,
+      "build": "b02b901"
     },
     {
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
+      "task": "q3-memls-comparison",
+      "recorded": 3,
+      "expected": 3,
+      "comparable": true,
+      "success_rate": 1.0,
+      "mean_protocol_similarity": 1.0,
+      "median_elapsed_s": 169.23,
+      "build": "b02b901"
     },
     {
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 66.67,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 91.67,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 100.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 33.33,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 91.67,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 96.88,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 50.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 62.5,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3.5-35B-A3B",
-          "n": 1,
-          "median": 58.33,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 33.33,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 75.0,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 33.33,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
-    },
-    {
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "comparable": false,
-      "models": [
-        {
-          "llm": "Qwen/Qwen3-14B",
-          "n": 1,
-          "median": 95.83,
-          "iqr": 0.0,
-          "spread": 0.0
-        }
-      ],
-      "reason": "requires the same profiled prompt/build/configuration on at least two LLMs"
+      "task": "q4-microstructure-equivalence",
+      "recorded": 3,
+      "expected": 3,
+      "comparable": true,
+      "success_rate": 0.6667,
+      "mean_protocol_similarity": 0.7813,
+      "median_elapsed_s": 270.91,
+      "build": "b02b901"
     }
   ],
-  "raw_runs": [
+  "cells": [
     {
-      "run_id": "p-smrt-arctic-underspecified",
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
+      "task": "q1-sparse-medium",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-plus",
+      "provider": "Alibaba Cloud Model Studio",
       "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 1,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 131.8,
+      "tokens": 288164,
+      "peak_prompt": 24756,
+      "model_calls": 16,
+      "tool_calls": 12,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "4cdded4983dbac409a9c800c3fa57ed3b195148292ad30886611c9bf843d73e5"
+    },
+    {
+      "task": "q1-sparse-medium",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-max",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 1,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 335.26,
+      "tokens": 331534,
+      "peak_prompt": 22816,
+      "model_calls": 19,
+      "tool_calls": 13,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "2c2af59da33ed6877d956c16051a48055f6590d033404978f1d90224573ac930"
+    },
+    {
+      "task": "q1-sparse-medium",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-turbo",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 1,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 388.52,
+      "tokens": 956045,
+      "peak_prompt": null,
+      "model_calls": 48,
+      "tool_calls": 37,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "6445bea0c3954bf6de5cdd646033160103dc68f5da99b590d91dbd788d1679e9"
+    },
+    {
+      "task": "q2-dmrt-comparison",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-plus",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 3,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 175.92,
+      "tokens": 304927,
+      "peak_prompt": 25337,
+      "model_calls": 17,
+      "tool_calls": 13,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "919950e6aaa3b9d3d8cb83f7b21bdafd387f38851768f296ef8e288a2df1201c"
+    },
+    {
+      "task": "q2-dmrt-comparison",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-max",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 2,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 370.35,
+      "tokens": 478561,
+      "peak_prompt": 23240,
+      "model_calls": 26,
+      "tool_calls": 19,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "f518465fa2d49bcff9b7c1e00c19ff500fbd9eaaed714b9aaae09bc400d15b75"
+    },
+    {
+      "task": "q2-dmrt-comparison",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-turbo",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 2,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 386.5,
+      "tokens": 1021330,
+      "peak_prompt": 24606,
+      "model_calls": 57,
+      "tool_calls": 47,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "c62563d28fdf114b00274d7386b56c6c302bc1cc84f2ac03cdc234f275b8722d"
+    },
+    {
+      "task": "q3-memls-comparison",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-plus",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 3,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 169.23,
+      "tokens": 483028,
+      "peak_prompt": 26671,
+      "model_calls": 26,
+      "tool_calls": 18,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "bdca075a3b2951c8a90ace4d2896a4976e61e831c5693ba2138ee6f91db5bc1d"
+    },
+    {
+      "task": "q3-memls-comparison",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-max",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 3,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 192.06,
+      "tokens": 328712,
+      "peak_prompt": 22558,
+      "model_calls": 19,
+      "tool_calls": 15,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "e436283e01ab92799dd7c248bc625e4cfabdd0de57160fbe3707d7e3c98a46f5"
+    },
+    {
+      "task": "q3-memls-comparison",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-turbo",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
+      "completed": true,
+      "phase": "completed",
+      "figures": 3,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 163.7,
+      "tokens": 562363,
+      "peak_prompt": 26350,
+      "model_calls": 31,
+      "tool_calls": 24,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "5359f2f5d5f446907ce2f78581e512bf09050be83d232a6ee293d5786d694ff4"
+    },
+    {
+      "task": "q4-microstructure-equivalence",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-plus",
+      "provider": "Alibaba Cloud Model Studio",
+      "repeat": 1,
+      "recorded": true,
+      "build": "b02b901",
       "completed": false,
-      "stop_rule": null
+      "phase": "approved",
+      "figures": 0,
+      "protocol_similarity": 0.3438,
+      "elapsed_s": 270.91,
+      "tokens": 465090,
+      "peak_prompt": 31198,
+      "model_calls": 25,
+      "tool_calls": 22,
+      "stop_reason": "evaluation_turn_limit",
+      "root_cause": "physical_model_failure",
+      "raw_sha256": "250263c9746e3a6a9e6c195a8ed99cf6d7cc6fbe4e962dbeee6e77744450a638"
     },
     {
-      "run_id": "p-smrt-arctic-underspecified",
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
+      "task": "q4-microstructure-equivalence",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-max",
+      "provider": "Alibaba Cloud Model Studio",
       "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-arctic-underspecified",
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 3,
+      "recorded": true,
+      "build": "b02b901",
       "completed": true,
-      "stop_rule": null
+      "phase": "completed",
+      "figures": 1,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 373.55,
+      "tokens": 340420,
+      "peak_prompt": 28622,
+      "model_calls": 18,
+      "tool_calls": 14,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "3483a07bc8d31e843f0c86cf6bfd1ffe5f70e92f71325476558f9f791912a160"
     },
     {
-      "run_id": "p-smrt-arctic-underspecified",
-      "task": "p-smrt-arctic-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
+      "task": "q4-microstructure-equivalence",
+      "prompt_profile": "P1_reproduction_first",
+      "llm": "qwen-turbo",
+      "provider": "Alibaba Cloud Model Studio",
       "repeat": 1,
-      "score": 100.0,
-      "score_components": 3,
+      "recorded": true,
+      "build": "b02b901",
       "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-density-above-ice",
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 3,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-density-above-ice",
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-density-above-ice",
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-density-above-ice",
-      "task": "p-smrt-density-above-ice",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-dmrt-with-exponential-acf",
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-dmrt-with-exponential-acf",
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-dmrt-with-exponential-acf",
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-smrt-dmrt-with-exponential-acf",
-      "task": "p-smrt-dmrt-with-exponential-acf",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 3,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-frozen-soil",
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-frozen-soil",
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 3,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-frozen-soil",
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-frozen-soil",
-      "task": "p-tau-omega-frozen-soil",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-vegetation-underspecified",
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-vegetation-underspecified",
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-vegetation-underspecified",
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tau-omega-vegetation-underspecified",
-      "task": "p-tau-omega-vegetation-underspecified",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tvc-ku-model-versus-measurement",
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tvc-ku-model-versus-measurement",
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tvc-ku-model-versus-measurement",
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-tvc-ku-model-versus-measurement",
-      "task": "p-tvc-ku-model-versus-measurement",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-two-models-not-comparable",
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-two-models-not-comparable",
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-two-models-not-comparable",
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-two-models-not-comparable",
-      "task": "p-two-models-not-comparable",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-water-cloud-beyond-swath",
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 3,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-water-cloud-beyond-swath",
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 2,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-water-cloud-beyond-swath",
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 66.67,
-      "score_components": 3,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "p-water-cloud-beyond-swath",
-      "task": "p-water-cloud-beyond-swath",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 2,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-active",
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-active",
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-active",
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-active",
-      "task": "t1-smrt-fig4-active",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 91.67,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-passive",
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-passive",
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 100.0,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-passive",
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 33.33,
-      "score_components": 3,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig4-passive",
-      "task": "t1-smrt-fig4-passive",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 91.67,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig5-iba-shs",
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 96.88,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig5-iba-shs",
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 50.0,
-      "score_components": 3,
-      "completed": false,
-      "stop_rule": "budget"
-    },
-    {
-      "run_id": "t1-smrt-fig5-iba-shs",
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 62.5,
-      "score_components": 3,
-      "completed": false,
-      "stop_rule": "budget"
-    },
-    {
-      "run_id": "t1-smrt-fig5-iba-shs",
-      "task": "t1-smrt-fig5-iba-shs",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3.5-35B-A3B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 58.33,
-      "score_components": 3,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig6-memls-iba",
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "full",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 33.33,
-      "score_components": 3,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig6-memls-iba",
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-capability",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 75.0,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig6-memls-iba",
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-harness",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 33.33,
-      "score_components": 3,
-      "completed": false,
-      "stop_rule": null
-    },
-    {
-      "run_id": "t1-smrt-fig6-memls-iba",
-      "task": "t1-smrt-fig6-memls-iba",
-      "prompt_profile": "legacy_unprofiled",
-      "build": "4607046",
-      "configuration": "no-literature",
-      "llm": "Qwen/Qwen3-14B",
-      "provider": "unrecorded",
-      "temperature": null,
-      "seed": null,
-      "repeat": 1,
-      "score": 95.83,
-      "score_components": 4,
-      "completed": true,
-      "stop_rule": null
+      "phase": "completed",
+      "figures": 2,
+      "protocol_similarity": 1.0,
+      "elapsed_s": 147.88,
+      "tokens": 758280,
+      "peak_prompt": 25688,
+      "model_calls": 40,
+      "tool_calls": 32,
+      "stop_reason": null,
+      "root_cause": null,
+      "raw_sha256": "e56a90744051f35c9c050f349a5c3f10b7c655cc5af281c0a302ddd9e4763ea1"
     }
   ]
 }

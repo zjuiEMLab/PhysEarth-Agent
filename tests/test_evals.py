@@ -4,8 +4,7 @@ from pathlib import Path
 import yaml
 
 from evaluation.metrics import score
-from evaluation.metrics import robustness
-from evaluation.runners import model_registration
+from evaluation.runners import llm_robustness, model_registration
 from physearth import evals
 
 
@@ -36,8 +35,10 @@ def test_evaluation_landing_page_orders_introduction_cases_and_scores():
     assert "Register a physical model" in required
     assert "20 / 20" not in required  # section totals remain decomposed and auditable
     assert "LLM robustness" in required
-    assert "0 / 16" in required
-    assert "N/A" in required
+    assert "12 / 12" in required
+    assert "92%" in required
+    assert "qwen-max" in required
+    assert "physical_model_failure" in required
     for config in evals.CONFIG_ORDER:
         assert config in summary
     for task_id in evals.snapshot()["tasks"]:
@@ -132,35 +133,38 @@ def test_dimension_a_reexecutes_schema_adapter_and_trace_checks():
 
 def test_dimension_d_never_mixes_legacy_or_different_builds():
     design = {
-        "comparison_rule": "same condition",
-        "configuration": "full",
-        "repeats": 1,
-        "tasks": ["task"],
-        "prompt_profiles": [{"id": "P0"}],
-        "llms": [{"id": "a"}, {"id": "b"}],
+        "comparison_rule": "same condition", "repeats": 1, "tasks": ["task"],
+        "prompt_profiles": [{"id": "P1"}],
+        "llms": [{"id": "a", "provider": "one"}, {"id": "b", "provider": "two"}],
     }
     base = {
-        "task": "task",
-        "config": "full",
-        "repeat": 1,
-        "prompt_profile": "P0",
-        "build": "same",
+        "task": "task", "build": "same", "completed": True, "figure_count": 1,
+        "protocol": {"paper_protocol_similarity": 1.0}, "elapsed_s": 10,
+        "tokens": {"total": 100, "peak_prompt": 20},
     }
-    records = [dict(base, llm={"id": "a", "provider": "one"}), dict(base, llm={"id": "b", "provider": "two"})]
-    scored = [
-        {
-            "task": "task", "config": "full", "llm": model, "repeat": 1,
-            "completed": True, "illegal_executed_rate": 0.0,
-            "citations": {"resolved_fraction": 1.0}, "config_match": {"fraction": 1.0},
-        }
-        for model in ("a", "b")
-    ]
-    report = robustness.analyse(records, scored, design)
+    records = [dict(base, llm="a"), dict(base, llm="b")]
+    report = llm_robustness.evaluate(records, design)
 
     assert report["status"] == "passed"
     assert report["coverage"] == {"recorded": 2, "expected": 2}
     assert report["comparable_groups"] == 1
 
     records[1]["build"] = "different"
-    report = robustness.analyse(records, scored, design)
+    report = llm_robustness.evaluate(records, design)
     assert report["comparable_groups"] == 0
+
+
+def test_dimension_d_uses_archived_reproduction_records_and_exposes_failure():
+    report = llm_robustness.evaluate()
+
+    assert report["status"] == "passed"
+    assert report["coverage"] == {"recorded": 12, "expected": 12}
+    assert report["completed"] == 11
+    assert report["models"] == 3
+    assert report["tasks"] == 4
+    assert report["repeats"] == 1
+    failed = [cell for cell in report["cells"] if not cell["completed"]]
+    assert len(failed) == 1
+    assert failed[0]["llm"] == "qwen-plus"
+    assert failed[0]["stop_reason"] == "evaluation_turn_limit"
+    assert failed[0]["root_cause"] == "physical_model_failure"

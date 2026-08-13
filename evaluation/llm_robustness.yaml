@@ -4,18 +4,17 @@ comparison_rule: Same task, prompt profile, build and system configuration withi
 configuration: full
 repeats: 1
 tasks:
-  - t1-smrt-fig4-passive
-  - t1-smrt-fig4-active
-  - t1-smrt-fig5-iba-shs
-  - t1-smrt-fig6-memls-iba
+  - q1-sparse-medium
+  - q2-dmrt-comparison
+  - q3-memls-comparison
+  - q4-microstructure-equivalence
 prompt_profiles:
-  - id: P0_direct
-    description: The benchmark question exactly as written.
   - id: P1_reproduction_first
-    description: Explicitly prioritise reading the cited protocol, matching its configuration, and reporting limitations.
+    description: Read the cited protocol, match its configuration, run the registered model, review figures, and report limitations.
 llms:
   - id: qwen-plus
-    provider: DashScope compatible API
+    provider: Alibaba Cloud Model Studio
   - id: qwen-max
-    provider: DashScope compatible API
-
+    provider: Alibaba Cloud Model Studio
+  - id: qwen-turbo
+    provider: Alibaba Cloud Model Studio
