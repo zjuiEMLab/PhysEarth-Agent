@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 import traceback
+from urllib.parse import urlparse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -126,7 +127,19 @@ def _stop_rule(events):
     return None
 
 
-def run_one(task, config_entry, llm, repeat, build):
+def _provider_metadata():
+    """Non-secret provider identity needed for dimension-D comparisons."""
+    base = config.llm_api_base()
+    parsed = urlparse(base)
+    return {
+        "name": parsed.netloc or "unrecorded",
+        "api_base_origin": "%s://%s" % (parsed.scheme, parsed.netloc)
+        if parsed.scheme and parsed.netloc
+        else "unrecorded",
+    }
+
+
+def run_one(task, config_entry, llm, repeat, build, prompt_profile="P0_direct"):
     started = time.perf_counter()
     # Unrestricted on purpose: the sweep runs on a model outside the interface's switcher,
     # so it never competes for the daily quota of the three a reviewer might be using.
@@ -141,6 +154,12 @@ def run_one(task, config_entry, llm, repeat, build):
         "config": config_entry["name"],
         "switches": config_entry["switches"],
         "llm": llm,
+        "provider": _provider_metadata(),
+        "prompt_profile": prompt_profile,
+        # The client currently leaves these at provider defaults. Recording null is
+        # intentional: an unknown value must not be mistaken for temperature=0 or a seed.
+        "temperature": None,
+        "seed": None,
         "repeat": repeat,
         "build": build,
         "question": task["question"],
@@ -182,6 +201,11 @@ def main(argv=None):
                         help="seconds to wait between runs, to stay under the account RPM limit")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--prompt-profile",
+        default="P0_direct",
+        help="declared prompt condition stored with every record; the question is unchanged",
+    )
     args = parser.parse_args(argv)
 
     config.load_dotenv()
@@ -236,7 +260,9 @@ def main(argv=None):
                     made.append(name)
                     continue
                 try:
-                    record = run_one(task, entry, llm, repeat, build)
+                    record = run_one(
+                        task, entry, llm, repeat, build, prompt_profile=args.prompt_profile
+                    )
                 except Exception:
                     print(traceback.format_exc())
                     spent = True
