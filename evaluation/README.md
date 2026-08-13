@@ -17,10 +17,28 @@ results/       tier0.json and one JSON record per agent run
 
 ```bash
 python evaluation/runners/tier0.py                    # free, deterministic, ~20 s
+python evaluation/runners/model_registration.py       # dimension A, deterministic
+python evaluation/runners/llm_robustness.py            # dimension D, rebuild from raw runs
 python evaluation/runners/agent_tasks.py --dry-run    # show the plan and the cache state
 python evaluation/runners/agent_tasks.py --repeats 3  # needs MODELSCOPE_TOKEN
 python evaluation/runners/report.py                   # rebuild REPORT.md from the cache
 ```
+
+## Competition dimensions A and D
+
+`model_registration.py` owns dimension A and writes
+`results/model_registration.json`. It validates every registered model card plus one
+intentionally bad fixture, re-runs all Tier-0 adapter oracles, and records four tool-layer
+checks: a successful run, an identical replay, an illegal call refused before execution,
+and a model call blocked while human approval is still pending. It does not use an LLM.
+
+`llm_robustness.py` owns dimension D. Its frozen design is in
+`llm_robustness.yaml`. A comparison is admitted only when task, prompt profile, build and
+system configuration are identical and at least two LLMs have records. The report exposes
+sample count, median and IQR when that condition is met. Older records without a declared
+prompt profile or provider remain available for audit but display as `N/A`; they are never
+silently pooled into a robustness claim. This makes the dashboard useful before the matrix
+is complete without presenting missing evidence as a zero or a pass.
 
 `agent_tasks.py` writes one file per run under `results/runs/` and skips any run whose
 file already exists. The free inference quota is counted per model and per day, so the

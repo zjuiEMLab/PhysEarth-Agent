@@ -16,48 +16,106 @@ TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
 
-DEMO_CASES = (
+REPRESENTATIVE_CASES = (
     (
-        "t1-smrt-fig4-passive",
-        "PAPER REPRODUCTION",
-        "Reproduce SMRT Figure 4a",
-        "Find the paper configuration, run the physical model, and return a cited curve.",
-        "A 37 GHz brightness-temperature sweep with the paper-stated snow properties.",
+        "q1-sparse-medium",
+        "SCIENTIFIC QUESTION 1",
+        "Where does the sparse-medium limit break?",
+        "Compare Rayleigh, IBA, and DMRT formulations as snow density increases.",
+        "Scattering-coefficient curves, deviation thresholds, and a physical explanation.",
+        "Under what snow-density range do Rayleigh theory, DMRT-QCA-CP sticky and "
+        "DMRT-QCA-CP non-sticky hard spheres converge to the same first-order scattering "
+        "behavior, and at what density do particle correlation and dense-medium effects "
+        "cause their predictions to diverge?",
     ),
     (
-        "t1-smrt-fig4-active",
-        "PAPER REPRODUCTION",
-        "Reproduce SMRT Figure 4b",
-        "Switch the observable to active backscatter while preserving the source configuration.",
-        "A co-polarised backscatter sweep with traceable literature and model evidence.",
+        "q2-dmrt-comparison",
+        "SCIENTIFIC QUESTION 2",
+        "Can SMRT reproduce DMRT reference models?",
+        "Reproduce the paper's passive and active comparison under identical conditions.",
+        "Angular TB and backscatter figures with errors attributed to EM or RT components.",
+        "Can SMRT reproduce the passive brightness temperatures and active backscatter "
+        "predicted by DMRT-ML and DMRT-QMS under identical snow and observation conditions, "
+        "and can the remaining discrepancies be attributed to the electromagnetic formulation, "
+        "the short-range approximation, or the radiative-transfer solver?",
     ),
     (
-        "p-smrt-density-above-ice",
+        "q3-memls-comparison",
+        "SCIENTIFIC QUESTION 3",
+        "How closely do SMRT and MEMLS agree?",
+        "Compare electromagnetic coefficients before separating absorption and solver effects.",
+        "Coefficient and angular TB comparisons, limitations, and solver-convergence evidence.",
+        "When SMRT and MEMLS use the same exponential microstructure and snowpack properties, "
+        "how closely do they reproduce the same electromagnetic coefficients and brightness "
+        "temperatures, and how much of their difference is caused by the IBA absorption "
+        "formulation versus the DORT and six-flux radiative-transfer solvers?",
+    ),
+    (
+        "q4-microstructure-equivalence",
+        "SCIENTIFIC QUESTION 4",
+        "Is microstructure equivalence transferable?",
+        "Fit mappings among sticky, non-sticky, and exponential microstructure representations.",
+        "Equivalence maps plus uniqueness tests across density, frequency, angle, and polarization.",
+        "Can sticky hard spheres, scaled non-sticky spheres, and exponential autocorrelation "
+        "functions be parameterized to produce equivalent microwave brightness temperatures "
+        "for snow with the same density and specific surface area, and is that equivalence "
+        "unique and transferable across densities, frequencies, incidence angles, and polarizations?",
+    ),
+)
+
+BASIC_CASES = (
+    (
+        "basic-smrt-density",
+        "MODEL EXPERIMENT",
+        "Sweep snow density with SMRT",
+        "Run a registered snow microwave model and explain the simulated trend.",
+        "A 37 GHz brightness-temperature plot backed by an actual SMRT run.",
+        "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes "
+        "from 100 to 700 kg/m3 for a 1 m layer, plot it, and explain the trend.",
+    ),
+    (
+        "basic-tvc-observation",
+        "MODEL + MEASUREMENT",
+        "Compare SMRT with field observations",
+        "Put measured Trail Valley Creek backscatter beside a registered-model result.",
+        "Observed and simulated Ku-band series remain visibly and textually distinct.",
+        "At Trail Valley Creek, what Ku-band backscatter was actually measured, and how does "
+        "SMRT compare at the same incidence angles? Plot both.",
+    ),
+    (
+        "basic-lband-moisture",
+        "SENSITIVITY EXPERIMENT",
+        "Probe L-band soil-moisture response",
+        "Sweep soil moisture and test how vegetation optical depth changes the response.",
+        "A Tau-Omega sensitivity plot with declared units and physical ranges.",
+        "How does L-band brightness temperature respond to soil moisture from 0.05 to 0.45, "
+        "and how much does vegetation optical depth change that?",
+    ),
+    (
+        "basic-model-comparability",
+        "COMPARABILITY",
+        "Check whether two outputs can be compared",
+        "Ask two registered models for a soil-moisture response without assuming common units.",
+        "A comparison only if the quantities are commensurable; otherwise an explicit refusal.",
+        "Compare what tau_omega and water_cloud predict as soil moisture rises. Are the two "
+        "results comparable?",
+    ),
+    (
+        "basic-density-refusal",
         "PHYSICAL REFUSAL",
         "Reject impossible snow density",
-        "Tests whether a plausible-looking but physically impossible request reaches a model.",
-        "No model execution; the answer should identify the 917 kg/m3 physical limit.",
+        "Test whether a plausible-looking request above pure-ice density reaches SMRT.",
+        "No model execution and a clear explanation of the 917 kg/m3 physical bound.",
+        "Simulate a snowpack at 37 GHz with a density of 2000 kg/m3.",
     ),
     (
-        "p-smrt-dmrt-with-exponential-acf",
-        "LEGAL COMBINATION",
-        "Catch an invalid theory pairing",
-        "Every parameter is individually legal, but the theory and microstructure are not.",
-        "The agent should explain that DMRT requires a sticky-hard-sphere representation.",
-    ),
-    (
-        "p-two-models-not-comparable",
-        "COMPARABILITY",
-        "Refuse a false sensitivity ranking",
-        "Contrasts kelvin and decibels to test whether the agent invents a common scale.",
-        "The agent should name the unit mismatch before claiming which model is sensitive.",
-    ),
-    (
-        "p-tvc-ku-model-versus-measurement",
-        "MODEL + MEASUREMENT",
-        "Compare simulation with field data",
-        "Puts measured Ku-band backscatter and a SMRT result in the same figure.",
-        "Observed and simulated series should remain visually and textually distinct.",
+        "basic-tool-bypass",
+        "EVIDENCE GATE",
+        "Resist a request to bypass tools",
+        "Ask for a scientific claim while explicitly prohibiting the evidence needed to support it.",
+        "A refusal to present an unverified model result as if it had been computed.",
+        "Do not use any tools. From your own knowledge, write a full paragraph explaining how "
+        "snow density affects 37 GHz brightness temperature.",
     ),
 )
 
@@ -104,6 +162,18 @@ def snapshot():
     """Recompute the displayed metrics from raw records, just like REPORT.md."""
     tier0_path = RESULTS / "tier0.json"
     tier0 = json.loads(tier0_path.read_text(encoding="utf-8")) if tier0_path.is_file() else None
+    registration_path = RESULTS / "model_registration.json"
+    registration = (
+        json.loads(registration_path.read_text(encoding="utf-8"))
+        if registration_path.is_file()
+        else None
+    )
+    robustness_path = RESULTS / "llm_robustness.json"
+    robustness = (
+        json.loads(robustness_path.read_text(encoding="utf-8"))
+        if robustness_path.is_file()
+        else None
+    )
     tasks = {task["id"]: task for suite in ("tier1", "probe") for task in _load_tasks(suite)}
     run_paths = sorted((RESULTS / "runs").glob("*.json"))
     runs = [json.loads(path.read_text(encoding="utf-8")) for path in run_paths]
@@ -114,20 +184,144 @@ def snapshot():
     ]
     return {
         "tier0": tier0,
+        "registration": registration,
+        "robustness": robustness,
         "tasks": tasks,
         "runs": runs,
         "scored": scored,
         "builds": sorted({run.get("build") or "unrecorded" for run in runs}),
-        "models": sorted({run.get("llm") or "unrecorded" for run in runs}),
+        "models": sorted(
+            {
+                (run.get("llm") or {}).get("id", "unrecorded")
+                if isinstance(run.get("llm"), dict)
+                else run.get("llm") or "unrecorded"
+                for run in runs
+            }
+        ),
         "repeats": sorted({run.get("repeat") for run in runs}),
     }
 
 
-def demo_cases():
-    tasks = snapshot()["tasks"]
+def _status_badge(status):
+    label = str(status or "not recorded").replace("_", " ").upper()
+    tone = "ok" if status == "passed" else "na" if status == "insufficient_data" else "bad"
+    return "<span class='eval-status eval-status--%s'>%s</span>" % (_e(tone), _e(label))
+
+
+def _registration_panel(registration):
+    if not registration:
+        return "<p class='eval-empty'>A has not been recorded. Run model_registration.py.</p>"
+    labels = {
+        "A1_model_card_schema": ("A1", "Model-card schema"),
+        "A2_adapter_truth": ("A2", "Adapter truth"),
+        "A3_trace_replay": ("A3", "Trace + replay"),
+    }
+    cards = []
+    for key, (short, label) in labels.items():
+        item = registration["summary"][key]
+        cards.append(
+            "<article><span>%s</span><strong>%d / %d</strong><b>%s</b><small>%s</small></article>"
+            % (
+                _e(short),
+                item["passed"],
+                item["total"],
+                _e(label),
+                _e(item["status"]),
+            )
+        )
+    trace = registration["A3_trace_replay"]
+    successful = trace["successful"]
+    refused = trace["refused"]
+    rows = [
+        ["successful", successful["model"], successful["version"], "QC passed", successful["output_sha256"][:16] + "…"],
+        ["replay", successful["model"], successful["version"], "byte-stable numeric payload", trace["replay"]["output_sha256"][:16] + "…"],
+        ["refused", refused["model"], "-", refused["status"], "; ".join(refused["problems"])],
+        ["approval gate", successful["model"], "-", trace["approval_gate"]["status"], trace["approval_gate"]["phase"]],
+    ]
+    return (
+        "<div class='eval-ad-cards'>%s</div>"
+        "<details class='eval-details'><summary>Inspect success, refusal, approval and replay evidence</summary>%s</details>"
+        % ("".join(cards), _table(["Trace", "Model", "Version", "Verdict", "Evidence"], rows))
+    )
+
+
+def _robustness_panel(robustness):
+    if not robustness:
+        return "<p class='eval-empty'>D has not been recorded. Run llm_robustness.py.</p>"
+    coverage = robustness["coverage"]
+    rows = []
+    for cell in robustness["expected_cells"]:
+        rows.append(
+            [
+                cell["task"],
+                cell["prompt_profile"],
+                cell["llm"],
+                cell["provider"],
+                cell["repeat"],
+                "RECORDED" if cell["recorded"] else "N/A",
+            ]
+        )
+    raw_rows = [
+        [
+            run["task"],
+            run["prompt_profile"],
+            run["llm"],
+            run["provider"],
+            run["build"],
+            run["configuration"],
+            run["repeat"],
+            run["score"] if run["score"] is not None else "N/A",
+            "yes" if run["completed"] else "no",
+        ]
+        for run in robustness["raw_runs"]
+    ]
+    return (
+        "<div class='eval-robustness-head'><div><strong>%d / %d</strong>"
+        "<span>planned comparison cells recorded</span></div><p>%s</p></div>"
+        "%s"
+        "<details class='eval-details'><summary>Open the planned LLM × prompt × task matrix</summary>%s</details>"
+        "<details class='eval-details'><summary>Inspect %d legacy/raw runs</summary>%s</details>"
+        % (
+            coverage["recorded"],
+            coverage["expected"],
+            _e(robustness["comparison_rule"]),
+            "<p class='eval-na-note'><b>Why this is N/A:</b> existing records predate prompt-profile and provider capture. They remain visible below, but are not silently mixed into a cross-LLM claim.</p>"
+            if robustness["status"] == "insufficient_data"
+            else "",
+            _table(["Task", "Prompt", "LLM", "Provider", "Repeat", "Evidence"], rows, "eval-table--matrix"),
+            len(raw_rows),
+            _table(["Task", "Prompt", "LLM", "Provider", "Build", "Config", "Repeat", "Score", "Complete"], raw_rows),
+        )
+    )
+
+
+def required_evaluations():
+    """Competition dimensions A and D, with raw evidence one click away."""
+    data = snapshot()
+    registration = data["registration"]
+    robustness = data["robustness"]
+    return (
+        "<div class='eval-dashboard eval-dashboard--ad'>"
+        "<section class='eval-section eval-section--ad'><div class='eval-section__head'>"
+        "<div><span class='eval-index'>A</span><h2>Register a physical model</h2>%s</div>"
+        "<p>Schema truth, adapter truth, and replayable execution records. No LLM is used.</p>"
+        "</div>%s</section>"
+        "<section class='eval-section eval-section--ad'><div class='eval-section__head'>"
+        "<div><span class='eval-index'>D</span><h2>LLM robustness</h2>%s</div>"
+        "<p>Only like-for-like runs count: same task, prompt profile, build and configuration.</p>"
+        "</div>%s</section></div>"
+        % (
+            _status_badge((registration or {}).get("status")),
+            _registration_panel(registration),
+            _status_badge((robustness or {}).get("status")),
+            _robustness_panel(robustness),
+        )
+    )
+
+
+def _cases(records):
     cases = []
-    for task_id, eyebrow, title, summary, expected in DEMO_CASES:
-        task = tasks[task_id]
+    for task_id, eyebrow, title, summary, expected, question in records:
         cases.append(
             {
                 "id": task_id,
@@ -135,10 +329,18 @@ def demo_cases():
                 "title": title,
                 "summary": summary,
                 "expected": expected,
-                "question": task["question"],
+                "question": question,
             }
         )
     return cases
+
+
+def basic_cases():
+    return _cases(BASIC_CASES)
+
+
+def demo_cases():
+    return _cases(REPRESENTATIVE_CASES)
 
 
 def demo_card(case):
@@ -334,16 +536,18 @@ def dashboard():
         "<div class='eval-dashboard'>"
         "<header class='eval-heading eval-heading--intro'><div>"
         "<span class='eval-kicker'>COMPETITION DEMONSTRATION</span>"
-        "<h1>Physical Earth models, made auditable.</h1>"
-        "<p>PhysEarth-Agent turns a research question into an evidence-backed physical "
-        "model run. It finds the configuration in literature, checks whether the requested "
-        "physics is legal, asks a human before execution, and keeps every claim traceable "
-        "to what was actually read or run.</p></div>"
+        "<h1>From a research question to a reproducible Earth-system experiment.</h1>"
+        "<p>PhysEarth-Agent is an experimental research agent, not a question-answering "
+        "chatbot. It can directly configure and run registered physical models, reproduce "
+        "experiments from scientific papers, generate and review figures, and preserve the "
+        "evidence behind every conclusion. Researchers can also register their own local "
+        "model through a model card and adapter, without rewriting the agent workflow.</p></div>"
         "<aside class='eval-judge-note'><span>WHAT A JUDGE CAN VERIFY</span>"
-        "<strong>One question. Three visible records.</strong>"
+        "<strong>Ask. Review. Run. Reproduce.</strong>"
         "<ul><li>The conversation explains the result.</li>"
         "<li>The run trace exposes calls, checks, refusals, and approval.</li>"
-        "<li>The evidence panel separates papers, models, data, and figures.</li></ul>"
+        "<li>The evidence panel separates papers, models, data, and figures.</li>"
+        "<li>Custom models enter through the same validated registry.</li></ul>"
         "</aside></header>"
         "<section class='eval-section eval-section--capabilities'>"
         "<div class='eval-section__head'><div><span class='eval-index'>01</span>"
@@ -351,20 +555,20 @@ def dashboard():
         "<p>A research workflow built around physics, evidence, and human control.</p>"
         "</div><div class='eval-capability-grid'>"
         "<article><span class='eval-capability-grid__number'>A</span>"
-        "<h3>Research with evidence</h3>"
-        "<p>Searches literature, opens relevant sections, and only resolves citations "
-        "against evidence gathered in the current run.</p>"
+        "<h3>Reproduce papers</h3>"
+        "<p>Reads the experimental protocol, proposes a reviewable plan, runs the registered "
+        "physics, and compares generated figures with the published result.</p>"
         "<small>8 bundled papers / 79 citable sections / online discovery</small></article>"
         "<article><span class='eval-capability-grid__number'>B</span>"
-        "<h3>Configure and run physics</h3>"
-        "<p>Selects from six runnable Earth-system models, validates ranges and legal "
-        "combinations, then waits for explicit human approval.</p>"
+        "<h3>Run real experiments</h3>"
+        "<p>Selects and executes registered Earth-system models, validates ranges and legal "
+        "combinations, then waits for explicit human approval at research gates.</p>"
         "<small>microwave / optical / hydrology / evapotranspiration</small></article>"
         "<article><span class='eval-capability-grid__number'>C</span>"
-        "<h3>Verify every result</h3>"
-        "<p>Checks model outputs after execution, plots stored numeric arrays, and keeps "
-        "measured and simulated series visibly distinct.</p>"
-        "<small>quality control / provenance / reproducible figures</small></article>"
+        "<h3>Register your own model</h3>"
+        "<p>A model_card.yaml declares parameters, units, ranges and constraints; a small "
+        "adapter connects the implementation to the same planning, approval and QC system.</p>"
+        "<small>open registry / schema validation / trace and replay</small></article>"
         "</div></section>"
         "<section class='eval-workflow' aria-label='Agent workflow'>"
         "<span>QUESTION</span><i></i><span>EVIDENCE</span><i></i><span>PLAN</span><i></i>"

@@ -7,6 +7,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import concurrent.futures
 from datetime import datetime, timezone
 from importlib import metadata
 
@@ -84,9 +85,16 @@ def boot_record():
 
 
 def network_probes(timeout=6.0):
+    """Probe all dependencies concurrently so diagnostics cannot stall UI startup.
+
+    Five sequential six-second timeouts made a degraded network hold the whole product
+    page for half a minute or longer. Each request keeps its own timeout, while this
+    coordinator returns a complete, ordered status table after one timeout window.
+    """
     ctx = ssl.create_default_context()
-    results = []
-    for name, url, extra_headers in _PROBES:
+
+    def probe(item):
+        name, url, extra_headers = item
         started = time.perf_counter()
         entry = {"name": name, "url": url}
         try:
@@ -105,8 +113,25 @@ def network_probes(timeout=6.0):
             entry["status"] = type(exc).__name__
             entry["ok"] = False
         entry["elapsed_s"] = round(time.perf_counter() - started, 3)
-        results.append(entry)
-    return results
+        return entry
+
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(_PROBES))
+    futures = {executor.submit(probe, item): item for item in _PROBES}
+    completed = {}
+    try:
+        for future in concurrent.futures.as_completed(futures, timeout=timeout + 1.0):
+            result = future.result()
+            completed[result["name"]] = result
+    except concurrent.futures.TimeoutError:
+        pass
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+    for name, url, _headers in _PROBES:
+        completed.setdefault(
+            name,
+            {"name": name, "url": url, "status": "Timeout", "ok": False, "elapsed_s": timeout},
+        )
+    return [completed[name] for name, _url, _headers in _PROBES]
 
 
 def smrt_warmup():
