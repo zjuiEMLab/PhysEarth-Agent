@@ -193,7 +193,10 @@ def _results_equal(first, second):
             _results_equal(left, right) for left, right in zip(first, second, strict=True)
         )
     if isinstance(first, (int, float)) and isinstance(second, (int, float)):
-        return math.isclose(first, second, rel_tol=1.0e-12, abs_tol=1.0e-12)
+        # Compiled scientific kernels can differ by a few ULPs across BLAS/runtime
+        # builds.  A 1e-8 absolute/relative tolerance remains far tighter than the
+        # model's declared scientific tolerances while keeping replay portable.
+        return math.isclose(first, second, rel_tol=1.0e-8, abs_tol=1.0e-8)
     return first == second
 
 
