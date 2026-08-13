@@ -529,6 +529,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
     answer = ""
     review_attempts = {}
     tool_failure_streak = {"name": None, "count": 0, "detail": ""}
+    repeated_success = {"signature": None, "count": 0}
     last_plan_error = ""
     forced_tool_name = None
     segments = []
@@ -761,6 +762,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
             )
             for call, arguments, _canonical, repair_note in parsed_calls:
                 name = call["name"]
+                success_signature = "%s:%s" % (
+                    name,
+                    json.dumps(arguments, sort_keys=True, ensure_ascii=False),
+                )
                 if repair_note:
                     events.append(
                         _event(
@@ -821,6 +826,37 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
+
+                # Unlimited total budgets must not mean unlimited identical work. A model
+                # occasionally redraws the same handles with the generic plot tool forever,
+                # or replays another successful call without changing research state. Stop
+                # that exact signature after three successes; different arguments and any
+                # failed/corrective call remain available without a hard global cap.
+                if result["status"] == "success":
+                    if repeated_success["signature"] == success_signature:
+                        repeated_success["count"] += 1
+                    else:
+                        repeated_success = {"signature": success_signature, "count": 1}
+                    if repeated_success["count"] >= harness.MAX_INTERVENTIONS:
+                        answer = (
+                            "Stopped after %d identical successful %s calls with no state "
+                            "progress. Reuse the existing result or call the required planned "
+                            "workflow tool instead of repeating it."
+                            % (repeated_success["count"], name)
+                        )
+                        events.append(
+                            _event(
+                                "harness_stop",
+                                rule="duplicate_success_no_progress",
+                                tool=name,
+                                reason=answer,
+                            )
+                        )
+                        state["phase"] = "done"
+                        yield answer, events, state
+                        return
+                else:
+                    repeated_success = {"signature": None, "count": 0}
 
                 # Successful execution is state progress. Do not let an intervention count
                 # from an earlier stage leak into a later QA repair and cause a premature

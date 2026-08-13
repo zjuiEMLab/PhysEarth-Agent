@@ -388,6 +388,9 @@ def revise(session, changes=None, note=""):
         "quantities", "controls", "metrics", "diagnostics", "success_criteria",
         "stop_conditions", "assumptions", "limitations", "baseline_run_id",
     }
+    # Apply revisions to a copy. A provider can submit valid chart changes together with
+    # invalid runs; mutating the live plan before run validation leaves a half-revised
+    # package whose selected chart IDs no longer exist and causes a figure-gate loop.
     for key in ("objective", "hypothesis"):
         if key in changes and changes[key] is not None:
             plan[key] = str(changes[key]).strip()

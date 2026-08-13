@@ -64,6 +64,23 @@ def test_basic_cases_restore_the_six_original_live_prompts():
     assert "2000 kg/m3" in cases[4]["question"]
 
 
+def test_architecture_image_is_embedded_from_the_presentation_export():
+    page = evals.architecture()
+
+    assert "How the agent is built" in page
+    assert "data:image/png;base64," in page
+    assert "PhysEarth-Agent architecture" in page
+
+
+def test_reproduction_evaluation_is_truthful_when_records_exist():
+    page = evals.reproduction_evaluation()
+    if page:
+        assert "Paper reproduction across three LLMs" in page
+        assert "Protocol" in page
+        assert "Visual" in page
+        assert "not a claimed curve RMSE" in page
+
+
 def test_old_recorded_specs_receive_new_model_defaults_when_replayed():
     task_path = Path("evaluation/tasks/tier1/smrt-fig4-passive.yaml")
     task = yaml.safe_load(task_path.read_text(encoding="utf-8"))

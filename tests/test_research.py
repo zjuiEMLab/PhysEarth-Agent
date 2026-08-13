@@ -1,3 +1,4 @@
+import copy
 from pathlib import Path
 
 import pytest
@@ -441,6 +442,34 @@ def test_revision_rejects_chart_not_produced_by_planned_runs_without_mutation():
         )
     assert box["research"]["plan_version"] == 1
     assert box["research"]["plan"]["charts"][0]["id"] == "density_curve"
+
+
+def test_invalid_revision_is_transactional_and_keeps_live_plan():
+    box = session.new_session("m")
+    box["research_required"] = True
+    _proposal(box)
+    original = copy.deepcopy(box["research"]["plan"])
+
+    with pytest.raises(ValueError):
+        research.revise(
+            box,
+            {
+                "charts": [
+                    {"id": "broken", "kind": "line", "x": "radius_m", "y": ["tb_v"]}
+                ],
+                "runs": [
+                    {
+                        "id": "broken",
+                        "model": "smrt",
+                        "label": "broken",
+                        "parameters": {"sweep_parameter": "not_a_registered_axis"},
+                    }
+                ],
+            },
+            "invalid partial revision",
+        )
+
+    assert box["research"]["plan"] == original
 
 
 def test_ui_session_cannot_run_model_before_research_approval():

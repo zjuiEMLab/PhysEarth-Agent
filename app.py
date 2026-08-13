@@ -374,6 +374,8 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                                 )
                                 demo_buttons.append((button, case["question"]))
                     gr.HTML(evals.required_evaluations(), elem_classes=["pe-eval-slot"])
+                    gr.HTML(evals.reproduction_evaluation(), elem_classes=["pe-eval-slot"])
+                    gr.HTML(evals.architecture(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.score_summary(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.score_details(), elem_classes=["pe-eval-slot"])
 

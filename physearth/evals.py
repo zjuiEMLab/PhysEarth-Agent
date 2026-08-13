@@ -1,5 +1,6 @@
 """Read and render the committed evaluation evidence for the competition UI."""
 
+import base64
 import html
 import json
 from collections import defaultdict
@@ -15,6 +16,7 @@ EVALUATION = REPO / "evaluation"
 TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
+ARCHITECTURE_IMAGE = REPO / "assets" / "evaluation" / "agent-architecture.png"
 
 REPRESENTATIVE_CASES = (
     (
@@ -319,6 +321,48 @@ def required_evaluations():
     )
 
 
+def reproduction_evaluation():
+    """Three-LLM by four-question paper-reproduction matrix, when recorded."""
+    path = RESULTS / "reproduction" / "summary.json"
+    if not path.is_file():
+        return ""
+    report = json.loads(path.read_text(encoding="utf-8"))
+    cells = report.get("cells") or []
+    rows = []
+    for cell in cells:
+        completed = bool(cell.get("completed") and cell.get("figures"))
+        rows.append(
+            [
+                cell.get("task"), cell.get("llm"), "PASS" if completed else "STOPPED",
+                cell.get("figures", 0), cell.get("tokens", {}).get("total", 0),
+                cell.get("tokens", {}).get("peak_prompt", "-"),
+                _pct(cell.get("protocol_similarity")),
+                _pct(cell.get("visual_similarity")), cell.get("stop_reason") or "-",
+            ]
+        )
+    success = report.get("success_rate")
+    return (
+        "<div class='eval-dashboard'><section class='eval-section eval-section--reproduction'>"
+        "<div class='eval-section__head'><div><span class='eval-index'>D+</span>"
+        "<h2>Paper reproduction across three LLMs</h2></div><p>Q1-Q4 use the same build, "
+        "research gates and physical registry. Each raw trace and figure is archived.</p></div>"
+        "<div class='eval-repro-kpis'><article><strong>%s</strong><span>successful cells</span>"
+        "</article><article><strong>%d</strong><span>total API tokens</span></article></div>"
+        "%s<p class='eval-na-note'><b>Similarity scope:</b> protocol similarity measures "
+        "planned-run, selected-figure and figure-QA coverage. Visual similarity is a coarse "
+        "edge/layout comparison with the published PNG, not a claimed curve RMSE. DMRT-ML, "
+        "DMRT-QMS and MEMLS are not executable in the local registry, so unavailable external "
+        "curves are never fabricated.</p></section></div>"
+        % (
+            _pct(success), int(report.get("total_tokens") or 0),
+            _table(
+                ["Question", "LLM", "Result", "Figures", "API tokens", "Peak context",
+                 "Protocol", "Visual", "Stop reason"], rows,
+            ),
+        )
+    )
+
+
 def _cases(records):
     cases = []
     for task_id, eyebrow, title, summary, expected, question in records:
@@ -350,6 +394,24 @@ def demo_card(case):
         "<h3>%s</h3><p>%s</p>"
         "<div class='eval-demo-card__expect'><span>EXPECTED</span>%s</div>"
         "</article>" % tuple(_e(case[key]) for key in ("eyebrow", "title", "summary", "expected"))
+    )
+
+
+@lru_cache(maxsize=1)
+def architecture():
+    """Render the repository architecture exported from the project presentation."""
+    if not ARCHITECTURE_IMAGE.is_file():
+        return ""
+    payload = base64.b64encode(ARCHITECTURE_IMAGE.read_bytes()).decode("ascii")
+    return (
+        "<div class='eval-dashboard'><section class='eval-section eval-architecture'>"
+        "<div class='eval-section__head'><div><span class='eval-index'>04</span>"
+        "<h2>How the agent is built</h2></div><p>The harness keeps planning, physical "
+        "execution, quality control, evidence, and human approval outside the LLM.</p></div>"
+        "<figure><img alt='PhysEarth-Agent architecture' src='data:image/png;base64,%s'>"
+        "<figcaption>Agent architecture extracted from the project presentation. Every "
+        "control-plane box maps to a module in this repository.</figcaption></figure>"
+        "</section></div>" % payload
     )
 
 
