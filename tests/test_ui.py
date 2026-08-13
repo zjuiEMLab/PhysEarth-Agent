@@ -461,3 +461,13 @@ def test_the_optimistic_acknowledgement_leaves_output_slots_to_gradio():
     # their roots by hand makes later streamed frames invisible even though the run ends.
     assert ".innerHTML =" not in js
     assert "TRACE_EMPTY" not in js
+
+
+def test_clear_is_wired_as_a_cancellation_boundary_for_streaming_send():
+    """A reset must cancel the active generator before its next frame repaints the UI."""
+    source = Path(__file__).resolve().parents[1].joinpath("app.py").read_text(encoding="utf-8")
+    assert "send_event = send.click(respond, inputs, outputs)" in source
+    assert "active_stream_events = [send_event]" in source
+    assert "active_stream_events.append(resume_event)" in source
+    assert "cancels=active_stream_events" in source
+    assert "clear.click(" in source and "queue=False" in source

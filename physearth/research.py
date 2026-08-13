@@ -1038,22 +1038,29 @@ def execution_gaps(session):
     successful = session.get("successful_runs") or []
     failed = session.get("failed_runs") or []
     matched = []
+    matched_success_indexes = set()
     matched_runs = []
     missing = []
     missing_ids = []
     current_failures = []
     for wanted in planned:
-        found = next(
-            (
-                actual
-                for actual in successful
-                if actual.get("model") == wanted.get("model")
-                and all(actual.get("spec", {}).get(key) == value for key, value in wanted.get("parameters", {}).items())
-                and actual.get("handle") not in matched
-            ),
-            None,
-        )
+        candidates = [
+            (index, actual)
+            for index, actual in enumerate(successful)
+            if index not in matched_success_indexes
+            and actual.get("model") == wanted.get("model")
+            and all(
+                actual.get("spec", {}).get(key) == value
+                for key, value in wanted.get("parameters", {}).items()
+            )
+        ]
+        # Prefer the explicit plan association written by run_planned_model.  The fallback
+        # keeps older sessions and direct test fixtures compatible.
+        exact = [item for item in candidates if item[1].get("planned_run_id") == wanted.get("id")]
+        selected = (exact or candidates)
+        found_index, found = selected[0] if selected else (None, None)
         if found:
+            matched_success_indexes.add(found_index)
             matched.append(found.get("handle"))
             matched_runs.append(
                 {
@@ -1086,15 +1093,23 @@ def execution_gaps(session):
         for item in matched_runs:
             for y_name in _chart_y_names(chart):
                 if _run_produces_chart(item["run"], chart, y_name):
-                    expected.append(
-                        {
-                            "run_id": item["run_id"],
-                            "label": "%s · %s" % (item["label"], y_name),
-                            "handle": item["handle"],
-                            "x": chart.get("x"),
-                            "y": y_name,
-                        }
-                    )
+                    series = {
+                        "run_id": item["run_id"],
+                        "label": "%s · %s" % (item["label"], y_name),
+                        "handle": item["handle"],
+                        "x": chart.get("x"),
+                        "y": y_name,
+                    }
+                    # Two plan roles may intentionally share one cached physical run (for
+                    # example a separately named validation baseline).  It satisfies both
+                    # run IDs but should appear only once in the figure.
+                    if not any(
+                        row["handle"] == series["handle"]
+                        and row["x"] == series["x"]
+                        and row["y"] == series["y"]
+                        for row in expected
+                    ):
+                        expected.append(series)
         requirement = {"chart": chart, "series": expected}
         chart_requirements.append(requirement)
         matching_figure = next(
@@ -1163,6 +1178,7 @@ def execution_gaps(session):
             {item.get("run_id") for item in current_failures if item.get("run_id")}
         ),
         "matched_handles": matched,
+        "matched_runs": matched_runs,
         "expected_figure_handles": expected_handles,
         "expected_figure_series": expected_series,
         "missing_figure_series": missing_figure_series,

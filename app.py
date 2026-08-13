@@ -443,8 +443,8 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
     # binding here would be a second route to the same generator: two runs against one
     # session dict, interleaving their trace and evidence writes and spending the budget
     # twice.
-    send.click(respond, inputs, outputs)
-    clear.click(reset, [model_bridge], outputs)
+    send_event = send.click(respond, inputs, outputs)
+    active_stream_events = [send_event]
     for button, demo_question in demo_buttons:
         button.click(
             lambda text=demo_question: (text, gr.Tabs(selected="agent")),
@@ -479,11 +479,24 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         # approval also resumes the same agent, so the button results in a real model run
         # and selected plot instead of merely changing a state label.
         if decision == "primary":
-            review_event.then(
+            resume_event = review_event.then(
                 resume_after_review,
                 [review_command, turns_state, session_box, model_bridge],
                 outputs,
             )
+            active_stream_events.append(resume_event)
+
+    # Resetting the panels is not enough while a streamed response is still alive: its
+    # next yield can repaint the freshly cleared UI with the old question's trace and
+    # figures. Clear cancels both normal Send and the approval-triggered formal execution.
+    clear.click(
+        reset,
+        [model_bridge],
+        outputs,
+        cancels=active_stream_events,
+        concurrency_limit=None,
+        queue=False,
+    )
 
 demo.queue(default_concurrency_limit=4)
 

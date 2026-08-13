@@ -433,22 +433,33 @@ def _record_tool_result(name, result, state, events):
             if not data.get("reused"):
                 session_state.bump(state, "model_runs")
             state["models_run"].add("%s@%s" % (data["model"], data["version"]))
-            if not data.get("reused"):
-                state["session"]["successful_runs"].append(
-                    {
-                        "model": data["model"],
-                        "spec": dict(data.get("spec") or {}),
-                        "handle": data.get("handle"),
-                        "planned_run_id": data.get("planned_run_id"),
-                    }
-                )
-                planned_id = data.get("planned_run_id")
-                if planned_id:
-                    state["session"]["failed_runs"] = [
-                        item for item in state["session"].setdefault("failed_runs", [])
-                        if item.get("run_id") != planned_id
-                        or item.get("spec") != dict(data.get("spec") or {})
-                    ]
+            # A cached physical result still fulfils the *current* planned run.  Previously
+            # reused results were deliberately not counted as new computations, but their
+            # planned_run_id was never registered either.  execution_gaps then requested the
+            # same run forever: run -> reuse -> still missing.  Store one lightweight plan
+            # association per run ID while keeping model_runs limited to real executions.
+            successful = state["session"].setdefault("successful_runs", [])
+            record = {
+                "model": data["model"],
+                "spec": dict(data.get("spec") or {}),
+                "handle": data.get("handle"),
+                "planned_run_id": data.get("planned_run_id"),
+            }
+            if not any(
+                item.get("model") == record["model"]
+                and item.get("spec") == record["spec"]
+                and item.get("handle") == record["handle"]
+                and item.get("planned_run_id") == record["planned_run_id"]
+                for item in successful
+            ):
+                successful.append(record)
+            planned_id = data.get("planned_run_id")
+            if planned_id:
+                state["session"]["failed_runs"] = [
+                    item for item in state["session"].setdefault("failed_runs", [])
+                    if item.get("run_id") != planned_id
+                    or item.get("spec") != dict(data.get("spec") or {})
+                ]
             if result.get("qc") and not result["qc"]["passed"]:
                 session_state.bump(state, "qc_failures")
         elif result["status"] == "needs_input":

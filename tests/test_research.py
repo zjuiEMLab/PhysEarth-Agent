@@ -1341,6 +1341,39 @@ def test_planned_run_id_executes_exact_approved_spec_and_reuses_handle():
     assert second["data"]["handle"] == first["data"]["handle"]
 
 
+def test_cached_result_is_registered_for_a_second_planned_run_id_without_looping():
+    box = session.new_session("m")
+    box["research_required"] = True
+    _proposal(box)
+    original = box["research"]["plan"]["runs"][0]
+    duplicate = dict(original, id="validation_baseline", label="Validation baseline")
+    duplicate["parameters"] = dict(original["parameters"])
+    box["research"]["plan"]["runs"].append(duplicate)
+    research.approve_plan(box)
+    research.pseudo_preview(box)
+    research.confirm_charts(box)
+    research.approve_execution(box)
+
+    first = tools.call(
+        "run_planned_model", {"run_id": original["id"]}, owner=box["id"], session=box
+    )
+    state = session.new_state(box)
+    agent._record_tool_result("run_planned_model", first, state, [])
+    reused = tools.call(
+        "run_planned_model", {"run_id": duplicate["id"]}, owner=box["id"], session=box
+    )
+    assert reused["data"]["reused"] is True
+    agent._record_tool_result("run_planned_model", reused, state, [])
+
+    gaps = research.execution_gaps(box)
+    assert gaps["missing_run_ids"] == []
+    assert {row["run_id"] for row in gaps["matched_runs"]} == {
+        original["id"], duplicate["id"]
+    }
+    requirement = gaps["chart_requirements"][0]
+    assert len(requirement["series"]) == 1
+
+
 def test_planned_chart_expands_multiple_compatible_outputs_and_completes():
     box = session.new_session("m")
     box["research_required"] = True
