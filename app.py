@@ -625,7 +625,10 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                     gr.HTML(evals.q1_comparison(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.architecture(), elem_classes=["pe-eval-slot"])
 
-            with gr.Tab("Upload & Test", id="upload", elem_id="pe-upload-tab"):
+            # Keep the temporary model/paper workbench implemented, but hide it until
+            # it has been tested end to end.  Its handlers and session cleanup remain
+            # available for a later UI release.
+            with gr.Tab("Upload & Test", id="upload", elem_id="pe-upload-tab", visible=False):
                 with gr.Column(elem_id="pe-upload-page"):
                     gr.HTML(
                         "<section class='upload-hero'><span class='upload-hero__eyebrow'>TEMPORARY WORKSPACE</span>"

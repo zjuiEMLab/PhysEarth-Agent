@@ -460,6 +460,10 @@ def q1_comparison():
         "<span><code>no-harness</code>: the same literature and tool access, without research-harness "
         "validation and evidence gates.</span></article><article><strong>Current PhysEarth-Agent</strong>"
         "<span><code>full</code>: evidence-first planning, registered-model validation, approval, QC, and citation checks.</span></article></div>"
+        "<p class='eval-na-note'><b>How to read the counts:</b> each row is one complete evaluation session. "
+        "The shared build is the Git commit that produced the record; <code>r1</code> means the first repeat. "
+        "Model calls and tool calls count requests inside that session. They are not the number of physical "
+        "SMRT runs in a research plan; those planned model runs are recorded separately in the plan and trace.</p>"
         "%s%s</section></div>" % (body, status)
     )
 

@@ -172,17 +172,20 @@ def test_gradio_exposes_evaluation_upload_and_agent_tabs_and_demo_prefill_handle
     import app
 
     assert app.main_tabs.get_config()["selected"] == "evaluation"
-    assert any(
-        component.get_config().get("elem_id") == "pe-upload-tab"
-        for component in app.demo.blocks.values()
+    upload_tabs = [
+        component for component in app.demo.blocks.values()
         if hasattr(component, "get_config")
-    )
+        and component.get_config().get("elem_id") == "pe-upload-tab"
+    ]
+    assert len(upload_tabs) == 1
+    assert upload_tabs[0].get_config().get("visible") is False
     page_html = "\n".join(
         str(component.get_config().get("value", ""))
         for component in app.demo.blocks.values()
         if component.__class__.__name__ == "HTML"
     )
-    assert "Register a model" in page_html  # remains available on Upload & Test
+    assert "Register a model" in page_html  # remains implemented in the hidden workbench
+    assert "How to read the counts:" in page_html
     assert "LLM robustness" not in page_html
     assert "What the evaluation shows" not in page_html
     assert "Inspect the recorded score tables" not in page_html
