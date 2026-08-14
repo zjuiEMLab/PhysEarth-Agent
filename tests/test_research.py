@@ -609,24 +609,25 @@ def test_invalid_revision_is_transactional_and_keeps_live_plan():
     _proposal(box)
     original = copy.deepcopy(box["research"]["plan"])
 
-    with pytest.raises(ValueError):
-        research.revise(
-            box,
-            {
-                "charts": [
-                    {"id": "broken", "kind": "line", "x": "radius_m", "y": ["tb_v"]}
-                ],
-                "runs": [
-                    {
-                        "id": "broken",
-                        "model": "smrt",
-                        "label": "broken",
-                        "parameters": {"sweep_parameter": "not_a_registered_axis"},
-                    }
-                ],
-            },
-            "invalid partial revision",
-        )
+    result = research.revise(
+        box,
+        {
+            "charts": [
+                {"id": "broken", "kind": "line", "x": "radius_m", "y": ["tb_v"]}
+            ],
+            "runs": [
+                {
+                    "id": "broken",
+                    "model": "smrt",
+                    "label": "broken",
+                    "parameters": {"sweep_parameter": "not_a_registered_axis"},
+                }
+            ],
+        },
+        "invalid partial revision",
+    )
+    assert result["status"] == "terminal_error"
+    assert result["data"]["error_code"] == "run_validation"
 
     assert box["research"]["plan"] == original
 
