@@ -939,7 +939,7 @@ if __name__ == "__main__":
         demo.launch(
             server_name=config.get("PHYSEARTH_HOST"),
             server_port=int(config.get("PHYSEARTH_PORT")),
-            # Gradio 6.22's frontend template expects body_css to be a mapping. Passing
+            # Gradio 6's frontend template expects body_css to be a mapping. Passing
             # the theme at launch time is required in Gradio 6; setting it on Blocks is
             # deprecated and leaves body_css=None on the pre-launch config.
             theme=gr.themes.Default(),
