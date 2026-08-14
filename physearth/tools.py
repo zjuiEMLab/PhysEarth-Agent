@@ -523,8 +523,23 @@ RESEARCH_PLAN_SPEC = {
                 },
                 "parameter_mapping": {
                     "type": "array",
-                    "description": "Map every paper concept to an exact registered model input. provenance_class must be paper_explicit, paper_inferred, user_specified, model_assumption, or backend_default.",
-                    "items": {"type": "object"},
+                    "description": "Map every paper concept to an exact registered model input and model. provenance_class must be paper_explicit, paper_inferred, user_specified, model_assumption, or backend_default.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "model": {"type": "string", "description": "Registered model declaring this input."},
+                            "paper_concept": {"type": "string"},
+                            "paper_value": {},
+                            "model_input": {"type": "string", "description": "Exact input name returned by list_models."},
+                            "mapped_value": {},
+                            "units": {"type": "string"},
+                            "provenance_class": {"type": "string"},
+                            "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+                            "confidence_basis": {"type": "string"},
+                            "evidence_ref": {"type": "string"},
+                            "rationale": {"type": "string"},
+                        },
+                    },
                 },
                 "outputs": {
                     "type": "array",

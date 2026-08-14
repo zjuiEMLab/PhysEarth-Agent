@@ -1082,8 +1082,10 @@ def _structured_approval_bar(session, project, research):
         + _plan_disclosure("Preview", ("<div class='approve__note'><b>%s</b><br>Pseudo-data are deterministic layout demonstrations, not model results.</div>" % _e(pseudo.get("label", "PSEUDO-DATA · demonstration only")) + pseudo_html) if pseudo_html else "No pseudo-data preview has been generated.")
         + "<details class='research-protocol-yaml'><summary>Raw generated protocol YAML · plan v%03d</summary><pre class='research-plan-yaml'>%s</pre><p class='approve__note'>This is a session draft for review and copying. Edit the plan in Conversation; it is never loaded as hidden instructions.</p></details>" % (project.get("plan_version", 1), protocol)
     )
+    details_open = " open" if project.get("plan_card_expanded", True) else ""
+    collapsed_marker = "false" if details_open else "true"
     return (
-        "<details class='research-plan-details' data-key='research-plan' open>"
+        "<details class='research-plan-details' data-key='research-plan' data-collapsed='%s'%s>"
         "<summary>Research plan · v%03d · %s</summary>"
         "<div class='approve approve--research' data-research-phase='%s' data-selected-count='%d' data-run-count='%d' data-chart-count='%d' data-validation='evidence %d · mappings %d'>"
         "<div class='research-plan-summary'>%d runs · %d charts · evidence %d · mappings %d</div>"
@@ -1094,6 +1096,7 @@ def _structured_approval_bar(session, project, research):
         "For a figure or preview, use ‘Revise plan in chat’.</div>"
         "%s%s<div class='research-plan-steps'><b>Execution steps</b>%s</div></div></details>"
         % (
+            collapsed_marker, details_open,
             project.get("plan_version", 1), _e(phase_label), _e(phase), len(project.get("selected_charts") or []),
             len(plan.get("runs") or []), len(plan.get("charts") or []), len(plan.get("literature_evidence") or []),
             len(plan.get("parameter_mapping") or []), len(plan.get("runs") or []), len(plan.get("charts") or []),
@@ -1174,9 +1177,9 @@ def approval_bar(session):
         }
         agent_assumptions = "; ".join(str(item) for item in plan.get("assumptions") or [])
         params = (
-            "<div class='approve__p'><b>Conditions from paper sections:</b> %s</div>"
-            "<div class='approve__p'><b>Condition evidence:</b> %s</div>"
-            "<div class='approve__p'><b>Agent-selected conditions:</b> %s</div>"
+            "<div class='approve__p'><b>Paper reference tags (not model constraints):</b> %s</div>"
+            "<div class='approve__p'><b>Paper tag evidence:</b> %s</div>"
+            "<div class='approve__p'><b>User/model inputs:</b> %s</div>"
             "<div class='approve__p'><b>Agent assumptions:</b> %s</div>"
             % (
                 _e(_mapping_text(protocol_fixed) or "not declared from the source yet"),
@@ -1221,10 +1224,11 @@ def approval_bar(session):
             "<div class='approve__p'><b>Paper-to-model mapping:</b> %s</div>"
             % _e(
                 "; ".join(
-                    "%s -> %s=%s [%s]"
+                    "%s (%s) -> %s=%s [%s, confidence=%s]"
                     % (
-                        item.get("paper_concept"), item.get("model_input"),
-                        item.get("mapped_value"), item.get("provenance_class"),
+                        item.get("paper_concept"), item.get("model") or "registered model",
+                        item.get("model_input"), item.get("mapped_value"),
+                        item.get("provenance_class"), item.get("confidence") or "unclassified",
                     )
                     for item in mapping_items
                     if isinstance(item, dict)
@@ -1258,11 +1262,13 @@ def approval_bar(session):
                 "<div class='approve__note'><b>Proposed plan repairs — review required:</b> %s</div>"
                 % _e(
                     "; ".join(
-                        "%s.%s: %s → %s (%s)"
+                        "%s.%s: %s -> %s (%s; source=%s; provenance=%s)"
                         % (
                             item.get("chart_id") or item.get("run_id") or "plan",
                             item.get("field"), item.get("from"),
                             item.get("to"), item.get("reason"),
+                            item.get("source") or "workflow metadata",
+                            item.get("provenance") or "unspecified",
                         )
                         for item in repairs
                     )

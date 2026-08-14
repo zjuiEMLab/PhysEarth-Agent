@@ -544,6 +544,12 @@ function peBoot() {
     var area = textarea();
     var text = area ? area.value.trim() : "";
     if (!text) return;
+    /* A chat revision supersedes the expanded draft immediately.  Collapse the
+       current card while the agent validates the request; the server also marks a
+       successful new plan version collapsed, so a rerender cannot reopen the old
+       long body. */
+    var currentPlan = document.querySelector(".research-plan-details[open]");
+    if (currentPlan) currentPlan.removeAttribute("open");
     pendingUntil = Date.now() + 20000;
     document.body.classList.add("is-reasoning");
 
@@ -578,27 +584,19 @@ function peBoot() {
       reviewInFlight = false;
       reviewPhaseAtClick = "";
     }
-    var labels = {
-      plan_review: ["Approve plan", "Revise in chat", "Pause"],
-      plan_approved: ["Generate preview", "Revise in chat", "Pause"],
-      pseudo_preview: ["Confirm figure package", "Revise plan in chat", "Pause"],
-      chart_selected: ["Approve execution", "Revise plan in chat", "Pause"]
-    }[phase];
+    var labels = ["Approve plan", "Satisfied with figures"];
     if (!labels) return;
     var buttons = [
       document.getElementById("pe-approve-yes"),
-      document.getElementById("pe-approve-all"),
-      document.getElementById("pe-approve-no")
+      document.getElementById("pe-approve-all")
     ];
     for (var i = 0; i < buttons.length; i++) {
       if (buttons[i] && buttons[i].textContent.trim() !== labels[i]) {
         buttons[i].textContent = labels[i];
       }
     }
-    if (buttons[0]) {
-      var selectedCount = Number(card.getAttribute("data-selected-count") || "0");
-      buttons[0].disabled = reviewInFlight || (phase === "pseudo_preview" && selectedCount < 1);
-    }
+    if (buttons[0]) buttons[0].disabled = reviewInFlight || !["plan_review", "plan_approved"].includes(phase);
+    if (buttons[1]) buttons[1].disabled = reviewInFlight || !["pseudo_preview", "chart_selected"].includes(phase);
   }
 
   document.addEventListener("click", function (event) {
@@ -606,7 +604,7 @@ function peBoot() {
     if (!target) return;
     if (target.id === "pe-send") optimisticSend();
     if (target.id === "pe-clear") optimisticClear();
-    if (target.id === "pe-approve-yes" || target.id === "pe-approve-all" || target.id === "pe-approve-no") {
+    if (target.id === "pe-approve-yes" || target.id === "pe-approve-all") {
       var card = document.querySelector(".approve--research[data-research-phase]");
       if (reviewInFlight) {
         event.preventDefault();
@@ -618,8 +616,7 @@ function peBoot() {
         reviewPhaseAtClick = card.getAttribute("data-research-phase") || "";
         var reviewButtons = [
           document.getElementById("pe-approve-yes"),
-          document.getElementById("pe-approve-all"),
-          document.getElementById("pe-approve-no")
+          document.getElementById("pe-approve-all")
         ];
         for (var r = 0; r < reviewButtons.length; r++) {
           if (reviewButtons[r]) reviewButtons[r].disabled = true;
@@ -633,11 +630,6 @@ function peBoot() {
           }
         }, 30000);
       }
-    }
-    if (target.id === "pe-approve-all" ||
-        (target.id === "pe-approve-yes" && document.querySelector("[data-research-phase='pseudo_preview']"))) {
-      var researchInput = textarea();
-      if (researchInput) researchInput.focus();
     }
   }, true);
 

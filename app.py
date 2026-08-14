@@ -382,6 +382,15 @@ def review_click(box, action):
     if session and session.get("research"):
         phase_before = session["research"].get("phase")
         result = research.review_action(session, action)
+        # One plan approval should lead directly to the display-only preview.  The
+        # physical model remains blocked; the user gets one later figure-confirmation
+        # click before formal execution.
+        if (
+            action == "primary"
+            and phase_before == "plan_review"
+            and session["research"].get("phase") == "plan_approved"
+        ):
+            result = research.pseudo_preview(session)
         audit.bind(session)
         audit.emit(
             "human_research_review",
@@ -396,8 +405,8 @@ def review_click(box, action):
             # Formal execution approval is the run approval. Do not ask a second time.
             approval.set_mode(session, approval.ALWAYS)
         if (
-            action == "primary"
-            and phase_before == "chart_selected"
+            action in ("primary", "satisfied_figures")
+            and phase_before in ("pseudo_preview", "chart_selected")
             and research.allow_model(session)
         ):
             # The phase transition is idempotent, but the continuation is a one-shot
@@ -421,7 +430,7 @@ def review_click(box, action):
             # clear its pending request. Hide the stale card in this click response; the
             # resumed generator will render either the next single-run request or no card.
             session["approval_resuming"] = True
-        decision = {"primary": "approve", "secondary": approval.ALWAYS, "pause": "reject"}[action]
+        decision = {"primary": "approve", "satisfied_figures": "reject"}[action]
         approval.decide(session, decision)
     # Review actions can create or remove pseudo figures.  Refresh evidence in the same
     # click response; waiting for a later agent stream left the Figures badge at zero and
@@ -713,14 +722,13 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                                 )
                                 with gr.Row(elem_classes=["approve__row"]):
                                     approve = gr.Button(
-                                        "Approve / Continue",
+                                        "Approve plan",
                                         variant="primary",
                                         elem_id="pe-approve-yes",
                                     )
-                                    approve_all = gr.Button(
-                                        "Revise / Regenerate", elem_id="pe-approve-all"
+                                    satisfied_figures = gr.Button(
+                                        "Satisfied with figures", elem_id="pe-approve-all"
                                     )
-                                    decline = gr.Button("Pause", elem_id="pe-approve-no")
                         with gr.Row(elem_classes=["composer__box"]):
                             question = gr.Textbox(
                                 elem_id="pe-input",
@@ -865,13 +873,12 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         queue=False,
     )
 
-    # These three must be able to run while `respond` is blocked inside the gate waiting
+    # These two must be able to run while `respond` is blocked inside the gate waiting
     # for them, so they are exempt from the queue's concurrency limit. Without that the
     # click would sit behind the very generator it is meant to release.
     for button, decision in (
         (approve, "primary"),
-        (approve_all, "secondary"),
-        (decline, "pause"),
+        (satisfied_figures, "satisfied_figures"),
     ):
         review_event = button.click(
             lambda box, verdict=decision: review_click(box, verdict),
@@ -883,7 +890,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         # The earlier review phases only mutate their explicit gate. Formal execution
         # approval also resumes the same agent, so the button results in a real model run
         # and selected plot instead of merely changing a state label.
-        if decision == "primary":
+        if decision in ("primary", "satisfied_figures"):
             resume_event = review_event.then(
                 resume_after_review,
                 [review_command, turns_state, session_box, model_bridge],

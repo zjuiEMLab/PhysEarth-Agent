@@ -229,6 +229,45 @@ def test_research_plan_gate_allows_five_no_progress_answers(monkeypatch):
     )
 
 
+def test_research_plan_mapping_stop_exposes_exact_structured_repair(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    script = [
+        [_call_chunk("research_plan", '{"action":"propose"}')]
+        for _ in range(5)
+    ]
+    client, _ = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    problem = {
+        "field": "parameter_mapping[0].model_input",
+        "source": "registered_model_declaration",
+        "actual": "density",
+        "expected": "an exact registered model input",
+        "allowed_values": ["density_kg_m3"],
+        "repair": "Replace the unknown input with an exact parameter returned by list_models.",
+        "blocking": True,
+    }
+
+    def fake_call(name, arguments, **_kwargs):
+        assert name == "research_plan"
+        return {
+            "status": "terminal_error",
+            "summary": "Q1 plan incomplete: 0 evidence issue(s), 0 target coverage issue(s), and 1 parameter mapping issue(s).",
+            "data": {
+                "error_code": "reproduction_evidence_incomplete",
+                "problems": [problem],
+            },
+            "error": "mapping incomplete",
+        }
+
+    monkeypatch.setattr(agent.tools, "call", fake_call)
+    answer, _events, _ = agent.run("Reproduce the paper result", session=box)
+
+    assert "parameter_mapping[0].model_input" in answer
+    assert "density_kg_m3" in answer
+    assert "allowed_values" in answer
+
+
 def test_research_plan_resource_error_forces_the_missing_read_before_retry(monkeypatch):
     box = _asking()
     box["research_required"] = True

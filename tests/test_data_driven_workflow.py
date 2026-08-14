@@ -356,6 +356,107 @@ def test_q1_metadata_repair_uses_opened_evidence_and_keeps_six_runs():
     )
 
 
+def test_q1_mapping_aliases_and_missing_metadata_are_repaired_from_registry():
+    box = session.new_session("m")
+    _q1_resources(box)
+    fields = _q1_plan_fields(_q1_runs())
+    fields["parameter_mapping"] = [
+        {
+            "paper_concept": "snow density",
+            "model_input": "density",
+            "mapped_value": 300.0,
+        },
+        {
+            "paper_concept": "particle radius",
+            "model_input": "radius",
+            "mapped_value": 0.0001,
+            "provenance_class": "paper_explicit",
+            "evidence_ref": "smrt-v1#08",
+        },
+    ]
+
+    result = tools.call("research_plan", fields, session=box)
+
+    assert result["status"] == "needs_input", result
+    plan = box["research"]["plan"]
+    density = next(item for item in plan["parameter_mapping"] if item.get("model_input") == "density_kg_m3")
+    radius = next(item for item in plan["parameter_mapping"] if item.get("model_input") == "radius_m")
+    assert density["model"] == "smrt"
+    assert density["provenance_class"] == "backend_default"
+    assert density["confidence"] == "medium"
+    assert density["paper_concept"] == "snow density"
+    assert density["rationale"]
+    assert radius["model"] == "smrt"
+    assert radius["units"] == "m"
+    assert radius["confidence"] == "high"
+    assert any(
+        item["field"].endswith(".model_input")
+        and item["from"] in {"density", "radius"}
+        for item in plan["automatic_repairs"]
+    )
+    assert len(plan["runs"]) == 6
+
+
+def test_unknown_mapping_alias_returns_registered_candidates_and_keeps_plan_uncreated():
+    box = session.new_session("m")
+    _q1_resources(box)
+    fields = _q1_plan_fields(_q1_runs())
+    fields["parameter_mapping"] = [{
+        "paper_concept": "snow density",
+        "model_input": "snow_density",
+        "mapped_value": 300.0,
+        "provenance_class": "model_assumption",
+        "rationale": "unverified mapping",
+    }]
+
+    result = tools.call("research_plan", fields, session=box)
+
+    assert result["status"] == "terminal_error"
+    assert result["data"]["error_code"] == "reproduction_evidence_incomplete"
+    problem = next(
+        item for item in result["data"]["problems"]
+        if item.get("field") == "parameter_mapping[0].model_input"
+    )
+    assert problem["source"] == "registered_model_declaration"
+    assert problem["actual"] == "snow_density"
+    assert "density_kg_m3" in problem["allowed_values"]
+    assert problem["blocking"] is True
+    assert "parameter_mapping[0].model_input" in result["summary"]
+    assert not (box.get("research") or {}).get("plan", {}).get("approval_state") == "plan_review"
+
+
+def test_paper_conditions_only_tag_parameters_and_never_block_registered_runs():
+    box = session.new_session("m")
+    _q1_resources(box)
+    fields = _q1_plan_fields(_q1_runs())
+    fields["paper_conditions"] = {
+        "stickiness": 0.5,
+        "radius_m": 0.0001,
+    }
+    fields["condition_provenance"] = {
+        "stickiness": "smrt-v1#08",
+        "radius_m": "smrt-v1#08",
+    }
+
+    result = tools.call("research_plan", fields, session=box)
+
+    assert result["status"] == "needs_input", result
+    assert "paper_condition_conflict" not in result["summary"]
+    plan = box["research"]["plan"]
+    stickiness = next(
+        item for item in plan["parameter_mapping"]
+        if item.get("model_input") == "stickiness"
+    )
+    assert stickiness["paper_value"] == 0.5
+    assert stickiness["provenance_class"] == "backend_default"
+    assert stickiness["confidence"] == "medium"
+    assert all(
+        warning.get("blocking") is False
+        for warning in plan.get("validation_warnings") or []
+        if warning.get("code") == "paper_context_difference"
+    )
+
+
 def test_q1_paper_radius_difference_is_a_nonblocking_context_warning():
     box = session.new_session("m")
     _q1_resources(box)

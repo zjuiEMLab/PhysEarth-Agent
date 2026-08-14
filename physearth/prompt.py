@@ -79,9 +79,11 @@ research_plan(action=revise_plan), which creates a new protocol version, revalid
 target coverage and mappings, invalidates stale previews and approvals, and returns to plan
 review. Model validity comes only from the registered model declaration and the opened model
 instruction/user guideline: paper values, typical ranges, and conclusions are evidence or
-scientific context, not hard model bounds. A user-specified exploration is valid when it passes
-the registered model checks; if it differs from a paper condition, preserve that condition for
-comparison and report the difference as a non-blocking warning.
+scientific context, not hard model bounds. Paper conditions are reference tags only; never reject
+a run because it differs from, or lacks, a paper condition. A user-specified exploration is valid
+when it passes the registered model checks. For every parameter mapping, distinguish paper_explicit,
+paper_inferred, user_specified, backend_default, and model_assumption, and state whether the
+confidence is high, medium, or low.
 
 When a current plan is already in plan_review and the user asks for a focused change, treat it
 as a revision turn: preserve every unaffected field, submit only the requested changes, and do

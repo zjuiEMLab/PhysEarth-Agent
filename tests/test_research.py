@@ -58,6 +58,21 @@ def test_plan_is_supplied_by_the_agent_not_selected_from_benchmark_templates():
     assert "kind" not in box["research"]
 
 
+def test_satisfied_figures_is_the_single_final_review_action():
+    box = session.new_session("m")
+    assert _proposal(box)["status"] == "needs_input"
+
+    assert research.approve_plan(box)["status"] == "needs_input"
+    assert research.pseudo_preview(box)["status"] == "needs_input"
+    result = research.review_action(box, "satisfied_figures")
+
+    assert result["status"] == "success"
+    assert box["research"]["phase"] == "approved"
+    duplicate = research.review_action(box, "satisfied_figures")
+    assert duplicate["status"] == "success"
+    assert "duplicate" in duplicate["summary"].lower()
+
+
 def test_plan_recovers_missing_prose_steps_when_runs_and_charts_are_executable():
     box = session.new_session("m")
     result = research.propose(
@@ -1173,7 +1188,8 @@ def test_q4_transferability_does_not_receive_hidden_protocol_charts():
         limitations=["grid calibration"], baseline_run_id="shs",
     )
     assert result["status"] == "terminal_error", result["summary"]
-    assert "paper_conditions" in result["summary"]
+    assert "paper_conditions" not in result["summary"]
+    assert "evidence issue" in result["summary"]
     assert box["research"] is None
 
 

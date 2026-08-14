@@ -223,6 +223,62 @@ def test_research_plan_preview_is_structured_and_keeps_yaml_in_a_disclosure():
     assert "Pasted revision text" not in out
 
 
+def test_revised_plan_card_is_collapsed_while_revision_summary_remains_visible():
+    from physearth import research, session
+
+    box = session.new_session("m")
+    result = research.propose(
+        box,
+        question="How does density affect the registered model output?",
+        objective="Quantify the density response",
+        hypothesis="The response changes across the density range",
+        steps=["read declarations", "run the model", "review the figure"],
+        parameters={"sweep_start": 10, "sweep_stop": 100},
+        runs=[{
+            "id": "density",
+            "label": "Density sweep",
+            "model": "smrt",
+            "parameters": {
+                "output": "coefficients",
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 10,
+                "sweep_stop": 100,
+                "sweep_points": 5,
+            },
+        }],
+        charts=[{"id": "density", "label": "Density", "kind": "line", "x": "density_kg_m3", "y": "ks_per_m"}],
+        quantities=["ks_per_m"],
+        controls=["frequency fixed"],
+        metrics=["trend"],
+        diagnostics=["finite outputs"],
+        success_criteria=["finite outputs"],
+        stop_conditions=["model failure"],
+        assumptions=["homogeneous layer"],
+        limitations=["registered model scope"],
+        baseline_run_id="density",
+    )
+    assert result["status"] == "needs_input"
+    assert "data-collapsed='false'" in render.approval_bar(box)
+
+    revised = research.revise(box, {"assumptions": ["revised layer assumption"]})
+    assert revised["status"] == "needs_input"
+    out = render.approval_bar(box)
+    assert "data-collapsed='true'" in out
+    assert "REVISION SUMMARY" in out
+
+
+def test_plan_review_exposes_only_the_two_review_controls():
+    from pathlib import Path
+
+    app_source = (Path(__file__).parents[1] / "app.py").read_text(encoding="utf-8")
+    js_source = (Path(__file__).parents[1] / "assets" / "ui.js").read_text(encoding="utf-8")
+    assert "Revise / Regenerate" not in app_source
+    assert 'gr.Button("Pause"' not in app_source
+    assert "pe-approve-no" not in app_source and "pe-approve-no" not in js_source
+    assert "Approve plan" in app_source and "Satisfied with figures" in app_source
+    assert 'document.querySelector(".research-plan-details[open]")' in js_source
+
+
 def test_guided_research_context_shows_live_capability_and_agent_paper_session():
     from physearth import session
 

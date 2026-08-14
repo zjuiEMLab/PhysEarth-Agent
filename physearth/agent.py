@@ -1197,13 +1197,32 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         return
 
                 if tool_failure_streak["count"] >= harness.max_interventions(tool=name):
+                    stop_detail = tool_failure_streak["detail"]
+                    if name == "research_plan":
+                        structured_stop_problems = [
+                            {
+                                key: item.get(key)
+                                for key in (
+                                    "field", "source", "actual", "expected",
+                                    "allowed_values", "repair", "blocking",
+                                )
+                                if key in item
+                            }
+                            for item in (failure_data.get("problems") or [])
+                            if isinstance(item, dict)
+                        ]
+                        if structured_stop_problems:
+                            stop_detail += " Structured repair gaps: %s" % json.dumps(
+                                structured_stop_problems,
+                                ensure_ascii=False,
+                            )
                     answer = (
                         "Stopped after %d consecutive failed %s calls with no state progress. "
                         "Last error: %s"
                         % (
                             tool_failure_streak["count"],
                             name,
-                            tool_failure_streak["detail"],
+                            stop_detail,
                         )
                     )
                     events.append(
@@ -1245,26 +1264,48 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     and result["status"] == "terminal_error"
                     and (result.get("data") or {}).get("error_code") in (
                         "reproduction_evidence_incomplete",
+                        "research_plan_validation",
                         "paper_condition_conflict",
                     )
                 ):
                     problems = (result.get("data") or {}).get("problems") or []
+                    blocking_problems = [
+                        item for item in problems
+                        if isinstance(item, dict) and item.get("blocking", True)
+                    ]
+                    mapping_only = bool(blocking_problems) and all(
+                        str(item.get("field", "")).startswith("parameter_mapping")
+                        for item in blocking_problems
+                    )
+                    if mapping_only:
+                        recovery_instruction = (
+                            "These are mapping-only errors. Preserve every existing run, chart, "
+                            "evidence reference, physical parameter, sweep range, output, and "
+                            "target. Repair only the listed mapping fields. For a model_input "
+                            "problem, use one exact value from allowed_values or the input names "
+                            "returned by list_models; do not submit an alias or the same invalid "
+                            "mapping object again. Add model when the error requests model-scoped "
+                            "coverage."
+                        )
+                    else:
+                        recovery_instruction = (
+                            "Preserve all existing physical runs, the theory/microstructure choices, "
+                            "sweep ranges, radii, frequencies, and outputs; this is a metadata-only "
+                            "repair. Do not submit the same invalid object again. Fill evidence_refs, "
+                            "deterministic target coverage, and parameter mappings, marking backend "
+                            "defaults or model assumptions explicitly. If a source figure asset is "
+                            "unavailable, mark the target partial with an availability reason."
+                        )
                     messages.append(
                         {
                             "role": "user",
                             "content": (
                                 "Repair the submitted reproduction plan using the structured "
-                                "validation problems below. Preserve all existing physical runs, "
-                                "theory/microstructure choices, sweep ranges, radii, frequencies, "
-                                "and outputs; this is a metadata-only repair. Do not submit the "
-                                "same invalid object again. Fill evidence_refs, deterministic "
-                                "target coverage, and parameter mappings, marking backend defaults "
-                                "or model assumptions explicitly. If a source figure asset is "
-                                "unavailable, mark the target partial with an availability reason. "
+                                "validation problems below. %s "
                                 "For a paper-condition conflict, correct the run's explicit value "
                                 "to the paper value named by the validator; never retain a conflicting "
                                 "backend default. Problems: %s"
-                                % json.dumps(problems, ensure_ascii=False)
+                                % (recovery_instruction, json.dumps(problems, ensure_ascii=False))
                             ),
                         }
                     )

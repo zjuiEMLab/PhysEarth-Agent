@@ -32,6 +32,21 @@ PARAMETER_PROVENANCE = (
     "backend_default",
 )
 
+PARAMETER_CONFIDENCE = ("high", "medium", "low")
+
+
+def _provenance_confidence(provenance):
+    return {
+        "paper_explicit": ("high", "explicitly supported by opened paper evidence"),
+        "paper_inferred": ("medium", "inferred from opened paper evidence"),
+        "user_specified": ("high", "directly specified by the user"),
+        "backend_default": ("medium", "provided by the registered model backend, not by the paper"),
+        "model_assumption": ("low", "not supported by paper or user evidence; requires review"),
+    }.get(
+        provenance,
+        ("low", "source provenance is incomplete and requires review"),
+    )
+
 
 def is_reproduction_question(question):
     """Return whether the question asks for evidence-led paper reproduction.
@@ -189,6 +204,7 @@ def _clean_parameter_mapping(values):
         ).strip()
         record.update(
             {
+                "model": str(item.get("model") or item.get("model_name") or "").strip(),
                 "paper_concept": str(
                     item.get("paper_concept") or item.get("paper_parameter") or item.get("concept") or ""
                 ).strip(),
@@ -197,6 +213,8 @@ def _clean_parameter_mapping(values):
                 "mapped_value": item.get("mapped_value", item.get("model_value")),
                 "units": str(item.get("units") or item.get("unit") or "").strip(),
                 "provenance_class": provenance,
+                "confidence": str(item.get("confidence") or item.get("confidence_level") or "").strip().lower(),
+                "confidence_basis": str(item.get("confidence_basis") or "").strip(),
                 "evidence_ref": evidence_ref,
                 "rationale": str(item.get("rationale") or item.get("reason") or "").strip(),
             }
@@ -271,7 +289,7 @@ def _ledger_entries(session, kind=None):
     ]
 
 
-def _repair_item(field, before, after, reason, provenance=None):
+def _repair_item(field, before, after, reason, provenance=None, source=None):
     item = {
         "field": field,
         "from": before,
@@ -280,12 +298,301 @@ def _repair_item(field, before, after, reason, provenance=None):
     }
     if provenance:
         item["provenance"] = provenance
+    if source:
+        item["source"] = source
     return item
 
 
 def _model_parameter_spec(session, model, name):
     declaration = ((session or {}).get("model_declarations") or {}).get(model) or {}
     return (declaration.get("parameters") or {}).get(name) or {}
+
+
+def _normalise_parameter_name(value):
+    """Create a conservative comparison form for registered input names.
+
+    This is intentionally only a name-shape comparison.  It does not use paper prose,
+    Evaluation YAML, or a question-specific alias table to decide what a model input is.
+    """
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", str(value or "").lower())).strip("_")
+
+
+def _normalise_units(value):
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
+
+
+def _units_compatible(left, right):
+    left = _normalise_units(left)
+    right = _normalise_units(right)
+    return not left or not right or left == right
+
+
+def _registered_parameter_index(session, model_names):
+    """Return declared parameter names grouped by registered model."""
+    index = {}
+    for model in sorted({str(name).strip() for name in model_names if str(name).strip()}):
+        entry = registry.get(model, session)
+        if entry:
+            index[model] = dict(entry.card.get("parameters") or {})
+    return index
+
+
+def _mapping_candidates(raw_name, model_name, parameter_index, units=""):
+    """Find exact or unambiguous registered candidates for one mapping name."""
+    models = [model_name] if model_name else sorted(parameter_index)
+    candidates = [
+        (model, name)
+        for model in models
+        for name in parameter_index.get(model, {})
+        if name == raw_name
+    ]
+    if candidates:
+        return candidates
+
+    normalised = _normalise_parameter_name(raw_name)
+    if not normalised:
+        return []
+    candidates = [
+        (model, name)
+        for model in models
+        for name, spec in parameter_index.get(model, {}).items()
+        if _normalise_parameter_name(name) == normalised
+        and _units_compatible(units, (spec or {}).get("unit"))
+    ]
+    if candidates:
+        return candidates
+
+    # Permit a short base name only when exactly one declared parameter has that
+    # registered stem.  Thus ``density`` can resolve to a declaration such as
+    # ``density_kg_m3`` without introducing a model-specific synonym table.
+    candidates = [
+        (model, name)
+        for model in models
+        for name, spec in parameter_index.get(model, {}).items()
+        if _normalise_parameter_name(name).startswith(normalised + "_")
+        and _units_compatible(units, (spec or {}).get("unit"))
+    ]
+    return candidates
+
+
+def _is_paper_context_problem(problem):
+    """Paper references may label a run, but never invalidate registered-model input."""
+    field = str((problem or {}).get("field") or "")
+    source = str((problem or {}).get("source") or "")
+    return bool(
+        (problem or {}).get("category") == "paper_context"
+        or source.startswith("paper_conditions")
+        or source.startswith("condition_provenance")
+        or field.startswith("runs[") and ".parameters." in field
+    )
+
+
+def _expected_mapping_inputs(runs, parameter_resolution):
+    """Return resolved run inputs keyed by their registered model and input name."""
+    by_run = _parameter_resolution_by_run(parameter_resolution, runs)
+    expected = {}
+    defaulted = set()
+    for run in runs or ():
+        model = str(run.get("model") or "").strip()
+        resolution = by_run.get(run.get("id")) or {}
+        resolved = resolution.get("resolved_parameters") or run.get("parameters") or {}
+        for name, value in resolved.items():
+            key = (model, str(name))
+            expected[key] = value
+            if name in set(resolution.get("defaulted_parameters") or ()):
+                defaulted.add(key)
+    return expected, defaulted
+
+
+def _repair_parameter_mappings(
+    session,
+    mappings,
+    runs,
+    parameter_resolution,
+    paper_conditions,
+    condition_provenance,
+    evidence_refs,
+):
+    """Canonicalize mapping metadata using only registered model declarations.
+
+    Physical run parameters are never changed here.  A mapping alias may be replaced by
+    one unambiguous registered input; missing audit metadata is filled and surfaced as an
+    automatic repair.  Unknown or ambiguous names remain blocking problems.
+    """
+    model_names = [run.get("model") for run in runs or ()]
+    parameter_index = _registered_parameter_index(session, model_names)
+    _expected, defaulted = _expected_mapping_inputs(runs, parameter_resolution)
+    repaired = []
+    problems = []
+    canonical = []
+    paper_conditions = dict(paper_conditions or {})
+    condition_provenance = dict(condition_provenance or {})
+    evidence_refs = set(evidence_refs or ())
+
+    for index, item in enumerate(mappings or ()):
+        record = dict(item)
+        raw_name = str(record.get("model_input") or "").strip()
+        model_name = str(record.get("model") or "").strip()
+        if raw_name:
+            candidates = _mapping_candidates(
+                raw_name, model_name, parameter_index, record.get("units")
+            )
+            if len(candidates) == 1:
+                candidate_model, candidate_name = candidates[0]
+                if candidate_name != raw_name:
+                    repaired.append(_repair_item(
+                        "parameter_mapping[%d].model_input" % index,
+                        raw_name,
+                        candidate_name,
+                        "replace an unambiguous alias with the exact registered model input",
+                        "registered_model_declaration",
+                        "registered_model_declaration",
+                    ))
+                    record["model_input"] = candidate_name
+                if not model_name and candidate_model:
+                    record["model"] = candidate_model
+                    model_name = candidate_model
+                    repaired.append(_repair_item(
+                        "parameter_mapping[%d].model" % index,
+                        "",
+                        candidate_model,
+                        "bind the mapping to the registered model that declares the input",
+                        "registered_model_declaration",
+                        "registered_model_declaration",
+                    ))
+                elif model_name and candidate_model != model_name:
+                    problems.append({
+                        "field": "parameter_mapping[%d].model" % index,
+                        "source": model_name,
+                        "actual": model_name,
+                        "expected": candidate_model,
+                        "allowed_values": [candidate_model],
+                        "repair": "Use the registered model that declares this input.",
+                        "blocking": True,
+                    })
+            else:
+                if model_name:
+                    candidate_values = sorted(parameter_index.get(model_name) or ())
+                elif len(parameter_index) == 1:
+                    candidate_values = sorted(next(iter(parameter_index.values()), {}).keys())
+                else:
+                    candidate_values = [
+                        "%s.%s" % (model, name)
+                        for model, names in parameter_index.items()
+                        for name in names
+                    ]
+                if len(candidates) > 1:
+                    candidate_values = ["%s.%s" % pair for pair in candidates]
+                problems.append({
+                    "field": "parameter_mapping[%d].model_input" % index,
+                    "source": "registered_model_declaration",
+                    "actual": raw_name,
+                    "expected": "an exact registered model input",
+                    "allowed_values": candidate_values,
+                    "repair": (
+                        "Replace the alias with one exact input from list_models."
+                        if len(candidates) > 1
+                        else "Replace the unknown input with an exact parameter returned by list_models."
+                    ),
+                    "blocking": True,
+                })
+
+        model_input = str(record.get("model_input") or "").strip()
+        model_name = str(record.get("model") or "").strip()
+        if not model_input or not model_name:
+            canonical.append(record)
+            continue
+
+        key = (model_name, model_input)
+        spec = parameter_index.get(model_name, {}).get(model_input) or {}
+        if not record.get("units") and spec.get("unit"):
+            record["units"] = str(spec.get("unit"))
+            repaired.append(_repair_item(
+                "parameter_mapping[%d].units" % index,
+                "",
+                record["units"],
+                "copy the declared unit for the registered model input",
+                "registered_model_declaration",
+                "registered_model_declaration",
+            ))
+        if not record.get("paper_concept"):
+            record["paper_concept"] = model_input
+            repaired.append(_repair_item(
+                "parameter_mapping[%d].paper_concept" % index,
+                "",
+                model_input,
+                "use the registered input label when no paper-side concept was supplied",
+                "model_assumption",
+                "registered_model_declaration",
+            ))
+
+        provenance = str(record.get("provenance_class") or "").strip().lower()
+        evidence_ref = _normalise_evidence_ref(record.get("evidence_ref"))
+        if not provenance or provenance not in PARAMETER_PROVENANCE:
+            if (
+                model_input in paper_conditions
+                and _normalise_evidence_ref(condition_provenance.get(model_input)) in evidence_refs
+            ):
+                provenance = "paper_inferred"
+                if not evidence_ref:
+                    evidence_ref = _normalise_evidence_ref(condition_provenance.get(model_input))
+            elif key in defaulted:
+                provenance = "backend_default"
+            else:
+                provenance = "model_assumption"
+            before = record.get("provenance_class") or ""
+            record["provenance_class"] = provenance
+            repaired.append(_repair_item(
+                "parameter_mapping[%d].provenance_class" % index,
+                before,
+                provenance,
+                "classify mapping provenance from registered resolution and opened evidence",
+                provenance,
+                "registered_model_declaration",
+            ))
+        if evidence_ref != str(record.get("evidence_ref") or "").strip():
+            record["evidence_ref"] = evidence_ref
+        if not record.get("rationale"):
+            if record.get("provenance_class") == "backend_default":
+                rationale = "The registered backend supplied this default; it is not paper evidence."
+            elif record.get("provenance_class") == "model_assumption":
+                rationale = "The registered input was retained as a model assumption without paper evidence."
+            else:
+                rationale = "The registered input was mapped to the opened paper evidence."
+            record["rationale"] = rationale
+            repaired.append(_repair_item(
+                "parameter_mapping[%d].rationale" % index,
+                "",
+                rationale,
+                "add an auditable explanation for the paper-to-model mapping",
+                record.get("provenance_class"),
+                "registered_model_declaration",
+            ))
+        confidence, confidence_basis = _provenance_confidence(record.get("provenance_class"))
+        if record.get("confidence") not in PARAMETER_CONFIDENCE:
+            before = record.get("confidence") or ""
+            record["confidence"] = confidence
+            repaired.append(_repair_item(
+                "parameter_mapping[%d].confidence" % index,
+                before,
+                confidence,
+                "label confidence from the mapping provenance without changing the run value",
+                record.get("provenance_class"),
+                "provenance_classification",
+            ))
+        if not record.get("confidence_basis"):
+            record["confidence_basis"] = confidence_basis
+            repaired.append(_repair_item(
+                "parameter_mapping[%d].confidence_basis" % index,
+                "",
+                confidence_basis,
+                "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+                record.get("provenance_class"),
+                "provenance_classification",
+            ))
+        canonical.append(record)
+
+    return canonical, repaired, problems, _expected, defaulted
 
 
 def _parameter_resolution_by_run(parameter_resolution, runs):
@@ -590,7 +897,6 @@ def _repair_reproduction_metadata(
 
     by_run = _parameter_resolution_by_run(parameter_resolution, runs)
     mappings = list(parameter_mapping or ())
-    mapped = {item.get("model_input") for item in mappings if item.get("model_input")}
     paper_conditions = dict(paper_conditions or {})
     condition_provenance = dict(condition_provenance or {})
     # A paper mapping with a valid evidence reference is sufficient to expose the
@@ -614,14 +920,33 @@ def _repair_reproduction_metadata(
                 provenance,
             ))
 
+    mappings, mapping_repairs, mapping_problems, _expected_mappings, _defaulted_mappings = _repair_parameter_mappings(
+        session,
+        mappings,
+        runs,
+        parameter_resolution,
+        paper_conditions,
+        condition_provenance,
+        sections | figures,
+    )
+    repairs.extend(mapping_repairs)
+    problems.extend(mapping_problems)
+    mapped = {
+        (str(item.get("model") or "").strip(), item.get("model_input"))
+        for item in mappings
+        if item.get("model_input") and item.get("model")
+    }
+
     for run in runs or ():
         run_id = run.get("id")
+        run_model = str(run.get("model") or "").strip()
         resolution = by_run.get(run_id) or {}
         requested = resolution.get("requested_parameters") or {}
         resolved = resolution.get("resolved_parameters") or run.get("parameters") or {}
         defaulted = set(resolution.get("defaulted_parameters") or ())
         for model_input, value in resolved.items():
-            if model_input in mapped:
+            mapping_key = (run_model, model_input)
+            if mapping_key in mapped:
                 continue
             spec = _model_parameter_spec(session, run.get("model"), model_input)
             units = spec.get("unit", "") if isinstance(spec, dict) else ""
@@ -640,23 +965,28 @@ def _repair_reproduction_metadata(
                 paper_value = None
                 rationale = "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
                 evidence_ref = ""
+            confidence, confidence_basis = _provenance_confidence(provenance)
             mapping = {
+                "model": run_model,
                 "paper_concept": model_input,
                 "paper_value": paper_value,
                 "model_input": model_input,
                 "mapped_value": value,
                 "units": units,
                 "provenance_class": provenance,
+                "confidence": confidence,
+                "confidence_basis": confidence_basis,
                 "evidence_ref": evidence_ref,
                 "rationale": rationale,
             }
             mappings.append(mapping)
-            mapped.add(model_input)
+            mapped.add(mapping_key)
             repairs.append(_repair_item(
-                "parameter_mapping.%s" % model_input,
+                "parameter_mapping.%s.%s" % (run_model, model_input),
                 None, mapping,
                 "map every resolved run input to an exact declared model parameter",
                 provenance,
+                "registered_model_declaration",
             ))
 
     # Paper conditions describe the source experiment; they are not model-validity
@@ -664,7 +994,13 @@ def _repair_reproduction_metadata(
     # the registered model declaration.  Keep the mismatch auditable as a warning and
     # never let an LLM-derived paper conclusion block that exploratory revision.
     context_warnings = []
+    explicitly_requested = {
+        (str(run.get("model") or "").strip(), key)
+        for run in runs or ()
+        for key in ((by_run.get(run.get("id")) or {}).get("requested_parameters") or {})
+    }
     for run in runs or ():
+        run_model = str(run.get("model") or "").strip()
         for key, expected in paper_conditions.items():
             actual = (run.get("parameters") or {}).get(key)
             if actual is not None and not _same_value(actual, expected):
@@ -685,18 +1021,26 @@ def _repair_reproduction_metadata(
                     ),
                 }
                 context_warnings.append(warning)
-                # A revised value is user-controlled even if the original mapping came
-                # from the paper. Preserve the paper value for comparison context, but
-                # do not mislabel the effective run input as paper_explicit.
+                # Keep the paper value for comparison context, but classify the effective
+                # run input from its actual source. A backend default is not user evidence.
                 for mapping in mappings:
                     if mapping.get("model_input") != key:
                         continue
                     if mapping.get("provenance_class") in ("paper_explicit", "paper_inferred"):
-                        mapping["provenance_class"] = "user_specified"
-                        mapping["rationale"] = (
-                            "The user extended this experiment beyond the paper condition; "
-                            "the paper value remains comparison context."
+                        mapping_key = (str(mapping.get("model") or run_model).strip(), key)
+                        provenance = (
+                            "user_specified"
+                            if mapping_key in explicitly_requested
+                            else "backend_default"
                         )
+                        mapping["provenance_class"] = provenance
+                        mapping["rationale"] = (
+                            "The submitted experiment differs from the paper condition; the "
+                            "paper value remains comparison context."
+                        )
+                        confidence, confidence_basis = _provenance_confidence(provenance)
+                        mapping["confidence"] = confidence
+                        mapping["confidence_basis"] = confidence_basis
 
     # Add evidence references to paper mappings only when they are actually available.
     for index, item in enumerate(mappings):
@@ -727,9 +1071,24 @@ def _evidence_problem_summary(question, problems):
         or str(item.get("field", "")).startswith("reproduction_targets")
     )
     mappings = sum(1 for item in problems if "mapping" in str(item.get("field", "")))
-    return "%s plan incomplete: %d evidence issue(s), %d target coverage issue(s), and %d parameter mapping issue(s)." % (
+    summary = "%s plan incomplete: %d evidence issue(s), %d target coverage issue(s), and %d parameter mapping issue(s)." % (
         label, evidence, coverage, mappings
     )
+    mapping_details = []
+    for item in problems:
+        if "mapping" not in str(item.get("field", "")):
+            continue
+        detail = str(item.get("field") or "parameter_mapping")
+        if item.get("actual") not in (None, ""):
+            detail += " (actual=%r)" % item.get("actual")
+        mapping_details.append(detail)
+    if mapping_details:
+        shown = mapping_details[:4]
+        suffix = "; ".join(shown)
+        if len(mapping_details) > len(shown):
+            suffix += "; +%d more" % (len(mapping_details) - len(shown))
+        summary += " Mapping fields: %s." % suffix
+    return summary
 
 
 def _evidence_plan_problems(session, question, literature_evidence, reproduction_targets,
@@ -818,41 +1177,76 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
         problems.append({"field": "selected_models", "source": model, "expected": "model used by a planned run", "repair": "Add this model to selected_models with its capability and instruction provenance."})
     if not parameter_mapping:
         problems.append({"field": "parameter_mapping", "source": "research_plan", "expected": "paper-to-model parameter mappings", "repair": "Map paper concepts to exact registered model input names and mark their provenance."})
-    mapped_inputs = {item.get("model_input") for item in parameter_mapping if item.get("model_input")}
-    declared_inputs = set()
-    for model_name in planned_models | selected_names:
-        entry = registry.get(model_name, session)
-        if entry:
-            declared_inputs.update((entry.card.get("parameters") or {}).keys())
+    parameter_index = _registered_parameter_index(session, planned_models | selected_names)
+    declared_inputs = {
+        model: set(parameters)
+        for model, parameters in parameter_index.items()
+    }
     for index, item in enumerate(parameter_mapping):
         prefix = "parameter_mapping[%d]" % index
         if not item.get("paper_concept"):
-            problems.append({"field": prefix + ".paper_concept", "source": "research_plan", "expected": "paper-side concept", "repair": "Name the concept used by the paper."})
+            problems.append({"field": prefix + ".paper_concept", "source": "research_plan", "actual": "", "expected": "paper-side concept", "repair": "Name the concept used by the paper.", "blocking": True})
         if not item.get("model_input"):
-            problems.append({"field": prefix + ".model_input", "source": "research_plan", "expected": "exact registered model input", "repair": "Use the parameter name returned by list_models."})
+            problems.append({"field": prefix + ".model_input", "source": "research_plan", "actual": "", "expected": "exact registered model input", "allowed_values": sorted({name for names in declared_inputs.values() for name in names}), "repair": "Use the parameter name returned by list_models.", "blocking": True})
         provenance = item.get("provenance_class")
         if provenance not in PARAMETER_PROVENANCE:
-            problems.append({"field": prefix + ".provenance_class", "source": provenance or "missing", "expected": ", ".join(PARAMETER_PROVENANCE), "repair": "Choose one provenance class and explain the mapping."})
+            problems.append({"field": prefix + ".provenance_class", "source": provenance or "missing", "actual": provenance or "", "expected": ", ".join(PARAMETER_PROVENANCE), "allowed_values": list(PARAMETER_PROVENANCE), "repair": "Choose one provenance class and explain the mapping.", "blocking": True})
         if not item.get("rationale"):
-            problems.append({"field": prefix + ".rationale", "source": "research_plan", "expected": "mapping rationale", "repair": "Explain how the paper value becomes the model input value."})
-        if item.get("model_input") and declared_inputs and item.get("model_input") not in declared_inputs:
-            problems.append({"field": prefix + ".model_input", "source": item.get("model_input"), "expected": "a parameter returned by list_models", "repair": "Replace it with the exact registered input name."})
+            problems.append({"field": prefix + ".rationale", "source": "research_plan", "actual": "", "expected": "mapping rationale", "repair": "Explain how the paper value becomes the model input value.", "blocking": True})
+        model_name = str(item.get("model") or "").strip()
+        model_input = item.get("model_input")
+        if model_input and model_name and model_name in declared_inputs and model_input not in declared_inputs[model_name]:
+            problems.append({
+                "field": prefix + ".model_input",
+                "source": "registered_model_declaration",
+                "actual": model_input,
+                "expected": "a parameter returned by list_models for %s" % model_name,
+                "allowed_values": sorted(declared_inputs[model_name]),
+                "repair": "Replace it with the exact registered input name.",
+                "blocking": True,
+            })
+        if model_input and not model_name and len(planned_models | selected_names) > 1:
+            problems.append({
+                "field": prefix + ".model",
+                "source": "research_plan",
+                "actual": "",
+                "expected": "the registered model declaring this input",
+                "allowed_values": sorted(planned_models | selected_names),
+                "repair": "Add model to every mapping so coverage is scoped to (model, model_input).",
+                "blocking": True,
+            })
         if provenance in ("paper_explicit", "paper_inferred") and not item.get("evidence_ref"):
-            problems.append({"field": prefix + ".evidence_ref", "source": provenance, "expected": "paper evidence reference", "repair": "Attach the opened section, figure, or table reference."})
-    run_inputs = {
-        key for run in runs for key in (run.get("parameters") or {}).keys()
+            problems.append({"field": prefix + ".evidence_ref", "source": provenance, "actual": "", "expected": "paper evidence reference", "repair": "Attach the opened section, figure, or table reference.", "blocking": True})
+    expected, defaulted = _expected_mapping_inputs(runs, parameter_resolution)
+    mapped_keys = {
+        (str(item.get("model") or "").strip(), item.get("model_input"))
+        for item in parameter_mapping
+        if item.get("model_input") and item.get("model")
     }
-    missing_inputs = sorted(run_inputs - mapped_inputs)
-    if missing_inputs:
-        defaulted = {
-            key for item in (parameter_resolution or ())
-            for key in (item.get("defaulted_parameters") or ())
-        }
-        unresolved = sorted(set(missing_inputs) - defaulted)
-        if unresolved:
-            problems.append({"field": "parameter_mapping", "source": ", ".join(unresolved), "expected": "mapping or explicitly declared assumption for every run input", "repair": "Add one mapping entry per run parameter, including output and sweep controls.", "blocking": True})
-        for name in sorted(set(missing_inputs) & defaulted):
-            problems.append({"field": "parameter_mapping.%s" % name, "source": "backend default", "expected": "an auditable backend_default mapping or an explicit paper/user value", "repair": "Review the inserted default and confirm it is acceptable; do not treat it as paper evidence.", "provenance": "backend_default", "blocking": False})
+    missing_keys = sorted(set(expected) - mapped_keys)
+    unresolved = [key for key in missing_keys if key not in defaulted]
+    if unresolved:
+        for model_name, model_input in unresolved:
+            problems.append({
+                "field": "parameter_mapping.%s.%s" % (model_name, model_input),
+                "source": "resolved_run_parameters",
+                "actual": None,
+                "expected": "mapping or explicitly declared assumption for every run input",
+                "allowed_values": sorted(declared_inputs.get(model_name) or ()),
+                "repair": "Add one mapping entry for this exact registered model input.",
+                "blocking": True,
+            })
+    for model_name, model_input in sorted(set(missing_keys) & defaulted):
+        problems.append({
+            "field": "parameter_mapping.%s.%s" % (model_name, model_input),
+            "source": "backend_default",
+            "actual": None,
+            "expected": "an auditable backend_default mapping or an explicit paper/user value",
+            "allowed_values": sorted(declared_inputs.get(model_name) or ()),
+            "repair": "Review the inserted default and confirm it is acceptable; do not treat it as paper evidence.",
+            "provenance": "backend_default",
+            "blocking": False,
+        })
     coverage_problems, _, _ = _target_coverage(reproduction_targets, runs, charts)
     for problem in coverage_problems:
         problems.append({"field": "reproduction_targets.coverage", "source": "runs/charts", "expected": "known run_ids or chart_ids", "repair": problem})
@@ -1202,35 +1596,25 @@ def propose(
     ):
         if not values:
             quality_problems.append(label)
-    if reproduction_case:
-        if not paper_conditions:
-            quality_problems.append("paper_conditions copied from the read paper evidence")
-        if not condition_provenance:
-            quality_problems.append("condition_provenance for the paper-derived conditions")
-        else:
-            missing_provenance = sorted(
-                set(paper_conditions) - set(condition_provenance)
-            )
-            if missing_provenance:
-                quality_problems.append(
-                    "condition_provenance for %s" % ", ".join(missing_provenance)
-                )
     for problem in metadata_problems:
-        if problem.get("blocking", True):
+        if problem.get("blocking", True) and not str(problem.get("field", "")).startswith("parameter_mapping") and not _is_paper_context_problem(problem):
             quality_problems.append(
                 "%s (expected %r; repair: %s)"
                 % (problem.get("field"), problem.get("expected"), problem.get("repair"))
             )
     blocking_metadata_problems = [
-        item for item in metadata_problems if item.get("blocking", True)
+        item for item in metadata_problems
+        if item.get("blocking", True)
+        and not str(item.get("field", "")).startswith("parameter_mapping")
+        and not _is_paper_context_problem(item)
     ]
     if blocking_metadata_problems:
         return _fail(
-            "The reproduction proposal conflicts with a paper-derived condition: %s"
+            "The reproduction proposal contains non-model validation errors: %s"
             % "; ".join(problem.get("field", "unknown") for problem in blocking_metadata_problems),
             {
-                "error_code": "paper_condition_conflict",
-                "stage": "parameter_mapping",
+                "error_code": "research_plan_validation",
+                "stage": "registered_model_validation",
                 "problems": blocking_metadata_problems,
                 "automatic_repairs": metadata_repairs,
                 "repair_hints": [problem.get("repair") for problem in blocking_metadata_problems if problem.get("repair")],
@@ -1276,6 +1660,21 @@ def propose(
         charts,
         parameter_resolution,
     )
+    evidence_problem_fields = {
+        str(item.get("field", "")) for item in evidence_problems
+    }
+    for problem in metadata_problems:
+        field = str(problem.get("field", ""))
+        if field in evidence_problem_fields:
+            # Prefer the metadata repair detail, which includes registered candidates and
+            # the exact source of an alias/ambiguity failure.
+            evidence_problems = [
+                {**item, **problem} if str(item.get("field", "")) == field else item
+                for item in evidence_problems
+            ]
+        else:
+            evidence_problems.append(problem)
+            evidence_problem_fields.add(field)
     evidence_problems.extend(blocking_metadata_problems)
     nonblocking_evidence_warnings = [
         item for item in evidence_problems if not item.get("blocking", True)
@@ -1402,6 +1801,9 @@ def propose(
         "selected_charts": [],
         "pseudo": None,
         "preview_version": 0,
+        # The initial plan is useful to inspect immediately. A successful chat
+        # revision collapses the obsolete long body while keeping its new summary.
+        "plan_card_expanded": True,
         "review_log": [],
         "execution_resume_sent": False,
         "proposed_by": "llm",
@@ -1674,7 +2076,9 @@ def revise(session, changes=None, note=""):
         plan.get("parameter_resolution") or [],
     )
     blocking_metadata_problems = [
-        item for item in metadata_problems if item.get("blocking", True)
+        item for item in metadata_problems
+        if item.get("blocking", True)
+        and not _is_paper_context_problem(item)
     ]
     evidence_problems.extend(blocking_metadata_problems)
     nonblocking_evidence_warnings = [
@@ -1724,6 +2128,7 @@ def revise(session, changes=None, note=""):
     project["selected_chart"] = None
     project["selected_charts"] = []
     project["pseudo"] = None
+    project["plan_card_expanded"] = False
     project["execution_resume_sent"] = False
     _clear_previews(session)
     summary = _revision_diff(before_plan, plan, changes)
@@ -3027,7 +3432,13 @@ def planned_run_ids(session, missing_only=False):
 
 
 def review_action(session, choice):
-    """Apply one of the three persistent UI controls to the current review phase."""
+    """Apply one of the two user-facing review controls to the current phase.
+
+    Plan edits are made in Conversation. The second control is final figure
+    confirmation, not a second plan-approval or regeneration path. Legacy
+    ``secondary``/``pause`` values remain accepted for old callers but are not
+    rendered by the current UI.
+    """
     project = _require(session)
     phase = project["phase"]
     if choice == "primary":
@@ -3044,6 +3455,54 @@ def review_action(session, choice):
             return approve_execution(session)
         if phase == "pseudo_preview":
             return confirm_charts(session)
+    if choice == "satisfied_figures":
+        if phase in ("approved", "completed"):
+            return _ok(
+                "Formal execution is already approved for the current plan; the duplicate figure confirmation was ignored.",
+                _public(project),
+            )
+        if phase == "pseudo_preview":
+            # The required charts are part of the reviewed plan.  Treat the user's
+            # explicit figure confirmation as the chart-package confirmation when no
+            # optional chart was selected, so the workflow has one figure approval
+            # rather than an invisible extra click on a required-chart button.
+            selected = list(project.get("selected_charts") or [])
+            if not selected:
+                selected = [
+                    chart.get("id")
+                    for chart in project.get("plan", {}).get("charts") or []
+                    if chart.get("required", True) and chart.get("id")
+                ]
+                project["selected_charts"] = selected
+                project["selected_chart"] = next(
+                    (
+                        dict(chart)
+                        for chart in project.get("plan", {}).get("charts") or []
+                        if chart.get("id") in selected
+                    ),
+                    None,
+                )
+                project.setdefault("review_log", []).append(
+                    {
+                        "version": project["plan_version"],
+                        "note": "user confirmed the required figure package",
+                        "changes": {"selected_charts": list(selected)},
+                    }
+                )
+            if not selected:
+                return _needs(
+                    "The plan has no required figure to confirm. Select a chart or revise the plan in Conversation.",
+                    _public(project),
+                )
+            confirm_charts(session)
+            return approve_execution(session)
+        if phase == "chart_selected":
+            return approve_execution(session)
+        return _needs(
+            "Satisfied with figures is available after the required chart package has been selected. "
+            "Revise the plan in Conversation or approve the plan first.",
+            _public(project),
+        )
     if choice == "secondary":
         if phase == "pseudo_preview":
             return _needs(
