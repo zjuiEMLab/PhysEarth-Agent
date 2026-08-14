@@ -363,7 +363,10 @@ def reproduction_evaluation():
 
 def _q1_comparison_sets(data):
     """Return only current-question full/no-harness pairs with shared provenance."""
-    task = (data.get("tasks") or {}).get(Q1_TASK_ID) or {}
+    task = next(
+        (item for item in _load_tasks("tier2") if item.get("id") == Q1_TASK_ID),
+        (data.get("tasks") or {}).get(Q1_TASK_ID) or {},
+    )
     question = task.get("question")
     if not question:
         return []
@@ -386,7 +389,6 @@ def _q1_comparison_sets(data):
 def q1_comparison():
     """Render the controlled Q1 comparison between the baseline and full agent."""
     data = snapshot()
-    task = (data.get("tasks") or {}).get(Q1_TASK_ID) or {}
     scored = {
         (str(item.get("llm") or ""), str(item.get("build") or ""), item.get("repeat"), item.get("config")): item
         for item in data.get("scored") or []
