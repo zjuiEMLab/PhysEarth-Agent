@@ -12,7 +12,7 @@ import re
 
 import yaml
 
-from physearth import audit, knowledge, plotting, reproduction, validation
+from physearth import audit, knowledge, plotting, validation
 from physearth.models import registry
 
 PHASES = (
@@ -48,14 +48,15 @@ def _provenance_confidence(provenance):
     )
 
 
-def is_reproduction_question(question):
+def is_reproduction_question(question, session=None):
     """Return whether the question asks for evidence-led paper reproduction.
 
-    SMRT evaluation cases remain available through ``reproduction.identify``.  This
-    generic detector makes the workflow useful for other registered Earth-science
-    models without adding a model-specific protocol to the prompt.
+    The detector is intentionally generic.  It selects the evidence-first workflow
+    from the user's language, without identifying a benchmark case or supplying a
+    paper-specific protocol.
     """
-    if reproduction.identify(question):
+    context = (session or {}).get("research_context") or {}
+    if context.get("reproduction_case") == "paper-reproduction":
         return True
     text = re.sub(r"\s+", " ", str(question or "").lower())
     return bool(
@@ -674,7 +675,7 @@ def _repair_reproduction_metadata(
     proposal to evidence, declared inputs, and deterministic coverage relationships.
     Every change is returned for the plan-review card.
     """
-    if not is_reproduction_question(question):
+    if not is_reproduction_question(question, session):
         return (
             literature_evidence, reproduction_targets, selected_models,
             parameter_mapping, outputs, paper_conditions, condition_provenance,
@@ -725,14 +726,13 @@ def _repair_reproduction_metadata(
             "session_evidence_ledger",
         ))
 
-    case_id = reproduction.identify(question)
     paper_session = ((session or {}).get("research_context") or {}).get("paper_session") or {}
     relevant_refs = [
         _normalise_evidence_ref(item.get("reference"))
         for item in opened
         if item.get("reference")
     ]
-    if case_id and not relevant_refs:
+    if not relevant_refs:
         relevant_refs = [
             _normalise_evidence_ref(item)
             for item in (session or {}).get("sections_read") or ()
@@ -747,47 +747,7 @@ def _repair_reproduction_metadata(
         ]
         if paper_refs:
             relevant_refs = paper_refs
-    if case_id:
-        case_ref = _normalise_evidence_ref((reproduction.CASES.get(case_id) or {}).get("section"))
-        if case_ref and case_ref in sections:
-            relevant_refs = [case_ref]
-
     reproduction_targets = list(reproduction_targets or ())
-    if case_id == "q1" and not reproduction_targets and relevant_refs:
-        # The bundled reference includes the result prose but no Figure 3 asset.  A
-        # section-level target is honest and reviewable; it must not pretend to be a
-        # pixel-level source-figure reproduction.
-        target_quantity = next(
-            (chart.get("y") for chart in charts or () if chart.get("y")),
-            next((str(value) for value in outputs or () if not isinstance(value, dict)), "first-order scattering coefficient"),
-        )
-        reproduction_targets.append(
-            {
-                "id": "section-3.1.1-sparse-medium",
-                "source_type": "result",
-                "source_id": "section-3.1.1-sparse-medium",
-                "target_quantity": target_quantity,
-                "evidence_refs": [relevant_refs[0]],
-                "expected_comparison": (
-                    "Compare model-generated first-order scattering behavior across the "
-                    "planned theory and microstructure runs with the result described in "
-                    "the paper section."
-                ),
-                "status": "partial" if not figures else "planned",
-                "availability_reason": (
-                    "The bundled paper has section text but no extracted Figure 3 asset; "
-                    "pixel-level source-figure comparison is unavailable."
-                    if not figures else ""
-                ),
-                "run_ids": [],
-                "chart_ids": [],
-            }
-        )
-        repairs.append(_repair_item(
-            "reproduction_targets", [], reproduction_targets,
-            "create a section-level Q1 result target from the opened paper evidence; no bundled Figure 3 asset is available",
-            "paper_section_result",
-        ))
 
     for index, target in enumerate(reproduction_targets):
         refs = [_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()]
@@ -802,30 +762,6 @@ def _repair_reproduction_metadata(
             ))
         elif refs:
             target["evidence_refs"] = refs
-
-        if (
-            case_id == "q1"
-            and target.get("source_type") == "figure"
-            and not set(target.get("evidence_refs") or ()).intersection(figures)
-        ):
-            before = dict(target)
-            target["source_type"] = "result"
-            target["source_id"] = "section-3.1.1-sparse-medium"
-            section_evidence = [ref for ref in relevant_refs if ref in sections]
-            if section_evidence:
-                target["evidence_refs"] = [section_evidence[0]]
-            target["status"] = "partial"
-            target["availability_reason"] = (
-                "The bundled paper does not contain an extracted Figure 3 asset; "
-                "the section-level result can be compared, but pixel-level figure "
-                "reproduction is unavailable."
-            )
-            repairs.append(_repair_item(
-                "reproduction_targets[%d]" % index,
-                before, target,
-                "downgrade an unavailable bundled source figure to the section-level result actually read",
-                "paper_section_result",
-            ))
 
     if not selected_models:
         seen_models = set()
@@ -1060,7 +996,7 @@ def _repair_reproduction_metadata(
 
 
 def _evidence_problem_summary(question, problems):
-    label = "Q1" if reproduction.identify(question) == "q1" else "Reproduction"
+    label = "Reproduction"
     evidence = sum(
         1 for item in problems
         if any(token in str(item.get("field", "")) for token in ("evidence", "literature"))
@@ -1094,7 +1030,7 @@ def _evidence_problem_summary(question, problems):
 def _evidence_plan_problems(session, question, literature_evidence, reproduction_targets,
                             selected_models, parameter_mapping, outputs, runs, charts,
                             parameter_resolution=None):
-    if not is_reproduction_question(question):
+    if not is_reproduction_question(question, session):
         return []
     problems = []
     sections, figures = _read_evidence_refs(session)
@@ -1492,9 +1428,6 @@ def propose(
 ):
     """Store an LLM-authored proposal; never infer one from a question template."""
     question = str(question or "").strip()
-    read_problem = reproduction.required_read_problem(session, question)
-    if read_problem:
-        return _fail(read_problem["message"], read_problem)
     objective = str(objective or "").strip()
     hypothesis = str(hypothesis or "").strip()
     steps = _clean_list(steps)
@@ -1516,7 +1449,7 @@ def propose(
     selected_models = _clean_selected_models(
         selected_models,
         runs,
-        derive=not is_reproduction_question(question),
+        derive=not is_reproduction_question(question, session),
     )
     selected_models = _enrich_selected_models(session, selected_models)
     parameter_mapping = _clean_parameter_mapping(parameter_mapping)
@@ -1555,7 +1488,6 @@ def propose(
     # literature sections it actually read; this validator never loads a pre-authored
     # protocols.yaml or silently repairs the proposal into a benchmark matrix.
     reference_repairs = []
-    reproduction_case = reproduction.identify(question)
     paper_session = (session.get("research_context") or {}).get("paper_session") or {}
     paper_section = paper_session.get("paper_section")
     (
@@ -1786,7 +1718,6 @@ def propose(
         "automatic_repairs": automatic_repairs,
         "validation_warnings": list(context_warnings) + nonblocking_evidence_warnings,
         "capability_gaps": _capability_gaps(question),
-        "reproduction_case": reproduction_case,
         "reference_sections": sorted(session.get("sections_read") or ()),
         "reference_paper_sections": [paper_section] if paper_section else [],
         "approval_state": "plan_review",
@@ -2047,7 +1978,7 @@ def revise(session, changes=None, note=""):
     # An explicit user deletion is different from an omitted field in an LLM
     # proposal.  Preserve the review contract: a user cannot approve a revision
     # after intentionally deleting every mapping; ask them to restore the metadata.
-    if "parameter_mapping" in changes and not changes.get("parameter_mapping") and is_reproduction_question(plan.get("question", project.get("question", ""))):
+    if "parameter_mapping" in changes and not changes.get("parameter_mapping") and is_reproduction_question(plan.get("question", project.get("question", "")), session):
         plan["parameter_mapping"] = []
         metadata_repairs = [
             item for item in metadata_repairs

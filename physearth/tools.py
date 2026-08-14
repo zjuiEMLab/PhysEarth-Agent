@@ -1345,6 +1345,18 @@ def research_plan(
 ):
     if _session is None:
         return research._fail("research_plan requires a session.")
+    if action in ("propose", "revise_plan"):
+        # A direct research_plan call is itself the agent's generic research-mode
+        # selection.  No paper/model-specific case is inferred here.
+        _session["research_required"] = True
+        if (
+            research.is_reproduction_question(question)
+            or literature_evidence
+            or reproduction_targets
+            or paper_conditions
+            or condition_provenance
+        ):
+            _session.setdefault("research_context", {})["reproduction_case"] = "paper-reproduction"
 
     def resource_gate():
         """Require data resources to be opened before a proposal can be accepted."""

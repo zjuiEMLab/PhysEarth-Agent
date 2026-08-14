@@ -52,6 +52,14 @@ def test_prompt_is_general_and_does_not_embed_smrt_protocols():
     assert "smrt-v1#08" not in text
 
 
+def test_reproduction_detection_is_generic_and_case_validator_is_removed():
+    assert not (Path(__file__).parents[1] / "physearth" / "reproduction.py").exists()
+    assert research.is_reproduction_question(
+        "Can the paper reproduce the published soil-model figure?"
+    )
+    assert not research.is_reproduction_question("What is the model output?")
+
+
 def test_paper_figure_inspection_records_visual_provenance_without_digitization():
     box = session.new_session("m")
     box["corpus"]["uploaded-paper"] = {
@@ -326,6 +334,14 @@ def _q1_plan_fields(runs):
         "baseline_run_id": "independent_rayleigh",
         "paper_conditions": {"radius_m": 0.0001},
         "condition_provenance": {"radius_m": "smrt-v1#08"},
+        "reproduction_targets": [{
+            "id": "scattering-result",
+            "source_type": "result",
+            "source_id": "paper-result",
+            "target_quantity": "ks_per_m",
+            "evidence_refs": ["smrt-v1#08"],
+            "expected_comparison": "Compare the planned model curves with the opened paper result.",
+        }],
         "runs": runs,
     }
 
@@ -339,14 +355,14 @@ def test_q1_metadata_repair_uses_opened_evidence_and_keeps_six_runs():
     plan = box["research"]["plan"]
     assert [run["id"] for run in plan["runs"]] == [run["id"] for run in _q1_runs()]
     assert plan["reproduction_targets"][0]["source_type"] == "result"
-    assert plan["reproduction_targets"][0]["source_id"] == "section-3.1.1-sparse-medium"
-    assert plan["reproduction_targets"][0]["status"] == "partial"
+    assert plan["reproduction_targets"][0]["source_id"] == "paper-result"
+    assert plan["reproduction_targets"][0]["status"] == "planned"
     assert plan["reproduction_targets"][0]["evidence_refs"] == ["smrt-v1#08"]
     assert any(
         item["provenance_class"] == "backend_default"
         for item in plan["parameter_mapping"]
     )
-    assert any(
+    assert not any(
         item["field"] == "reproduction_targets"
         for item in plan["automatic_repairs"]
     )
@@ -506,7 +522,7 @@ def test_reproduction_revision_accepts_user_range_inside_registered_model_bounds
     )
 
 
-def test_unavailable_bundled_figure_is_recorded_and_downgraded_to_section_result():
+def test_unavailable_bundled_figure_remains_an_explicit_partial_target():
     box = session.new_session("m")
     _q1_resources(box)
     missing = tools.call(
@@ -525,13 +541,15 @@ def test_unavailable_bundled_figure_is_recorded_and_downgraded_to_section_result
         "source_type": "figure",
         "source_id": "fig03",
         "target_quantity": "ks_per_m",
-        "evidence_refs": ["smrt-v1#fig03"],
+        "evidence_refs": ["smrt-v1#08"],
         "expected_comparison": "compare the coefficient trend with Figure 3",
+        "status": "partial",
+        "availability_reason": "source figure asset unavailable",
     }]
     result = tools.call("research_plan", fields, session=box)
     assert result["status"] == "needs_input", result
     target = box["research"]["plan"]["reproduction_targets"][0]
-    assert target["source_type"] == "result"
+    assert target["source_type"] == "figure"
     assert target["status"] == "partial"
     assert target["evidence_refs"] == ["smrt-v1#08"]
 

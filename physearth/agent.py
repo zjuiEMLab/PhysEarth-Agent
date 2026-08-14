@@ -13,7 +13,6 @@ from physearth import (
     config,
     harness,
     prompt,
-    reproduction,
     research,
     tools,
 )
@@ -679,18 +678,19 @@ def stream(question, history=None, model=None, session=None, switches=None):
         state["phase"] = "done"
         yield answer, events, state
         return
-    preflight_case = reproduction.identify(question)
-    reproduction_preflight = preflight_case or research.is_reproduction_question(question)
+    context = session.get("research_context") or {}
+    guided_reproduction = bool(session.get("research_required")) or context.get("reproduction_case") == "paper-reproduction"
+    reproduction_preflight = research.is_reproduction_question(question) or guided_reproduction
     if reproduction_preflight:
         session["research_required"] = True
         context = session.setdefault("research_context", {})
-        context["reproduction_case"] = preflight_case or "paper-reproduction"
+        context["reproduction_case"] = "paper-reproduction"
         context["question"] = question
         events.append(
             _event(
                 "research_mode_selected",
                 rule="agent_preflight_reproduction",
-                case_id=preflight_case or "paper-reproduction",
+                case_id="paper-reproduction",
                 detail=(
                     "The agent selected the reviewed research workflow before the first model "
                     "request because this question matches a registered paper reproduction."

@@ -326,7 +326,7 @@ def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
     guided_session = result[9]
 
     assert result[10] == question
-    assert guided_session["research_required"] is False
+    assert guided_session["research_required"] is True
     assert "demo" not in guided_session["research_context"]
     assert "FIXED REPRODUCTION BRIEF" not in context_html
     assert "research-context' hidden" in context_html

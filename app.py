@@ -53,6 +53,9 @@ def _session(box, model_id):
 def start_guided_demo(question, model_id):
     """Start the guided demo without injecting evaluation data into the agent session."""
     session = _new_session(model_id)
+    session["research_required"] = True
+    context = session.setdefault("research_context", {})
+    context["question"] = question
     audit.emit(
         "guided_demo_started",
         session=session,

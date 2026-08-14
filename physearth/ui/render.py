@@ -234,25 +234,14 @@ def _reproduction_state(session):
     context = session.get("research_context") or {}
     project = session.get("research") or {}
     plan = project.get("plan") or {}
-    case_id = context.get("reproduction_case") or plan.get("reproduction_case")
     paper_session = context.get("paper_session") or {}
-    if not case_id and not paper_session and not plan:
+    if not context.get("reproduction_case") and not paper_session and not plan:
         return None
     paper_slug = paper_session.get("paper") or ""
     card = knowledge.card(paper_slug) if paper_slug else {}
     paper_section = paper_session.get("paper_section") or ""
     source_section = paper_session.get("source_section") or ""
-    if case_id:
-        try:
-            from physearth import reproduction
-
-            case = reproduction.CASES.get(case_id) or {}
-            paper_section = paper_section or case.get("paper_section", "")
-            source_section = source_section or case.get("section", "")
-        except (ImportError, KeyError, TypeError):
-            pass
     return {
-        "case_id": case_id,
         "paper_session": paper_session,
         "plan": plan,
         "question": project.get("question") or context.get("question") or "",

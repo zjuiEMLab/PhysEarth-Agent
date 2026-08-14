@@ -144,6 +144,11 @@ def test_normal_question_does_not_force_research_plan(monkeypatch):
 
 def test_guided_reproduction_preflight_selects_research_mode_before_model_plan(monkeypatch):
     box = _asking()
+    box["research_required"] = True
+    box["research_context"] = {
+        "reproduction_case": "paper-reproduction",
+        "question": "guided paper reproduction",
+    }
     script = [
         [_Chunk(_Delta(content="I will prepare the reproduction workflow."))],
         [_call_chunk("research_plan", '{"action":"status"}')],
