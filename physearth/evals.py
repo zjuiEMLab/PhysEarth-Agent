@@ -701,9 +701,6 @@ def dashboard():
         "<span>QUESTION</span><i></i><span>EVIDENCE</span><i></i><span>PLAN</span><i></i>"
         "<span>HUMAN APPROVAL</span><i></i><span>MODEL + QC</span><i></i><span>ANSWER</span>"
         "</section>"
-        "<div class='eval-model-strip'><span>RUNNABLE MODELS</span>"
-        "<b>SMRT</b><b>Tau-Omega</b><b>Water Cloud</b><b>PROSAIL</b>"
-        "<b>PyET</b><b>PyWatershed</b></div>"
         "</div>"
     )
 

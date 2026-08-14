@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -123,11 +124,19 @@ def test_gradio_exposes_evaluation_upload_and_agent_tabs_and_demo_prefill_handle
         for component in app.demo.blocks.values()
         if hasattr(component, "get_config")
     )
-    assert any(
-        "Register a physical model" in str(component.get_config().get("value", ""))
+    page_html = "\n".join(
+        str(component.get_config().get("value", ""))
         for component in app.demo.blocks.values()
         if component.__class__.__name__ == "HTML"
     )
+    assert "Register a model" in page_html  # remains available on Upload & Test
+    assert "LLM robustness" not in page_html
+    assert "What the evaluation shows" not in page_html
+    assert "Inspect the recorded score tables" not in page_html
+    assert "RUNNABLE MODELS" not in page_html
+    css = Path("assets/ui.css").read_text(encoding="utf-8")
+    workflow_css = re.search(r"\.eval-workflow\s*\{(?P<body>.*?)\}", css, re.DOTALL)
+    assert workflow_css and "font-size: 14px" in workflow_css.group("body")
     assert len(app.basic_evaluation_cases) == 3
     assert len(app.evaluation_cases) == 4
     assert len(app.guided_evaluation_cases) == 1

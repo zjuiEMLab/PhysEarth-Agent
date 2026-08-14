@@ -619,11 +619,8 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                                     elem_classes=["eval-demo-button"],
                                 )
                                 guided_demo_buttons.append((button, case["question"]))
-                    gr.HTML(evals.required_evaluations(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.reproduction_evaluation(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.architecture(), elem_classes=["pe-eval-slot"])
-                    gr.HTML(evals.score_summary(), elem_classes=["pe-eval-slot"])
-                    gr.HTML(evals.score_details(), elem_classes=["pe-eval-slot"])
 
             with gr.Tab("Upload & Test", id="upload", elem_id="pe-upload-tab"):
                 with gr.Column(elem_id="pe-upload-page"):
