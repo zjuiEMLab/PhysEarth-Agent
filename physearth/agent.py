@@ -1,10 +1,22 @@
 import ast
 import json
+import re
 import time
 
 from openai import OpenAI
 
-from physearth import audit, approval, budget, config, harness, prompt, tools, research
+from physearth import (
+    approval,
+    artifacts,
+    audit,
+    budget,
+    config,
+    harness,
+    prompt,
+    reproduction,
+    research,
+    tools,
+)
 from physearth import session as session_state
 from physearth import switches as switch_flags
 
@@ -35,6 +47,12 @@ MAX_KEPT_TOOL_CHARS = 12000
 # that cannot occur in the text itself rather than run together into one paragraph.
 SEGMENT_BREAK = ""
 CONTEXT_CEILING_TOKENS = session_state.CONTEXT_CEILING_TOKENS
+
+_TOOL_BYPASS_PATTERNS = (
+    re.compile(r"\b(?:do not|don't|dont|without)\s+(?:use|call|invoke)\s+(?:any\s+)?tools?\b", re.I),
+    re.compile(r"\bno\s+tools?\b", re.I),
+    re.compile(r"(?:不要|勿|禁止)\s*(?:使用|调用|调用任何)\s*工具", re.I),
+)
 
 _MODEL_LABELS = {
     "Qwen/Qwen3.5-122B-A10B": "Qwen3.5 122B-A10B",
@@ -100,6 +118,17 @@ def _event(kind, **fields):
     event = dict(kind=kind, at=time.strftime("%H:%M:%S"), **fields)
     audit.emit("agent_event", agent_event=event)
     return event
+
+
+def _requests_tool_bypass(question):
+    """Recognize an explicit request to disable evidence/model tools.
+
+    This is a generic safety boundary. If a user asks for a scientific claim while
+    explicitly disabling the tools that establish evidence, the agent must not silently
+    turn that request into an unsupported answer or execute a tool anyway.
+    """
+    text = str(question or "")
+    return any(pattern.search(text) for pattern in _TOOL_BYPASS_PATTERNS)
 
 
 def _fault(exc):
@@ -368,6 +397,8 @@ def _allowed_marker_correction(state, unresolved):
     allowed.extend("[data:%s]" % key for key in sorted(state.get("datasets_read") or ()))
     allowed.extend("[skill:%s]" % key for key in sorted(state.get("skills_read") or ()))
     allowed.extend("[abs:%s]" % key for key in sorted(state.get("abstracts_seen") or ()))
+    allowed.extend("[guideline:%s]" % key for key in sorted(state.get("guidelines_read") or ()))
+    allowed.extend("[figure:%s]" % key for key in sorted(state.get("paper_figures_read") or ()))
     return (
         "Rewrite the entire report from scratch. The previous draft is discarded. Invalid "
         "markers were: %s. The complete marker whitelist for this conversation is: %s. "
@@ -382,6 +413,50 @@ def _record_tool_result(name, result, state, events):
     for key in result.get("citations", []):
         state["sections_read"].add(key)
     data = result.get("data") or {}
+    session = state.get("session") or {}
+    context = session.setdefault("research_context", {})
+    if name == "list_models" and result["status"] == "success" and data.get("name"):
+        context.setdefault("capabilities", {})[data["name"]] = {
+            "name": data.get("name"),
+            "version": data.get("version"),
+            "runnable_here": data.get("runnable_here"),
+            "tier": data.get("tier"),
+            "outputs": list((data.get("outputs") or {}).keys())
+            if isinstance(data.get("outputs"), dict)
+            else list(data.get("outputs") or []),
+            "instruction_available": data.get("instruction_available"),
+            "instruction_version": data.get("instruction_version"),
+            "parameters": sorted((data.get("parameters") or {}).keys()),
+            "parameter_options": {
+                key: list(spec.get("enum") or [])
+                for key, spec in (data.get("parameters") or {}).items()
+                if isinstance(spec, dict) and spec.get("enum")
+            },
+            "combinations": list(data.get("combinations") or []),
+        }
+    if name == "read_model_instruction" and result["status"] == "success" and data.get("model"):
+        context.setdefault("instructions", {})[data["model"]] = {
+            "version": data.get("version") or "1.0",
+            "instruction_id": data.get("instruction_id") or data["model"],
+        }
+    if name == "read_literature" and result["status"] == "success" and data.get("section_id"):
+        context.setdefault("sections", []).append(
+            "%s#%s" % (data.get("slug"), data.get("section_id"))
+        )
+        context.setdefault("paper_evidence", []).append(
+            {
+                "kind": "section",
+                "reference": "%s#%s" % (data.get("slug"), data.get("section_id")),
+                "title": data.get("title", ""),
+            }
+        )
+        context["paper_session"] = {
+            "paper": data.get("slug"),
+            "title": data.get("title"),
+            "doi": data.get("doi", ""),
+            "source_section": "%s#%s" % (data.get("slug"), data.get("section_id")),
+            "paper_section": data.get("title", ""),
+        }
     if name == "read_literature" and result["status"] == "success" and data.get("section_id"):
         if data.get("source") == "skill":
             state["skills_read"].add(data["slug"])
@@ -392,6 +467,47 @@ def _record_tool_result(name, result, state, events):
                     detail="%s is now open, so [skill:%s] resolves in this answer."
                     % (data["slug"], data["slug"]),
                 )
+            )
+    if name == "read_research_guideline" and result["status"] == "success":
+        guideline_id = data.get("guideline_id") or "research-planning"
+        state.setdefault("research_guidelines_read", set()).add(guideline_id)
+        state.setdefault("skills_read", set()).add(guideline_id)
+    if name == "read_model_instruction" and result["status"] == "success":
+        model = data.get("model")
+        version = data.get("version")
+        if model:
+            state.setdefault("model_instructions_read", set()).add(
+                "%s@%s" % (model, version or "1.0")
+            )
+            state.setdefault("guidelines_read", set()).add(
+                "%s@%s" % (model, version or "1.0")
+            )
+    if name == "read_paper_figure" and result["status"] == "success":
+        key = data.get("citation_key")
+        if key:
+            state.setdefault("paper_figures_read", set()).add(key.replace("#fig-", "#"))
+            context.setdefault("paper_evidence", []).append(
+                {
+                    "kind": "figure",
+                    "reference": key.replace("#fig-", "#"),
+                    "paper": data.get("paper"),
+                    "figure": (data.get("figure") or {}).get("id"),
+                    "caption": (data.get("figure") or {}).get("caption", ""),
+                }
+            )
+    if name == "inspect_paper_figure" and result["status"] == "success":
+        key = data.get("citation_key")
+        if key:
+            state.setdefault("paper_figures_inspected", set()).add(key.replace("#fig-", "#"))
+            context.setdefault("paper_evidence", []).append(
+                {
+                    "kind": "figure_inspection",
+                    "reference": key,
+                    "paper": data.get("paper"),
+                    "figure": data.get("figure_id"),
+                    "analysis_status": data.get("analysis_status"),
+                    "visual_observations": data.get("visual_observations") or {},
+                }
             )
     if name == "discover_literature" and result["status"] == "success":
         for item in data.get("candidates") or []:
@@ -499,7 +615,19 @@ def _record_tool_result(name, result, state, events):
     if data.get("handle") and result["status"] == "success":
         session_state.remember_handle(state, data["handle"], _handle_line(name, data))
     if name in ("plot", "plot_planned_chart") and result["status"] == "success":
-        session_state.remember_figure(state, (result.get("ui") or {})["figure"])
+        figure = (result.get("ui") or {})["figure"]
+        session_state.remember_figure(state, figure)
+        session = state.get("session") or {}
+        if not session.get("ephemeral"):
+            try:
+                artifacts.persist_figure(
+                    session.get("id") or "shared",
+                    (session.get("research") or {}).get("research_id") or session.get("id") or "shared",
+                    figure.get("figure_number") or 1,
+                    figure,
+                )
+            except (OSError, ValueError):
+                pass
 
 
 def stream(question, history=None, model=None, session=None, switches=None):
@@ -527,10 +655,53 @@ def stream(question, history=None, model=None, session=None, switches=None):
     state["switches"] = switch_flags.resolve(switches)
     events = []
     answer = ""
+    if _requests_tool_bypass(question):
+        session["tool_bypass_requested"] = True
+        events.append(
+            _event(
+                "tool_bypass_requested",
+                rule="explicit_user_tool_bypass",
+                detail="The user explicitly prohibited evidence and model tools.",
+            )
+        )
+        answer = (
+            "I can’t provide an evidence-backed scientific or model-result claim while the "
+            "tools are explicitly disabled. Enable the literature and model tools, and I can "
+            "verify the relevant source, parameters, and result before answering."
+        )
+        events.append(
+            _event(
+                "tool_bypass_blocked",
+                rule="evidence_required",
+                detail="No model, literature, dataset, or other tool was called.",
+            )
+        )
+        state["phase"] = "done"
+        yield answer, events, state
+        return
+    preflight_case = reproduction.identify(question)
+    reproduction_preflight = preflight_case or research.is_reproduction_question(question)
+    if reproduction_preflight:
+        session["research_required"] = True
+        context = session.setdefault("research_context", {})
+        context["reproduction_case"] = preflight_case or "paper-reproduction"
+        context["question"] = question
+        events.append(
+            _event(
+                "research_mode_selected",
+                rule="agent_preflight_reproduction",
+                case_id=preflight_case or "paper-reproduction",
+                detail=(
+                    "The agent selected the reviewed research workflow before the first model "
+                    "request because this question matches a registered paper reproduction."
+                ),
+            )
+        )
     review_attempts = {}
     tool_failure_streak = {"name": None, "count": 0, "detail": ""}
     repeated_success = {"signature": None, "count": 0}
     last_plan_error = ""
+    last_plan_problems = []
     forced_tool_name = None
     segments = []
 
@@ -710,7 +881,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         detail=detail,
                     )
                 )
-                if attempts >= harness.MAX_INTERVENTIONS:
+                if attempts >= harness.max_interventions(tool=call.get("name")):
                     answer = (
                         "Stopped after %d invalid %s tool calls with no progress: %s. "
                         "Start a new turn with a simpler request or revise the plan explicitly."
@@ -780,6 +951,22 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 yield answer, events, state
                 events.pop()
 
+                # Research may be selected by the agent-side preflight for an unambiguous
+                # reproduction question, or by the model's first explicit research_plan call
+                # for an otherwise ordinary question.
+                if name == "research_plan" and not session.get("research_required"):
+                    session["research_required"] = True
+                    events.append(
+                        _event(
+                            "research_mode_selected",
+                            rule="agent_selected_research",
+                            detail=(
+                                "The agent selected the reviewed research workflow by calling "
+                                "research_plan."
+                            ),
+                        )
+                    )
+
                 started_tool = time.perf_counter()
                 # The gate sits here, between deciding to run a model and running it. The
                 # model has no way past it, because there is nothing it can put in a tool
@@ -797,6 +984,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     )
                     yield answer, events, state
                     verdict = approval.wait(session)
+                    session.pop("approval_resuming", None)
                     events.pop()
                     state["phase"] = "running_tool"
                     if verdict["decision"] == "reject":
@@ -902,16 +1090,17 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     tool_failure_streak["detail"] = result.get("error") or result["summary"]
                     if name == "research_plan":
                         last_plan_error = result["summary"]
+                        last_plan_problems = list(failure_data.get("problems") or [])
                         if not session.get("research"):
-                            # A recognised paper reproduction must gather the exact bundled
-                            # section before planning. Forcing research_plan again here would
-                            # create a deterministic plan_required loop because no new evidence
-                            # could enter the session.
-                            forced_tool_name = (
-                                "read_literature"
-                                if failure_code == "reference_read_required"
-                                else "research_plan"
-                            )
+                            # Resource gates are actionable workflow repairs. Force the
+                            # missing read operation instead of asking the model to submit
+                            # the same plan again; otherwise a valid plan can loop forever
+                            # on messages such as ``Read every selected model instruction``.
+                            forced_tool_name = {
+                                "reference_read_required": "read_literature",
+                                "research_guideline_read_required": "read_research_guideline",
+                                "model_instruction_read_required": "read_model_instruction",
+                            }.get(failure_code, "research_plan")
 
                 if result["status"] == "needs_input" and (
                     name == "research_plan"
@@ -954,6 +1143,31 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     )
                 yield answer, events, state
 
+                # A valid revision already has a complete, validated status message from
+                # the backend. Do not spend another model call composing a redundant
+                # "plan is back in review" response; the UI can show the structured
+                # revision summary and the new plan immediately.
+                revision_summary = (result.get("data") or {}).get("revision_summary")
+                if (
+                    name == "research_plan"
+                    and arguments.get("action") == "revise_plan"
+                    and result["status"] == "needs_input"
+                    and revision_summary
+                    and ((session.get("research") or {}).get("phase") == "plan_review")
+                ):
+                    answer = research.revision_summary_text(revision_summary)
+                    events.append(
+                        _event(
+                            "research_revision",
+                            phase="plan_review",
+                            detail=answer,
+                            revision_summary=revision_summary,
+                        )
+                    )
+                    state["phase"] = "done"
+                    yield answer, events, state
+                    return
+
                 if (
                     name == "run_planned_model"
                     and result["status"] == "terminal_error"
@@ -982,7 +1196,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         yield answer, events, state
                         return
 
-                if tool_failure_streak["count"] >= harness.MAX_INTERVENTIONS:
+                if tool_failure_streak["count"] >= harness.max_interventions(tool=name):
                     answer = (
                         "Stopped after %d consecutive failed %s calls with no state progress. "
                         "Last error: %s"
@@ -1005,27 +1219,71 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     return
 
                 payload = {k: v for k, v in result.items() if k not in ("qc", "ui")}
+                tool_content = json.dumps(payload, ensure_ascii=False)
+                # A figure inspection may carry one bounded image part for a configured
+                # multimodal endpoint. Keep the base64 out of the textual tool transcript;
+                # text-only providers receive the explicit metadata-only result instead.
+                image_data_url = (result.get("data") or {}).get("image_data_url")
+                if image_data_url:
+                    text_payload = json.loads(tool_content)
+                    text_data = dict(text_payload.get("data") or {})
+                    text_data.pop("image_data_url", None)
+                    text_payload["data"] = text_data
+                    tool_content = [
+                        {"type": "text", "text": json.dumps(text_payload, ensure_ascii=False)},
+                        {"type": "image_url", "image_url": {"url": image_data_url}},
+                    ]
                 messages.append(
                     {
                         "role": "tool",
                         "tool_call_id": call["id"],
-                        "content": json.dumps(payload, ensure_ascii=False),
+                        "content": tool_content,
                     }
                 )
-            messages[0] = {"role": "system", "content": prompt.build(state)}
+                if (
+                    name == "research_plan"
+                    and result["status"] == "terminal_error"
+                    and (result.get("data") or {}).get("error_code") in (
+                        "reproduction_evidence_incomplete",
+                        "paper_condition_conflict",
+                    )
+                ):
+                    problems = (result.get("data") or {}).get("problems") or []
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Repair the submitted reproduction plan using the structured "
+                                "validation problems below. Preserve all existing physical runs, "
+                                "theory/microstructure choices, sweep ranges, radii, frequencies, "
+                                "and outputs; this is a metadata-only repair. Do not submit the "
+                                "same invalid object again. Fill evidence_refs, deterministic "
+                                "target coverage, and parameter mappings, marking backend defaults "
+                                "or model assumptions explicitly. If a source figure asset is "
+                                "unavailable, mark the target partial with an availability reason. "
+                                "For a paper-condition conflict, correct the run's explicit value "
+                                "to the paper value named by the validator; never retain a conflicting "
+                                "backend default. Problems: %s"
+                                % json.dumps(problems, ensure_ascii=False)
+                            ),
+                        }
+                    )
+                messages[0] = {"role": "system", "content": prompt.build(state)}
             continue
 
         answer = transcript(segments, completion.content or "")
 
-        # The planner is an agent action, not a question classifier in application code.
-        # If the model tries to answer an executable question without proposing a plan,
-        # return that attempt to the model and require a structured research_plan call.
+        # If this turn has explicitly entered research mode but the model tries to answer
+        # an executable question without proposing a plan, return that attempt to the model
+        # and require a structured research_plan call. Ordinary Q&A never reaches this gate.
         if session.get("research_required") and not session.get("research"):
             gate_key = "research_gate:plan_required"
             attempts = review_attempts.get(gate_key, 0) + 1
             review_attempts[gate_key] = attempts
-            if attempts >= harness.MAX_INTERVENTIONS:
+            if attempts >= harness.max_interventions(rule=gate_key):
                 detail = last_plan_error or "the model did not submit a valid research_plan proposal"
+                if last_plan_problems:
+                    detail += " Structured gaps: %s" % json.dumps(last_plan_problems, ensure_ascii=False)
                 answer = (
                     "Research planning stopped after %d no-progress attempts. Last validation "
                     "error: %s No model run or scientific result was produced. Revise the "
@@ -1300,12 +1558,21 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 yield transcript(segments), events, state
                 continue
 
-        report_problem = research.report_problem(session, answer) if session.get("research_required") else ""
-        if report_problem:
-            check = {"rule": "research_scope", "passed": False, "reason": report_problem}
-            correction = report_problem + " Re-send the complete corrected report."
-        else:
-            check, correction = harness.review_final(answer, state)
+        report_warning = research.report_warnings(session, answer) if session.get("research_required") else ""
+        if report_warning:
+            session.setdefault("report_warnings", [])
+            if report_warning not in session["report_warnings"]:
+                session["report_warnings"].append(report_warning)
+            events.append(
+                _event(
+                    "harness_warning",
+                    rule="report_completeness",
+                    detail=report_warning,
+                )
+            )
+        # Report completeness is advisory. Evidence, citation, abstract-depth and budget
+        # checks remain blocking and are handled by the strict final harness below.
+        check, correction = harness.review_final(answer, state)
         if correction and check.get("rule") == "citation_integrity":
             correction = _allowed_marker_correction(state, check.get("unresolved") or [])
         attempts = review_attempts.get(check["rule"], 0)

@@ -128,30 +128,203 @@ def test_unrepairable_tool_arguments_are_not_replayed_to_provider(monkeypatch):
     assert any("strict JSON" in message.get("content", "") for message in second_request)
 
 
-def test_research_plan_gate_stops_after_three_no_progress_answers(monkeypatch):
+def test_normal_question_does_not_force_research_plan(monkeypatch):
+    box = _asking()
+    script = [[_Chunk(_Delta(content="A direct explanation."))]]
+    client, _ = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    answer, events, _ = agent.run("What is brightness temperature?", session=box)
+
+    assert answer == "A direct explanation."
+    assert client.tool_choices == ["auto"]
+    assert box.get("research_required", False) is False
+    assert not any(event["kind"] == "research_block" for event in events)
+
+
+def test_guided_reproduction_preflight_selects_research_mode_before_model_plan(monkeypatch):
+    box = _asking()
+    script = [
+        [_Chunk(_Delta(content="I will prepare the reproduction workflow."))],
+        [_call_chunk("research_plan", '{"action":"status"}')],
+        [_Chunk(_Delta(content="The plan is ready for review."))],
+    ]
+    client, _ = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    def fake_call(name, arguments, **_kwargs):
+        assert name == "research_plan"
+        box["research"] = {"phase": "plan_review"}
+        return {
+            "status": "needs_input",
+            "summary": "Review the research plan.",
+            "data": {"phase": "plan_review"},
+        }
+
+    monkeypatch.setattr(agent.tools, "call", fake_call)
+    from physearth import evals
+
+    answer, events, _ = agent.run(evals.guided_demo()["question"], session=box)
+
+    assert box["research_required"] is True
+    assert "Research is paused at the human-review stage" in answer
+    assert any(
+        event["kind"] == "research_mode_selected"
+        and event["rule"] == "agent_preflight_reproduction"
+        for event in events
+    )
+
+
+def test_research_plan_call_selects_research_mode(monkeypatch):
+    box = _asking()
+    script = [
+        [_call_chunk("research_plan", '{"action":"status"}')],
+        [_Chunk(_Delta(content="The plan is waiting for your review."))],
+    ]
+    client, _ = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    def fake_call(name, arguments, **_kwargs):
+        assert name == "research_plan"
+        box["research"] = {"phase": "plan_review"}
+        return {
+            "status": "needs_input",
+            "summary": "Review the research plan.",
+            "data": {"phase": "plan_review"},
+        }
+
+    monkeypatch.setattr(agent.tools, "call", fake_call)
+    answer, events, _ = agent.run("Compare two model predictions", session=box)
+
+    assert box["research_required"] is True
+    assert "Research is paused at the human-review stage" in answer
+    assert any(event["kind"] == "research_mode_selected" for event in events)
+
+
+def test_research_plan_gate_allows_five_no_progress_answers(monkeypatch):
     box = _asking()
     box["research_required"] = True
     script = [
         [_Chunk(_Delta(content="I will answer without a plan."))],
         [_Chunk(_Delta(content="Still no structured plan."))],
         [_Chunk(_Delta(content="Again no tool call."))],
+        [_Chunk(_Delta(content="One more prose answer."))],
+        [_Chunk(_Delta(content="The fifth answer still has no plan."))],
     ]
     client, sent = _fake_client(script)
     monkeypatch.setattr(agent, "_client", lambda: client)
 
     answer, events, _ = agent.run("Run a scientific comparison", session=box)
 
-    assert len(sent) == 3
+    assert len(sent) == 5
     assert client.tool_choices[0] == "auto"
     assert all(
         choice == {"type": "function", "function": {"name": "research_plan"}}
         for choice in client.tool_choices[1:]
     )
-    assert "stopped after 3 no-progress attempts" in answer
+    assert "stopped after 5 no-progress attempts" in answer
     assert any(
         event["kind"] == "harness_stop" and event["rule"] == "plan_no_progress"
         for event in events
     )
+
+
+def test_research_plan_resource_error_forces_the_missing_read_before_retry(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    script = [
+        [_call_chunk("research_plan", '{"action":"propose","runs":[{"model":"smrt"}]}')],
+        [_call_chunk("read_model_instruction", '{"model":"smrt"}')],
+        [_call_chunk("research_plan", '{"action":"status"}')],
+        [_Chunk(_Delta(content="The plan is waiting for review."))],
+    ]
+    client, _ = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    called = []
+
+    def fake_call(name, arguments, **_kwargs):
+        called.append(name)
+        if name == "research_plan" and len(called) == 1:
+            return {
+                "status": "needs_input",
+                "summary": "Read every selected model instruction before proposing: smrt@1.0.",
+                "data": {
+                    "error_code": "model_instruction_read_required",
+                    "required_resources": {
+                        "read_model_instruction": [{"model": "smrt", "version": "1.0"}]
+                    },
+                },
+                "error": "model instruction read required",
+            }
+        if name == "read_model_instruction":
+            box["model_instructions_read"].add("smrt@1.0")
+            return {
+                "status": "success",
+                "summary": "Read model instruction smrt v1.0.",
+                "data": {"model": "smrt", "version": "1.0"},
+            }
+        box["research"] = {"phase": "plan_review"}
+        return {
+            "status": "needs_input",
+            "summary": "Review the research plan.",
+            "data": {"phase": "plan_review"},
+        }
+
+    monkeypatch.setattr(agent.tools, "call", fake_call)
+    answer, _events, _ = agent.run("Compare two model predictions", session=box)
+
+    assert called[:3] == ["research_plan", "read_model_instruction", "research_plan"]
+
+
+def test_successful_plan_revision_does_not_make_a_redundant_follow_up_llm_call(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    box["research"] = {"phase": "plan_review", "plan_version": 1, "plan": {}}
+    script = [[_call_chunk(
+        "research_plan",
+        '{"action":"revise_plan","changes":{"assumptions":["updated"]}}',
+    )]]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    summary = {
+        "from_version": 1,
+        "to_version": 2,
+        "changed": [{"field": "assumptions", "from": ["old"], "to": ["updated"]}],
+        "added": [],
+        "removed": [],
+        "preserved": ["runs", "charts"],
+        "invalidated": ["pseudo_preview", "chart_selection", "execution_approval"],
+        "validation": "passed",
+        "next_phase": "plan_review",
+    }
+
+    def fake_call(name, arguments, **_kwargs):
+        assert name == "research_plan"
+        return {
+            "status": "needs_input",
+            "summary": "Plan revised.",
+            "data": {"phase": "plan_review", "revision_summary": summary},
+            "citations": [],
+            "qc": None,
+            "ui": None,
+            "error": "Plan revised.",
+        }
+
+    monkeypatch.setattr(agent.tools, "call", fake_call)
+    answer, events, _ = agent.run("Change the assumption to updated.", session=box)
+
+    assert len(sent) == 1
+    assert "Plan revised from v001 to v002" in answer
+    assert any(event["kind"] == "research_revision" for event in events)
+
+
+def test_only_research_plan_uses_the_five_attempt_budget():
+    from physearth import harness
+
+    assert harness.max_interventions(tool="research_plan") == 5
+    assert harness.max_interventions(rule="research_gate:plan_required") == 5
+    assert harness.max_interventions(tool="run_model") == 3
+    assert harness.max_interventions(rule="citation_integrity") == 3
 
 
 def test_citation_rewrite_discards_invalid_marker_from_pre_tool_narration(monkeypatch):

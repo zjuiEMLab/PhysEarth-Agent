@@ -162,6 +162,130 @@ def test_q2_reproduction_rejects_a_density_sweep_with_nonpaper_conditions():
     assert any("DMRT-ML and DMRT-QMS are not executable" in item for item in problems)
 
 
+def test_q1_repair_restores_the_six_theory_microstructure_runs():
+    question = (
+        "Under what snow-density range do different microstructure (independent spheres, "
+        "non-sticky hard spheres and sticky hard sphere) and different theories (Rayleigh, "
+        "DMRT QCA-CP, IBA) converge to the same first-order scattering behavior, and at "
+        "what density do particle correlation and dense-medium effects cause their predictions "
+        "to diverge?"
+    )
+    runs = [
+        {
+            "id": "run_iba_independent",
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "electromagnetic_model": "iba",
+                "microstructure_model": "independent_sphere",
+                "output": "coefficients",
+                "radius_m": 0.0002,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 50,
+                "sweep_stop": 500,
+                "sweep_points": 20,
+            },
+        },
+        {
+            "id": "run_iba_sticky",
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "electromagnetic_model": "iba",
+                "microstructure_model": "sticky_hard_spheres",
+                "output": "coefficients",
+                "radius_m": 0.0002,
+                "stickiness": 0.5,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 50,
+                "sweep_stop": 500,
+                "sweep_points": 20,
+            },
+        },
+        {
+            "id": "run_rayleigh_independent",
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "electromagnetic_model": "rayleigh",
+                "microstructure_model": "independent_sphere",
+                "output": "coefficients",
+                "radius_m": 0.0002,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 50,
+                "sweep_stop": 500,
+                "sweep_points": 20,
+            },
+        },
+        {
+            "id": "run_dmrt_sticky",
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "electromagnetic_model": "dmrt_qcacp_shortrange",
+                "microstructure_model": "sticky_hard_spheres",
+                "output": "coefficients",
+                "radius_m": 0.0002,
+                "stickiness": 0.5,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 50,
+                "sweep_stop": 500,
+                "sweep_points": 20,
+            },
+        },
+        {
+            "id": "run_iba_exponential",
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "output": "coefficients",
+                "corr_length_m": 0.00015,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 50,
+                "sweep_stop": 500,
+                "sweep_points": 20,
+            },
+        },
+    ]
+    charts = [
+        {
+            "id": "chart_ks_density",
+            "required": True,
+            "x": "density_kg_m3",
+            "ys": ["ks_per_m"],
+        }
+    ]
+
+    repairs = reproduction.repair(question, runs, charts)
+    pairs = {
+        (
+            run["parameters"]["electromagnetic_model"],
+            run["parameters"]["microstructure_model"],
+        )
+        for run in runs
+    }
+    assert pairs == {
+        ("rayleigh", "independent_sphere"),
+        ("iba", "independent_sphere"),
+        ("dmrt_qcacp_shortrange", "non_sticky_hard_spheres"),
+        ("iba", "non_sticky_hard_spheres"),
+        ("dmrt_qcacp_shortrange", "sticky_hard_spheres"),
+        ("iba", "sticky_hard_spheres"),
+    }
+    assert len(runs) == 6
+    assert "run_rayleigh_independent" in {run["id"] for run in runs}
+    assert all(run["parameters"]["radius_m"] == 0.0001 for run in runs)
+    assert all(run["parameters"]["sweep_start"] == 1.0 for run in runs)
+    assert all(run["parameters"]["sweep_stop"] == 96.0 for run in runs)
+    assert any(repair.get("field") == "microstructure_model" for repair in repairs)
+
+    case_id, problems = reproduction.validate(question, runs, charts, ["Q1 pilot and full sweep limitations"])
+    assert case_id == "q1"
+    assert problems == []
+
+
 def test_q2_paper_protocol_accepts_angular_passive_and_active_smrt_partial_reproduction():
     common = {
         "microstructure_model": "sticky_hard_spheres",
@@ -388,6 +512,26 @@ def test_plan_revision_preview_chart_and_execution_gate():
     assert not research.allow_model(box)
     research.approve_execution(box)
     assert research.allow_model(box)
+
+
+def test_execution_approval_is_idempotent_and_sends_one_continuation():
+    import app
+
+    box = session.new_session("m")
+    box["research_required"] = True
+    _proposal(box)
+    research.approve_plan(box)
+    research.pseudo_preview(box)
+    chart_id = box["research"]["plan"]["charts"][0]["id"]
+    research.choose_chart(box, chart_id)
+    research.confirm_charts(box)
+
+    first = app.review_click(box, "primary")
+    assert box["research"]["phase"] == "approved"
+    assert first[3]
+    second = app.review_click(box, "primary")
+    assert box["research"]["phase"] == "approved"
+    assert second[3] == ""
 
 
 def test_revision_after_preview_creates_new_version_and_clears_stale_preview():
@@ -819,7 +963,7 @@ def test_tb_h_is_added_when_planned_tb_runs_already_compute_both_polarizations()
     )
 
 
-def test_q4_inversion_plan_is_repaired_to_executable_observable_charts():
+def test_q4_inversion_plan_is_not_repaired_from_a_stored_protocol():
     box = session.new_session("m")
     box["sections_read"].add("smrt-v1#09")
     question = (
@@ -873,17 +1017,11 @@ def test_q4_inversion_plan_is_repaired_to_executable_observable_charts():
         baseline_run_id="target",
     )
 
-    assert result["status"] == "needs_input"
-    plan = box["research"]["plan"]
-    assert len(plan["runs"]) == 11
-    assert [(chart["x"], chart["ys"]) for chart in plan["charts"]] == [
-        ("radius_m", ["tb_v", "tb_h"]),
-        ("corr_length_m", ["tb_v", "tb_h"]),
-    ]
-    assert any(item.get("field") == "charts" for item in plan["automatic_repairs"])
+    assert result["status"] == "terminal_error"
+    assert box["research"] is None
 
 
-def test_q4_shs_stickiness_target_family_is_accepted_as_baseline():
+def test_q4_shs_plan_is_not_repaired_from_a_stored_protocol():
     box = session.new_session("m")
     box["sections_read"].add("smrt-v1#09")
     question = (
@@ -931,13 +1069,11 @@ def test_q4_shs_stickiness_target_family_is_accepted_as_baseline():
         stop_conditions=["report missing bracket"], assumptions=["homogeneous layer"],
         limitations=["grid inversion"], baseline_run_id="shs",
     )
-    assert result["status"] == "needs_input"
-    plan = box["research"]["plan"]
-    assert next(run for run in plan["runs"] if run["id"] == "shs")["stage"] == "baseline"
-    assert [chart["x"] for chart in plan["charts"]] == ["radius_m", "corr_length_m"]
+    assert result["status"] == "terminal_error"
+    assert box["research"] is None
 
 
-def test_q4_shs_transfer_target_is_baseline_even_when_planner_calls_it_sensitivity():
+def test_q4_shs_transfer_plan_is_not_repaired_from_a_stored_protocol():
     box = session.new_session("m")
     box["sections_read"].add("smrt-v1#09")
     question = (
@@ -974,11 +1110,11 @@ def test_q4_shs_transfer_target_is_baseline_even_when_planner_calls_it_sensitivi
         diagnostics=["uniqueness"], success_criteria=["finite"], stop_conditions=["QC"],
         assumptions=["dry snow"], limitations=["grid inversion"], baseline_run_id="shs_150",
     )
-    assert result["status"] == "needs_input"
-    assert next(run for run in box["research"]["plan"]["runs"] if run["id"] == "shs_150")["stage"] == "baseline"
+    assert result["status"] == "terminal_error"
+    assert box["research"] is None
 
 
-def test_q4_transferability_sweeps_receive_required_observable_charts():
+def test_q4_transferability_does_not_receive_hidden_protocol_charts():
     box = session.new_session("m")
     box["sections_read"].add("smrt-v1#09")
     question = (
@@ -1036,13 +1172,9 @@ def test_q4_transferability_sweeps_receive_required_observable_charts():
         stop_conditions=["QC failure"], assumptions=["dry snow"],
         limitations=["grid calibration"], baseline_run_id="shs",
     )
-    assert result["status"] == "needs_input", result["summary"]
-    plan = box["research"]["plan"]
-    assert {chart["x"] for chart in plan["charts"]} == {
-        "radius_m", "corr_length_m", "density_kg_m3", "frequency_ghz", "angle_deg"
-    }
-    assert all(chart["ys"] == ["tb_v", "tb_h"] for chart in plan["charts"])
-    assert not research._validate_chart_runs(plan["charts"], plan["runs"])
+    assert result["status"] == "terminal_error", result["summary"]
+    assert "paper_conditions" in result["summary"]
+    assert box["research"] is None
 
 
 def test_revise_plan_recovers_retained_rejected_draft():
@@ -1111,7 +1243,7 @@ def test_rejected_plan_is_retained_for_harness_recovery():
     assert status["data"]["proposal"]["question"] == "q"
 
 
-def test_sweep_bound_is_clamped_and_recorded_for_human_review():
+def test_sweep_bound_outside_registered_model_range_is_blocked_with_source_details():
     box = session.new_session("m")
     result = research.propose(
         box, question="How does brightness temperature vary with correlation length?",
@@ -1130,12 +1262,14 @@ def test_sweep_bound_is_clamped_and_recorded_for_human_review():
         diagnostics=["finite"], success_criteria=["valid"], stop_conditions=["QC failure"],
         assumptions=["homogeneous layer"], limitations=["single frequency"], baseline_run_id="exp",
     )
-    assert result["status"] == "needs_input"
-    assert box["research"]["plan"]["runs"][0]["parameters"]["sweep_stop"] == 0.003
-    assert any(
-        repair.get("run_id") == "exp" and repair.get("field") == "sweep_stop"
-        for repair in box["research"]["plan"]["automatic_repairs"]
-    )
+    assert result["status"] == "terminal_error"
+    assert result["data"]["error_code"] == "run_validation"
+    problem = result["data"]["problems"][0]
+    assert problem["field"].endswith("sweep_stop")
+    assert problem["source"] == "registered_model_declaration"
+    assert "0.003" in problem["expected"]
+    assert problem["actual"] == 0.005
+    assert problem["blocking"] is True
 
 
 def test_unplotted_main_run_is_still_rejected():
@@ -1534,7 +1668,7 @@ def test_figure_qa_status_message_is_not_accepted_as_final_scientific_report():
         {"figure_number": 1, "preview": False},
         {"figure_number": 2, "preview": False},
     ]
-    problem = research.report_problem(
+    problem = research.report_warnings(
         box,
         "Figure 1 passed QA. Figure 2 passed QA. The formal execution and QA phase is "
         "complete. The final scientific report can now be delivered.",

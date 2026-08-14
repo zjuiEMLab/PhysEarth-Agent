@@ -18,13 +18,16 @@ question: >-
   Use the SMRT Section 3 scientific-question demo on the sparse-medium approximation. Do not
   regenerate a paper figure. Instead, translate the question into a small, executable pilot
   and explain what would be required for the full study. The scientific question is: under
-  what snow-density range do Rayleigh theory, DMRT-QCA-CP with sticky hard spheres, and
-  DMRT-QCA-CP with non-sticky hard spheres converge to the same first-order scattering
-  behavior, and at what density do particle correlation and dense-medium effects cause their
-  predictions to diverge? Use 37 GHz and a 100 micrometre ice-sphere radius. Start with a
-  small density pilot, compare legal SMRT configurations, report the scattering coefficient
-  and finite-output checks, and state which conclusions are only hypotheses until the full
-  density sweep is run.
+  what snow-density range do Rayleigh theory, DMRT-QCA-CP, and IBA across independent
+  spheres, non-sticky hard spheres, and sticky hard spheres converge to the same first-order
+  scattering behavior, and at what density do particle correlation and dense-medium effects
+  cause their predictions to diverge? Use the six legal theory/microstructure combinations:
+  Rayleigh plus independent spheres; IBA plus independent spheres; DMRT-QCA-CP plus
+  non-sticky hard spheres; IBA plus non-sticky hard spheres; DMRT-QCA-CP plus sticky hard
+  spheres; and IBA plus sticky hard spheres. Use 37 GHz and a 100 micrometre ice-sphere
+  radius. Start with a small density pilot, compare legal SMRT configurations, report the
+  scattering coefficient and finite-output checks, and state which conclusions are only
+  hypotheses until the full density sweep is run.
 demo:
   source_question: >-
     Under what snow-density range do Rayleigh theory, DMRT-QCA-CP sticky and DMRT-QCA-CP
@@ -36,7 +39,7 @@ demo:
   pilot:
     density_kg_m3: [1.0, 25.0, 50.0, 75.0, 96.0]
     output: ks
-    comparison: legal_theory_and_microstructure_configurations
+    comparison: six_theory_microstructure_configurations
   expected_outputs:
     - scattering coefficient against density
     - low-density agreement or disagreement with the Rayleigh reference
@@ -45,6 +48,7 @@ demo:
   required_behaviors:
     - read and cite the source section before fixing paper parameters
     - compare only combinations declared legal by the SMRT model card
+    - include exactly the six required theory and microstructure combinations
     - preserve failed or unsupported configurations instead of silently dropping them
     - do not claim a breakdown density from the five-point pilot alone
   limitations:

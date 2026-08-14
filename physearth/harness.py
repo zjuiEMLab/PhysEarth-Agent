@@ -7,8 +7,21 @@ MODEL_PATTERN = re.compile(r"\[(?:model:)?([A-Za-z0-9_-]+)@([^\]\s]+)\]")
 DATA_PATTERN = re.compile(r"\[data:([a-z0-9-]+)\]")
 ABSTRACT_PATTERN = re.compile(r"\[abs:(10\.\d{4,9}/[^\]\s]+)\]", re.I)
 SKILL_PATTERN = re.compile(r"\[skill:([a-z0-9-]+)\]")
+GUIDELINE_PATTERN = re.compile(r"\[guideline:([A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+)\]")
+FIGURE_PATTERN = re.compile(r"\[figure:([a-z0-9-]+#[A-Za-z0-9_.-]+)\]")
 UNCITED_ANSWER_CHARS = 400
 MAX_INTERVENTIONS = 3
+# Planning often needs one or two corrective rounds to express a complete structured
+# proposal. This is intentionally narrower than MAX_INTERVENTIONS: physical execution,
+# citation repair, and ordinary tool failures retain the stricter general limit.
+RESEARCH_PLAN_MAX_INTERVENTIONS = 5
+
+
+def max_interventions(tool=None, rule=None):
+    """Return the retry budget for one harness branch."""
+    if tool == "research_plan" or str(rule or "").startswith("research_gate:plan"):
+        return RESEARCH_PLAN_MAX_INTERVENTIONS
+    return MAX_INTERVENTIONS
 
 # What an abstract-level citation is not allowed to carry. These are the units of a
 # result, not of a configuration: an abstract may well say a study was at 37 GHz and 55
@@ -42,6 +55,14 @@ def find_skill_markers(text):
     return SKILL_PATTERN.findall(text or "")
 
 
+def find_guideline_markers(text):
+    return GUIDELINE_PATTERN.findall(text or "")
+
+
+def find_figure_markers(text):
+    return FIGURE_PATTERN.findall(text or "")
+
+
 def check_citations(
     text,
     sections_read,
@@ -49,6 +70,8 @@ def check_citations(
     datasets_read=(),
     abstracts_seen=(),
     skills_read=(),
+    guidelines_read=(),
+    paper_figures_read=(),
 ):
     text = text or ""
     # An [abs:doi] marker also matches the literature pattern's shape in some DOIs, so it
@@ -59,6 +82,8 @@ def check_citations(
     data_markers = find_data_markers(plain)
     abstract_markers = find_abstract_markers(text)
     skill_markers = find_skill_markers(text)
+    guideline_markers = find_guideline_markers(text)
+    figure_markers = find_figure_markers(text)
     unresolved = sorted({m for m in markers if m not in sections_read})
     unresolved += sorted({m for m in model_markers if m not in set(models_run)})
     unresolved += sorted({m for m in data_markers if m not in set(datasets_read)})
@@ -69,13 +94,17 @@ def check_citations(
     # a method note this conversation actually opened, which turns a piece of self-praise
     # into a fact the run trace can confirm.
     unresolved += sorted({"skill:" + m for m in skill_markers if m not in set(skills_read)})
+    unresolved += sorted({"guideline:" + m for m in guideline_markers if m not in set(guidelines_read)})
+    unresolved += sorted({"figure:" + m for m in figure_markers if m not in set(paper_figures_read)})
     return {
         "rule": "citation_integrity",
         "markers": markers
         + ["model:" + m for m in model_markers]
         + ["data:" + m for m in data_markers]
         + ["abs:" + m for m in abstract_markers]
-        + ["skill:" + m for m in skill_markers],
+        + ["skill:" + m for m in skill_markers]
+        + ["guideline:" + m for m in guideline_markers]
+        + ["figure:" + m for m in figure_markers],
         "unresolved": unresolved,
         "passed": not unresolved,
     }
@@ -147,7 +176,9 @@ def citation_correction(result):
         "opened with read_literature. Note that a model name is not a paper slug, and that "
         "seeing a model's version in the capability table is not the same as reading its "
         "declaration: if you want to keep a [model:...] marker, call list_models on that "
-        "model now and then re-send. Otherwise remove or rewrite the factual claim that depended "
+        "model now and then re-send. A [guideline:model@version] marker requires opening that "
+        "model instruction, and a [figure:paper#id] marker requires opening that source figure. "
+        "Otherwise remove or rewrite the factual claim that depended "
         "on that marker; deleting only the citation while retaining the unsupported claim is not "
         "a correction. Fix each claim and re-send the full answer."
         % ", ".join(result["unresolved"])
@@ -209,6 +240,8 @@ def review_final(text, state):
             state.get("datasets_read", ()),
             state.get("abstracts_seen", ()),
             state.get("skills_read", ()),
+            state.get("guidelines_read", ()),
+            state.get("paper_figures_read", ()),
         ),
         check_abstract_depth(text),
     ]

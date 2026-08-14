@@ -52,7 +52,12 @@ def test_the_corpus_ablation_removes_every_literature_tool_and_the_catalogue():
     off = {"literature": False}
     names = [s["function"]["name"] for s in tools.specs(off)]
     assert not set(names) & set(tools.CORPUS_TOOLS)
-    assert set(names) == {"list_models", "run_model", "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart", "research_plan"}
+    assert set(names) == {
+        "list_models", "read_model_instruction", "register_model_guideline",
+        "register_github_model_repo", "inspect_github_model_repo", "run_model",
+        "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart",
+        "research_plan",
+    }
     assert tools.call("read_literature", {"slug": "smrt-v1"}, switches_in=off)["status"] == (
         "terminal_error"
     )
@@ -97,3 +102,6 @@ def test_an_unenforced_resolve_keeps_the_offending_value_and_still_reports_it():
 def test_the_full_configuration_is_what_the_application_runs():
     plain = prompt.build(_state())
     assert prompt.build(session.new_state(session.new_session("m"))) == plain
+    assert "Q1 sparse-medium requires exactly six main coefficient runs" not in plain
+    assert "read_research_guideline" in plain
+    assert "read_model_instruction" in plain

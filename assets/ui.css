@@ -122,9 +122,9 @@ main.contain > .column {
    on specificity, so without this exclusion a panel would collapse to `display: contents`
    and its heading, body and composer would fall through into the stage's three grid
    columns, laying the conversation out to the right of its own title. */
-#pe-app .block:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
-#pe-app .form:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
-#pe-app .html-container:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
+#pe-app .block:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(.upload-grid):not(.upload-card):not(.upload-form-row):not(.upload-actions):not(.upload-approval-row):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-upload-page):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
+#pe-app .form:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(.upload-grid):not(.upload-card):not(.upload-form-row):not(.upload-actions):not(.upload-approval-row):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-upload-page):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
+#pe-app .html-container:not(.pe-panel):not(.stage):not(.pe-slot):not(.composer__box):not(.upload-grid):not(.upload-card):not(.upload-form-row):not(.upload-actions):not(.upload-approval-row):not(#pe-chat-scroll):not(#pe-panel-chat):not(#pe-panel-trace):not(#pe-panel-evid):not(#pe-trace-stream):not(#pe-approve):not(#pe-upload-page):not(#pe-model-bridge):not(#pe-chart-bridge):not(#pe-chart-submit),
 #pe-app .prose.gradio-style {
   display: contents !important;
 }
@@ -452,7 +452,18 @@ a.tag:hover {
   box-shadow: var(--shadow-panel) !important;
 }
 
+/* The conversation column is one scroll surface. Keeping the history, research
+   context, approval controls, and composer in one surface prevents a long plan from
+   creating a second scrollbar with no usable thumb. */
+#pe-app #pe-panel-chat {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 #pe-app #pe-panel-chat > #pe-chat-scroll,
+#pe-app #pe-panel-chat > #pe-approve,
 #pe-app #pe-panel-chat > .composer__box {
   flex-shrink: 0 !important;
   min-width: 0 !important;
@@ -465,6 +476,7 @@ a.tag:hover {
    context and appear beside the heading instead of below it. */
 #pe-app #pe-panel-chat > .pe-slot,
 #pe-app #pe-panel-chat > #pe-chat-scroll,
+#pe-app #pe-panel-chat > #pe-approve,
 #pe-app #pe-panel-chat > .composer__box {
   width: 100% !important;
   max-width: 100% !important;
@@ -488,12 +500,12 @@ a.tag:hover {
 }
 
 #pe-app #pe-panel-chat > #pe-chat-scroll {
-  flex: 1 1 auto !important;
-  overflow-y: auto !important;
+  flex: none !important;
+  overflow: visible !important;
 }
 
-/* Run trace has one scroll surface: execution cards and the research review are in the
-   same stream; the meters are a separate fixed footer. */
+/* Run trace has one scroll surface for execution cards; the research review now lives in
+   the left conversation panel. The meters remain a separate fixed footer. */
 #pe-app #pe-panel-trace > #pe-trace-stream {
   order: 1 !important;
   flex: 1 1 auto !important;
@@ -530,9 +542,28 @@ a.tag:hover {
   box-shadow: none !important;
 }
 
+#pe-app #pe-panel-chat > #pe-approve {
+  flex: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 /* The approval Column also contains the buttons. Hide the whole Column in the idle state;
    hiding only its HTML card would leave orphaned Run it / Decline buttons above the trace. */
 #pe-app #pe-panel-trace #pe-approve:has(.approve[hidden]) {
+  display: none !important;
+}
+
+#pe-app #pe-panel-chat #pe-approve:has(.research-context[hidden]) {
   display: none !important;
 }
 
@@ -547,8 +578,29 @@ a.tag:hover {
   overflow: visible !important;
 }
 
+#pe-app #pe-panel-chat #pe-approve > .pe-slot {
+  flex: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
 #pe-app #pe-panel-trace #pe-approve > .approve__row {
   flex: none !important;
+  display: flex !important;
+}
+
+#pe-app #pe-panel-chat #pe-approve > .approve__row {
+  flex: none !important;
+  display: flex !important;
+}
+
+#pe-app #pe-panel-chat #pe-approve > .approve__row {
+  display: none !important;
+}
+
+#pe-app #pe-panel-chat #pe-approve:has(.approve:not([hidden])) > .approve__row {
   display: flex !important;
 }
 
@@ -1941,6 +1993,70 @@ body:not(.is-reasoning) .step-card--thinking {
   display: none;
 }
 
+.guided-brief {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--clay);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--paper) 94%, var(--clay-wash));
+  color: var(--ink-soft);
+}
+
+.guided-brief__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 9px;
+  margin-bottom: 8px;
+}
+
+.guided-brief__hint {
+  color: var(--ink-mute);
+  font-size: 10.5px;
+}
+
+.guided-brief__body h3 {
+  margin: 3px 0 5px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.guided-brief__body p {
+  margin: 4px 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.guided-brief__body a {
+  color: var(--clay-press);
+  text-decoration: underline;
+}
+
+.research-plan-runs {
+  width: 100%;
+  margin: 5px 0 10px;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.research-plan-runs th,
+.research-plan-runs td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.research-plan-runs th {
+  color: var(--ink-mute);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* ---------- hero model switcher ---------- */
 
 .segment--model > button .vendor {
@@ -2138,7 +2254,11 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   flex: none !important;
 }
 
-#pe-approve:not(:has(.approve:not([hidden]))) {
+#pe-app #pe-panel-trace #pe-approve:not(:has(.approve:not([hidden]))) {
+  display: none !important;
+}
+
+#pe-app #pe-panel-chat #pe-approve:not(:has(.research-context:not([hidden]))) {
   display: none !important;
 }
 
@@ -2274,6 +2394,162 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   font-size: 10.5px;
 }
 
+.research-context {
+  padding: 10px 12px 0;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 94%, var(--clay-wash));
+  color: var(--ink-soft);
+}
+
+.research-context__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 9px;
+  margin-bottom: 8px;
+}
+
+.research-context__hint,
+.research-context__resource {
+  color: var(--ink-mute);
+  font-size: 10.5px;
+}
+
+.conversation-research-status {
+  margin: 0 12px 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--paper-2) 84%, var(--clay-wash));
+  color: var(--ink-soft);
+  font-size: 10.5px;
+}
+
+.conversation-research-status > summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 650;
+  list-style-position: inside;
+}
+
+.conversation-research-status__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding-top: 6px;
+  line-height: 1.4;
+}
+
+.conversation-research-status__label {
+  color: var(--ink-mute);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.conversation-research-status__model {
+  flex-basis: 100%;
+  color: var(--ink-soft);
+}
+
+.research-context__label {
+  margin: 10px 0 4px;
+  color: var(--ink-mute);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.research-context__fixed {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.research-context__live {
+  padding-top: 2px;
+}
+
+.research-context__live-note {
+  margin: 5px 0 10px;
+  padding: 8px 9px;
+  color: var(--ink-mute);
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.research-context__paper,
+.research-context__capability,
+.research-context__protocol {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.research-context__paper h3 {
+  margin: 3px 0 5px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.research-context__paper p,
+.research-context__protocol p {
+  margin: 4px 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.research-context__paper a {
+  color: var(--clay-press);
+  text-decoration: underline;
+}
+
+.research-capability {
+  margin: 5px 0;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--paper);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.research-capability span {
+  color: var(--ink-mute);
+  overflow-wrap: anywhere;
+}
+
+.eval-demo-card--guided {
+  min-height: 0;
+}
+
+.eval-demo-card__context {
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--paper);
+}
+
+.eval-demo-card__context b {
+  color: var(--ink);
+}
+
+.eval-demo-card__workflow {
+  margin-top: 10px;
+  color: var(--ink-mute);
+  font-size: 11px;
+}
+
+.eval-demo-card__workflow ol {
+  margin: 6px 0 0 18px;
+  padding: 0;
+  line-height: 1.5;
+}
+
 .research-flow b {
   flex-basis: 100%;
   margin-bottom: 2px;
@@ -2371,6 +2647,35 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--paper) 84%, transparent);
   font-size: 11px;
+}
+
+.research-protocol-yaml {
+  margin: 8px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--paper);
+}
+
+.research-protocol-yaml summary {
+  cursor: pointer;
+  padding: 7px 8px;
+  color: var(--clay-press);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.research-protocol-yaml pre {
+  max-height: 280px;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .research-protocol__row {
@@ -2481,7 +2786,8 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 
 #pe-main-tabs .tabitem,
 #pe-app #pe-agent-tab,
-#pe-app #pe-evaluation-tab {
+#pe-app #pe-evaluation-tab,
+#pe-app #pe-upload-tab {
   flex: 1 1 auto !important;
   height: auto !important;
   width: 100% !important;
@@ -2527,6 +2833,221 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 
 #pe-app #pe-evaluation-tab {
   overflow-y: auto !important;
+}
+
+#pe-app #pe-upload-tab {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+#pe-app #pe-upload-tab > .column,
+#pe-app #pe-upload-page {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  min-height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+#pe-app #pe-upload-page {
+  max-width: 1240px !important;
+  align-self: center !important;
+  padding: 30px 34px 56px !important;
+  box-sizing: border-box !important;
+}
+
+.upload-hero {
+  max-width: 760px;
+  margin: 0 auto 25px;
+  text-align: center;
+}
+
+.upload-hero__eyebrow,
+.upload-card__number {
+  color: var(--clay);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.upload-hero h1 {
+  margin: 8px 0 8px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: clamp(25px, 3vw, 38px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.upload-hero p {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#pe-app .upload-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+  gap: 16px !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+#pe-app .upload-card {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  gap: 14px !important;
+  padding: 20px !important;
+  background: rgba(250, 249, 245, 0.86) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-panel) !important;
+}
+
+#pe-app .upload-card--test {
+  margin-top: 16px !important;
+}
+
+.upload-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.upload-card__number {
+  flex: none;
+  padding-top: 4px;
+}
+
+.upload-card__head h2 {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.upload-card__head p {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+#pe-app .upload-form-row,
+#pe-app .upload-approval-row,
+#pe-app .upload-actions {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 0.48fr) !important;
+  align-items: end !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+#pe-app .upload-approval-row {
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 0.65fr) !important;
+}
+
+#pe-app .upload-actions {
+  grid-template-columns: minmax(160px, 0.55fr) minmax(0, 1fr) !important;
+}
+
+#pe-upload-page .upload-card .gradio-accordion,
+#pe-upload-page .upload-card details {
+  width: 100% !important;
+  margin: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--paper) !important;
+}
+
+#pe-upload-page .upload-card summary {
+  padding: 10px 12px !important;
+  color: var(--ink-soft) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+
+#pe-upload-page .upload-card details > .wrap,
+#pe-upload-page .upload-card details > div {
+  padding: 10px 12px 12px !important;
+}
+
+#pe-upload-page .upload-card label {
+  color: var(--ink-mute) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+}
+
+#pe-upload-page .upload-card input,
+#pe-upload-page .upload-card textarea {
+  min-height: 34px !important;
+  color: var(--ink) !important;
+  background: var(--paper) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: var(--radius-xs) !important;
+  box-shadow: none !important;
+  font-family: var(--font-serif) !important;
+  font-size: 12px !important;
+}
+
+#pe-upload-page .upload-card button {
+  min-height: 35px !important;
+  border-radius: var(--radius-xs) !important;
+  font-family: var(--font-serif) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+#pe-upload-page .upload-card button.primary {
+  color: var(--paper) !important;
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
+}
+
+.upload-status {
+  min-height: 20px;
+  padding: 2px 0;
+  color: var(--ink-mute);
+  font-size: 11px;
+}
+
+.upload-divider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.upload-divider::before,
+.upload-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.upload-evidence,
+.upload-output {
+  display: block !important;
+  max-height: 360px;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 #pe-app #pe-evaluation-page {
@@ -3424,6 +3945,28 @@ body.is-reasoning .segment--model > button:not(.is-active) {
     padding: 18px 14px 40px !important;
   }
 
+  #pe-app #pe-upload-page {
+    padding: 22px 14px 40px !important;
+  }
+
+  #pe-app .upload-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #pe-app .upload-form-row,
+  #pe-app .upload-approval-row,
+  #pe-app .upload-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .upload-hero {
+    margin-bottom: 18px;
+  }
+
+  .upload-hero h1 {
+    font-size: 29px;
+  }
+
   .eval-heading {
     grid-template-columns: 1fr;
     gap: 15px;
@@ -3479,4 +4022,313 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   .eval-suite-details summary b {
     display: none;
   }
+}
+
+/* Codex-style conversation column: the transcript is the only scroll surface and the
+   composer stays anchored to the bottom of the left panel. Research review is an embedded
+   disclosure, so a long generated plan never pushes the input off-screen. */
+#pe-app #pe-panel-chat {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#pe-app #pe-panel-chat > #pe-chat-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+}
+
+#pe-app #pe-panel-chat > #pe-approve {
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+}
+
+#pe-app #pe-panel-chat > .composer__box {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 8 !important;
+  flex: 0 0 auto !important;
+  background: color-mix(in srgb, var(--paper) 96%, transparent) !important;
+  border-top: 1px solid var(--line) !important;
+  backdrop-filter: blur(10px);
+}
+
+.research-plan-details {
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 96%, var(--clay-wash));
+}
+
+.research-plan-details > summary {
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.research-plan-details > summary::marker {
+  color: var(--clay);
+}
+
+.research-plan-details > .approve {
+  margin: 0 12px 10px;
+}
+
+/* Final conversation layout contract. The plan and its controls are inside the
+   transcript scroll surface; the composer remains the only sticky bottom control. */
+#pe-app #pe-panel-chat {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#pe-app #pe-panel-chat > #pe-chat-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+#pe-app #pe-panel-chat > #pe-chat-scroll > #pe-approve {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+#pe-app #pe-panel-chat > .composer__box {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 8 !important;
+  flex: 0 0 auto !important;
+  background: color-mix(in srgb, var(--paper) 96%, transparent) !important;
+  border-top: 1px solid var(--line) !important;
+  backdrop-filter: blur(10px);
+}
+
+.conversation-research-status {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 12px;
+  background: color-mix(in srgb, var(--paper) 96%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.conversation-research-status__activity {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.research-plan-details {
+  overflow: visible;
+}
+
+.research-plan-details > summary {
+  min-height: 38px;
+  font-size: 13px;
+}
+
+.research-plan-details > summary small,
+.research-plan-summary,
+.research-plan-details .approve__note,
+.research-plan-details .approve__p,
+.research-plan-details td,
+.research-plan-details th {
+  font-size: 12px;
+}
+
+.research-plan-summary {
+  margin: 8px 12px;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+
+/* Keep primary interaction text readable while allowing chart internals and code
+   blocks to retain their specialized compact typography. */
+.conversation-research-status,
+.research-plan-details,
+.approve__row,
+.approve__row button,
+.step-card,
+.evidence-card,
+.trace-metrics {
+  font-size: max(12px, 1em);
+}
+
+/* Readable long-plan preview: the left panel remains the only scroll surface. */
+.research-plan-details {
+  font-size: 13px;
+}
+
+.research-plan-details > summary {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.research-plan-summary,
+.research-plan-flow,
+.research-plan-revision,
+.research-plan-section,
+.research-plan-details .approve__note,
+.research-plan-details .research-plan-prose {
+  line-height: 1.5;
+}
+
+.research-plan-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 12px;
+  color: var(--ink-soft);
+}
+
+.research-plan-flow span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.research-flow__step {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.research-flow__step.is-current {
+  color: var(--ink);
+  border-color: var(--clay);
+  background: var(--clay-wash);
+}
+
+.research-plan-section,
+.research-protocol-yaml {
+  margin: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--paper) 96%, var(--clay-wash));
+}
+
+.research-plan-section > summary,
+.research-protocol-yaml > summary {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.research-plan-section__body {
+  padding: 0 10px 10px;
+  overflow-wrap: anywhere;
+}
+
+.research-plan-table-wrap,
+.research-preview-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.research-plan-table,
+.research-preview {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.research-plan-table th,
+.research-plan-table td,
+.research-preview th,
+.research-preview td {
+  padding: 6px 7px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.research-plan-table th,
+.research-preview th {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.research-plan-revision {
+  margin: 10px 12px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--clay) 55%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--clay-wash) 68%, var(--paper));
+}
+
+.research-plan-change-group + .research-plan-change-group {
+  margin-top: 7px;
+}
+
+.research-plan-change-group ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.research-plan-change-group li {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.4fr) minmax(0, 1fr);
+  gap: 8px;
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+
+.research-plan-revision__meta {
+  margin-top: 8px;
+  color: var(--ink-soft);
+}
+
+.research-plan-yaml {
+  max-height: none;
+  margin: 0 10px 10px;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.msg-paste {
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--paper) 94%, var(--clay-wash));
+}
+
+.msg-paste > summary {
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.msg-paste > pre {
+  margin: 0;
+  padding: 8px;
+  border-top: 1px solid var(--line);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.45;
 }

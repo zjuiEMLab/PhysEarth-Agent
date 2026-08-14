@@ -56,6 +56,15 @@ def size():
         return len(_STORE)
 
 
+def clear_owner(owner):
+    """Drop all in-memory result handles belonging to a cleared temporary session."""
+    if owner is None:
+        return
+    with _LOCK:
+        for handle in [h for h, entry in _STORE.items() if entry["owner"] == owner]:
+            _STORE.pop(handle, None)
+
+
 def summarise_series(series, units):
     summary = {}
     for name, values in (series or {}).items():

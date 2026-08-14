@@ -140,10 +140,32 @@ def fetch(doi, licence_hint=""):
     if not front.get("license_url") and licence_hint:
         front["license"] = LICENCE_NAMES.get(licence_hint.strip().lower(), front["license"])
     front["doi"] = front.get("doi") or doi
+    # Keep image provenance in the paper artifact.  The parser never trusts an arbitrary
+    # URL as a fetch target; only same-host HTTPS assets are eligible for a later download.
+    for figure in parsed.get("figures") or []:
+        href = figure.get("source_uri") or ""
+        resolved = urllib.parse.urljoin(landing, href) if href else ""
+        host = urllib.parse.urlparse(resolved).hostname
+        if host in http.ALLOWED_HOSTS and urllib.parse.urlparse(resolved).scheme == "https":
+            figure["source_url"] = resolved
+            suffix = urllib.parse.urlparse(resolved).path.rsplit(".", 1)[-1].lower()
+            figure["asset_format"] = suffix if suffix in ("png", "jpg", "jpeg", "svg", "webp", "gif") else "bin"
+            try:
+                payload, _ = http.get_bytes(resolved, max_bytes=8_000_000)
+                figure["asset_bytes"] = payload
+                figure["asset_status"] = "extracted"
+            except (http.Upstream, ValueError):
+                figure["asset_status"] = "source_uri_only"
+        else:
+            figure["source_url"] = ""
+            if href:
+                figure["asset_status"] = "unresolved_source_uri"
     return {
         "doi": doi,
         "front": front,
         "sections": parsed["sections"],
+        "figures": parsed.get("figures") or [],
+        "tables": parsed.get("tables") or [],
         "source": source,
         "url": landing,
         "elapsed_s": elapsed,

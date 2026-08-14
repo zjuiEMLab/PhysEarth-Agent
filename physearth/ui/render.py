@@ -20,6 +20,7 @@ ABS_CITE = re.compile(r"\[abs:(10\.\d{4,9}/[^\]\s]+)\]", re.I)
 SKILL_CITE = re.compile(r"\[skill:([a-z0-9][a-z0-9-]*)\]")
 BOLD = re.compile(r"\*\*([^*]+)\*\*")
 CODE = re.compile(r"`([^`]+)`")
+SAFE_SUB = re.compile(r"&lt;(/?)(sub|sup)&gt;", re.I)
 SECTION_PREVIEW_CHARS = 620
 
 # The composer's own greyed-out text, in place of a row of preset buttons. It is one
@@ -161,6 +162,9 @@ def _inline(text):
     out = _e(text)
     out = CODE.sub(lambda m: "<code>%s</code>" % m.group(1), out)
     out = BOLD.sub(lambda m: "<b>%s</b>" % m.group(1), out)
+    # Allow only the two typographic equation tags after escaping. Attributes and every
+    # other HTML tag remain escaped, so model output cannot inject markup or scripts.
+    out = SAFE_SUB.sub(lambda m: "<%s%s>" % (m.group(1), m.group(2).lower()), out)
     return _markers(out)
 
 
@@ -209,43 +213,208 @@ def hero(model_id=None, running=False, status=""):
 # ---------------------------------------------------------------- conversation
 
 
-def conversation_head(count):
+def conversation_head(count, session=None, events=None, state=None):
     return (
         "<div class='subpanel' style='padding-bottom:0'><div class='sec-head'>%s"
         "<span class='sec-title'>Conversation</span>"
         "<span class='sec-count'>%d question%s</span></div></div>"
-        % (_svg("chat", "sec-icon"), count, "" if count == 1 else "s")
+        "%s"
+        % (
+            _svg("chat", "sec-icon"),
+            count,
+            "" if count == 1 else "s",
+            current_activity_status(session, events=events, state=state),
+        )
     )
 
 
-def history(turns, pending=False):
+def _reproduction_state(session):
+    """Return paper state discovered through literature reads and the generated plan."""
+    session = session if isinstance(session, dict) else {}
+    context = session.get("research_context") or {}
+    project = session.get("research") or {}
+    plan = project.get("plan") or {}
+    case_id = context.get("reproduction_case") or plan.get("reproduction_case")
+    paper_session = context.get("paper_session") or {}
+    if not case_id and not paper_session and not plan:
+        return None
+    paper_slug = paper_session.get("paper") or ""
+    card = knowledge.card(paper_slug) if paper_slug else {}
+    paper_section = paper_session.get("paper_section") or ""
+    source_section = paper_session.get("source_section") or ""
+    if case_id:
+        try:
+            from physearth import reproduction
+
+            case = reproduction.CASES.get(case_id) or {}
+            paper_section = paper_section or case.get("paper_section", "")
+            source_section = source_section or case.get("section", "")
+        except (ImportError, KeyError, TypeError):
+            pass
+    return {
+        "case_id": case_id,
+        "paper_session": paper_session,
+        "plan": plan,
+        "question": project.get("question") or context.get("question") or "",
+        "paper": paper_slug,
+        "title": card.get("title") or paper_session.get("title") or paper_slug,
+        "doi": card.get("doi") or paper_session.get("doi") or "",
+        "paper_section": paper_section,
+        "source_section": source_section,
+    }
+
+
+def _mapping_text(mapping):
+    return ", ".join(
+        "%s=%s" % (key, value) for key, value in sorted((mapping or {}).items())
+    )
+
+
+def _plan_run_rows(plan):
+    rows = []
+    for run in plan.get("runs") or []:
+        spec = run.get("parameters") or {}
+        theory = spec.get("electromagnetic_model", "")
+        microstructure = spec.get("microstructure_model", "")
+        output = spec.get("output", "")
+        sweep = spec.get("sweep_parameter", "")
+        rows.append(
+            "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+            % (
+                _e(run.get("id", "")),
+                _e(run.get("label", "%s + %s" % (theory, microstructure))),
+                _e(theory),
+                _e(microstructure),
+                _e("%s; sweep %s" % (output or "not specified", sweep or "none")),
+            )
+        )
+    if not rows:
+        return ""
+    return (
+        "<div class='research-context__label'>AGENT PLAN: RUNS</div>"
+        "<table class='research-plan-runs'><thead><tr><th>ID</th><th>Run</th>"
+        "<th>Theory</th><th>Microstructure</th><th>Output</th></tr></thead><tbody>%s</tbody></table>"
+        % "".join(rows)
+    )
+
+
+def guided_brief(session):
+    """Render agent-discovered paper state and the later agent-authored plan."""
+    state = _reproduction_state(session)
+    if not state:
+        return ""
+    plan = state["plan"]
+    doi = state["doi"]
+    paper_link = (
+        "<a href='https://doi.org/%s' target='_blank' rel='noopener'>Open DOI / paper source</a>"
+        % _e(doi)
+        if doi
+        else ""
+    )
+    source_fixed = plan.get("paper_conditions") or {}
+    provenance = plan.get("condition_provenance") or {}
+    plan_params = plan.get("parameters") or {}
+    extra_params = {key: value for key, value in plan_params.items() if key not in source_fixed}
+    assumptions = plan.get("assumptions") or []
+    source_html = (
+        "<p><b>From paper sections:</b> %s</p>"
+        % _e(_mapping_text(source_fixed) or "not declared yet")
+    )
+    assumption_text = _mapping_text(extra_params)
+    if assumptions:
+        assumption_text = "; ".join(filter(None, [assumption_text] + [str(item) for item in assumptions]))
+    assumption_html = (
+        "<p><b>Agent/model assumptions to review:</b> %s</p>"
+        % _e(assumption_text or "none declared outside the generated protocol")
+    )
+    provenance_html = (
+        "<p><b>Condition evidence:</b> %s</p>"
+        % _e(_mapping_text(provenance) or "not declared; review against the paper sections")
+    )
+    expected = list(plan.get("quantities") or [])
+    for chart in plan.get("charts") or []:
+        expected.extend(chart.get("ys") or ([chart.get("y")] if chart.get("y") else []))
+    expected = list(dict.fromkeys(str(item) for item in expected))
+    plan_html = ""
+    if plan:
+        plan_html = (
+            _plan_run_rows(plan)
+            + "<div class='research-context__label'>AGENT PLAN: EXPECTED OUTPUTS</div>"
+            + "<p><b>Plan-declared quantities and chart outputs:</b> %s</p>"
+            % _e(", ".join(expected) or "not specified")
+        )
+    return (
+        "<article class='guided-brief'><div class='guided-brief__head'>"
+        "<span class='badge badge--model'>PAPER SESSION · AGENT DISCOVERED</span>"
+        "<span class='guided-brief__hint'>Plan values remain editable</span></div>"
+        "<div class='guided-brief__body'><div class='research-context__label'>PAPER SESSION</div>"
+        "<h3>%s</h3><p><b>Protocol:</b> %s; <b>Paper section:</b> %s%s</p>"
+        "<p><b>Research question:</b> %s</p>"
+        "<div class='research-context__label'>CONDITION PROVENANCE</div>%s%s%s%s"
+        "</div></article>"
+        % (
+            _e(state["title"]),
+            _e(state["source_section"] or "pending"),
+            _e(state["paper_section"] or "pending"),
+            " · " + paper_link if paper_link else "",
+            _e(state["question"] or "pending plan question"),
+            source_html,
+            assumption_html,
+            provenance_html,
+            plan_html,
+        )
+    )
+
+
+def history(turns, pending=False, session=None):
     """The session so far. It keeps growing until the visitor clears it.
 
     `pending` means a question is in flight. The opening hint belongs to an empty
     conversation, not to one that is busy answering its first question underneath it.
     """
+    brief = guided_brief(session)
     if not turns:
         if pending:
-            return "<div class='msg-group'></div>"
-        return (
+            empty = "<div class='msg-group'></div>"
+        else:
+            empty = (
             "<div class='msg-group'><div class='pane-empty'>"
             "<div class='pane-empty__title'>Ask a question to begin</div>"
             "<div class='pane-empty__hint'>Every answer is checked against what the agent "
             "actually read and ran. The run trace in the middle shows each check, including "
             "the refusals.</div></div></div>"
-        )
-    out = []
-    for turn in turns:
-        out.append(_message("you", turn["question"], user=True))
-        out.append(_message("physearth", turn["answer"], faulted=turn.get("faulted")))
-    return "<div class='msg-group'>%s</div>" % "".join(out)
+            )
+    else:
+        out = []
+        for turn in turns:
+            out.append(_message("you", turn["question"], user=True))
+            out.append(_message("physearth", turn["answer"], faulted=turn.get("faulted")))
+        empty = "<div class='msg-group'>%s</div>" % "".join(out)
+    return brief + empty
+
+
+def _user_body(text):
+    """Render long pasted revisions without collapsing their structure or trusting HTML."""
+    text = str(text or "")
+    lines = text.splitlines()
+    structured = (
+        len(lines) >= 8
+        or "```" in text
+        or any(line.lstrip().startswith(("format:", "plan_version:", "runs:", "charts:")) for line in lines)
+    )
+    if not structured:
+        return _paragraphs(text)
+    return (
+        "<details class='msg-paste' open><summary>Pasted revision text · %d lines</summary>"
+        "<pre>%s</pre></details>" % (len(lines), _e(text))
+    )
 
 
 def _message(who, text, user=False, running=False, faulted=False):
     # Render user text through the same small, escaped Markdown subset as answers. This
     # keeps long research questions readable and avoids exposing literal ** markers in the
     # conversation bubble.
-    body = _paragraphs(text) if user else answer_html(text, running)
+    body = _user_body(text) if user else answer_html(text, running)
     note = (
         "<span class='badge badge--warn'>not an answer</span><span class='msg__rule'></span>"
         if faulted
@@ -269,6 +438,15 @@ def live(question, answer, running=False):
     )
 
 
+def live_result(answer, running=False):
+    """Render an internal continuation without adding a synthetic user bubble."""
+    if not answer and not running:
+        return "<div class='msg-group'></div>"
+    return "<div class='msg-group'>%s</div>" % _message(
+        "physearth", answer, running=running
+    )
+
+
 # ---------------------------------------------------------------- run trace
 
 
@@ -277,6 +455,7 @@ BADGES = {
     "tool_call": ("badge--model", "TOOL", "step-card--tool"),
     "tool_start": ("badge--step", "RUNNING", "step-card--thinking"),
     "harness_block": ("badge--block", "BLOCKED", "step-card--block"),
+    "harness_warning": ("badge--warn", "WARNING", "step-card--warn"),
     "harness_pass": ("badge--ok", "PASSED", "step-card--pass"),
     "harness_stop": ("badge--warn", "STOPPED", "step-card--warn"),
     "harness_giveup": ("badge--warn", "GAVE UP", "step-card--warn"),
@@ -288,8 +467,11 @@ BADGES = {
     "approval_wait": ("badge--warn", "WAITING FOR YOU", "step-card--warn"),
     "approval": ("badge--ok", "APPROVAL", "step-card--pass"),
     "research_wait": ("badge--warn", "RESEARCH REVIEW", "step-card--warn"),
+    "research_revision": ("badge--ok", "PLAN REVISED", "step-card--pass"),
     "research_block": ("badge--block", "RESEARCH GATE", "step-card--block"),
     "research_complete": ("badge--passed", "RESEARCH COMPLETE", "step-card--passed"),
+    "tool_bypass_requested": ("badge--warn", "TOOLS DISABLED", "step-card--warn"),
+    "tool_bypass_blocked": ("badge--block", "SAFE REFUSAL", "step-card--block"),
 }
 
 APPROVAL_WORDS = {
@@ -317,6 +499,11 @@ def _disclosure(key, label, text):
 
 def _event_body(event, index):
     kind = event["kind"]
+    if kind == "research_revision":
+        return (
+            "<div class='step-card__line'>%s</div>"
+            % _e(event.get("detail") or "The research plan was revised and returned to review.")
+        )
     if kind == "model_call":
         rows = [
             (
@@ -383,6 +570,13 @@ def _event_body(event, index):
             lines.append("<div class='step-card__line'>%s</div>" % _e(event.get("detail") or ""))
         return "".join(lines)
 
+    if kind == "harness_warning":
+        return (
+            "<div class='step-card__line'>The report was delivered, but this advisory finding "
+            "may improve its scientific completeness:</div>"
+            "<div class='step-card__line'>%s</div>" % _e(event.get("detail") or "")
+        )
+
     if kind == "harness_pass":
         markers = sorted(set(event.get("markers") or []))
         chips_html = (
@@ -415,6 +609,18 @@ def _event_body(event, index):
     if kind == "approval":
         return "<div class='step-card__line'>%s</div>" % _e(
             APPROVAL_WORDS.get(event.get("decision"), event.get("decision") or "")
+        )
+
+    if kind == "tool_bypass_requested":
+        return (
+            "<div class='step-card__line'>The user explicitly asked the agent not to use "
+            "evidence or model tools.</div>"
+        )
+
+    if kind == "tool_bypass_blocked":
+        return (
+            "<div class='step-card__line'>No tool was called. The request was refused because "
+            "a scientific model claim cannot be verified with the required tools disabled.</div>"
         )
 
     if kind == "tool_start":
@@ -498,11 +704,412 @@ def _meter(label, value, cap, tone="", note=""):
     )
 
 
-def approval_bar(session):
-    """Render either the research review card or the physical-run approval gate."""
+def research_context(session):
+    """Render only the embedded research-plan/approval card.
+
+    Capability and paper progress is rendered above Conversation, not as a persistent
+    panel beside the composer.
+    """
     from physearth import approval as gate
 
+    session = session if isinstance(session, dict) else {}
+    project = session.get("research") or {}
+    waiting = gate.pending(session)
+    if session.get("approval_resuming") and waiting and not project:
+        # ``review_click`` signals the waiting agent before approval.wait() clears the
+        # pending request. Do not leave the already-approved call on screen during that
+        # small hand-off window; the next generator frame will render a genuinely pending
+        # second single-run request, if one exists.
+        return "<div class='research-context' hidden></div>"
+    if not project and not waiting:
+        return "<div class='research-context' hidden></div>"
+    return (
+        "<div class='research-context'>%s</div>"
+        % approval_bar(session)
+    )
+
+    capabilities = context.get("capabilities") or {}
+    capability_cards = []
+    for name, item in sorted(capabilities.items()):
+        options = item.get("parameter_options") or {}
+        theories = ", ".join(str(value) for value in options.get("electromagnetic_model", []))
+        microstructures = ", ".join(str(value) for value in options.get("microstructure_model", []))
+        outputs = ", ".join(str(value) for value in item.get("outputs") or []) or "not declared"
+        status = "available here" if item.get("runnable_here") else "registered, unavailable here"
+        reason = ""
+        if not item.get("runnable_here"):
+            reason = " The physical package is not installed in this environment."
+        capability_cards.append(
+            "<div class='research-capability'><b>%s v%s</b> · %s%s"
+            "<br><span>Outputs: %s</span><br><span>Theories: %s</span>"
+            "<br><span>Microstructures: %s</span></div>"
+            % (
+                _e(name),
+                _e(item.get("version", "?")),
+                _e(status),
+                _e(reason),
+                _e(outputs),
+                _e(theories or "not declared"),
+                _e(microstructures or "not declared"),
+            )
+        )
+    capability_html = (
+        "".join(capability_cards)
+        if capability_cards
+        else "<span class='badge badge--warn'>Capability check pending: the agent must call list_models.</span>"
+    )
+    instruction_names = sorted((context.get("instructions") or {}).keys())
+    resource_note = (
+        "Guideline read · model instruction read for %s · paper sections read%s"
+        % (
+            ", ".join(instruction_names) or "none yet",
+            "" if context.get("paper_session") else " pending",
+        )
+    )
+    capability_html = (
+        "<section class='research-context__capability'><div class='research-context__label'>"
+        "MODEL SUPPORT CHECK</div>%s<p class='research-context__resource'>%s</p></section>"
+        % (capability_html, _e(resource_note))
+    )
+    paper_state = _reproduction_state(session)
+    paper_status = ""
+    if paper_state:
+        paper_status = (
+            "<section class='research-context__capability'><div class='research-context__label'>"
+            "PAPER SESSION</div><p><b>Agent identified:</b> %s; source section %s; paper section %s.</p></section>"
+            % (
+                _e(paper_state.get("paper") or "pending"),
+                _e(paper_state.get("source_section") or "pending"),
+                _e(paper_state.get("paper_section") or "pending"),
+            )
+        )
+    plan_html = approval_bar(session) if project or waiting else ""
+    if not project and not waiting:
+        plan_html = (
+            "<p class='research-context__live-note'>The agent will read the required resources "
+            "and generate the research plan after you send this question.</p>"
+        )
+    live_html = (
+        "<section class='research-context__live'><div class='research-context__label'>"
+        "LIVE RESEARCH STATUS</div>%s%s%s</section>"
+        % (paper_status, capability_html, plan_html)
+    )
+    return (
+        "<div class='research-context'><div class='research-context__head'>"
+        "<span class='badge badge--model'>LIVE RESEARCH STATUS</span>"
+        "<span class='research-context__hint'>The paper brief is at the top of the conversation</span>"
+        "</div>%s</div>"
+        % live_html
+    )
+
+
+def research_status(session):
+    """Render the dynamic research status above the Conversation transcript."""
+    from physearth import approval as gate
+
+    session = session if isinstance(session, dict) else {}
+    context = session.get("research_context") or {}
+    project = session.get("research") or {}
+    paper_state = _reproduction_state(session)
+    waiting = gate.pending(session)
+    if not project and not context.get("reproduction_case") and not paper_state and not waiting:
+        return ""
+
+    capabilities = context.get("capabilities") or {}
+    capability_cards = []
+    for name, item in sorted(capabilities.items()):
+        options = item.get("parameter_options") or {}
+        theories = ", ".join(str(value) for value in options.get("electromagnetic_model", []))
+        microstructures = ", ".join(str(value) for value in options.get("microstructure_model", []))
+        outputs = ", ".join(str(value) for value in item.get("outputs") or []) or "not declared"
+        status = "available" if item.get("runnable_here") else "unavailable here"
+        capability_cards.append(
+            "<span class='conversation-research-status__model'><b>%s v%s</b> · %s · outputs: %s"
+            " · theories: %s · microstructures: %s</span>"
+            % (
+                _e(name), _e(item.get("version", "?")), _e(status), _e(outputs),
+                _e(theories or "not declared"), _e(microstructures or "not declared"),
+            )
+        )
+    instruction_names = sorted((context.get("instructions") or {}).keys())
+    resource_text = (
+        "Guideline/model instruction: %s · paper evidence: %s"
+        % (
+            ", ".join(instruction_names) or "pending",
+            "read" if context.get("paper_session") or session.get("sections_read") else "pending",
+        )
+    )
+    paper_text = ""
+    if paper_state:
+        paper_text = " · paper: %s · section: %s" % (
+            _e(paper_state.get("paper") or "pending"),
+            _e(paper_state.get("paper_section") or paper_state.get("source_section") or "pending"),
+        )
+    phase = (project.get("phase") or "resource reading") if project else "resource reading"
+    return (
+        "<details class='conversation-research-status' data-key='conversation-research-status' open>"
+        "<summary><span class='badge badge--model'>LIVE RESEARCH STATUS</span> · %s%s</summary>"
+        "<div class='conversation-research-status__body'>"
+        "<span class='conversation-research-status__label'>MODEL SUPPORT CHECK</span>"
+        "<span>%s</span>%s</div></details>"
+        % (_e(phase), paper_text, _e(resource_text), "".join(capability_cards))
+    )
+
+
+def current_activity_status(session, events=None, state=None):
+    """Render only the latest model/tool activity above the transcript."""
+    session = session if isinstance(session, dict) else {}
+    events = events or []
+    state = state if isinstance(state, dict) else {}
+    event = events[-1] if events else {}
+    kind = event.get("kind")
+    if kind == "model_call":
+        activity = "Model call"
+    elif kind in ("tool_start", "tool_call"):
+        activity = "Tool call%s" % (
+            " · %s" % event.get("name") if event.get("name") else ""
+        )
+    elif kind == "approval_wait":
+        activity = "Waiting for approval"
+    elif kind in ("harness_block", "research_block", "harness_stop"):
+        activity = "Validation stopped"
+    elif kind == "research_mode_selected":
+        activity = "Research mode selected"
+    elif state.get("phase") == "running_tool":
+        activity = "Tool call"
+    elif state.get("phase") == "calling_model":
+        activity = "Model call"
+    elif (session.get("research") or {}).get("phase") == "plan_review":
+        activity = "Waiting for plan review"
+    else:
+        activity = "Idle"
+    return (
+        "<div class='conversation-research-status' data-key='conversation-research-status' "
+        "role='status' aria-live='polite'>"
+        "<span class='badge badge--model'>LIVE RESEARCH STATUS</span>"
+        "<span class='conversation-research-status__activity'>%s</span></div>"
+        % _e(activity)
+    )
+
+
+def _plan_cell(value, limit=None):
+    if isinstance(value, (dict, list, tuple)):
+        text = json.dumps(value, ensure_ascii=False, indent=1, default=str)
+    else:
+        text = str(value if value not in (None, "") else "—")
+    if limit and len(text) > limit:
+        text = text[: limit - 1] + "…"
+    return _e(text)
+
+
+def _plan_table(headers, rows, css="research-plan-table"):
+    head = "".join("<th>%s</th>" % _e(header) for header in headers)
+    body = "".join(
+        "<tr>%s</tr>" % "".join("<td>%s</td>" % cell for cell in row)
+        for row in rows
+    )
+    return (
+        "<div class='%s-wrap'><table class='%s'><thead><tr>%s</tr></thead>"
+        "<tbody>%s</tbody></table></div>" % (css, css, head, body or "<tr><td colspan='%d'>none</td></tr>" % len(headers))
+    )
+
+
+def _plan_disclosure(title, body, open=False):
+    return (
+        "<details class='research-plan-section'%s><summary>%s</summary>"
+        "<div class='research-plan-section__body'>%s</div></details>"
+        % (" open" if open else "", _e(title), body)
+    )
+
+
+def _revision_changes_html(summary):
+    if not summary:
+        return ""
+    groups = []
+    for name, label in (("changed", "Changed"), ("added", "Added"), ("removed", "Removed")):
+        items = summary.get(name) or []
+        if not items:
+            continue
+        rows = []
+        for item in items:
+            if name == "changed":
+                text = "%s → %s" % (
+                    _plan_cell(item.get("from"), 260), _plan_cell(item.get("to"), 260)
+                )
+            else:
+                value = item.get("to") if name == "added" else item.get("from")
+                text = _plan_cell(value, 260)
+            rows.append("<li><b>%s</b><span>%s</span></li>" % (_e(item.get("field", "field")), text))
+        groups.append(
+            "<div class='research-plan-change-group'><b>%s</b><ul>%s</ul></div>"
+            % (label, "".join(rows))
+        )
+    invalidated = ", ".join(summary.get("invalidated") or []) or "none"
+    preserved = ", ".join(summary.get("preserved") or []) or "none"
+    return (
+        "<section class='research-plan-revision'>"
+        "<div class='research-context__label'>REVISION SUMMARY · v%03d → v%03d</div>"
+        "%s<div class='research-plan-revision__meta'><b>Cleared:</b> %s · <b>Preserved:</b> %s · <b>Next:</b> review plan</div>"
+        "</section>"
+        % (
+            summary.get("from_version", 0), summary.get("to_version", 0),
+            "".join(groups) or "<p>No physical fields changed.</p>",
+            _e(invalidated), _e(preserved),
+        )
+    )
+
+
+def _structured_approval_bar(session, project, research):
+    plan = project.get("plan") or {}
+    phase = project.get("phase", "plan_review")
+    phase_labels = {
+        "plan_review": "Review and revise the plan",
+        "plan_approved": "Plan approved for preview",
+        "pseudo_preview": "Review pseudo-data layout",
+        "chart_selected": "Review final figure package",
+    }
+    phase_label = phase_labels.get(phase, phase)
+    phase_index = {"plan_review": 0, "plan_approved": 1, "pseudo_preview": 2, "chart_selected": 3}.get(phase, 0)
+    flow = "".join(
+        "<span class='research-flow__step%s'>%d. %s</span>"
+        % (" is-current" if index == phase_index else "", index + 1, _e(label))
+        for index, label in enumerate(
+            ("Review plan", "Preview layout", "Confirm figures", "Approve execution", "Run real model")
+        )
+    )
+    guidance = {
+        "plan_review": "Review the method, variables, runs, and acceptance criteria. No physical result is authorized.",
+        "plan_approved": "Only a display-only preview is authorized. No physical model call is authorized.",
+        "pseudo_preview": "Pseudo-data demonstrate layout only. Select the chart package or revise the plan.",
+        "chart_selected": "The selected figure package is ready for formal execution approval.",
+    }.get(phase, "Review the current research decision before continuing.")
+    evidence_rows = [
+        [_plan_cell(item.get("evidence_ref")), _plan_cell(item.get("purpose"), 260)]
+        for item in plan.get("literature_evidence") or [] if isinstance(item, dict)
+    ]
+    target_rows = [
+        [
+            _plan_cell(item.get("id")), _plan_cell("%s:%s" % (item.get("source_type"), item.get("source_id"))),
+            _plan_cell(item.get("target_quantity")), _plan_cell(item.get("status")),
+            _plan_cell(", ".join(item.get("run_ids") or []) or "none"),
+            _plan_cell(", ".join(item.get("chart_ids") or []) or "none"),
+        ]
+        for item in plan.get("reproduction_targets") or [] if isinstance(item, dict)
+    ]
+    model_rows = [
+        [_plan_cell(item.get("model")), _plan_cell(item.get("version")), _plan_cell(item.get("purpose"), 260), _plan_cell(item.get("capability_status"))]
+        for item in plan.get("selected_models") or [] if isinstance(item, dict)
+    ]
+    mapping_rows = [
+        [_plan_cell(item.get("paper_concept")), _plan_cell(item.get("paper_value")), _plan_cell(item.get("model_input")), _plan_cell(item.get("mapped_value")), _plan_cell(item.get("provenance_class"))]
+        for item in plan.get("parameter_mapping") or [] if isinstance(item, dict)
+    ]
+    run_rows = []
+    for run in plan.get("runs") or []:
+        parameters = run.get("resolved_parameters") or run.get("parameters") or {}
+        run_rows.append([
+            _plan_cell(run.get("id")), _plan_cell(run.get("label"), 220), _plan_cell(run.get("model")),
+            _plan_cell(parameters, 520), _plan_cell(", ".join(run.get("target_ids") or []) or "none"),
+        ])
+    chart_rows = [
+        [_plan_cell(item.get("id")), _plan_cell(item.get("label"), 220), _plan_cell(item.get("x")), _plan_cell(", ".join(item.get("ys") or [item.get("y") or ""])), _plan_cell(item.get("purpose"))]
+        for item in plan.get("charts") or [] if isinstance(item, dict)
+    ]
+    condition_rows = [
+        [_e("Paper context (non-blocking)"), _plan_cell(plan.get("paper_conditions") or {})],
+        [_e("Paper context provenance"), _plan_cell(plan.get("condition_provenance") or {})],
+        [_e("User/model parameters"), _plan_cell({key: value for key, value in (plan.get("parameters") or {}).items() if key not in (plan.get("paper_conditions") or {})})],
+        [_e("Assumptions"), _plan_cell(plan.get("assumptions") or [])],
+        [_e("Limitations"), _plan_cell(plan.get("limitations") or [])],
+        [_e("Success criteria"), _plan_cell(plan.get("success_criteria") or [])],
+    ]
+    warning_rows = [
+        [
+            _plan_cell(item.get("code") or "warning"),
+            _plan_cell(item.get("field")),
+            _plan_cell(item.get("expected")),
+            _plan_cell(item.get("actual")),
+            _plan_cell("non-blocking" if item.get("blocking") is False else "blocking"),
+        ]
+        for item in plan.get("validation_warnings") or []
+        if isinstance(item, dict)
+    ]
+    chart_buttons = "".join(
+        "<button type='button' class='approve__chart%s' data-chart-id='%s'%s data-required='%s'>"
+        "<b>[%s]</b> %s <span>(%s · %s: %s → %s%s)</span></button>"
+        % (
+            " is-selected" if item.get("id") in set(project.get("selected_charts") or []) else "",
+            _e(item.get("id")), " disabled" if phase != "pseudo_preview" else "",
+            "true" if item.get("required", True) else "false", _e(item.get("id")), _e(item.get("label")),
+            _e(item.get("purpose", "result")), _e(item.get("kind")), _e(item.get("x")),
+            _e(", ".join(item.get("ys") or [item.get("y") or ""])),
+            " · required" if item.get("required", True) else " · optional",
+        )
+        for item in plan.get("charts") or []
+    ) or "none"
+    steps_html = "<ol class='research-steps'>%s</ol>" % "".join(
+        "<li>%s</li>" % _e(step) for step in (plan.get("steps") or [])
+    )
+    pseudo = project.get("pseudo") or {}
+    pseudo_html = ""
+    if pseudo.get("points"):
+        keys = list(pseudo["points"][0])
+        pseudo_html = _plan_table(
+            keys,
+            [[_plan_cell(row.get(key)) for key in keys] for row in pseudo["points"][:8]],
+            css="research-preview",
+        )
+    summary = plan.get("revision_summary") or project.get("revision_summary")
+    protocol = _e(research.protocol_yaml(project))
+    sections = (
+        _plan_disclosure(
+            "Question and hypothesis",
+            "<div class='research-plan-prose'><b>Question:</b> %s</div><div class='research-plan-prose'><b>Hypothesis:</b> %s</div>"
+            % (_e(plan.get("question", "")), _e(plan.get("hypothesis", ""))),
+            open=True,
+        )
+        + _plan_disclosure("Literature evidence", _plan_table(("Evidence", "Purpose"), evidence_rows), open=True)
+        + _plan_disclosure("Reproduction targets", _plan_table(("Target", "Source", "Quantity", "Status", "Runs", "Charts"), target_rows), open=True)
+        + _plan_disclosure("Models and paper-to-model mappings", _plan_table(("Model", "Version", "Purpose", "Status"), model_rows) + _plan_table(("Paper concept", "Paper value", "Model input", "Mapped value", "Provenance"), mapping_rows))
+        + _plan_disclosure(
+            "Validation sources and warnings",
+            "<div class='approve__note'>Registered model declarations and opened model instructions/user guidelines provide hard validity checks. Paper conditions are comparison context only.</div>"
+            + _plan_table(("Field", "Value"), condition_rows)
+            + _plan_table(("Code", "Field", "Paper context", "Actual", "Status"), warning_rows),
+        )
+        + _plan_disclosure("Planned runs", _plan_table(("ID", "Label", "Model", "Resolved parameters", "Targets"), run_rows), open=True)
+        + _plan_disclosure("Outputs and charts", _plan_table(("Chart", "Label", "X", "Y", "Purpose"), chart_rows) + "<div class='approve__note'><b>Chart options</b></div><div class='approve__charts'>%s</div>" % chart_buttons, open=True)
+        + _plan_disclosure("Preview", ("<div class='approve__note'><b>%s</b><br>Pseudo-data are deterministic layout demonstrations, not model results.</div>" % _e(pseudo.get("label", "PSEUDO-DATA · demonstration only")) + pseudo_html) if pseudo_html else "No pseudo-data preview has been generated.")
+        + "<details class='research-protocol-yaml'><summary>Raw generated protocol YAML · plan v%03d</summary><pre class='research-plan-yaml'>%s</pre><p class='approve__note'>This is a session draft for review and copying. Edit the plan in Conversation; it is never loaded as hidden instructions.</p></details>" % (project.get("plan_version", 1), protocol)
+    )
+    return (
+        "<details class='research-plan-details' data-key='research-plan' open>"
+        "<summary>Research plan · v%03d · %s</summary>"
+        "<div class='approve approve--research' data-research-phase='%s' data-selected-count='%d' data-run-count='%d' data-chart-count='%d' data-validation='evidence %d · mappings %d'>"
+        "<div class='research-plan-summary'>%d runs · %d charts · evidence %d · mappings %d</div>"
+        "<div class='approve__head'>Research review · <b>plan v%03d</b></div>"
+        "<div class='research-plan-flow'><b>Research plan flow</b><span>%s</span></div>"
+        "<div class='approve__note approve__note--guide'><b>Current stage:</b> %s. %s "
+        "<b>How to edit this plan:</b> describe the change in Conversation; the agent will create a new version. "
+        "For a figure or preview, use ‘Revise plan in chat’.</div>"
+        "%s%s<div class='research-plan-steps'><b>Execution steps</b>%s</div></div></details>"
+        % (
+            project.get("plan_version", 1), _e(phase_label), _e(phase), len(project.get("selected_charts") or []),
+            len(plan.get("runs") or []), len(plan.get("charts") or []), len(plan.get("literature_evidence") or []),
+            len(plan.get("parameter_mapping") or []), len(plan.get("runs") or []), len(plan.get("charts") or []),
+            len(plan.get("literature_evidence") or []), len(plan.get("parameter_mapping") or []), project.get("plan_version", 1), flow, _e(phase_label), _e(guidance),
+            _revision_changes_html(summary), sections, steps_html,
+        )
+    )
+
+
+def approval_bar(session):
+    """Render either the research review card or the physical-run approval gate."""
+    from physearth import approval as gate, research
+
     project = (session or {}).get("research") or {}
+    if project and project.get("phase") not in ("approved", "completed"):
+        return _structured_approval_bar(session, project, research)
     if project and project.get("phase") not in ("approved", "completed"):
         plan = project.get("plan") or {}
         phase = project.get("phase", "plan_review")
@@ -559,9 +1166,83 @@ def approval_bar(session):
         steps = "".join(
             "<li>%s</li>" % _e(step) for step in (plan.get("steps") or [])
         )
-        params = "".join(
-            "<span class='approve__p'><b>%s</b> %s</span>" % (_e(key), _e(value))
-            for key, value in sorted((plan.get("parameters") or {}).items())
+        protocol_fixed = plan.get("paper_conditions") or {}
+        condition_provenance = plan.get("condition_provenance") or {}
+        plan_parameters = plan.get("parameters") or {}
+        agent_parameters = {
+            key: value for key, value in plan_parameters.items() if key not in protocol_fixed
+        }
+        agent_assumptions = "; ".join(str(item) for item in plan.get("assumptions") or [])
+        params = (
+            "<div class='approve__p'><b>Conditions from paper sections:</b> %s</div>"
+            "<div class='approve__p'><b>Condition evidence:</b> %s</div>"
+            "<div class='approve__p'><b>Agent-selected conditions:</b> %s</div>"
+            "<div class='approve__p'><b>Agent assumptions:</b> %s</div>"
+            % (
+                _e(_mapping_text(protocol_fixed) or "not declared from the source yet"),
+                _e(_mapping_text(condition_provenance) or "not declared"),
+                _e(_mapping_text(agent_parameters) or "none outside the source conditions"),
+                _e(agent_assumptions or "none declared"),
+            )
+        )
+        evidence_items = plan.get("literature_evidence") or []
+        evidence_html = (
+            "<div class='approve__p'><b>Literature evidence:</b> %s</div>"
+            % _e(
+                "; ".join(
+                    "%s (%s)" % (item.get("evidence_ref"), item.get("purpose", "source evidence"))
+                    for item in evidence_items
+                    if isinstance(item, dict) and item.get("evidence_ref")
+                )
+                or "not declared"
+            )
+        )
+        target_items = plan.get("reproduction_targets") or []
+        target_html = (
+            "<div class='approve__p'><b>Reproduction targets:</b> %s</div>"
+            % _e(
+                "; ".join(
+                    "%s %s:%s [%s] -> runs=%s charts=%s%s"
+                    % (
+                        item.get("id"), item.get("source_type"), item.get("source_id"),
+                        item.get("status", "planned"),
+                        ",".join(item.get("run_ids") or []) or "none",
+                        ",".join(item.get("chart_ids") or []) or "none",
+                        " (%s)" % item.get("availability_reason") if item.get("availability_reason") else "",
+                    )
+                    for item in target_items
+                    if isinstance(item, dict)
+                )
+                or "none"
+            )
+        )
+        mapping_items = plan.get("parameter_mapping") or []
+        mapping_html = (
+            "<div class='approve__p'><b>Paper-to-model mapping:</b> %s</div>"
+            % _e(
+                "; ".join(
+                    "%s -> %s=%s [%s]"
+                    % (
+                        item.get("paper_concept"), item.get("model_input"),
+                        item.get("mapped_value"), item.get("provenance_class"),
+                    )
+                    for item in mapping_items
+                    if isinstance(item, dict)
+                )
+                or "not declared"
+            )
+        )
+        selected_model_items = plan.get("selected_models") or []
+        models_html = (
+            "<div class='approve__p'><b>Selected models:</b> %s</div>"
+            % _e(
+                "; ".join(
+                    "%s (%s)" % (item.get("model"), item.get("purpose", "planned"))
+                    for item in selected_model_items
+                    if isinstance(item, dict)
+                )
+                or "not declared"
+            )
         )
         gaps = plan.get("capability_gaps") or []
         scope_html = (
@@ -613,6 +1294,10 @@ def approval_bar(session):
             + "<div class='approve__note approve__note--guide'><b>Current stage:</b> %s. %s</div>"
             % (_e(phase_label), _e(review_guidance))
             + revision_html
+            + evidence_html
+            + target_html
+            + models_html
+            + mapping_html
             + scope_html
         )
         protocol_rows = "".join(
@@ -631,6 +1316,14 @@ def approval_bar(session):
         protocol_rows += (
             "<div class='research-protocol__row'><b>Baseline</b><span>%s</span></div>"
             % _e(plan.get("baseline_run_id") or "not specified")
+        )
+        generated_protocol_html = (
+            "<details class='research-protocol-yaml'><summary>Generated protocol.yaml "
+            "(session draft, plan v%03d)</summary><pre>%s</pre>"
+            "<p class='approve__note'>This YAML is generated from the current agent plan. "
+            "Edit it by describing changes in Conversation; the agent will create a new "
+            "version through research_plan(action='revise_plan').</p></details>"
+            % (project.get("plan_version", 1), _e(research.protocol_yaml(project)))
         )
         pseudo = project.get("pseudo") or {}
         pseudo_rows = pseudo.get("points") or []
@@ -666,11 +1359,21 @@ def approval_bar(session):
             )
             for item in (plan.get("charts") or [])
         )
+        evidence_count = len(plan.get("literature_evidence") or [])
+        mapping_count = len(plan.get("parameter_mapping") or [])
+        run_count = len(plan.get("runs") or [])
+        chart_count = len(plan.get("charts") or [])
+        validation_label = "evidence %d · mappings %d" % (evidence_count, mapping_count)
         return (
-            "<div class='approve approve--research' data-research-phase='%s' data-selected-count='%d'>"
+            "<details class='research-plan-details' data-key='research-plan'>"
+            "<summary>Research plan · v%03d · %s</summary>"
+            "<div class='approve approve--research' data-research-phase='%s' data-selected-count='%d' "
+            "data-run-count='%d' data-chart-count='%d' data-validation='%s'>"
+            "<div class='research-plan-summary'>%d runs · %d charts · %s</div>"
             "<div class='approve__head'>Research review · <b>%s</b> · plan v%03d</div>"
             "<div class='approve__note'>Phase: %s. No formal physical result is authorized yet.</div>"
             "<div class='research-question'><b>Question:</b> %s<br><b>Hypothesis:</b> %s</div>"
+            "%s"
             "%s"
             "<div class='research-protocol'>%s</div>"
             "<ol class='research-steps'>%s</ol>"
@@ -678,10 +1381,10 @@ def approval_bar(session):
             "%s"
             "<div class='approve__note'><b>Chart options</b></div><div class='approve__charts'>%s</div>"
             "<div class='approve__note'>必需科研图已锁定；可勾选其他可选图。确认整个图组后再批准正式计算。</div>"
-            "</div>"
-            % (_e(project.get("phase")), len(selected_ids), _e(plan.get("title", "Research plan")), project.get("plan_version", 1),
+            "</div></details>"
+            % (project.get("plan_version", 1), _e(phase_label), _e(project.get("phase")), len(selected_ids), run_count, chart_count, _e(validation_label), run_count, chart_count, _e(validation_label), _e(plan.get("title", "Research plan")), project.get("plan_version", 1),
                _e(project.get("phase")), _e(plan.get("question", "")), _e(plan.get("hypothesis", "")),
-               scope_html, protocol_rows, steps, params, pseudo_html, charts or "none")
+               scope_html, generated_protocol_html, protocol_rows, steps, params, pseudo_html, charts or "none")
         )
 
     waiting = gate.pending(session)
@@ -789,6 +1492,18 @@ def _agreement_row(values):
         for name in ("bias", "rmse", "mae", "r")
         if values.get(name) is not None
     )
+    return (
+        "<div class='fig-stats'>%s<span class='fig-stats__note'>%s against %s over %d "
+        "overlapping point(s), %g to %g</span></div>"
+        % (
+            stats,
+            _e(values.get("of", "")),
+            _e(values.get("against", "")),
+            values.get("n_points", 0),
+            (values.get("overlap") or [0, 0])[0],
+            (values.get("overlap") or [0, 0])[1],
+        )
+    )
 
 
 def _comparison_table(rows):
@@ -811,18 +1526,6 @@ def _comparison_table(rows):
         "<table><thead><tr><th>quantity</th><th>series</th><th>baseline</th>"
         "<th>bias</th><th>RMSE</th><th>MAE</th></tr></thead><tbody>%s</tbody></table></div>"
         % body
-    )
-    return (
-        "<div class='fig-stats'>%s<span class='fig-stats__note'>%s against %s over %d "
-        "overlapping point(s), %g to %g</span></div>"
-        % (
-            stats,
-            _e(values.get("of", "")),
-            _e(values.get("against", "")),
-            values.get("n_points", 0),
-            (values.get("overlap") or [0, 0])[0],
-            (values.get("overlap") or [0, 0])[1],
-        )
     )
 
 

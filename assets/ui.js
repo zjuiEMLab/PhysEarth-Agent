@@ -437,19 +437,21 @@ function peBoot() {
 
   /* ---------- keep the scrolling panes pinned to the newest content ---------- */
 
-  function scrollToEnd(node) {
-    /* Only follow the newest content when the reader is already at the bottom. Pinning
-       unconditionally makes it impossible to read back during a run. */
+  function scrollToEnd(node, force) {
+    /* Keep the latest conversation visible while respecting a reader who scrolled up
+       to inspect the paper brief or an earlier answer. */
     if (!node) return;
-    if (node.scrollHeight - node.scrollTop - node.clientHeight < 48) {
+    if (force || node.scrollHeight - node.scrollTop - node.clientHeight < 48) {
       node.scrollTop = node.scrollHeight;
     }
   }
 
   function autoScroll() {
-    scrollToEnd(document.getElementById("pe-chat-scroll"));
-    var trace = document.querySelector(".pe-panel--trace .subpanel__scroll");
-    scrollToEnd(trace);
+    /* The transcript is the left-panel scroll surface. New streamed context and review
+       cards should always leave the latest exchange visible; the plan itself is a
+       collapsible card, so this does not create a second scrollbar. */
+    scrollToEnd(document.getElementById("pe-chat-scroll"), true);
+    scrollToEnd(document.querySelector(".pe-panel--trace .subpanel__scroll"));
   }
 
   /* ---------- clicks: examples, model choice, citation jumps ---------- */
@@ -535,6 +537,8 @@ function peBoot() {
      frame is fast enough to render the question and placeholder itself. */
 
   var pendingUntil = 0;
+  var reviewInFlight = false;
+  var reviewPhaseAtClick = "";
 
   function optimisticSend() {
     var area = textarea();
@@ -564,8 +568,16 @@ function peBoot() {
 
   function syncResearchControls() {
     var card = document.querySelector(".approve--research[data-research-phase]");
-    if (!card) return;
+    if (!card) {
+      reviewInFlight = false;
+      reviewPhaseAtClick = "";
+      return;
+    }
     var phase = card.getAttribute("data-research-phase");
+    if (reviewInFlight && phase !== reviewPhaseAtClick) {
+      reviewInFlight = false;
+      reviewPhaseAtClick = "";
+    }
     var labels = {
       plan_review: ["Approve plan", "Revise in chat", "Pause"],
       plan_approved: ["Generate preview", "Revise in chat", "Pause"],
@@ -585,7 +597,7 @@ function peBoot() {
     }
     if (buttons[0]) {
       var selectedCount = Number(card.getAttribute("data-selected-count") || "0");
-      buttons[0].disabled = phase === "pseudo_preview" && selectedCount < 1;
+      buttons[0].disabled = reviewInFlight || (phase === "pseudo_preview" && selectedCount < 1);
     }
   }
 
@@ -594,6 +606,34 @@ function peBoot() {
     if (!target) return;
     if (target.id === "pe-send") optimisticSend();
     if (target.id === "pe-clear") optimisticClear();
+    if (target.id === "pe-approve-yes" || target.id === "pe-approve-all" || target.id === "pe-approve-no") {
+      var card = document.querySelector(".approve--research[data-research-phase]");
+      if (reviewInFlight) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (card) {
+        reviewInFlight = true;
+        reviewPhaseAtClick = card.getAttribute("data-research-phase") || "";
+        var reviewButtons = [
+          document.getElementById("pe-approve-yes"),
+          document.getElementById("pe-approve-all"),
+          document.getElementById("pe-approve-no")
+        ];
+        for (var r = 0; r < reviewButtons.length; r++) {
+          if (reviewButtons[r]) reviewButtons[r].disabled = true;
+        }
+        /* A lost network response must not permanently lock the review controls. */
+        setTimeout(function () {
+          if (reviewInFlight) {
+            reviewInFlight = false;
+            reviewPhaseAtClick = "";
+            syncResearchControls();
+          }
+        }, 30000);
+      }
+    }
     if (target.id === "pe-approve-all" ||
         (target.id === "pe-approve-yes" && document.querySelector("[data-research-phase='pseudo_preview']"))) {
       var researchInput = textarea();

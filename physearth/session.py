@@ -44,8 +44,14 @@ def new_session(model=None):
         "turns": 0,
         "sections_read": set(),
         "models_run": set(),
+        "models_inspected": set(),
         "datasets_read": set(),
         "skills_read": set(),
+        "research_guidelines_read": set(),
+        "model_instructions_read": set(),
+        "guidelines_read": set(),
+        "paper_figures_read": set(),
+        "paper_figures_inspected": set(),
         "abstracts_seen": set(),
         "figures": [],
         "successful_runs": [],
@@ -53,7 +59,21 @@ def new_session(model=None):
         "evidence_revision": 0,
         "handles": [],
         "corpus": {},
+        "uploaded_files": {},
+        "model_guidelines": {},
+        "temporary_models": {},
+        "temporary_model_dirs": [],
+        "temporary_github_proposals": {},
+        "research_context": {
+            "capabilities": {},
+            "instructions": {},
+            "sections": [],
+            "paper_session": {},
+        },
         "abstracts": {},
+        "evidence_ledger": [],
+        "model_declarations": {},
+        "run_parameter_resolution": {},
         "research": None,
         "max_model_calls": MAX_SESSION_MODEL_CALLS,
         "max_tool_calls": MAX_SESSION_TOOL_CALLS,
@@ -76,6 +96,10 @@ def new_state(session=None, model=None):
         "models_run": session["models_run"],
         "datasets_read": session["datasets_read"],
         "skills_read": session["skills_read"],
+        "models_inspected": session["models_inspected"],
+        "guidelines_read": session["guidelines_read"],
+        "paper_figures_read": session["paper_figures_read"],
+        "paper_figures_inspected": session["paper_figures_inspected"],
         "abstracts_seen": session["abstracts_seen"],
         "figures": [],
     }
@@ -163,10 +187,24 @@ def held_block(session):
         )
     if session["models_run"]:
         lines.append("Models already run or declared: %s." % ", ".join(sorted(session["models_run"])))
+    if session.get("models_inspected"):
+        lines.append("Model declarations already inspected: %s." % ", ".join(sorted(session["models_inspected"])))
     if session["datasets_read"]:
         lines.append("Reference datasets already read: %s." % ", ".join(sorted(session["datasets_read"])))
     if session["skills_read"]:
         lines.append("Method notes already read: %s." % ", ".join(sorted(session["skills_read"])))
+    if session.get("research_guidelines_read"):
+        lines.append("Research guidelines already read: %s." % ", ".join(sorted(session["research_guidelines_read"])))
+    if session.get("model_instructions_read"):
+        lines.append("Model instructions already read: %s." % ", ".join(sorted(session["model_instructions_read"])))
+    evidence = (session.get("research_context") or {}).get("paper_evidence") or []
+    if evidence:
+        lines.append(
+            "Paper evidence opened for reproduction: %s."
+            % ", ".join(str(item.get("reference")) for item in evidence[-12:] if item.get("reference"))
+        )
+    if session.get("evaluation_model"):
+        lines.append("Temporary Evaluation preferred physical model: %s." % session["evaluation_model"])
     ingested = session.get("corpus") or {}
     if ingested:
         lines.append(
@@ -211,6 +249,26 @@ def held_block(session):
                 ", ".join(selected_ids) or "none",
             )
         )
+        targets = plan.get("reproduction_targets") or []
+        if targets:
+            lines.append(
+                "Reproduction targets: %s. Every target must remain linked to a planned run or chart."
+                % "; ".join(
+                    "%s (%s:%s)" % (item.get("id"), item.get("source_type"), item.get("source_id"))
+                    for item in targets[:12]
+                )
+            )
+        mappings = plan.get("parameter_mapping") or []
+        if mappings:
+            lines.append(
+                "Paper-to-model mappings: %s."
+                % "; ".join(
+                    "%s -> %s [%s]" % (
+                        item.get("paper_concept"), item.get("model_input"), item.get("provenance_class")
+                    )
+                    for item in mappings[:16]
+                )
+            )
     handles = session["handles"][-MAX_HELD_HANDLES:]
     if handles:
         lines.append("Live result handles, oldest first:")

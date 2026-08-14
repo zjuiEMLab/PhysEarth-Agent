@@ -1,6 +1,7 @@
 name: smrt
 version: "1.5.1"
-tier: demo
+tier: local
+requires_import: smrt
 entrypoint: adapter:run
 license: LGPL-3.0
 citation: >-
@@ -11,6 +12,9 @@ description: >-
   Snow Microwave Radiative Transfer. Computes brightness temperature and backscatter from a
   homogeneous snow layer using a choice of electromagnetic theory and microstructure
   representation. Documented by the smrt-v1 paper in the literature corpus.
+instruction_id: smrt
+instruction_version: "1.0"
+instruction_path: model_guideline.md
 
 parameters:
   electromagnetic_model:
@@ -22,8 +26,11 @@ parameters:
   microstructure_model:
     type: string
     unit: none
-    description: Representation of the snow microstructure.
-    enum: [exponential, sticky_hard_spheres, independent_sphere, teubner_strey, gaussian_random_field]
+    description: >-
+      Representation of the snow microstructure. non_sticky_hard_spheres is the
+      none-sticky limit of SMRT's sticky-hard-sphere implementation and is translated
+      by the local adapter to stickiness=infinity.
+    enum: [exponential, sticky_hard_spheres, non_sticky_hard_spheres, independent_sphere, teubner_strey, gaussian_random_field]
     default: exponential
   output:
     type: string
@@ -144,10 +151,11 @@ parameters:
 
 combinations:
   - when: {electromagnetic_model: [dmrt_qca_shortrange, dmrt_qcacp_shortrange]}
-    allow: {microstructure_model: [sticky_hard_spheres]}
+    allow: {microstructure_model: [sticky_hard_spheres, non_sticky_hard_spheres]}
     reason: >-
-      DMRT is derived for sticky hard spheres only; pairing it with another microstructure
-      representation has no analytical basis in SMRT.
+      DMRT is implemented for the sticky-hard-sphere family, including its none-sticky
+      limit; pairing it with an autocorrelation-function microstructure has no analytical
+      basis in SMRT.
   - when: {microstructure_model: [exponential, teubner_strey, gaussian_random_field]}
     allow: {electromagnetic_model: [iba, iba_original, symsce_torquato21]}
     reason: >-

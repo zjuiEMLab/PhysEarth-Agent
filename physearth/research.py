@@ -6,12 +6,14 @@ submitted a structured proposal through the research_plan tool.
 """
 
 import copy
+import json
 import math
 import re
 
+import yaml
+
 from physearth import audit, knowledge, plotting, reproduction, validation
 from physearth.models import registry
-
 
 PHASES = (
     "plan_review",
@@ -21,6 +23,842 @@ PHASES = (
     "approved",
     "completed",
 )
+
+PARAMETER_PROVENANCE = (
+    "paper_explicit",
+    "paper_inferred",
+    "user_specified",
+    "model_assumption",
+    "backend_default",
+)
+
+
+def is_reproduction_question(question):
+    """Return whether the question asks for evidence-led paper reproduction.
+
+    SMRT evaluation cases remain available through ``reproduction.identify``.  This
+    generic detector makes the workflow useful for other registered Earth-science
+    models without adding a model-specific protocol to the prompt.
+    """
+    if reproduction.identify(question):
+        return True
+    text = re.sub(r"\s+", " ", str(question or "").lower())
+    return bool(
+        re.search(r"\b(?:reproduce|reproduced|reproduction|replicate|replicated|replication|recreate|recreated)\b", text)
+        and re.search(r"\b(?:paper|article|study|literature|published|figure|table|result)\b", text)
+    )
+
+
+def _clean_records(values, limit=32):
+    if isinstance(values, dict):
+        values = [values]
+    elif isinstance(values, str):
+        values = [{"reference": item} for item in _clean_list(values)]
+    return [dict(item) for item in (values or []) if isinstance(item, dict)][:limit]
+
+
+def _clean_literature_evidence(values):
+    cleaned = []
+    for item in _clean_records(values):
+        reference = str(
+            item.get("evidence_ref")
+            or item.get("reference")
+            or item.get("citation")
+            or item.get("source_ref")
+            or ""
+        ).strip()
+        if not reference:
+            continue
+        record = dict(item)
+        record["evidence_ref"] = reference
+        record["purpose"] = str(item.get("purpose") or item.get("role") or "source evidence").strip()
+        cleaned.append(record)
+    return cleaned
+
+
+def _clean_reproduction_targets(values):
+    cleaned = []
+    for index, item in enumerate(_clean_records(values)):
+        record = dict(item)
+        source_type = str(
+            item.get("source_type") or item.get("kind") or item.get("type") or "result"
+        ).strip().lower()
+        source_id = str(
+            item.get("source_id")
+            or item.get("figure_id")
+            or item.get("table_id")
+            or item.get("result_id")
+            or item.get("identifier")
+            or ""
+        ).strip()
+        evidence = item.get("evidence_refs") or item.get("evidence_ref") or item.get("evidence") or []
+        if isinstance(evidence, str):
+            evidence = [evidence]
+        run_ids = item.get("run_ids") or item.get("runs") or []
+        chart_ids = item.get("chart_ids") or item.get("charts") or []
+        if isinstance(run_ids, str):
+            run_ids = _clean_list(run_ids)
+        if isinstance(chart_ids, str):
+            chart_ids = _clean_list(chart_ids)
+        covered_by = item.get("covered_by")
+        if isinstance(covered_by, dict):
+            run_ids = list(run_ids) + list(covered_by.get("run_ids") or covered_by.get("runs") or [])
+            chart_ids = list(chart_ids) + list(covered_by.get("chart_ids") or covered_by.get("charts") or [])
+        record.update(
+            {
+                "id": str(item.get("id") or "target_%d" % (index + 1)).strip(),
+                "source_type": source_type,
+                "source_id": source_id,
+                "target_quantity": str(
+                    item.get("target_quantity") or item.get("quantity") or item.get("output") or ""
+                ).strip(),
+                "evidence_refs": [str(ref).strip() for ref in evidence if str(ref).strip()],
+                "expected_comparison": str(
+                    item.get("expected_comparison") or item.get("comparison") or ""
+                ).strip(),
+                "status": str(item.get("status") or "planned").strip().lower(),
+                "availability_reason": str(
+                    item.get("availability_reason") or item.get("reason") or ""
+                ).strip(),
+                "run_ids": [str(run_id).strip() for run_id in run_ids if str(run_id).strip()],
+                "chart_ids": [str(chart_id).strip() for chart_id in chart_ids if str(chart_id).strip()],
+            }
+        )
+        cleaned.append(record)
+    return cleaned
+
+
+def _clean_selected_models(values, runs=None, derive=True):
+    cleaned = []
+    raw_values = [{"model": values}] if isinstance(values, str) else (values or [])
+    for item in raw_values:
+        record = {"model": item} if isinstance(item, str) else dict(item) if isinstance(item, dict) else {}
+        if not record.get("model") and record.get("name"):
+            record["model"] = record["name"]
+        if record.get("model"):
+            record["model"] = str(record["model"]).strip()
+            cleaned.append(record)
+    if not cleaned and derive:
+        names = []
+        for run in runs or []:
+            name = str(run.get("model") or "").strip()
+            if name and name not in names:
+                names.append(name)
+        cleaned = [{"model": name, "purpose": "planned model"} for name in names]
+    return cleaned[:24]
+
+
+def _enrich_selected_models(session, values):
+    capabilities = ((session or {}).get("research_context") or {}).get("capabilities") or {}
+    instructions = ((session or {}).get("research_context") or {}).get("instructions") or {}
+    enriched = []
+    for item in values or []:
+        record = dict(item)
+        model = record.get("model")
+        capability = capabilities.get(model) or {}
+        instruction = instructions.get(model) or {}
+        record.setdefault("version", capability.get("version"))
+        record.setdefault(
+            "capability_status",
+            "runnable" if capability.get("runnable_here") else "unavailable",
+        )
+        record.setdefault(
+            "instruction_ref",
+            "guideline:%s@%s" % (model, instruction.get("version") or capability.get("instruction_version") or "1.0"),
+        )
+        enriched.append(record)
+    return enriched
+
+
+def _clean_parameter_mapping(values):
+    cleaned = []
+    for item in _clean_records(values, 64):
+        record = dict(item)
+        model_input = str(
+            item.get("model_input")
+            or item.get("model_parameter")
+            or item.get("input")
+            or item.get("parameter")
+            or ""
+        ).strip()
+        provenance = str(
+            item.get("provenance_class") or item.get("provenance") or item.get("source_type") or ""
+        ).strip().lower()
+        evidence_ref = str(
+            item.get("evidence_ref") or item.get("source_ref") or item.get("citation") or ""
+        ).strip()
+        record.update(
+            {
+                "paper_concept": str(
+                    item.get("paper_concept") or item.get("paper_parameter") or item.get("concept") or ""
+                ).strip(),
+                "paper_value": item.get("paper_value", item.get("source_value")),
+                "model_input": model_input,
+                "mapped_value": item.get("mapped_value", item.get("model_value")),
+                "units": str(item.get("units") or item.get("unit") or "").strip(),
+                "provenance_class": provenance,
+                "evidence_ref": evidence_ref,
+                "rationale": str(item.get("rationale") or item.get("reason") or "").strip(),
+            }
+        )
+        cleaned.append(record)
+    return cleaned
+
+
+def _clean_outputs(values):
+    if isinstance(values, dict):
+        values = [values]
+    if isinstance(values, str):
+        return _clean_list(values, 24)
+    return [dict(item) if isinstance(item, dict) else str(item).strip() for item in (values or []) if str(item).strip()][:24]
+
+
+def _normalise_evidence_ref(value):
+    text = str(value or "").strip().strip("[]")
+    text = re.sub(r"^(?:paper|figure|table|result):", "", text, flags=re.I)
+    return text.replace("#fig-", "#")
+
+
+def _read_evidence_refs(session):
+    sections = {_normalise_evidence_ref(item) for item in (session or {}).get("sections_read") or ()}
+    figures = {_normalise_evidence_ref(item) for item in (session or {}).get("paper_figures_read") or ()}
+    skill_refs = set()
+    for item in (session or {}).get("evidence_ledger") or ():
+        if not isinstance(item, dict):
+            continue
+        reference = _normalise_evidence_ref(item.get("reference"))
+        if item.get("kind") == "section" and reference:
+            sections.add(reference)
+            if item.get("source") == "skill":
+                skill_refs.add(reference)
+        elif item.get("kind") in ("figure", "figure_inspection") and reference and item.get("asset_available", True) is not False:
+            figures.add(reference)
+    sections -= skill_refs
+    return sections, figures
+
+
+def _target_coverage(targets, runs, charts):
+    run_ids = {run.get("id") for run in runs}
+    chart_ids = {chart.get("id") for chart in charts}
+    problems = []
+    linked_runs = {run_id: [] for run_id in run_ids}
+    linked_charts = {chart_id: [] for chart_id in chart_ids}
+    for target in targets:
+        target_id = target.get("id") or "target"
+        bad_runs = sorted(set(target.get("run_ids") or ()) - run_ids)
+        bad_charts = sorted(set(target.get("chart_ids") or ()) - chart_ids)
+        if bad_runs:
+            problems.append("target %s references unknown run_ids: %s" % (target_id, ", ".join(bad_runs)))
+        if bad_charts:
+            problems.append("target %s references unknown chart_ids: %s" % (target_id, ", ".join(bad_charts)))
+        if target.get("status") not in ("partial", "unavailable") and not target.get("run_ids") and not target.get("chart_ids"):
+            problems.append("target %s has no run_ids or chart_ids coverage" % target_id)
+        if target.get("status") in ("partial", "unavailable") and not target.get("availability_reason"):
+            problems.append("target %s is %s without an availability_reason" % (target_id, target.get("status")))
+        for run_id in target.get("run_ids") or ():
+            if run_id in linked_runs:
+                linked_runs[run_id].append(target_id)
+        for chart_id in target.get("chart_ids") or ():
+            if chart_id in linked_charts:
+                linked_charts[chart_id].append(target_id)
+    return problems, linked_runs, linked_charts
+
+
+def _ledger_entries(session, kind=None):
+    return [
+        item for item in (session or {}).get("evidence_ledger") or ()
+        if isinstance(item, dict) and (kind is None or item.get("kind") == kind)
+    ]
+
+
+def _repair_item(field, before, after, reason, provenance=None):
+    item = {
+        "field": field,
+        "from": before,
+        "to": after,
+        "reason": reason,
+    }
+    if provenance:
+        item["provenance"] = provenance
+    return item
+
+
+def _model_parameter_spec(session, model, name):
+    declaration = ((session or {}).get("model_declarations") or {}).get(model) or {}
+    return (declaration.get("parameters") or {}).get(name) or {}
+
+
+def _parameter_resolution_by_run(parameter_resolution, runs):
+    by_run = {
+        item.get("run_id"): item for item in (parameter_resolution or ())
+        if isinstance(item, dict) and item.get("run_id")
+    }
+    # Revisions from older sessions may not have the resolution ledger.  Treat the
+    # stored parameters as requested in that case; this preserves the reviewed values
+    # and still lets the validator report any missing metadata.
+    for run in runs or ():
+        run_id = run.get("id")
+        if run_id not in by_run:
+            params = dict(run.get("parameters") or {})
+            by_run[run_id] = {
+                "run_id": run_id,
+                "model": run.get("model"),
+                "requested_parameters": dict(params),
+                "resolved_parameters": dict(params),
+                "defaulted_parameters": [],
+            }
+    return by_run
+
+
+def _same_value(left, right):
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return math.isclose(float(left), float(right), rel_tol=1e-9, abs_tol=1e-12)
+    return left == right
+
+
+def _mark_user_revised_inputs(plan, before_plan, changes):
+    """Mark run parameters changed through a user revision as user-specified."""
+    revised_runs = changes.get("runs")
+    if not isinstance(revised_runs, list):
+        return
+    before_runs = {
+        str(item.get("id")): item
+        for item in before_plan.get("runs") or []
+        if isinstance(item, dict) and item.get("id")
+    }
+    changed_inputs = set()
+    for run in revised_runs:
+        if not isinstance(run, dict) or not run.get("id"):
+            continue
+        old = before_runs.get(str(run.get("id"))) or {}
+        old_parameters = old.get("parameters") or {}
+        for name, value in (run.get("parameters") or {}).items():
+            if not _same_value(old_parameters.get(name), value):
+                changed_inputs.add(name)
+    if not changed_inputs:
+        return
+    for mapping in plan.get("parameter_mapping") or []:
+        if mapping.get("model_input") not in changed_inputs:
+            continue
+        mapping["provenance_class"] = "user_specified"
+        mapping["rationale"] = (
+            "This input was changed in the user-approved revision; any paper value "
+            "remains comparison context rather than a model-validity constraint."
+        )
+
+
+def _repair_reproduction_metadata(
+    session,
+    question,
+    literature_evidence,
+    reproduction_targets,
+    selected_models,
+    parameter_mapping,
+    outputs,
+    runs,
+    charts,
+    paper_conditions,
+    condition_provenance,
+    parameter_resolution,
+):
+    """Complete review metadata from resources actually opened in this session.
+
+    This function deliberately does not author physical runs.  It only binds an LLM
+    proposal to evidence, declared inputs, and deterministic coverage relationships.
+    Every change is returned for the plan-review card.
+    """
+    if not is_reproduction_question(question):
+        return (
+            literature_evidence, reproduction_targets, selected_models,
+            parameter_mapping, outputs, paper_conditions, condition_provenance,
+            [], [], [],
+        )
+
+    repairs = []
+    problems = []
+    sections, figures = _read_evidence_refs(session)
+    inspectable_figures = {
+        _normalise_evidence_ref(item.get("reference"))
+        for item in _ledger_entries(session, "figure")
+        if item.get("asset_available", True) is not False and item.get("reference")
+    }
+    inspected_figures = {
+        _normalise_evidence_ref(item.get("reference"))
+        for item in _ledger_entries(session, "figure_inspection")
+        if item.get("analysis_status") not in ("unavailable",) and item.get("reference")
+    }
+    ledger_sections = _ledger_entries(session, "section")
+    ledger_figures = _ledger_entries(session, "figure") + _ledger_entries(session, "figure_inspection")
+    opened = []
+    seen = set()
+    for item in ledger_sections + ledger_figures:
+        if item.get("kind") == "section" and item.get("source") == "skill":
+            continue
+        if item.get("kind") == "figure" and item.get("asset_available", True) is False:
+            continue
+        ref = _normalise_evidence_ref(item.get("reference"))
+        if ref and ref not in seen:
+            opened.append(item)
+            seen.add(ref)
+
+    literature_evidence = list(literature_evidence or ())
+    if not literature_evidence and opened:
+        literature_evidence = [
+            {
+                "evidence_ref": _normalise_evidence_ref(item.get("reference")),
+                "purpose": "paper evidence read during reproduction analysis",
+                "source": item.get("source", "session evidence ledger"),
+                "title": item.get("title", ""),
+            }
+            for item in opened
+        ]
+        repairs.append(_repair_item(
+            "literature_evidence", [], literature_evidence,
+            "bind the proposal to paper sections or figures opened in this session",
+            "session_evidence_ledger",
+        ))
+
+    case_id = reproduction.identify(question)
+    paper_session = ((session or {}).get("research_context") or {}).get("paper_session") or {}
+    relevant_refs = [
+        _normalise_evidence_ref(item.get("reference"))
+        for item in opened
+        if item.get("reference")
+    ]
+    if case_id and not relevant_refs:
+        relevant_refs = [
+            _normalise_evidence_ref(item)
+            for item in (session or {}).get("sections_read") or ()
+            if _normalise_evidence_ref(item)
+        ]
+    paper_slug = paper_session.get("paper_slug") or paper_session.get("paper")
+    if paper_slug:
+        paper_refs = [
+            _normalise_evidence_ref(item.get("reference"))
+            for item in opened
+            if item.get("paper") == paper_slug
+        ]
+        if paper_refs:
+            relevant_refs = paper_refs
+    if case_id:
+        case_ref = _normalise_evidence_ref((reproduction.CASES.get(case_id) or {}).get("section"))
+        if case_ref and case_ref in sections:
+            relevant_refs = [case_ref]
+
+    reproduction_targets = list(reproduction_targets or ())
+    if case_id == "q1" and not reproduction_targets and relevant_refs:
+        # The bundled reference includes the result prose but no Figure 3 asset.  A
+        # section-level target is honest and reviewable; it must not pretend to be a
+        # pixel-level source-figure reproduction.
+        target_quantity = next(
+            (chart.get("y") for chart in charts or () if chart.get("y")),
+            next((str(value) for value in outputs or () if not isinstance(value, dict)), "first-order scattering coefficient"),
+        )
+        reproduction_targets.append(
+            {
+                "id": "section-3.1.1-sparse-medium",
+                "source_type": "result",
+                "source_id": "section-3.1.1-sparse-medium",
+                "target_quantity": target_quantity,
+                "evidence_refs": [relevant_refs[0]],
+                "expected_comparison": (
+                    "Compare model-generated first-order scattering behavior across the "
+                    "planned theory and microstructure runs with the result described in "
+                    "the paper section."
+                ),
+                "status": "partial" if not figures else "planned",
+                "availability_reason": (
+                    "The bundled paper has section text but no extracted Figure 3 asset; "
+                    "pixel-level source-figure comparison is unavailable."
+                    if not figures else ""
+                ),
+                "run_ids": [],
+                "chart_ids": [],
+            }
+        )
+        repairs.append(_repair_item(
+            "reproduction_targets", [], reproduction_targets,
+            "create a section-level Q1 result target from the opened paper evidence; no bundled Figure 3 asset is available",
+            "paper_section_result",
+        ))
+
+    for index, target in enumerate(reproduction_targets):
+        refs = [_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()]
+        if not refs and relevant_refs:
+            before = list(refs)
+            target["evidence_refs"] = [relevant_refs[0]]
+            repairs.append(_repair_item(
+                "reproduction_targets[%d].evidence_refs" % index,
+                before, target["evidence_refs"],
+                "attach the target to evidence already opened in this session",
+                "session_evidence_ledger",
+            ))
+        elif refs:
+            target["evidence_refs"] = refs
+
+        if (
+            case_id == "q1"
+            and target.get("source_type") == "figure"
+            and not set(target.get("evidence_refs") or ()).intersection(figures)
+        ):
+            before = dict(target)
+            target["source_type"] = "result"
+            target["source_id"] = "section-3.1.1-sparse-medium"
+            section_evidence = [ref for ref in relevant_refs if ref in sections]
+            if section_evidence:
+                target["evidence_refs"] = [section_evidence[0]]
+            target["status"] = "partial"
+            target["availability_reason"] = (
+                "The bundled paper does not contain an extracted Figure 3 asset; "
+                "the section-level result can be compared, but pixel-level figure "
+                "reproduction is unavailable."
+            )
+            repairs.append(_repair_item(
+                "reproduction_targets[%d]" % index,
+                before, target,
+                "downgrade an unavailable bundled source figure to the section-level result actually read",
+                "paper_section_result",
+            ))
+
+    if not selected_models:
+        seen_models = set()
+        derived = []
+        for run in runs or ():
+            model = str(run.get("model") or "").strip()
+            if model and model not in seen_models:
+                seen_models.add(model)
+                derived.append({"model": model, "purpose": "model used by the submitted reproduction runs"})
+        if derived:
+            selected_models = derived
+            repairs.append(_repair_item(
+                "selected_models", [], selected_models,
+                "derive model identities from already submitted runs; capabilities remain session-gated",
+                "submitted_run_models",
+            ))
+
+    if not outputs:
+        derived_outputs = []
+        for chart in charts or ():
+            derived_outputs.extend(chart.get("ys") or ([chart.get("y")] if chart.get("y") else []))
+        for run in runs or ():
+            output = (run.get("parameters") or {}).get("output")
+            if output:
+                derived_outputs.append(output)
+        outputs = _clean_outputs(sorted(set(str(item) for item in derived_outputs if item)))
+        if outputs:
+            repairs.append(_repair_item(
+                "outputs", [], outputs,
+                "derive compared outputs from declared charts and run inputs",
+                "submitted_plan_fields",
+            ))
+
+    # Add only deterministic target coverage.  Physical runs and chart definitions are
+    # never modified; only their relationship to a target is recorded.
+    for index, target in enumerate(reproduction_targets):
+        if target.get("run_ids") or target.get("chart_ids"):
+            continue
+        quantity = str(target.get("target_quantity") or "").lower()
+        output_names = {
+            str(value.get("name") or value.get("output") or "").lower()
+            for value in outputs or () if isinstance(value, dict)
+        }
+        output_names.update(str(value).lower() for value in outputs or () if not isinstance(value, dict))
+        target_outputs = {
+            item for item in output_names
+            if item and (item in quantity or quantity in item)
+        }
+        chart_ids = [
+            chart.get("id") for chart in charts or ()
+            if target_outputs.intersection({str(item).lower() for item in (chart.get("ys") or [chart.get("y")]) if item})
+        ]
+        if not chart_ids:
+            chart_ids = [chart.get("id") for chart in charts or () if chart.get("purpose") in ("result", "comparison")]
+        run_ids = [
+            run.get("id") for run in runs or ()
+            if not target_outputs or str((run.get("parameters") or {}).get("output") or "").lower() in target_outputs
+        ]
+        if run_ids or chart_ids:
+            target["run_ids"] = [item for item in run_ids if item]
+            target["chart_ids"] = [item for item in chart_ids if item]
+            repairs.append(_repair_item(
+                "reproduction_targets[%d].coverage" % index,
+                {"run_ids": [], "chart_ids": []},
+                {"run_ids": target["run_ids"], "chart_ids": target["chart_ids"]},
+                "link the target to compatible declared run outputs and result charts",
+                "deterministic_plan_coverage",
+            ))
+
+    by_run = _parameter_resolution_by_run(parameter_resolution, runs)
+    mappings = list(parameter_mapping or ())
+    mapped = {item.get("model_input") for item in mappings if item.get("model_input")}
+    paper_conditions = dict(paper_conditions or {})
+    condition_provenance = dict(condition_provenance or {})
+    # A paper mapping with a valid evidence reference is sufficient to expose the
+    # condition in the plan, but not to change the resolved run value.
+    for item in mappings:
+        model_input = item.get("model_input")
+        provenance = item.get("provenance_class")
+        evidence_ref = _normalise_evidence_ref(item.get("evidence_ref"))
+        if (
+            model_input and provenance in ("paper_explicit", "paper_inferred")
+            and evidence_ref and evidence_ref in sections | figures
+            and model_input not in paper_conditions
+            and item.get("mapped_value") is not None
+        ):
+            paper_conditions[model_input] = item.get("mapped_value")
+            condition_provenance[model_input] = evidence_ref
+            repairs.append(_repair_item(
+                "paper_conditions.%s" % model_input,
+                None, item.get("mapped_value"),
+                "promote an evidence-backed paper mapping into the explicit condition ledger",
+                provenance,
+            ))
+
+    for run in runs or ():
+        run_id = run.get("id")
+        resolution = by_run.get(run_id) or {}
+        requested = resolution.get("requested_parameters") or {}
+        resolved = resolution.get("resolved_parameters") or run.get("parameters") or {}
+        defaulted = set(resolution.get("defaulted_parameters") or ())
+        for model_input, value in resolved.items():
+            if model_input in mapped:
+                continue
+            spec = _model_parameter_spec(session, run.get("model"), model_input)
+            units = spec.get("unit", "") if isinstance(spec, dict) else ""
+            evidence_ref = _normalise_evidence_ref(condition_provenance.get(model_input))
+            if model_input in paper_conditions:
+                provenance = "paper_explicit" if evidence_ref in sections | figures else "paper_inferred"
+                paper_value = paper_conditions.get(model_input)
+                rationale = "Paper condition mapped to the registered model input."
+            elif model_input in defaulted:
+                provenance = "backend_default"
+                paper_value = None
+                rationale = "The registered model inserted this value during parameter resolution; it is not paper evidence."
+                evidence_ref = ""
+            else:
+                provenance = "model_assumption"
+                paper_value = None
+                rationale = "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+                evidence_ref = ""
+            mapping = {
+                "paper_concept": model_input,
+                "paper_value": paper_value,
+                "model_input": model_input,
+                "mapped_value": value,
+                "units": units,
+                "provenance_class": provenance,
+                "evidence_ref": evidence_ref,
+                "rationale": rationale,
+            }
+            mappings.append(mapping)
+            mapped.add(model_input)
+            repairs.append(_repair_item(
+                "parameter_mapping.%s" % model_input,
+                None, mapping,
+                "map every resolved run input to an exact declared model parameter",
+                provenance,
+            ))
+
+    # Paper conditions describe the source experiment; they are not model-validity
+    # constraints.  A user may deliberately extend a paper sweep while remaining inside
+    # the registered model declaration.  Keep the mismatch auditable as a warning and
+    # never let an LLM-derived paper conclusion block that exploratory revision.
+    context_warnings = []
+    for run in runs or ():
+        for key, expected in paper_conditions.items():
+            actual = (run.get("parameters") or {}).get(key)
+            if actual is not None and not _same_value(actual, expected):
+                warning = {
+                    "code": "paper_context_difference",
+                    "field": "runs[%s].parameters.%s" % (run.get("id"), key),
+                    "source": "paper_conditions.%s" % key,
+                    "expected": expected,
+                    "actual": actual,
+                    "repair": "none",
+                    "provenance": condition_provenance.get(key) or "paper evidence",
+                    "category": "paper_context",
+                    "blocking": False,
+                    "message": (
+                        "The run differs from the paper reference condition; it is an "
+                        "exploratory extension and is not an exact reproduction of that "
+                        "source condition."
+                    ),
+                }
+                context_warnings.append(warning)
+                # A revised value is user-controlled even if the original mapping came
+                # from the paper. Preserve the paper value for comparison context, but
+                # do not mislabel the effective run input as paper_explicit.
+                for mapping in mappings:
+                    if mapping.get("model_input") != key:
+                        continue
+                    if mapping.get("provenance_class") in ("paper_explicit", "paper_inferred"):
+                        mapping["provenance_class"] = "user_specified"
+                        mapping["rationale"] = (
+                            "The user extended this experiment beyond the paper condition; "
+                            "the paper value remains comparison context."
+                        )
+
+    # Add evidence references to paper mappings only when they are actually available.
+    for index, item in enumerate(mappings):
+        if item.get("provenance_class") in ("paper_explicit", "paper_inferred") and not item.get("evidence_ref") and relevant_refs:
+            item["evidence_ref"] = relevant_refs[0]
+            repairs.append(_repair_item(
+                "parameter_mapping[%d].evidence_ref" % index,
+                "", relevant_refs[0],
+                "attach a paper mapping to the opened section evidence",
+                item.get("provenance_class"),
+            ))
+    return (
+        literature_evidence, reproduction_targets, selected_models,
+        mappings, outputs, paper_conditions, condition_provenance,
+        repairs, problems, context_warnings,
+    )
+
+
+def _evidence_problem_summary(question, problems):
+    label = "Q1" if reproduction.identify(question) == "q1" else "Reproduction"
+    evidence = sum(
+        1 for item in problems
+        if any(token in str(item.get("field", "")) for token in ("evidence", "literature"))
+    )
+    coverage = sum(
+        1 for item in problems
+        if "coverage" in str(item.get("field", ""))
+        or str(item.get("field", "")).startswith("reproduction_targets")
+    )
+    mappings = sum(1 for item in problems if "mapping" in str(item.get("field", "")))
+    return "%s plan incomplete: %d evidence issue(s), %d target coverage issue(s), and %d parameter mapping issue(s)." % (
+        label, evidence, coverage, mappings
+    )
+
+
+def _evidence_plan_problems(session, question, literature_evidence, reproduction_targets,
+                            selected_models, parameter_mapping, outputs, runs, charts,
+                            parameter_resolution=None):
+    if not is_reproduction_question(question):
+        return []
+    problems = []
+    sections, figures = _read_evidence_refs(session)
+    inspectable_figures = {
+        _normalise_evidence_ref(item.get("reference"))
+        for item in _ledger_entries(session, "figure")
+        if item.get("asset_available", True) is not False and item.get("reference")
+    }
+    inspected_figures = {
+        _normalise_evidence_ref(item.get("reference"))
+        for item in _ledger_entries(session, "figure_inspection")
+        if item.get("analysis_status") not in ("unavailable",) and item.get("reference")
+    }
+    if not sections:
+        problems.append({
+            "field": "literature_evidence",
+            "source": "session.sections_read",
+            "expected": "at least one opened paper section",
+            "repair": "Call read_literature for the relevant paper section before proposing the plan.",
+        })
+    if not literature_evidence:
+        problems.append({
+            "field": "literature_evidence",
+            "source": "research_plan",
+            "expected": "opened section/figure references",
+            "repair": "Add the paper section references and explain their role in the reproduction.",
+        })
+    for index, item in enumerate(literature_evidence):
+        ref = _normalise_evidence_ref(item.get("evidence_ref"))
+        if ref and ref not in sections and ref not in figures:
+            problems.append({
+                "field": "literature_evidence[%d].evidence_ref" % index,
+                "source": ref,
+                "expected": "a section or source figure opened in this session",
+                "repair": "Read the cited section or figure, then use its returned citation reference.",
+            })
+    if not reproduction_targets:
+        problems.append({
+            "field": "reproduction_targets",
+            "source": "research_plan",
+            "expected": "at least one figure, table, or result target",
+            "repair": "Record the paper result to reproduce, its evidence references, and its planned coverage.",
+        })
+    for index, target in enumerate(reproduction_targets):
+        prefix = "reproduction_targets[%d]" % index
+        if not target.get("source_id"):
+            problems.append({"field": prefix + ".source_id", "source": "research_plan", "expected": "figure/table/result identifier", "repair": "Add the identifier from the paper."})
+        if not target.get("target_quantity"):
+            problems.append({"field": prefix + ".target_quantity", "source": "research_plan", "expected": "quantity or result being reproduced", "repair": "Name the paper quantity or result."})
+        if not target.get("expected_comparison"):
+            problems.append({"field": prefix + ".expected_comparison", "source": "research_plan", "expected": "comparison intent", "repair": "Explain how the model output will be compared with the paper result."})
+        refs = {_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()}
+        if not refs:
+            problems.append({"field": prefix + ".evidence_refs", "source": "research_plan", "expected": "opened paper evidence", "repair": "Read and cite the relevant section, figure, or table."})
+        elif not refs.intersection(sections | figures):
+            problems.append({"field": prefix + ".evidence_refs", "source": ", ".join(sorted(refs)), "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."})
+        if (
+            target.get("source_type") == "figure"
+            and not refs.intersection(figures)
+            and target.get("status") not in ("partial", "unavailable")
+        ):
+            problems.append({"field": prefix + ".evidence_refs", "source": "paper_figures_read", "expected": "source figure opened with read_paper_figure", "repair": "Call read_paper_figure before proposing the reproduction."})
+        if (
+            target.get("source_type") == "figure"
+            and refs.intersection(inspectable_figures)
+            and not refs.intersection(inspected_figures)
+            and target.get("status") not in ("partial", "unavailable")
+        ):
+            problems.append({
+                "field": prefix + ".figure_inspection",
+                "source": ", ".join(sorted(refs.intersection(inspectable_figures))),
+                "expected": "visual inspection of the opened source figure",
+                "repair": "Call inspect_paper_figure after read_paper_figure and record axes, legends, panels, and qualitative trends; do not digitize curves automatically.",
+            })
+    if not selected_models:
+        problems.append({"field": "selected_models", "source": "research_plan", "expected": "each model used for reproduction", "repair": "List the selected model and its purpose after list_models/read_model_instruction."})
+    planned_models = {str(run.get("model") or "").strip() for run in runs}
+    selected_names = {str(item.get("model") or "").strip() for item in selected_models}
+    for model in sorted(planned_models - selected_names):
+        problems.append({"field": "selected_models", "source": model, "expected": "model used by a planned run", "repair": "Add this model to selected_models with its capability and instruction provenance."})
+    if not parameter_mapping:
+        problems.append({"field": "parameter_mapping", "source": "research_plan", "expected": "paper-to-model parameter mappings", "repair": "Map paper concepts to exact registered model input names and mark their provenance."})
+    mapped_inputs = {item.get("model_input") for item in parameter_mapping if item.get("model_input")}
+    declared_inputs = set()
+    for model_name in planned_models | selected_names:
+        entry = registry.get(model_name, session)
+        if entry:
+            declared_inputs.update((entry.card.get("parameters") or {}).keys())
+    for index, item in enumerate(parameter_mapping):
+        prefix = "parameter_mapping[%d]" % index
+        if not item.get("paper_concept"):
+            problems.append({"field": prefix + ".paper_concept", "source": "research_plan", "expected": "paper-side concept", "repair": "Name the concept used by the paper."})
+        if not item.get("model_input"):
+            problems.append({"field": prefix + ".model_input", "source": "research_plan", "expected": "exact registered model input", "repair": "Use the parameter name returned by list_models."})
+        provenance = item.get("provenance_class")
+        if provenance not in PARAMETER_PROVENANCE:
+            problems.append({"field": prefix + ".provenance_class", "source": provenance or "missing", "expected": ", ".join(PARAMETER_PROVENANCE), "repair": "Choose one provenance class and explain the mapping."})
+        if not item.get("rationale"):
+            problems.append({"field": prefix + ".rationale", "source": "research_plan", "expected": "mapping rationale", "repair": "Explain how the paper value becomes the model input value."})
+        if item.get("model_input") and declared_inputs and item.get("model_input") not in declared_inputs:
+            problems.append({"field": prefix + ".model_input", "source": item.get("model_input"), "expected": "a parameter returned by list_models", "repair": "Replace it with the exact registered input name."})
+        if provenance in ("paper_explicit", "paper_inferred") and not item.get("evidence_ref"):
+            problems.append({"field": prefix + ".evidence_ref", "source": provenance, "expected": "paper evidence reference", "repair": "Attach the opened section, figure, or table reference."})
+    run_inputs = {
+        key for run in runs for key in (run.get("parameters") or {}).keys()
+    }
+    missing_inputs = sorted(run_inputs - mapped_inputs)
+    if missing_inputs:
+        defaulted = {
+            key for item in (parameter_resolution or ())
+            for key in (item.get("defaulted_parameters") or ())
+        }
+        unresolved = sorted(set(missing_inputs) - defaulted)
+        if unresolved:
+            problems.append({"field": "parameter_mapping", "source": ", ".join(unresolved), "expected": "mapping or explicitly declared assumption for every run input", "repair": "Add one mapping entry per run parameter, including output and sweep controls.", "blocking": True})
+        for name in sorted(set(missing_inputs) & defaulted):
+            problems.append({"field": "parameter_mapping.%s" % name, "source": "backend default", "expected": "an auditable backend_default mapping or an explicit paper/user value", "repair": "Review the inserted default and confirm it is acceptable; do not treat it as paper evidence.", "provenance": "backend_default", "blocking": False})
+    coverage_problems, _, _ = _target_coverage(reproduction_targets, runs, charts)
+    for problem in coverage_problems:
+        problems.append({"field": "reproduction_targets.coverage", "source": "runs/charts", "expected": "known run_ids or chart_ids", "repair": problem})
+    if not outputs:
+        problems.append({"field": "outputs", "source": "research_plan", "expected": "model outputs used to evaluate the target", "repair": "Declare the quantities/outputs that will be compared."})
+    return problems
 
 
 def _clean_list(values, limit=20):
@@ -48,7 +886,7 @@ def _repair_missing_protocol_steps(steps, runs, charts):
 
     before = list(steps)
     defaults = [
-        "Verify the cited reference protocol, registered-model capabilities, controlled conditions, and baseline configuration.",
+        "Verify the cited paper evidence, registered-model capabilities, controlled conditions, and baseline configuration.",
         "Execute every declared baseline, main, and diagnostic physical-model run with output and numerical quality control.",
         "Render the required figures from actual outputs, calculate the declared comparison metrics, review figure quality, and report conclusions and limitations.",
     ]
@@ -97,65 +935,119 @@ def _clean_charts(charts):
 
 
 def _repair_sweep_bounds(model, parameters, card):
-    """Clamp only sweep bounds to an already-declared physical parameter range.
+    """Leave sweep bounds unchanged so the registered validator can reject invalid input.
 
-    This does not invent physics: the model chose the parameter and interval, while the
-    registered capability declaration supplies the hard legal bounds. The exact change is
-    retained for human review. Ordinary fixed parameter values remain strict failures.
+    Sweep bounds are user-authored physical conditions, not metadata that the planner may
+    silently rewrite. The model contract remains the sole source of the hard range check;
+    keeping the original values also makes the structured error actionable.
     """
-    repaired = dict(parameters)
-    sweep = repaired.get("sweep_parameter")
-    target = (card.get("parameters") or {}).get(sweep)
-    if sweep in (None, "none") or not target or target.get("type") not in ("number", "integer"):
-        return repaired, []
-    changes = []
-    low, high = target.get("minimum"), target.get("maximum")
-    for field in ("sweep_start", "sweep_stop"):
-        value = repaired.get(field)
-        if not isinstance(value, (int, float)):
-            continue
-        bounded = max(low, min(high, value))
-        if bounded != value:
-            repaired[field] = int(bounded) if target.get("type") == "integer" else float(bounded)
-            changes.append(
-                {
-                    "field": field,
-                    "from": value,
-                    "to": repaired[field],
-                    "reason": "%s sweep bound was clamped to the declared %s range" % (model, sweep),
-                }
-            )
-    return repaired, changes
+    return dict(parameters), []
+
+
+def _run_validation_details(model, parameters, problems, card):
+    """Convert model-contract failures into field/source/action records for the UI."""
+    details = []
+    declared = card.get("parameters") or {}
+    for message in problems:
+        text = str(message)
+        field = text.split(" = ", 1)[0].split(" must", 1)[0].split(" is", 1)[0].strip()
+        spec = declared.get(field) or {}
+        expected = "registered model declaration"
+        if field in ("sweep_start", "sweep_stop"):
+            sweep = parameters.get("sweep_parameter")
+            target = declared.get(sweep) or {}
+            expected = ("%s to %s %s" % (
+                target.get("minimum"), target.get("maximum"), target.get("unit", "")
+            )).strip()
+        elif spec.get("minimum") is not None and spec.get("maximum") is not None:
+            expected = ("%s to %s %s" % (
+                spec.get("minimum"), spec.get("maximum"), spec.get("unit", "")
+            )).strip()
+        elif spec.get("enum"):
+            expected = "one of %s" % ", ".join(map(str, spec.get("enum")))
+        details.append(
+            {
+                "field": field or "parameters",
+                "source": "registered_model_declaration",
+                "expected": expected,
+                "actual": parameters.get(field),
+                "repair": "Use a value accepted by the registered model declaration; do not infer a limit from paper text.",
+                "provenance": "registered_model_declaration",
+                "blocking": True,
+                "message": text,
+            }
+        )
+    return details
 
 
 def _clean_runs(runs):
     cleaned = []
     problems = []
+    problem_details = []
     repairs = []
+    resolutions = []
     for index, run in enumerate(runs or []):
         if not isinstance(run, dict):
-            problems.append("planned run %d is not an object" % (index + 1))
+            message = "planned run %d is not an object" % (index + 1)
+            problems.append(message)
+            problem_details.append({
+                "field": "runs[%d]" % index,
+                "source": "research_plan",
+                "expected": "run object",
+                "actual": type(run).__name__,
+                "repair": "Submit the affected run as an object with model and parameters.",
+                "blocking": True,
+                "message": message,
+            })
             continue
         model = str(run.get("model") or "").strip()
         entry = registry.get(model)
         if entry is None:
-            problems.append("planned run %d uses unknown model %r" % (index + 1, model))
+            message = "planned run %d uses unknown model %r" % (index + 1, model)
+            problems.append(message)
+            problem_details.append({
+                "field": "runs[%d].model" % index,
+                "source": "registered_model_registry",
+                "expected": "a registered model name",
+                "actual": model,
+                "repair": "Call list_models and choose a registered model.",
+                "blocking": True,
+                "message": message,
+            })
             continue
+        requested_parameters = dict(run.get("parameters") or {})
         parameters, bound_repairs = _repair_sweep_bounds(
-            model, dict(run.get("parameters") or {}), entry.card
+            model, requested_parameters, entry.card
         )
         for repair in bound_repairs:
             repairs.append({"run_id": str(run.get("id") or "run_%d" % (index + 1)), **repair})
         resolved, run_problems = validation.resolve(entry.card, parameters, enforce=True)
         if run_problems:
             problems.extend("planned run %d: %s" % (index + 1, item) for item in run_problems)
+            for detail in _run_validation_details(model, parameters, run_problems, entry.card):
+                detail["field"] = "runs[%d].parameters.%s" % (index, detail["field"])
+                problem_details.append(detail)
             continue
+        run_id = str(run.get("id") or "run_%d" % (index + 1)).strip()
+        defaulted_parameters = sorted(set(resolved) - set(requested_parameters))
+        resolutions.append(
+            {
+                "run_id": run_id,
+                "model": model,
+                "requested_parameters": requested_parameters,
+                "resolved_parameters": dict(resolved),
+                "defaulted_parameters": defaulted_parameters,
+            }
+        )
         cleaned.append(
             {
-                "id": str(run.get("id") or "run_%d" % (index + 1)).strip(),
+                "id": run_id,
                 "label": str(run.get("label") or "%s run" % model).strip(),
                 "model": model,
                 "parameters": resolved,
+                "requested_parameters": requested_parameters,
+                "resolved_parameters": dict(resolved),
+                "defaulted_parameters": defaulted_parameters,
                 "stage": str(run.get("stage") or "main").strip(),
             }
         )
@@ -164,8 +1056,18 @@ def _clean_runs(runs):
     # dropping later runs changes the reviewed experiment and makes chart validation
     # inexplicable. Keep a generous explicit ceiling instead.
     if len(cleaned) > 24:
-        problems.append("a proposal may contain at most 24 physical-model runs")
-    return cleaned[:24], problems, repairs
+        message = "a proposal may contain at most 24 physical-model runs"
+        problems.append(message)
+        problem_details.append({
+            "field": "runs",
+            "source": "research_plan",
+            "expected": "at most 24 physical-model runs",
+            "actual": len(cleaned),
+            "repair": "Remove unneeded runs or split the experiment into a new reviewed plan.",
+            "blocking": True,
+            "message": message,
+        })
+    return cleaned[:24], problems, repairs, resolutions[:24], problem_details
 
 
 def propose(
@@ -186,6 +1088,13 @@ def propose(
     diagnostics=None,
     stop_conditions=None,
     baseline_run_id="",
+    paper_conditions=None,
+    condition_provenance=None,
+    literature_evidence=None,
+    reproduction_targets=None,
+    selected_models=None,
+    parameter_mapping=None,
+    outputs=None,
 ):
     """Store an LLM-authored proposal; never infer one from a question template."""
     question = str(question or "").strip()
@@ -196,7 +1105,7 @@ def propose(
     hypothesis = str(hypothesis or "").strip()
     steps = _clean_list(steps)
     charts = _clean_charts(charts)
-    runs, run_problems, run_repairs = _clean_runs(runs)
+    runs, run_problems, run_repairs, parameter_resolution, run_problem_details = _clean_runs(runs)
     quantities = _clean_list(quantities, 12)
     controls = _clean_list(controls, 12)
     metrics = _clean_list(metrics, 12)
@@ -206,6 +1115,18 @@ def propose(
     assumptions = _clean_list(assumptions, 12)
     limitations = _clean_list(limitations, 12)
     baseline_run_id = str(baseline_run_id or "").strip()
+    paper_conditions = dict(paper_conditions or {})
+    condition_provenance = dict(condition_provenance or {})
+    literature_evidence = _clean_literature_evidence(literature_evidence)
+    reproduction_targets = _clean_reproduction_targets(reproduction_targets)
+    selected_models = _clean_selected_models(
+        selected_models,
+        runs,
+        derive=not is_reproduction_question(question),
+    )
+    selected_models = _enrich_selected_models(session, selected_models)
+    parameter_mapping = _clean_parameter_mapping(parameter_mapping)
+    outputs = _clean_outputs(outputs)
     if not question or not objective or not hypothesis:
         return _fail("A proposal requires question, objective and hypothesis.")
     if not charts:
@@ -215,7 +1136,7 @@ def propose(
             "The proposed execution plan is invalid: %s" % "; ".join(run_problems),
             {
                 "error_code": "run_validation",
-                "problems": run_problems,
+                "problems": run_problem_details,
                 "repair_hints": [
                     "Use only model/microstructure combinations declared by list_models.",
                     "Do not preserve an invalid same-microstructure comparison by silently changing physics; remove the incompatible run or choose a declared compatible formulation.",
@@ -236,26 +1157,38 @@ def propose(
                 ],
             },
         )
-    reference_repairs = reproduction.repair(question, runs, charts)
-    reproduction_case, reproduction_problems = reproduction.validate(
-        question, runs, charts, limitations
+    # Paper reproduction is evidence-led.  The agent derives conditions and runs from the
+    # literature sections it actually read; this validator never loads a pre-authored
+    # protocols.yaml or silently repairs the proposal into a benchmark matrix.
+    reference_repairs = []
+    reproduction_case = reproduction.identify(question)
+    paper_session = (session.get("research_context") or {}).get("paper_session") or {}
+    paper_section = paper_session.get("paper_section")
+    (
+        literature_evidence,
+        reproduction_targets,
+        selected_models,
+        parameter_mapping,
+        outputs,
+        paper_conditions,
+        condition_provenance,
+        metadata_repairs,
+        metadata_problems,
+        context_warnings,
+    ) = _repair_reproduction_metadata(
+        session,
+        question,
+        literature_evidence,
+        reproduction_targets,
+        selected_models,
+        parameter_mapping,
+        outputs,
+        runs,
+        charts,
+        paper_conditions,
+        condition_provenance,
+        parameter_resolution,
     )
-    if reproduction_problems:
-        return _fail(
-            "The proposed plan does not reproduce the paper's %s protocol: %s"
-            % (reproduction_case.upper(), "; ".join(reproduction_problems)),
-            {
-                "error_code": "reference_protocol_mismatch",
-                "case_id": reproduction_case,
-                "reference_section": reproduction.CASES[reproduction_case]["section"],
-                "problems": reproduction_problems,
-                "repair_hints": [
-                    "Keep the independent variable and common physical conditions from the paper section.",
-                    "Use separate passive, active, coefficient, and solver-diagnostic runs when their outputs differ.",
-                    "Declare unavailable external reference models as a partial reproduction; never replace them with another SMRT run.",
-                ],
-            },
-        )
     quality_problems = []
     for label, values in (
         ("quantities of interest", quantities),
@@ -269,17 +1202,115 @@ def propose(
     ):
         if not values:
             quality_problems.append(label)
+    if reproduction_case:
+        if not paper_conditions:
+            quality_problems.append("paper_conditions copied from the read paper evidence")
+        if not condition_provenance:
+            quality_problems.append("condition_provenance for the paper-derived conditions")
+        else:
+            missing_provenance = sorted(
+                set(paper_conditions) - set(condition_provenance)
+            )
+            if missing_provenance:
+                quality_problems.append(
+                    "condition_provenance for %s" % ", ".join(missing_provenance)
+                )
+    for problem in metadata_problems:
+        if problem.get("blocking", True):
+            quality_problems.append(
+                "%s (expected %r; repair: %s)"
+                % (problem.get("field"), problem.get("expected"), problem.get("repair"))
+            )
+    blocking_metadata_problems = [
+        item for item in metadata_problems if item.get("blocking", True)
+    ]
+    if blocking_metadata_problems:
+        return _fail(
+            "The reproduction proposal conflicts with a paper-derived condition: %s"
+            % "; ".join(problem.get("field", "unknown") for problem in blocking_metadata_problems),
+            {
+                "error_code": "paper_condition_conflict",
+                "stage": "parameter_mapping",
+                "problems": blocking_metadata_problems,
+                "automatic_repairs": metadata_repairs,
+                "repair_hints": [problem.get("repair") for problem in blocking_metadata_problems if problem.get("repair")],
+            },
+        )
     run_ids = [run["id"] for run in runs]
     if baseline_run_id not in run_ids:
         quality_problems.append("baseline_run_id naming one planned run")
     if quality_problems:
+        provenance_missing = any(
+            item.startswith("paper_conditions") or item.startswith("condition_provenance")
+            for item in quality_problems
+        )
         return _fail(
             "The proposal is a computation checklist, not yet a scientific protocol. Add: %s."
-            % ", ".join(quality_problems)
+            % ", ".join(quality_problems),
+            {
+                "error_code": (
+                    "paper_condition_provenance_missing"
+                    if provenance_missing
+                    else "plan_quality"
+                ),
+                "problems": quality_problems,
+                "repair_hints": [
+                    (
+                        "Read the relevant paper section and add paper_conditions plus "
+                        "condition_provenance before resubmitting the generated protocol."
+                        if provenance_missing
+                        else "Complete every required research-protocol field and resubmit the proposal."
+                    )
+                ],
+            },
         )
+    evidence_problems = _evidence_plan_problems(
+        session,
+        question,
+        literature_evidence,
+        reproduction_targets,
+        selected_models,
+        parameter_mapping,
+        outputs,
+        runs,
+        charts,
+        parameter_resolution,
+    )
+    evidence_problems.extend(blocking_metadata_problems)
+    nonblocking_evidence_warnings = [
+        item for item in evidence_problems if not item.get("blocking", True)
+    ]
+    if evidence_problems and any(item.get("blocking", True) for item in evidence_problems):
+        return _fail(
+            _evidence_problem_summary(
+                question,
+                [item for item in evidence_problems if item.get("blocking", True)],
+            ),
+            {
+                "error_code": "reproduction_evidence_incomplete",
+                "stage": "reproduction_metadata",
+                "problem_count": sum(1 for item in evidence_problems if item.get("blocking", True)),
+                "automatic_repairs": metadata_repairs,
+                "problems": evidence_problems,
+                "repair_hints": [item.get("repair") for item in evidence_problems if item.get("repair")],
+            },
+        )
+    coverage_problems, linked_runs, linked_charts = _target_coverage(
+        reproduction_targets, runs, charts
+    )
+    if not coverage_problems:
+        for run in runs:
+            run["target_ids"] = sorted(
+                set(run.get("target_ids") or ()) | set(linked_runs.get(run["id"]) or ())
+            )
+        for chart in charts:
+            chart["target_ids"] = sorted(
+                set(chart.get("target_ids") or ()) | set(linked_charts.get(chart["id"]) or ())
+            )
     automatic_repairs = list(run_repairs)
     automatic_repairs.extend(structural_repairs)
     automatic_repairs.extend(reference_repairs)
+    automatic_repairs.extend(metadata_repairs)
     automatic_repairs.extend(_repair_required_companion_outputs(question, charts, runs))
     automatic_repairs.extend(_repair_sampling_density(charts, runs))
     automatic_repairs.extend(_repair_chart_axes(charts, runs))
@@ -327,12 +1358,21 @@ def propose(
             % "; ".join(coverage_problems)
         )
     plan = {
+        "plan_version": 1,
         "title": objective,
         "question": question,
         "objective": objective,
         "hypothesis": hypothesis,
         "steps": steps,
         "parameters": dict(parameters or {}),
+        "paper_conditions": paper_conditions,
+        "condition_provenance": condition_provenance,
+        "literature_evidence": literature_evidence,
+        "reproduction_targets": reproduction_targets,
+        "selected_models": selected_models,
+        "parameter_mapping": parameter_mapping,
+        "parameter_resolution": parameter_resolution,
+        "outputs": outputs,
         "runs": runs,
         "charts": charts,
         "quantities": quantities,
@@ -345,10 +1385,12 @@ def propose(
         "limitations": limitations,
         "baseline_run_id": baseline_run_id,
         "automatic_repairs": automatic_repairs,
+        "validation_warnings": list(context_warnings) + nonblocking_evidence_warnings,
         "capability_gaps": _capability_gaps(question),
         "reproduction_case": reproduction_case,
-        "reference_sections": [reproduction.CASES[reproduction_case]["section"]]
-        if reproduction_case else [],
+        "reference_sections": sorted(session.get("sections_read") or ()),
+        "reference_paper_sections": [paper_section] if paper_section else [],
+        "approval_state": "plan_review",
     }
     plan["outcome_scope"] = "partial" if plan["capability_gaps"] else "full"
     session["research"] = {
@@ -361,6 +1403,7 @@ def propose(
         "pseudo": None,
         "preview_version": 0,
         "review_log": [],
+        "execution_resume_sent": False,
         "proposed_by": "llm",
     }
     summary = "LLM-authored research plan v001 is ready for human review."
@@ -379,12 +1422,116 @@ def status(session):
     return _ok("Research project is in phase %s." % project["phase"], _public(project))
 
 
+_REVISION_FIELDS = (
+    "objective", "hypothesis", "steps", "parameters", "paper_conditions",
+    "condition_provenance", "literature_evidence", "reproduction_targets",
+    "selected_models", "parameter_mapping", "outputs", "runs", "charts",
+    "quantities", "controls", "metrics", "diagnostics", "success_criteria",
+    "stop_conditions", "assumptions", "limitations", "baseline_run_id",
+)
+_REVISION_SENTINEL = object()
+
+
+def _revision_value(plan, field):
+    value = plan
+    for part in str(field).split("."):
+        if not isinstance(value, dict) or part not in value:
+            return _REVISION_SENTINEL
+        value = value[part]
+    return value
+
+
+def _revision_value_text(value, limit=220):
+    if value is _REVISION_SENTINEL:
+        return "<missing>"
+    if isinstance(value, (dict, list, tuple)):
+        text = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    else:
+        text = str(value)
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _revision_diff(before, after, requested):
+    """Return a compact, field-level diff while preserving full plan values elsewhere."""
+    fields = []
+    for key, value in (requested or {}).items():
+        if key in {"note", "reason"} or value is None:
+            continue
+        if key == "parameters" and isinstance(value, dict):
+            fields.extend("parameters.%s" % name for name in value)
+        elif key not in _REVISION_FIELDS:
+            fields.append("parameters.%s" % key)
+        else:
+            fields.append(key)
+
+    changed = []
+    added = []
+    removed = []
+    for field in dict.fromkeys(fields):
+        old = _revision_value(before, field)
+        new = _revision_value(after, field)
+        if old == new:
+            continue
+        item = {"field": field, "from": None if old is _REVISION_SENTINEL else old,
+                "to": None if new is _REVISION_SENTINEL else new}
+        if old is _REVISION_SENTINEL or old in (None, "", [], {}):
+            added.append(item)
+        elif new is _REVISION_SENTINEL or new in (None, "", [], {}):
+            removed.append(item)
+        else:
+            changed.append(item)
+
+    preserved = [
+        field for field in ("runs", "charts", "literature_evidence", "reproduction_targets",
+                            "selected_models", "outputs")
+        if _revision_value(before, field) == _revision_value(after, field)
+    ]
+    return {"changed": changed, "added": added, "removed": removed, "preserved": preserved}
+
+
+def revision_summary_text(summary):
+    """Plain-text status for a successful revision; it contains no new scientific claim."""
+    if not summary:
+        return "The research plan was revised. Review the updated plan before continuing."
+    changes = []
+    for group in ("changed", "added", "removed"):
+        for item in summary.get(group) or []:
+            if group == "changed":
+                changes.append(
+                    "%s: %s -> %s" % (
+                        item.get("field"), _revision_value_text(item.get("from")),
+                        _revision_value_text(item.get("to")),
+                    )
+                )
+            else:
+                value = item.get("to") if group == "added" else item.get("from")
+                changes.append("%s %s: %s" % (group[:-1], item.get("field"), _revision_value_text(value)))
+    changed_text = "; ".join(changes) if changes else "no physical fields changed"
+    preserved = ", ".join(summary.get("preserved") or []) or "none"
+    invalidated = ", ".join(summary.get("invalidated") or []) or "none"
+    return (
+        "Plan revised from v%03d to v%03d. Changes: %s. Preserved: %s. "
+        "Cleared: %s. Validation passed. Review the updated plan before approving it again."
+        % (
+            summary.get("from_version", 0), summary.get("to_version", 0),
+            changed_text, preserved, invalidated,
+        )
+    )
+
+
 def revise(session, changes=None, note=""):
     project = _require(session)
     changes = dict(changes or {})
+    before_plan = copy.deepcopy(project["plan"])
+    before_plan.pop("revision_summary", None)
     plan = copy.deepcopy(project["plan"])
+    plan.pop("revision_summary", None)
     known_fields = {
         "objective", "hypothesis", "steps", "charts", "runs", "parameters",
+        "paper_conditions", "condition_provenance",
+        "literature_evidence", "reproduction_targets", "selected_models",
+        "parameter_mapping", "outputs",
         "quantities", "controls", "metrics", "diagnostics", "success_criteria",
         "stop_conditions", "assumptions", "limitations", "baseline_run_id",
     }
@@ -398,6 +1545,22 @@ def revise(session, changes=None, note=""):
                 plan["title"] = plan[key]
     if isinstance(changes.get("parameters"), dict):
         plan.setdefault("parameters", {}).update(changes["parameters"])
+    if isinstance(changes.get("paper_conditions"), dict):
+        plan["paper_conditions"] = dict(changes["paper_conditions"])
+    if isinstance(changes.get("condition_provenance"), dict):
+        plan["condition_provenance"] = dict(changes["condition_provenance"])
+    if "literature_evidence" in changes:
+        plan["literature_evidence"] = _clean_literature_evidence(changes.get("literature_evidence"))
+    if "reproduction_targets" in changes:
+        plan["reproduction_targets"] = _clean_reproduction_targets(changes.get("reproduction_targets"))
+    if "selected_models" in changes:
+        plan["selected_models"] = _clean_selected_models(
+            changes.get("selected_models"), plan.get("runs"), derive=False
+        )
+    if "parameter_mapping" in changes:
+        plan["parameter_mapping"] = _clean_parameter_mapping(changes.get("parameter_mapping"))
+    if "outputs" in changes:
+        plan["outputs"] = _clean_outputs(changes.get("outputs"))
     # Also accept parameter keys directly for concise model tool calls. Explicit plan
     # fields remain reserved, so they cannot be confused with model parameters.
     for key, value in changes.items():
@@ -411,10 +1574,18 @@ def revise(session, changes=None, note=""):
             raise ValueError("A revised plan requires at least one chart option.")
         plan["charts"] = charts
     if "runs" in changes and changes["runs"] is not None:
-        runs, problems, repairs = _clean_runs(changes["runs"])
+        runs, problems, repairs, resolutions, problem_details = _clean_runs(changes["runs"])
         if problems or not runs:
-            raise ValueError("Invalid revised runs: %s" % "; ".join(problems or ["none supplied"]))
+            return _fail(
+                "Invalid revised runs: %s" % "; ".join(problems or ["none supplied"]),
+                {
+                    "error_code": "run_validation",
+                    "problems": problem_details,
+                    "repair_hints": [item.get("repair") for item in problem_details if item.get("repair")],
+                },
+            )
         plan["runs"] = runs
+        plan["parameter_resolution"] = resolutions
         if repairs:
             plan.setdefault("automatic_repairs", []).extend(
                 {"run_id": repair.get("run_id"), **{k: v for k, v in repair.items() if k != "run_id"}}
@@ -438,8 +1609,109 @@ def revise(session, changes=None, note=""):
         raise ValueError("A revised plan must keep both an objective and a hypothesis.")
     if not plan.get("steps") or len(plan["steps"]) < 3:
         raise ValueError("A revised plan requires at least three executable research steps.")
+    plan["literature_evidence"] = _clean_literature_evidence(plan.get("literature_evidence"))
+    plan["reproduction_targets"] = _clean_reproduction_targets(plan.get("reproduction_targets"))
+    plan["selected_models"] = _enrich_selected_models(
+        session,
+        _clean_selected_models(plan.get("selected_models"), plan.get("runs"), derive=False),
+    )
+    plan["parameter_mapping"] = _clean_parameter_mapping(plan.get("parameter_mapping"))
+    plan["outputs"] = _clean_outputs(plan.get("outputs"))
+    (
+        plan["literature_evidence"],
+        plan["reproduction_targets"],
+        plan["selected_models"],
+        plan["parameter_mapping"],
+        plan["outputs"],
+        plan["paper_conditions"],
+        plan["condition_provenance"],
+        metadata_repairs,
+        metadata_problems,
+        context_warnings,
+    ) = _repair_reproduction_metadata(
+        session,
+        plan.get("question", project.get("question", "")),
+        plan.get("literature_evidence"),
+        plan.get("reproduction_targets"),
+        plan.get("selected_models"),
+        plan.get("parameter_mapping"),
+        plan.get("outputs"),
+        plan.get("runs") or [],
+        plan.get("charts") or [],
+        plan.get("paper_conditions") or {},
+        plan.get("condition_provenance") or {},
+        plan.get("parameter_resolution") or [],
+    )
+    # An explicit user deletion is different from an omitted field in an LLM
+    # proposal.  Preserve the review contract: a user cannot approve a revision
+    # after intentionally deleting every mapping; ask them to restore the metadata.
+    if "parameter_mapping" in changes and not changes.get("parameter_mapping") and is_reproduction_question(plan.get("question", project.get("question", ""))):
+        plan["parameter_mapping"] = []
+        metadata_repairs = [
+            item for item in metadata_repairs
+            if not str(item.get("field", "")).startswith("parameter_mapping")
+        ]
+        metadata_problems.append({
+            "field": "parameter_mapping",
+            "source": "user revision",
+            "expected": "one auditable mapping for every resolved run input",
+            "repair": "Restore the mappings or revise individual entries without deleting the complete mapping set.",
+            "provenance": "user_specified",
+            "blocking": True,
+        })
+    _mark_user_revised_inputs(plan, before_plan, changes)
+    plan.setdefault("automatic_repairs", []).extend(metadata_repairs)
+    evidence_problems = _evidence_plan_problems(
+        session,
+        plan.get("question", project.get("question", "")),
+        plan.get("literature_evidence"),
+        plan.get("reproduction_targets"),
+        plan.get("selected_models"),
+        plan.get("parameter_mapping"),
+        plan.get("outputs"),
+        plan.get("runs") or [],
+        plan.get("charts") or [],
+        plan.get("parameter_resolution") or [],
+    )
+    blocking_metadata_problems = [
+        item for item in metadata_problems if item.get("blocking", True)
+    ]
+    evidence_problems.extend(blocking_metadata_problems)
+    nonblocking_evidence_warnings = [
+        item for item in evidence_problems if not item.get("blocking", True)
+    ]
+    if evidence_problems and any(item.get("blocking", True) for item in evidence_problems):
+        return _fail(
+            _evidence_problem_summary(
+                plan.get("question", project.get("question", "")),
+                [item for item in evidence_problems if item.get("blocking", True)],
+            ),
+            {
+                "error_code": "reproduction_evidence_incomplete",
+                "stage": "reproduction_metadata",
+                "problem_count": sum(1 for item in evidence_problems if item.get("blocking", True)),
+                "automatic_repairs": metadata_repairs,
+                "problems": evidence_problems,
+                "repair_hints": [item.get("repair") for item in evidence_problems if item.get("repair")],
+            },
+        )
+    targets = plan.get("reproduction_targets") or []
+    coverage_problems, linked_runs, linked_charts = _target_coverage(
+        targets, plan.get("runs") or [], plan.get("charts") or []
+    )
+    if not coverage_problems:
+        for run in plan.get("runs") or []:
+            run["target_ids"] = sorted(
+                set(run.get("target_ids") or ()) | set(linked_runs.get(run.get("id")) or ())
+            )
+        for chart in plan.get("charts") or []:
+            chart["target_ids"] = sorted(
+                set(chart.get("target_ids") or ()) | set(linked_charts.get(chart.get("id")) or ())
+            )
     project["plan_version"] += 1
     project["plan"] = plan
+    project["plan"]["plan_version"] = project["plan_version"]
+    project["plan"]["approval_state"] = "plan_review"
     project["review_log"].append(
         {
             "version": project["plan_version"],
@@ -448,11 +1720,25 @@ def revise(session, changes=None, note=""):
         }
     )
     project["phase"] = "plan_review"
+    plan["validation_warnings"] = list(context_warnings) + nonblocking_evidence_warnings
     project["selected_chart"] = None
     project["selected_charts"] = []
     project["pseudo"] = None
+    project["execution_resume_sent"] = False
     _clear_previews(session)
-    return _needs("Plan revised to v%03d. Review it again." % project["plan_version"], _public(project))
+    summary = _revision_diff(before_plan, plan, changes)
+    summary.update(
+        {
+            "from_version": project["plan_version"] - 1,
+            "to_version": project["plan_version"],
+            "invalidated": ["pseudo_preview", "chart_selection", "execution_approval"],
+            "validation": "passed",
+            "next_phase": "plan_review",
+        }
+    )
+    plan["revision_summary"] = summary
+    project["revision_summary"] = summary
+    return _needs(revision_summary_text(summary), {**_public(project), "revision_summary": summary})
 
 
 def revise_after_figure_quality(session, chart_id, issues=None):
@@ -637,6 +1923,8 @@ def revise_after_figure_quality(session, chart_id, issues=None):
             },
         )
     project["plan_version"] += 1
+    plan["plan_version"] = project["plan_version"]
+    project["execution_resume_sent"] = False
     plan.setdefault("automatic_repairs", []).extend(repairs)
     requires_human_review = coefficient_solver_axis
     project["review_log"].append(
@@ -770,6 +2058,7 @@ def revise_after_run_failures(session, failures):
                 plan["parameters"]["radius_m"] = new_radius
 
     project["plan_version"] += 1
+    plan["plan_version"] = project["plan_version"]
     if repairs:
         plan.setdefault("automatic_repairs", []).extend(repairs)
         note = "automatic recovery proposal after model failure"
@@ -811,6 +2100,7 @@ def revise_after_run_failures(session, failures):
     project["selected_chart"] = None
     project["selected_charts"] = []
     project["pseudo"] = None
+    project["execution_resume_sent"] = False
     session["figures"] = []
     session["evidence_revision"] = int(session.get("evidence_revision", 0)) + 1
     return _needs(summary, _public(project))
@@ -820,6 +2110,12 @@ def approve_plan(session):
     project = _require(session)
     if project["phase"] != "plan_review":
         return _fail("The plan cannot be approved in phase %s." % project["phase"])
+    resource_gate = (project.get("plan") or {}).get("resource_gate")
+    if resource_gate:
+        return _needs(
+            "The plan is structurally valid but cannot be approved until its research guideline, model instructions, and required paper evidence are read.",
+            {**_public(project), "resource_gate": resource_gate},
+        )
     project["phase"] = "plan_approved"
     return _needs(
         "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next.",
@@ -1029,9 +2325,15 @@ def confirm_charts(session):
 
 def approve_execution(session):
     project = _require(session)
+    if project["phase"] in ("approved", "completed"):
+        return _ok(
+            "Formal execution was already approved for the current plan; no second model continuation was scheduled.",
+            _public(project),
+        )
     if project["phase"] != "chart_selected":
         return _needs("Select a chart after the pseudo-data preview first.", _public(project))
     project["phase"] = "approved"
+    project["execution_resume_sent"] = False
     _clear_previews(session)
     return _ok(
         "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs.",
@@ -1057,6 +2359,12 @@ def complete(session):
         return _needs(
             "The workflow cannot complete; planned runs still missing: %s."
             % ", ".join(gaps["missing_runs"]),
+            _public(project),
+        )
+    if gaps.get("target_gaps"):
+        return _needs(
+            "The workflow cannot complete; reproduction targets still lack covered planned runs or reviewed charts: %s."
+            % ", ".join(item.get("target_id") or "target" for item in gaps["target_gaps"]),
             _public(project),
         )
     if gaps["figure_problem"]:
@@ -1207,6 +2515,33 @@ def execution_gaps(session):
                 failed_reviews[0]["requirement"]["chart"].get("id"),
                 "; ".join(failed_reviews[0]["issues"]),
             )
+            )
+    target_statuses = []
+    for target in (project.get("plan") or {}).get("reproduction_targets") or []:
+        run_ids = set(target.get("run_ids") or ())
+        chart_ids = set(target.get("chart_ids") or ())
+        matched_ids = {item.get("run_id") for item in matched_runs}
+        complete_by_run = bool(run_ids) and run_ids.issubset(matched_ids)
+        complete_by_chart = bool(chart_ids) and not (
+            chart_ids
+            & (
+                set(item["chart"].get("id") for item in missing_charts)
+                | set(item["chart"].get("id") for item in unreviewed_charts)
+                | set(item["requirement"]["chart"].get("id") for item in failed_reviews)
+            )
+        ) and chart_ids.issubset(set(item.get("id") for item in selected_charts))
+        target_status = target.get("status") if target.get("status") in ("partial", "unavailable") else (
+            "covered" if complete_by_run or complete_by_chart else "pending"
+        )
+        target_statuses.append(
+            {
+                "target_id": target.get("id"),
+                "source_type": target.get("source_type"),
+                "source_id": target.get("source_id"),
+                "run_ids": sorted(run_ids),
+                "chart_ids": sorted(chart_ids),
+                "status": target_status,
+            }
         )
     return {
         "missing_runs": missing,
@@ -1227,12 +2562,13 @@ def execution_gaps(session):
         "unreviewed_chart_ids": [item["chart"].get("id") for item in unreviewed_charts],
         "failed_figure_reviews": failed_reviews,
         "figure_problem": figure_problem,
+        "reproduction_targets": target_statuses,
+        "target_gaps": [item for item in target_statuses if item["status"] == "pending"],
     }
 
 
 def _figure_satisfies(figure, expected):
     """A planned chart is one figure containing every exact handle/x/y series."""
-    actual = figure.get("series") or []
     return bool(expected) and all(
         _figure_has_series(figure, wanted)
         for wanted in expected
@@ -1533,7 +2869,13 @@ def _capability_gaps(question):
     return sorted(set(gaps))
 
 
-def report_problem(session, answer):
+def report_warnings(session, answer):
+    """Return advisory report-completeness findings.
+
+    These findings help the model and the reviewer improve a scientific report, but they
+    are not evidence failures.  Citation, evidence, abstract-depth and model validation
+    remain enforced by ``harness.review_final`` and the research execution gates.
+    """
     plan = ((session.get("research") or {}).get("plan") or {})
     gaps = plan.get("capability_gaps") or []
     problems = []
@@ -1605,6 +2947,11 @@ def report_problem(session, answer):
             % ", ".join(gaps)
         )
     return " ".join(problems)
+
+
+def report_problem(session, answer):
+    """Backward-compatible name for callers that still inspect report findings."""
+    return report_warnings(session, answer)
 
 
 def safe_report(session):
@@ -1684,6 +3031,11 @@ def review_action(session, choice):
     project = _require(session)
     phase = project["phase"]
     if choice == "primary":
+        if phase in ("approved", "completed"):
+            return _ok(
+                "Formal execution is already approved for the current plan; the duplicate review action was ignored.",
+                _public(project),
+            )
         if phase == "plan_review":
             return approve_plan(session)
         if phase == "plan_approved":
@@ -1720,8 +3072,82 @@ def _require(session):
     return session["research"]
 
 
+def protocol_document(project):
+    """Return the generated, session-scoped research protocol for human review.
+
+    This is deliberately derived from the LLM proposal and current plan version.  It is
+    not read from the paper corpus and is never used as hidden instruction text.
+    """
+    plan = project.get("plan") or {}
+    return {
+        "format": "phys-earth/research-protocol",
+        "version": int(project.get("plan_version", 1)),
+        "plan_version": int(project.get("plan_version", 1)),
+        "phase": project.get("phase", "plan_review"),
+        "question": plan.get("question", ""),
+        "objective": plan.get("objective", ""),
+        "hypothesis": plan.get("hypothesis", ""),
+        "paper_evidence": list(plan.get("reference_sections") or []),
+        "paper_sections": list(plan.get("reference_paper_sections") or []),
+        "literature_evidence": list(plan.get("literature_evidence") or []),
+        "reproduction_targets": list(plan.get("reproduction_targets") or []),
+        "selected_models": list(plan.get("selected_models") or []),
+        "parameter_mapping": list(plan.get("parameter_mapping") or []),
+        "parameter_resolution": list(plan.get("parameter_resolution") or []),
+        "paper_conditions": dict(plan.get("paper_conditions") or {}),
+        "condition_provenance": dict(plan.get("condition_provenance") or {}),
+        "parameters": dict(plan.get("parameters") or {}),
+        "outputs": list(plan.get("outputs") or []),
+        "assumptions": list(plan.get("assumptions") or []),
+        "runs": list(plan.get("runs") or []),
+        "charts": list(plan.get("charts") or []),
+        "quantities": list(plan.get("quantities") or []),
+        "controls": list(plan.get("controls") or []),
+        "metrics": list(plan.get("metrics") or []),
+        "diagnostics": list(plan.get("diagnostics") or []),
+        "success_criteria": list(plan.get("success_criteria") or []),
+        "stop_conditions": list(plan.get("stop_conditions") or []),
+        "limitations": list(plan.get("limitations") or []),
+        "baseline_run_id": plan.get("baseline_run_id", ""),
+        "approval_state": project.get("phase", "plan_review"),
+        "automatic_repairs": list(plan.get("automatic_repairs") or []),
+        "validation_warnings": list(plan.get("validation_warnings") or []),
+        "revision_summary": dict(plan.get("revision_summary") or project.get("revision_summary") or {}),
+    }
+
+
+def protocol_yaml(project):
+    """Serialize the generated protocol without writing a persistent protocol.yaml."""
+    return yaml.safe_dump(
+        protocol_document(project),
+        sort_keys=False,
+        allow_unicode=True,
+        default_flow_style=False,
+    )
+
+
+def target_ids_for_run(session, run_id):
+    run = planned_run(session, run_id)
+    return list((run or {}).get("target_ids") or [])
+
+
+def target_ids_for_chart(session, chart_id):
+    project = session.get("research") or {}
+    chart = next(
+        (
+            item for item in (project.get("plan") or {}).get("charts") or []
+            if item.get("id") == str(chart_id or "").strip()
+        ),
+        None,
+    )
+    return list((chart or {}).get("target_ids") or [])
+
+
 def _public(project):
-    return {**project, "plan": {**project["plan"]}, "review_log": list(project["review_log"])}
+    public = {**project, "plan": {**project["plan"]}, "review_log": list(project["review_log"])}
+    public["protocol"] = protocol_document(public)
+    public["protocol_yaml"] = protocol_yaml(public)
+    return public
 
 
 def _ok(summary, data):

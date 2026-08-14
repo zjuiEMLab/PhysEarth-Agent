@@ -60,6 +60,21 @@ def test_rayleigh_requires_a_sphere_microstructure(card):
     assert not problems
 
 
+def test_smrt_accepts_q1_non_sticky_hard_sphere_configurations(card):
+    for electromagnetic_model in ("dmrt_qcacp_shortrange", "iba"):
+        spec, problems = validation.resolve(
+            card,
+            {
+                "electromagnetic_model": electromagnetic_model,
+                "microstructure_model": "non_sticky_hard_spheres",
+                "output": "coefficients",
+                "radius_m": 0.0001,
+            },
+        )
+        assert not problems
+        assert spec["microstructure_model"] == "non_sticky_hard_spheres"
+
+
 def test_sweep_bounds_are_checked_against_the_swept_parameter(card):
     _, problems = validation.resolve(
         card, {"sweep_parameter": "density_kg_m3", "sweep_start": 50, "sweep_stop": 1200}
@@ -402,14 +417,15 @@ def test_a_source_cannot_forge_the_closing_delimiter():
     assert wrapped.count(untrusted.CLOSE) == 1
 
 
-def test_nothing_we_ship_is_a_local_model():
-    """`local` means the operator supplies the model themselves. A released package is a
-    package of demo models; a local one inside it would be a contradiction."""
+def test_bundled_models_declare_external_runtime_dependencies_explicitly():
+    """A model with an optional scientific dependency must advertise its runtime tier."""
     from physearth.models import registry
 
     rows = registry.summary()
     assert rows, "no model registered"
-    assert {r["tier"] for r in rows} == {"demo"}
+    smrt = next(row for row in rows if row["name"] == "smrt")
+    assert smrt["tier"] == "local"
+    assert smrt["requires_import"] == "smrt"
     assert all(r["runnable"] for r in rows)
     assert not registry.rejected()
 

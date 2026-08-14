@@ -17,6 +17,17 @@ SECTION_SPLIT_CHARS = 12000
 SKIP_TAGS = {"fig", "table-wrap", "graphic", "media", "supplementary-material", "label"}
 
 
+def _local(tag):
+    return str(tag or "").rsplit("}", 1)[-1]
+
+
+def _href(node):
+    for key, value in node.attrib.items():
+        if key == "href" or key.endswith("}href") or key.endswith(":href"):
+            return value
+    return ""
+
+
 def clean(text):
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r" *\n *", "\n", text)
@@ -150,16 +161,91 @@ def front_matter(root, labels, journal=""):
     }
 
 
+def _caption(node, labels):
+    caption = next((child for child in node if _local(child.tag) == "caption"), None)
+    return text_of(caption, labels)
+
+
+def _label_text(node):
+    return clean("".join(node.itertext())) if node is not None else ""
+
+
+def _table_rows(node, labels):
+    rows = []
+    for row in node.iter():
+        if _local(row.tag) != "tr":
+            continue
+        cells = []
+        for cell in row:
+            if _local(cell.tag) in ("td", "th"):
+                cells.append(text_of(cell, labels))
+        if cells:
+            rows.append(cells)
+    return rows
+
+
+def extract_assets(root, labels):
+    """Extract figure/table metadata while keeping them out of section prose."""
+    figures, tables = [], []
+
+    def visit(node, section_id="", section_title=""):
+        tag = _local(node.tag)
+        if tag == "sec":
+            section_id = node.get("id") or section_id
+            title_node = next((child for child in node if _local(child.tag) == "title"), None)
+            section_title = text_of(title_node, labels) or section_title
+        if tag == "fig":
+            label_node = next((child for child in node if _local(child.tag) == "label"), None)
+            graphics = [child for child in node.iter() if _local(child.tag) in ("graphic", "media")]
+            figures.append(
+                {
+                    "id": node.get("id") or "fig-%d" % (len(figures) + 1),
+                    "label": _label_text(label_node) or "Figure %d" % (len(figures) + 1),
+                    "caption": _caption(node, labels),
+                    "section_id": section_id,
+                    "section_title": section_title,
+                    "source_uri": _href(graphics[0]) if graphics else "",
+                    "asset_status": "source_uri_only" if graphics else "caption_only",
+                }
+            )
+            return
+        if tag == "table-wrap":
+            label_node = next((child for child in node if _local(child.tag) == "label"), None)
+            tables.append(
+                {
+                    "id": node.get("id") or "table-%d" % (len(tables) + 1),
+                    "label": _label_text(label_node) or "Table %d" % (len(tables) + 1),
+                    "caption": _caption(node, labels),
+                    "section_id": section_id,
+                    "section_title": section_title,
+                    "rows": _table_rows(node, labels),
+                    "asset_status": "structured" if _table_rows(node, labels) else "caption_only",
+                }
+            )
+            return
+        for child in node:
+            visit(child, section_id, section_title)
+
+    visit(root)
+    return figures, tables
+
+
 def parse(xml_text, journal=""):
-    """Return {front, sections}. `sections` is a list of (title, body), abstract first."""
+    """Return text plus paper assets.
+
+    Figures and tables are metadata/artifacts, not prose.  Keeping them in separate lists
+    preserves the old section text contract while making source assets available to the paper
+    artifact store.
+    """
     root = ET.fromstring(xml_text)
     labels = reference_labels(root)
     front = front_matter(root, labels, journal)
+    figures, tables = extract_assets(root, labels)
     pieces = []
     if front.get("abstract"):
         pieces.append(("Abstract", front["abstract"]))
     pieces.extend((title, body) for title, body in build_sections(root, labels) if body)
-    return {"front": front, "sections": pieces}
+    return {"front": front, "sections": pieces, "figures": figures, "tables": tables}
 
 
 def slugify(text, limit=48):

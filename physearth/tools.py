@@ -1,12 +1,47 @@
 import concurrent.futures
+import base64
+import mimetypes
+import os
+import re
 import time
+from pathlib import Path
 
-from physearth import knowledge, live, plotting, reference, results, switches, validation, research
-from physearth.ingest import discover, fulltext, http
+from physearth import (
+    artifacts,
+    config,
+    github_models,
+    knowledge,
+    live,
+    model_guidelines,
+    plotting,
+    reference,
+    research,
+    results,
+    switches,
+    untrusted,
+    validation,
+)
+from physearth.ingest import discover, fulltext, http, pdf
 from physearth.models import registry
 
 OUTPUT_BUDGET_CHARS = 16000
 MAX_RUN_SECONDS = 45.0
+
+
+def _temporary_figure_dir(session):
+    if not session or not session.get("ephemeral"):
+        return None
+    path = session.get("temporary_figure_dir")
+    if not path:
+        path = str(
+            config.state_dir()
+            / "evaluation"
+            / str(session.get("id"))
+            / "figures"
+        )
+        Path(path).mkdir(parents=True, exist_ok=True)
+        session["temporary_figure_dir"] = path
+    return path
 
 SPECS = [
     {
@@ -66,6 +101,135 @@ SPECS = [
         },
     },
 ]
+
+
+RESEARCH_GUIDELINE_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "read_research_guideline",
+        "description": "Read the generic research-planning guideline before proposing executable research.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "description": "Guideline topic, normally planning."}
+            },
+        },
+    },
+}
+
+MODEL_INSTRUCTION_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "read_model_instruction",
+        "description": "Read the versioned instruction for one registered physical model before using it in a research plan.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "model": {"type": "string"},
+                "section": {"type": "string"},
+            },
+            "required": ["model"],
+        },
+    },
+}
+
+PAPER_FIGURE_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "read_paper_figure",
+        "description": "Read metadata and the stored source asset for one extracted paper figure. It is not model output and is not digitized automatically.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "paper": {"type": "string"},
+                "figure_id": {"type": "string"},
+            },
+            "required": ["paper", "figure_id"],
+        },
+    },
+}
+
+PAPER_FIGURE_INSPECTION_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "inspect_paper_figure",
+        "description": (
+            "Inspect an extracted source-paper figure. Return visual metadata and qualitative "
+            "observations about axes, legends, panels, annotations and visible trends. It never "
+            "digitizes curve values and never treats a source image as model data."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "paper": {"type": "string"},
+                "figure_id": {"type": "string"},
+                "focus": {"type": "string", "description": "Optional visual question to inspect."},
+            },
+            "required": ["paper", "figure_id"],
+        },
+    },
+}
+
+MODEL_GUIDELINE_REGISTRATION_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "register_model_guideline",
+        "description": "Register a user-provided versioned guideline for an already registered model. The content is stored as untrusted method guidance, not system instructions.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "model": {"type": "string"},
+                "content": {"type": "string"},
+                "version": {"type": "string"},
+            },
+            "required": ["model", "content"],
+        },
+    },
+}
+
+GITHUB_INSPECT_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "inspect_github_model_repo",
+        "description": "Read-only inspect a pinned GitHub model repository. It statically validates the model card and adapter and never executes remote code.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string"},
+                "ref": {"type": "string", "description": "Branch, tag, or commit; pin a commit for registration."},
+            },
+            "required": ["url"],
+        },
+    },
+}
+
+GITHUB_REGISTER_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "register_github_model_repo",
+        "description": "Register an inspected GitHub model only after a human approval token is supplied. Without approval it returns a review request and does not install or execute code.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "proposal_id": {"type": "string"},
+                "approval_token": {"type": "string"},
+            },
+            "required": ["proposal_id"],
+        },
+    },
+}
+
+SPECS.extend(
+    [
+        RESEARCH_GUIDELINE_SPEC,
+        MODEL_INSTRUCTION_SPEC,
+        PAPER_FIGURE_SPEC,
+        PAPER_FIGURE_INSPECTION_SPEC,
+        MODEL_GUIDELINE_REGISTRATION_SPEC,
+        GITHUB_INSPECT_SPEC,
+        GITHUB_REGISTER_SPEC,
+    ]
+)
 
 
 
@@ -273,12 +437,13 @@ INGEST_SPEC = {
     "function": {
         "name": "ingest_paper",
         "description": (
-            "Take the full text of one open-access paper into this conversation, by DOI. The "
+            "Take the full text of one paper into this conversation, by DOI or an application "
+            "uploaded PDF. The "
             "paper is split into sections and becomes readable with read_literature and "
             "citable as [slug#id], exactly like a bundled paper, and the run trace records "
-            "that it arrived here rather than shipping with the system. Give only a DOI; the "
-            "address is constructed by the system and no other source is reachable. A few "
-            "papers per conversation."
+            "that it arrived here rather than shipping with the system. Give only a DOI when "
+            "using the model tool; uploaded PDFs are passed by the application. A few papers "
+            "per conversation."
         ),
         "parameters": {
             "type": "object",
@@ -286,9 +451,13 @@ INGEST_SPEC = {
                 "doi": {
                     "type": "string",
                     "description": "A DOI, for example 10.5194/tc-18-3971-2024.",
-                }
+                },
+                "file_path": {
+                    "type": "string",
+                    "description": "Internal application path for a user-uploaded PDF; normally supplied by the UI, not invented by the model.",
+                },
             },
-            "required": ["doi"],
+            "required": [],
         },
     },
 }
@@ -314,7 +483,11 @@ RESEARCH_PLAN_SPEC = {
             "demonstrations only, never scientific evidence. When the user requests a revision, "
             "call action=revise_plan with changes that update every affected run and chart, not "
             "only the pseudo-preview labels; the backend creates a new plan version and returns "
-            "to human plan review."
+            "to human plan review. The returned protocol_yaml is a session-scoped, generated "
+            "research protocol; it is not loaded from a paper protocol file. For paper "
+            "reproduction, the proposal must include opened literature evidence, explicit "
+            "reproduction targets, selected models, paper-to-model parameter mappings and "
+            "target coverage."
         ),
         "parameters": {
             "type": "object",
@@ -325,6 +498,39 @@ RESEARCH_PLAN_SPEC = {
                 "hypothesis": {"type": "string"},
                 "steps": {"type": "array", "items": {"type": "string"}},
                 "parameters": {"type": "object"},
+                "paper_conditions": {
+                    "type": "object",
+                    "description": "Paper reference conditions for comparison context. They are not model-validity constraints; legality comes from the registered model declaration and model instruction.",
+                },
+                "condition_provenance": {
+                    "type": "object",
+                    "description": "For each paper condition, identify its evidence marker or say agent-assumption/user-question.",
+                },
+                "literature_evidence": {
+                    "type": "array",
+                    "description": "Opened paper section, figure, table, or result references and the role each plays in the reproduction.",
+                    "items": {"type": "object"},
+                },
+                "reproduction_targets": {
+                    "type": "array",
+                    "description": "Paper figures, tables, or results to reproduce. Each target needs evidence_refs and run_ids or chart_ids coverage.",
+                    "items": {"type": "object"},
+                },
+                "selected_models": {
+                    "type": "array",
+                    "description": "Models selected after list_models/read_model_instruction, with purpose and capability status.",
+                    "items": {"type": "object"},
+                },
+                "parameter_mapping": {
+                    "type": "array",
+                    "description": "Map every paper concept to an exact registered model input. provenance_class must be paper_explicit, paper_inferred, user_specified, model_assumption, or backend_default.",
+                    "items": {"type": "object"},
+                },
+                "outputs": {
+                    "type": "array",
+                    "description": "Model outputs used to compare the planned runs with the paper targets.",
+                    "items": {"type": "string"},
+                },
                 "runs": {
                     "type": "array",
                     "description": "Every distinct registered physical-model run required by the plan.",
@@ -390,8 +596,12 @@ RESEARCH_PLAN_SPEC = {
                     "type": "object",
                     "description": (
                         "User-requested plan changes. Include complete affected runs and charts "
-                        "when changing a sweep, output, axis, or figure; do not edit pseudo-data "
-                        "as if it were a model result."
+                        "when changing a sweep, output, axis, or figure. Update paper_conditions "
+                        "and condition_provenance only when explicitly changing the source reference; "
+                        "paper conditions are comparison context, not model-validity constraints. Update "
+                        "reproduction_targets and parameter_mapping when changing evidence, targets, "
+                        "or paper-to-model translation; do "
+                        "not edit pseudo-data as if it were a model result."
                     ),
                 },
             },
@@ -442,6 +652,29 @@ def _ok(summary, data, citations=None, qc=None, ui=None):
         "ui": ui,
         "error": None,
     }
+
+
+def _ledger(session, kind, record):
+    """Record evidence/resource metadata without retaining unbounded source text."""
+    if session is None:
+        return
+    item = {"kind": str(kind), **dict(record or {})}
+    key = (
+        item.get("kind"), item.get("reference"), item.get("model"),
+        item.get("version"), item.get("figure_id"), item.get("section_id"),
+    )
+    ledger = session.setdefault("evidence_ledger", [])
+    for index, entry in enumerate(ledger):
+        if not isinstance(entry, dict):
+            continue
+        entry_key = (
+            entry.get("kind"), entry.get("reference"), entry.get("model"),
+            entry.get("version"), entry.get("figure_id"), entry.get("section_id"),
+        )
+        if entry_key == key:
+            ledger[index] = {**entry, **item}
+            return
+    ledger.append(item)
 
 
 def _fail(message, data=None):
@@ -497,7 +730,7 @@ def read_literature(slug, section_id=None, _session=None):
             "Section %r not found in %s. Available section ids: %s." % (section_id, slug, available)
         )
     section = opened["section"]
-    return _ok(
+    result = _ok(
         "%s section %s: %s (%d chars%s, %s)"
         % (
             slug,
@@ -511,6 +744,7 @@ def read_literature(slug, section_id=None, _session=None):
             "slug": slug,
             "section_id": section["section_id"],
             "title": section["title"],
+            "doi": item.get("doi", ""),
             "citation_key": section["citation_key"],
             "source": opened["source"],
             "text": opened["text"],
@@ -518,6 +752,323 @@ def read_literature(slug, section_id=None, _session=None):
         },
         citations=[section["citation_key"]],
     )
+    if _session is not None:
+        _session.setdefault("sections_read", set()).add(section["citation_key"])
+    _ledger(
+        _session,
+        "section",
+        {
+            "reference": section["citation_key"],
+            "paper": slug,
+            "section_id": section["section_id"],
+            "title": section.get("title", ""),
+            "source": opened["source"],
+            "doi": item.get("doi", ""),
+        },
+    )
+    return result
+
+
+def read_research_guideline(topic="planning", _session=None):
+    topic = str(topic or "planning").strip().lower()
+    slug = "research-planning" if topic in ("planning", "research", "") else topic
+    result = read_literature(slug, "00", _session=_session)
+    if result["status"] == "success":
+        if _session is not None:
+            _session.setdefault("research_guidelines_read", set()).add(slug)
+            _session.setdefault("skills_read", set()).add(slug)
+        result["summary"] = "Research guideline %s is open and must govern the plan." % slug
+        result.setdefault("data", {})["guideline_id"] = slug
+    return result
+
+
+def read_model_instruction(model, section=None, _session=None, _switches=None):
+    entry = registry.get(str(model or "").strip(), _session)
+    if entry is None:
+        return _fail("Unknown model %r. Call list_models first." % model)
+    instruction = model_guidelines.read(entry.name, entry.card, _session)
+    if instruction is None:
+        return {
+            "status": "needs_input",
+            "summary": "Model %s has no registered instruction. Register a user guideline before planning with it." % entry.name,
+            "data": {"model": entry.name, "error_code": "model_instruction_missing"},
+            "citations": [], "qc": None, "ui": None,
+            "error": "model instruction missing",
+        }
+    text = instruction["text"]
+    if section:
+        wanted = str(section).strip().lower()
+        chunks = re.split(r"(?m)^#{1,6}\s+", text)
+        selected = [chunk for chunk in chunks if chunk.lower().startswith(wanted)]
+        if selected:
+            text = selected[0]
+    if _session is not None:
+        _session.setdefault("model_instructions_read", set()).add(
+            "%s@%s" % (entry.name, instruction["version"])
+        )
+        _session.setdefault("guidelines_read", set()).add(
+            "%s@%s" % (entry.name, instruction["version"])
+        )
+    result = _ok(
+        "Read model instruction %s v%s." % (entry.name, instruction["version"]),
+        {
+            "model": entry.name,
+            "version": instruction["version"],
+            "instruction_id": instruction["instruction_id"],
+            "source": instruction["source"],
+            "text": untrusted.wrap(
+                text,
+                "model-guideline:%s@%s" % (entry.name, instruction["version"]),
+                "registered model instruction",
+            ),
+            "external_source_findings": untrusted.scan(text),
+            "sha256": instruction["sha256"],
+            "citation_key": "model-guideline:%s@%s" % (entry.name, instruction["version"]),
+        },
+    )
+    _ledger(
+        _session,
+        "model_instruction",
+        {
+            "model": entry.name,
+            "version": instruction["version"],
+            "reference": "model-guideline:%s@%s" % (entry.name, instruction["version"]),
+            "source": instruction.get("source", "model guideline"),
+            "instruction_id": instruction.get("instruction_id", entry.name),
+        },
+    )
+    return result
+
+
+def read_paper_figure(paper, figure_id, _session=None):
+    item = live.card(_session, str(paper or "").strip())
+    if not item:
+        return _fail("Unknown paper %r." % paper)
+    figure = next((fig for fig in item.get("figures") or [] if str(fig.get("id")) == str(figure_id)), None)
+    if figure is None:
+        _ledger(
+            _session,
+            "figure",
+            {
+                "reference": "%s#%s" % (paper, figure_id),
+                "paper": paper,
+                "figure_id": str(figure_id),
+                "caption": "",
+                "source": "paper artifact",
+                "asset_available": False,
+            },
+        )
+        return _fail("Paper %s has no extracted figure %s." % (paper, figure_id))
+    citation_key = "%s#fig-%s" % (paper, figure_id)
+    payload = dict(figure)
+    payload.pop("asset_bytes", None)
+    payload["citation_key"] = citation_key
+    if _session is not None:
+        _session.setdefault("paper_figures_read", set()).add("%s#%s" % (paper, figure_id))
+    result = _ok(
+        "Source-paper figure %s is available. It is not model output and has not been digitized." % figure_id,
+        {"paper": paper, "figure": payload, "citation_key": citation_key},
+    )
+    _ledger(
+        _session,
+        "figure",
+        {
+            "reference": citation_key.replace("#fig-", "#"),
+            "paper": paper,
+            "figure_id": str(figure_id),
+            "caption": payload.get("caption", ""),
+            "source": payload.get("source_uri") or payload.get("source_url") or "paper artifact",
+            "asset_available": bool(
+                payload.get("asset_uri") or payload.get("asset_path")
+                or payload.get("source_uri") or payload.get("asset_bytes")
+            ),
+        },
+    )
+    return result
+
+
+def inspect_paper_figure(paper, figure_id, focus="", _session=None):
+    """Inspect a source figure without silently turning pixels into data.
+
+    The current provider can opt into a bounded multimodal payload with
+    ``PHYSEARTH_LLM_VISION=1``. Without it, the tool still records the asset, caption,
+    dimensions and provenance, and explicitly reports that qualitative visual review is
+    unavailable rather than inventing axes or trends.
+    """
+    item = live.card(_session, str(paper or "").strip())
+    if not item:
+        return _fail("Unknown paper %r." % paper)
+    figure = next(
+        (fig for fig in item.get("figures") or [] if str(fig.get("id")) == str(figure_id)),
+        None,
+    )
+    reference = "%s#fig-%s" % (paper, figure_id)
+    if figure is None:
+        _ledger(
+            _session,
+            "figure_inspection",
+            {
+                "reference": reference.replace("#fig-", "#"),
+                "paper": paper,
+                "figure_id": str(figure_id),
+                "asset_available": False,
+                "analysis_status": "unavailable",
+                "availability_reason": "figure asset was not extracted from the paper",
+            },
+        )
+        return _fail(
+            "Cannot inspect paper %s figure %s: no extracted source asset is available." %
+            (paper, figure_id)
+        )
+
+    payload = dict(figure)
+    raw = payload.get("asset_bytes")
+    asset_path = payload.get("asset_path") or payload.get("asset_uri")
+    if raw is None and asset_path:
+        try:
+            candidate = Path(str(asset_path)).resolve()
+            state_root = config.state_dir().resolve()
+            if candidate.is_file() and candidate.is_relative_to(state_root):
+                raw = candidate.read_bytes()
+        except (OSError, RuntimeError, ValueError):
+            raw = None
+
+    asset_available = bool(raw)
+    asset_format = str(payload.get("asset_format") or Path(str(asset_path or "")).suffix.lstrip("."))
+    width = height = None
+    if raw:
+        try:
+            from io import BytesIO
+            from PIL import Image
+
+            with Image.open(BytesIO(raw)) as image:
+                width, height = image.size
+                asset_format = image.format.lower() if image.format else asset_format
+        except (ImportError, OSError, ValueError):
+            pass
+
+    caption = str(payload.get("caption") or "").strip()
+    analysis_status = "vision_payload_ready" if asset_available and _vision_enabled() else (
+        "metadata_only" if asset_available else "unavailable"
+    )
+    availability_reason = ""
+    if not asset_available:
+        availability_reason = "paper artifact contains metadata but no extracted image asset"
+    elif analysis_status == "metadata_only":
+        availability_reason = (
+            "the configured language-model endpoint has no enabled multimodal image path; "
+            "caption and asset provenance were retained without visual claims"
+        )
+    visual = {
+        "axes": [],
+        "legend": [],
+        "panels": None,
+        "visible_trends": [],
+        "annotations": [],
+        "focus": str(focus or "").strip(),
+    }
+    if caption:
+        visual["caption_context"] = caption
+    if width and height:
+        visual["dimensions_px"] = {"width": width, "height": height}
+
+    image_data_url = None
+    if asset_available and _vision_enabled() and len(raw) <= 2_000_000:
+        mime = mimetypes.guess_type("figure.%s" % (asset_format or "png"))[0] or "image/png"
+        image_data_url = "data:%s;base64,%s" % (mime, base64.b64encode(raw).decode("ascii"))
+
+    data = {
+        "paper": paper,
+        "figure_id": str(figure_id),
+        "citation_key": reference,
+        "caption": caption,
+        "source_page": payload.get("page"),
+        "source": payload.get("source_uri") or payload.get("source_url") or "paper artifact",
+        "asset_available": asset_available,
+        "asset_format": asset_format or None,
+        "asset_path": asset_path,
+        "analysis_status": analysis_status,
+        "availability_reason": availability_reason,
+        "visual_observations": visual,
+        "numeric_digitization": "not performed",
+    }
+    if image_data_url:
+        data["image_data_url"] = image_data_url
+    _ledger(
+        _session,
+        "figure_inspection",
+        {
+            "reference": reference,
+            "paper": paper,
+            "figure_id": str(figure_id),
+            "caption": caption,
+            "source": data["source"],
+            "asset_available": asset_available,
+            "analysis_status": analysis_status,
+            "availability_reason": availability_reason,
+            "numeric_digitization": "not performed",
+        },
+    )
+    if _session is not None:
+        _session.setdefault("paper_figures_inspected", set()).add("%s#%s" % (paper, figure_id))
+    summary = (
+        "Inspected source-paper figure %s. %s Numeric curve digitization was not performed."
+        % (
+            figure_id,
+            "A bounded visual payload is ready for a multimodal model."
+            if image_data_url
+            else ("Only metadata/caption are available; no visual trend was inferred." if not asset_available or analysis_status == "metadata_only" else "Visual metadata recorded."),
+        )
+    )
+    return _ok(summary, data, citations=[reference])
+
+
+def _vision_enabled():
+    return str(os.environ.get("PHYSEARTH_LLM_VISION", "0")).strip().lower() in {
+        "1", "true", "yes", "on"
+    }
+
+
+def register_model_guideline(model, content, version="1.0", _session=None):
+    entry = registry.get(str(model or "").strip(), _session)
+    if entry is None:
+        return _fail("Unknown model %r. Register the model before its guideline." % model)
+    if _session is None:
+        return _fail("register_model_guideline requires a session.")
+    try:
+        if _session.get("ephemeral"):
+            item = model_guidelines.register_temporary(entry.name, content, version, _session)
+        else:
+            item = model_guidelines.register(entry.name, content, version, _session.get("id"), source="user")
+    except ValueError as exc:
+        return _fail(str(exc))
+    _session.setdefault("model_guidelines", {})[entry.name] = item
+    return _ok(
+        "Registered user guideline %s v%s for %s." % (item["instruction_id"], item["version"], entry.name),
+        {key: value for key, value in item.items() if key != "text"},
+    )
+
+
+def inspect_github_model_repo(url, ref="main", _session=None):
+    if not http.online():
+        return _offline_note("inspecting a GitHub model repository")
+    if _session is None:
+        return _fail("GitHub inspection requires a session.")
+    try:
+        proposal, files = github_models.inspect(url, ref)
+        proposal = github_models.save_proposal(_session, proposal, files)
+    except (ValueError, LookupError, http.Upstream) as exc:
+        return _fail("GitHub repository inspection failed: %s" % exc)
+    return _ok(
+        "Inspected GitHub repository %s at %s. No remote code was executed; human approval is required before registration." % (url, ref),
+        {key: value for key, value in proposal.items() if key != "root"},
+    )
+
+
+def register_github_model_repo(proposal_id, approval_token="", _session=None):
+    if _session is None:
+        return _fail("GitHub registration requires a session.")
+    return github_models.register(_session, proposal_id, approval_token)
 
 
 def _offline_note(action):
@@ -578,9 +1129,38 @@ def discover_literature(query, from_year=None, limit=6, _session=None):
     )
 
 
-def ingest_paper(doi, _session=None):
+def ingest_paper(doi="", file_path=None, _session=None, _persist=True):
     if _session is None:
         return _fail("ingest_paper needs a conversation to put the paper into.")
+    if file_path:
+        try:
+            record = pdf.parse(file_path)
+            card = live.add(_session, record, persist=_persist)
+        except (ValueError, RuntimeError, OSError) as exc:
+            return _fail("The uploaded paper could not be ingested: %s" % exc)
+        return _ok(
+            "Stored uploaded PDF %s as %s: %d page section(s), %d extracted figure(s)."
+            % (
+                record.get("filename") or "paper.pdf",
+                card["slug"],
+                len(card["sections"]),
+                len(card.get("figures") or []),
+            ),
+            {
+                "slug": card["slug"],
+                "doi": "",
+                "title": card["title"],
+                "license": card["license"],
+                "fetched_from": "pdf_upload",
+                "figures": card.get("figures") or [],
+                "tables": card.get("tables") or [],
+                "artifact": card.get("artifact"),
+                "sections": live.section_index(_session, card["slug"]),
+            },
+        )
+    doi = fulltext.normalise(doi)
+    if not doi:
+        return _fail("ingest_paper requires a DOI or an uploaded PDF.")
     if not http.online():
         return _offline_note("taking in a paper by DOI")
     doi = fulltext.normalise(doi)
@@ -613,7 +1193,7 @@ def ingest_paper(doi, _session=None):
             "missing paper. Say so rather than reporting that the paper was not found." % (doi, exc)
         )
     try:
-        card = live.add(_session, record)
+        card = live.add(_session, record, persist=_persist)
     except ValueError as exc:
         return _fail(str(exc))
     return _ok(
@@ -625,28 +1205,48 @@ def ingest_paper(doi, _session=None):
             "doi": doi,
             "title": card["title"],
             "license": card["license"],
+            "figures": card.get("figures") or [],
+            "tables": card.get("tables") or [],
+            "artifact": card.get("artifact"),
             "fetched_from": record["source"],
             "sections": live.section_index(_session, card["slug"]),
         },
     )
 
 
-def list_models(model=None, _switches=None):
+def list_models(model=None, _switches=None, _session=None):
     declared = switches.resolve(_switches)["capability"]
     if model in (None, ""):
-        rows = registry.summary()
+        rows = registry.summary(_session)
         rejected = registry.rejected()
+        for row in rows:
+            _ledger(
+                _session,
+                "model_declaration",
+                {
+                    "model": row.get("name"),
+                    "version": row.get("version"),
+                    "source": "list_models",
+                    "parameters": row.get("parameters") or {},
+                    "outputs": row.get("outputs") or {},
+                    "defaults": row.get("defaults") or {},
+                },
+            )
         return _ok(
             "%d registered model(s), %d rejected." % (len(rows), len(rejected)),
             {"models": rows, "rejected": rejected},
         )
-    entry = registry.get(model)
+    entry = registry.get(model, _session)
     if entry is None:
         return _fail(
-            "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names()) or "none")
+            "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names(session=_session)) or "none")
         )
     card = entry.card
-    return _ok(
+    if _session is not None:
+        _session.setdefault("models_inspected", set()).add(
+            "%s@%s" % (card["name"], card["version"])
+        )
+    result = _ok(
         "Capability declaration for %s v%s." % (card["name"], card["version"])
         if declared
         else "Parameter names for %s v%s. Ranges and combinations are not published."
@@ -664,8 +1264,37 @@ def list_models(model=None, _switches=None):
             "combinations": (card.get("combinations") or []) if declared else [],
             "outputs": card["outputs"],
             "resource_profile": card.get("resource_profile") or {},
+            "instruction_id": card.get("instruction_id") or card["name"],
+            "instruction_version": str(card.get("instruction_version") or "1.0"),
+            "instruction_available": bool(model_guidelines.read(card["name"], card, _session)),
         },
     )
+    _ledger(
+        _session,
+        "model_declaration",
+        {
+            "model": card["name"],
+            "version": card["version"],
+            "source": "list_models",
+            "parameters": card.get("parameters") or {},
+            "outputs": card.get("outputs") or {},
+            "combinations": card.get("combinations") or [],
+            "defaults": {
+                name: spec.get("default")
+                for name, spec in (card.get("parameters") or {}).items()
+                if isinstance(spec, dict) and "default" in spec
+            },
+        },
+    )
+    if _session is not None:
+        _session.setdefault("model_declarations", {})[card["name"]] = {
+            "model": card["name"],
+            "version": card["version"],
+            "parameters": card.get("parameters") or {},
+            "outputs": card.get("outputs") or {},
+            "combinations": card.get("combinations") or [],
+        }
+    return result
 
 
 def research_plan(
@@ -675,6 +1304,13 @@ def research_plan(
     hypothesis="",
     steps=None,
     parameters=None,
+    paper_conditions=None,
+    condition_provenance=None,
+    literature_evidence=None,
+    reproduction_targets=None,
+    selected_models=None,
+    parameter_mapping=None,
+    outputs=None,
     runs=None,
     charts=None,
     success_criteria=None,
@@ -695,14 +1331,148 @@ def research_plan(
     if _session is None:
         return research._fail("research_plan requires a session.")
 
-    def propose_with_recovery_draft():
+    def resource_gate():
+        """Require data resources to be opened before a proposal can be accepted."""
+        if action not in ("propose", "revise_plan"):
+            return None
+        if action == "revise_plan" and not runs:
+            candidate_runs = (changes or {}).get("runs") or ((_session.get("research") or {}).get("plan") or {}).get("runs") or []
+            candidate_runs = candidate_runs or ((_session.get("research_draft") or {}).get("proposal") or {}).get("runs") or []
+        else:
+            candidate_runs = runs or []
+        candidate_models = selected_models or []
+        if action == "revise_plan" and not candidate_models:
+            candidate_models = (changes or {}).get("selected_models") or ((_session.get("research") or {}).get("plan") or {}).get("selected_models") or []
+        model_names = {
+            str(item.get("model") or "").strip()
+            for item in candidate_runs
+            if isinstance(item, dict)
+        }
+        model_names.update(
+            str(item.get("model") or item.get("name") or "").strip()
+            for item in candidate_models
+            if isinstance(item, dict)
+        )
+        model_names = sorted(name for name in model_names if name)
+        # Let the normal validator explain an empty/malformed draft.  Resource gating is
+        # for an otherwise executable proposal and must not hide its structural error.
+        if not model_names:
+            return None
+        if "research-planning" not in set(_session.get("research_guidelines_read") or ()):
+            return {
+                "error_code": "research_guideline_read_required",
+                "message": "Read the research guideline with read_research_guideline before proposing executable research.",
+                "repair_hints": ["Call read_research_guideline(topic='planning'), then submit the complete proposal again."],
+            }
+        missing_models = []
+        missing_instructions = []
+        for model_name in model_names:
+            entry = registry.get(model_name, _session)
+            instruction = model_guidelines.read(entry.name, entry.card, _session) if entry else None
+            version = instruction.get("version", "1.0") if instruction else "?"
+            key = "%s@%s" % (model_name, version)
+            inspected_key = "%s@%s" % (model_name, entry.card.get("version") if entry else "?")
+            if inspected_key not in set(_session.get("models_inspected") or ()):
+                missing_models.append("%s (call list_models first)" % inspected_key)
+            if key not in set(_session.get("model_instructions_read") or ()):
+                missing_models.append(key)
+                missing_instructions.append({"model": model_name, "version": version})
+        if missing_models:
+            return {
+                "error_code": "model_instruction_read_required",
+                "missing_models": missing_models,
+                "required_resources": {
+                    "list_models": [
+                        {"model": model_name}
+                        for model_name in model_names
+                        if "%s@%s (call list_models first)" % (
+                            model_name,
+                            (registry.get(model_name, _session).card.get("version")
+                             if registry.get(model_name, _session) else "?"),
+                        ) in missing_models
+                    ],
+                    "read_model_instruction": missing_instructions,
+                },
+                "message": "Read every selected model instruction before proposing: %s." % ", ".join(missing_models),
+                "repair_hints": ["Call list_models for each selected model, then read_model_instruction(model=...) and resubmit the complete proposal."],
+            }
+        return None
+
+    gate = resource_gate()
+    if gate and action in ("propose", "revise_plan"):
         draft = {
             "question": question,
             "objective": objective,
             "hypothesis": hypothesis,
             "steps": list(steps or []),
             "parameters": dict(parameters or {}),
+            "paper_conditions": dict(paper_conditions or {}),
+            "condition_provenance": dict(condition_provenance or {}),
+            "literature_evidence": list(literature_evidence or []),
+            "reproduction_targets": list(reproduction_targets or []),
+            "selected_models": list(selected_models or []),
+            "parameter_mapping": list(parameter_mapping or []),
+            "outputs": list(outputs or []),
             "runs": list(runs or []),
+            "charts": list(charts or []),
+            "success_criteria": list(success_criteria or []),
+            "assumptions": list(assumptions or []),
+            "limitations": list(limitations or []),
+            "quantities": list(quantities or []),
+            "controls": list(controls or []),
+            "metrics": list(metrics or []),
+            "diagnostics": list(diagnostics or []),
+            "stop_conditions": list(stop_conditions or []),
+            "baseline_run_id": baseline_run_id,
+        }
+        if action == "revise_plan" and not draft["question"]:
+            retained = ((_session.get("research_draft") or {}).get("proposal") or {})
+            current = ((_session.get("research") or {}).get("plan") or {})
+            base = {**retained, **current}
+            for key, value in (changes or {}).items():
+                if value is not None:
+                    base[key] = value
+            draft = {**base, **{key: value for key, value in draft.items() if value}}
+        proposal_result = research.propose(
+            _session,
+            draft.get("question", ""), draft.get("objective", ""), draft.get("hypothesis", ""),
+            draft.get("steps"), draft.get("parameters"), draft.get("runs"), draft.get("charts"),
+            draft.get("success_criteria"), draft.get("assumptions"), draft.get("limitations"),
+            draft.get("quantities"), draft.get("controls"), draft.get("metrics"),
+            draft.get("diagnostics"), draft.get("stop_conditions"), draft.get("baseline_run_id", ""),
+            paper_conditions=draft.get("paper_conditions"),
+            condition_provenance=draft.get("condition_provenance"),
+            literature_evidence=draft.get("literature_evidence"),
+            reproduction_targets=draft.get("reproduction_targets"),
+            selected_models=draft.get("selected_models"),
+            parameter_mapping=draft.get("parameter_mapping"),
+            outputs=draft.get("outputs"),
+        )
+        if _session.get("research"):
+            _session["research"]["plan"]["resource_gate"] = gate
+            if supplemental_metadata:
+                _session["research"]["plan"]["supplemental_metadata"] = {
+                    str(key): value for key, value in supplemental_metadata.items()
+                }
+        _session["research_draft"] = {"proposal": draft, "error": gate["message"], "data": gate}
+        response = research._needs(gate["message"], {**gate, "proposal": (proposal_result.get("data") if proposal_result else None)})
+        return response
+
+    def propose_with_recovery_draft():
+        draft = {
+            "question": question,
+            "objective": objective,
+            "hypothesis": hypothesis,
+            "steps": list(steps or []),
+        "parameters": dict(parameters or {}),
+        "paper_conditions": dict(paper_conditions or {}),
+        "condition_provenance": dict(condition_provenance or {}),
+        "literature_evidence": list(literature_evidence or []),
+        "reproduction_targets": list(reproduction_targets or []),
+        "selected_models": list(selected_models or []),
+        "parameter_mapping": list(parameter_mapping or []),
+        "outputs": list(outputs or []),
+        "runs": list(runs or []),
             "charts": list(charts or []),
             "success_criteria": list(success_criteria or []),
             "assumptions": list(assumptions or []),
@@ -718,6 +1488,13 @@ def research_plan(
             _session, question, objective, hypothesis, steps, parameters, runs, charts,
             success_criteria, assumptions, limitations, quantities, controls, metrics,
             diagnostics, stop_conditions, baseline_run_id,
+            paper_conditions=paper_conditions,
+            condition_provenance=condition_provenance,
+            literature_evidence=literature_evidence,
+            reproduction_targets=reproduction_targets,
+            selected_models=selected_models,
+            parameter_mapping=parameter_mapping,
+            outputs=outputs,
         )
         if result.get("status") in ("success", "needs_input") and _session.get("research"):
             if supplemental_metadata:
@@ -836,10 +1613,10 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
     guarded = switches.resolve(_switches)["harness"]
     parameters = dict(parameters or {})
     parameters.update(extra)
-    entry = registry.get(model)
+    entry = registry.get(model, _session)
     if entry is None:
         return _fail(
-            "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names()) or "none")
+            "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names(session=_session)) or "none")
         )
     if not entry.runnable:
         return _fail(
@@ -902,6 +1679,27 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
         },
         _owner,
     )
+    if _session is not None and not _session.get("ephemeral"):
+        project = _session.get("research") or {}
+        research_id = project.get("research_id") or _session.get("id")
+        try:
+            artifacts.persist_run(
+                _session.get("id") or "shared",
+                research_id,
+                handle,
+                {
+                    "handle": handle,
+                    "model": model,
+                    "version": entry.card["version"],
+                    "spec": spec,
+                    "axis": axis,
+                    "series": result.get("series"),
+                    "points": points,
+                    "diagnostics": diagnostics,
+                },
+            )
+        except (OSError, ValueError):
+            pass
     summary = "%s ran in %.2fs: %d point(s)%s. Quality control %s." % (
         model,
         elapsed,
@@ -983,6 +1781,7 @@ def run_planned_model(run_id, _owner=None, _switches=None, _session=None):
                 "series_summary": results.summarise_series(payload.get("series"), units),
                 "units": units,
                 "planned_run_id": run_id,
+                "reproduction_target_ids": research.target_ids_for_run(_session, run_id),
                 "reused": True,
             },
         )
@@ -995,6 +1794,7 @@ def run_planned_model(run_id, _owner=None, _switches=None, _session=None):
         _session=_session,
     )
     result.setdefault("data", {})["planned_run_id"] = run_id
+    result.setdefault("data", {})["reproduction_target_ids"] = research.target_ids_for_run(_session, run_id)
     if result.get("status") == "success":
         result["data"]["reused"] = False
         result["summary"] = "Approved run %s: %s" % (run_id, result["summary"])
@@ -1067,6 +1867,7 @@ def plot(
     dry_run=False,
     metrics=None,
     _owner=None,
+    _session=None,
 ):
     spec = {
         "series": series or [],
@@ -1091,7 +1892,12 @@ def plot(
             "error": "; ".join(problems),
         }
     try:
-        figure = plotting.render(spec, resolved, preview=bool(dry_run))
+        figure = plotting.render(
+            spec,
+            resolved,
+            preview=bool(dry_run),
+            temporary_dir=_temporary_figure_dir(_session),
+        )
     except Exception as exc:
         return _fail("The chart could not be drawn: %s: %s" % (type(exc).__name__, exc))
 
@@ -1230,10 +2036,12 @@ def plot_planned_chart(chart_id, action="render", _owner=None, _session=None):
                     if not refusals:
                         comparisons.append({"quantity": y_name, **values})
         result["data"]["planned_chart_id"] = chart_id
+        result["data"]["reproduction_target_ids"] = research.target_ids_for_chart(_session, chart_id)
         result["data"]["comparisons"] = comparisons
         result["summary"] = "Approved chart %s: %s" % (chart_id, result["summary"])
         if result.get("ui") and result["ui"].get("figure"):
             result["ui"]["figure"]["planned_chart_id"] = chart_id
+            result["ui"]["figure"]["reproduction_target_ids"] = research.target_ids_for_chart(_session, chart_id)
             result["ui"]["figure"]["purpose"] = chart.get("purpose", "result")
             result["ui"]["figure"]["comparisons"] = comparisons
             result["ui"]["figure"]["figure_number"] = figure_number
@@ -1280,7 +2088,10 @@ def _review_planned_figure(chart_id, _owner=None, _session=None):
     redrawn = False
     if review["redraw_reasons"] and not review["issues"]:
         reviewed_figure = plotting.render(
-            {**spec, "quality_profile": "publication"}, resolved, preview=False
+            {**spec, "quality_profile": "publication"},
+            resolved,
+            preview=False,
+            temporary_dir=_temporary_figure_dir(_session),
         )
         reviewed_figure.update(
             planned_chart_id=chart_id,
@@ -1336,6 +2147,13 @@ DISPATCH = {
     "list_literature": list_literature,
     "read_reference_dataset": read_reference_dataset,
     "read_literature": read_literature,
+    "read_research_guideline": read_research_guideline,
+    "read_model_instruction": read_model_instruction,
+    "read_paper_figure": read_paper_figure,
+    "inspect_paper_figure": inspect_paper_figure,
+    "register_model_guideline": register_model_guideline,
+    "inspect_github_model_repo": inspect_github_model_repo,
+    "register_github_model_repo": register_github_model_repo,
     "list_models": list_models,
     "run_model": run_model,
     "run_planned_model": run_planned_model,
@@ -1351,10 +2169,18 @@ DISPATCH = {
 # tool call.
 OWNER_SCOPED = ("run_model", "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart")
 SWITCH_AWARE = ("run_model", "run_planned_model", "list_models")
-SESSION_SCOPED = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
+SESSION_SCOPED = (
+    "list_literature", "read_literature", "list_models", "read_research_guideline", "read_model_instruction",
+    "read_paper_figure", "inspect_paper_figure", "register_model_guideline",
+    "inspect_github_model_repo", "register_github_model_repo", "discover_literature", "ingest_paper"
+)
 SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model", "run_planned_model", "plot_planned_chart")
-CORPUS_TOOLS = ("list_literature", "read_literature", "discover_literature", "ingest_paper")
-ONLINE_TOOLS = ("discover_literature", "ingest_paper")
+SESSION_SCOPED = SESSION_SCOPED + ("plot",)
+CORPUS_TOOLS = (
+    "list_literature", "read_literature", "read_research_guideline",
+    "read_paper_figure", "inspect_paper_figure", "discover_literature", "ingest_paper",
+)
+ONLINE_TOOLS = ("discover_literature", "inspect_github_model_repo")
 
 
 def specs(switches_in=None):
@@ -1388,6 +2214,7 @@ def call(name, arguments, owner=None, switches_in=None, session=None):
     if name in SESSION_SCOPED:
         arguments["_session"] = session
     try:
-        return handler(**arguments)
+        with registry.session_context(session):
+            return handler(**arguments)
     except TypeError as exc:
         return _fail("Bad arguments for %s: %s" % (name, exc))

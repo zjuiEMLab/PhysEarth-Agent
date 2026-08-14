@@ -36,6 +36,8 @@ ALLOWED_HOSTS = (
     "os.copernicus.org",
     "soil.copernicus.org",
     "esurf.copernicus.org",
+    "api.github.com",
+    "raw.githubusercontent.com",
 )
 
 TIMEOUT_S = 20.0

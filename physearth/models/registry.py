@@ -1,7 +1,10 @@
 import importlib
 import importlib.util
 import os
+import shutil
 import sys
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 import yaml
@@ -14,6 +17,17 @@ EXTRA_DIRS_ENV = "PHYSEARTH_MODEL_PATH"
 
 _REGISTRY = None
 _REJECTED = None
+_ACTIVE_SESSION = ContextVar("physearth_model_session", default=None)
+
+
+@contextmanager
+def session_context(session):
+    """Make session-only models visible to nested validation without global mutation."""
+    token = _ACTIVE_SESSION.set(session)
+    try:
+        yield
+    finally:
+        _ACTIVE_SESSION.reset(token)
 
 
 class Model:
@@ -177,9 +191,58 @@ def reload():
     _build()
 
 
-def all_models():
+def register_directory(directory, source="managed"):
+    """Register one already-approved model directory.
+
+    GitHub inspection never calls this function.  Callers must complete their own approval
+    gate before allowing the adapter import that the normal registry contract requires.
+    """
     _ensure()
-    return dict(_REGISTRY)
+    model = _load_directory(Path(directory), source)
+    if model.name in _REGISTRY:
+        raise contract.DeclarationError("name %r already registered" % model.name)
+    _REGISTRY[model.name] = model
+    return model
+
+
+def register_session_directory(session, directory, source="temporary evaluation"):
+    """Load an approved model into one session without mutating the global registry."""
+    if session is None:
+        raise ValueError("a session is required for temporary model registration")
+    _ensure()
+    model = _load_directory(Path(directory), source)
+    if model.name in _REGISTRY:
+        raise contract.DeclarationError(
+            "temporary model name %r conflicts with a globally registered model" % model.name
+        )
+    temporary = session.setdefault("temporary_models", {})
+    if model.name in temporary:
+        raise contract.DeclarationError(
+            "temporary model %r is already registered in this session" % model.name
+        )
+    temporary[model.name] = model
+    session.setdefault("temporary_model_dirs", []).append(str(directory))
+    return model
+
+
+def clear_session(session):
+    """Remove session-only models and their temporary source directories."""
+    if not session:
+        return
+    session.pop("temporary_models", None)
+    for raw in session.pop("temporary_model_dirs", []) or []:
+        try:
+            shutil.rmtree(Path(raw), ignore_errors=True)
+        except (OSError, ValueError):
+            pass
+
+
+def all_models(session=None):
+    _ensure()
+    session = session if session is not None else _ACTIVE_SESSION.get()
+    models = dict(_REGISTRY)
+    models.update((session or {}).get("temporary_models") or {})
+    return models
 
 
 def rejected():
@@ -187,20 +250,24 @@ def rejected():
     return list(_REJECTED)
 
 
-def get(name):
+def get(name, session=None):
     _ensure()
+    session = session if session is not None else _ACTIVE_SESSION.get()
+    temporary = (session or {}).get("temporary_models") or {}
+    if name in temporary:
+        return temporary[name]
     return _REGISTRY.get(name)
 
 
-def names(runnable_only=False):
-    _ensure()
-    return [n for n, m in _REGISTRY.items() if m.runnable or not runnable_only]
+def names(runnable_only=False, session=None):
+    session = session if session is not None else _ACTIVE_SESSION.get()
+    return [n for n, m in all_models(session).items() if m.runnable or not runnable_only]
 
 
-def summary():
-    _ensure()
+def summary(session=None):
+    session = session if session is not None else _ACTIVE_SESSION.get()
     rows = []
-    for name, model in _REGISTRY.items():
+    for name, model in all_models(session).items():
         rows.append(
             {
                 "name": name,
@@ -212,21 +279,26 @@ def summary():
                 "description": model.card["description"],
                 "outputs": sorted(model.card["outputs"]),
                 "source": model.source,
+                "instruction_id": model.card.get("instruction_id") or model.name,
+                "instruction_version": str(model.card.get("instruction_version") or "1.0"),
+                "instruction_available": bool(
+                    (model.card.get("instruction_path") or "")
+                ),
             }
         )
     return rows
 
 
-def capability_block(declared=True):
+def capability_block(declared=True, session=None):
     """The models as the agent sees them.
 
     With `declared` false only the name, the description and the output names survive;
     every range, enum, default and legal combination is withheld. That is the capability
     ablation, and nothing else about the system changes with it.
     """
-    _ensure()
+    session = session if session is not None else _ACTIVE_SESSION.get()
     lines = []
-    for name, model in _REGISTRY.items():
+    for name, model in all_models(session).items():
         card = model.card
         head = "- %s v%s (%s)" % (name, card["version"], card["tier"])
         if not model.runnable:

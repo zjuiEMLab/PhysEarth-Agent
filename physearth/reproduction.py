@@ -10,24 +10,29 @@ import math
 import re
 
 
+
 CASES = {
     "q1": {
         "section": "smrt-v1#08",
+        "paper_section": "3.1.1",
         "title": "sparse-medium approximation",
         "markers": ("rayleigh", "first-order", "density"),
     },
     "q2": {
         "section": "smrt-v1#08",
+        "paper_section": "3.1.2",
         "title": "comparison with DMRT-ML and DMRT-QMS",
         "markers": ("dmrt-ml", "dmrt-qms"),
     },
     "q3": {
         "section": "smrt-v1#08",
+        "paper_section": "3.1.3",
         "title": "comparison with MEMLS-IBA",
         "markers": ("memls", "exponential", "brightness"),
     },
     "q4": {
         "section": "smrt-v1#09",
+        "paper_section": "3.1.4",
         "title": "equivalence of microstructure models",
         "markers": ("sticky hard sphere", "exponential", "equival"),
     },
@@ -79,6 +84,8 @@ def repair(question, runs, charts=None):
     the review card so the human approves the exact computation before it can execute.
     """
     case_id = identify(question)
+    if case_id == "q1":
+        return _repair_q1(runs)
     if case_id == "q4":
         return _repair_q4(runs, charts or [])
     if case_id == "q3":
@@ -208,6 +215,204 @@ def repair(question, runs, charts=None):
                 "reason": "restore a missing core Figure 4 comparison run from smrt-v1#08",
             }
         )
+    return repairs
+
+
+Q1_MATRIX = (
+    ("rayleigh", "independent_sphere", "q1_rayleigh_independent", "Rayleigh with independent spheres"),
+    ("iba", "independent_sphere", "q1_iba_independent", "IBA with independent spheres"),
+    ("dmrt_qcacp_shortrange", "non_sticky_hard_spheres", "q1_dmrt_non_sticky", "DMRT QCA-CP with non-sticky hard spheres"),
+    ("iba", "non_sticky_hard_spheres", "q1_iba_non_sticky", "IBA with non-sticky hard spheres"),
+    ("dmrt_qcacp_shortrange", "sticky_hard_spheres", "q1_dmrt_sticky", "DMRT QCA-CP with sticky hard spheres"),
+    ("iba", "sticky_hard_spheres", "q1_iba_sticky", "IBA with sticky hard spheres"),
+)
+
+
+def q1_protocol():
+    # Q1's expected matrix belongs to the offline Evaluation case.  The live research
+    # workflow never calls this helper; it generates a new protocol from paper evidence.
+    from physearth import evals
+
+    item = dict(evals.guided_demo())
+    item.setdefault("id", item.get("protocol_id", "q1"))
+    item.setdefault("paper", item.get("paper", "smrt-v1"))
+    return item
+
+
+def q1_matrix():
+    """Read Q1's run matrix from the structured paper protocol artifact."""
+    protocol = q1_protocol()
+    required = protocol.get("required_runs") or []
+    ids = (
+        "q1_rayleigh_independent", "q1_iba_independent", "q1_dmrt_non_sticky",
+        "q1_iba_non_sticky", "q1_dmrt_sticky", "q1_iba_sticky",
+    )
+    labels = (
+        "Rayleigh with independent spheres", "IBA with independent spheres",
+        "DMRT QCA-CP with non-sticky hard spheres", "IBA with non-sticky hard spheres",
+        "DMRT QCA-CP with sticky hard spheres", "IBA with sticky hard spheres",
+    )
+    return tuple(
+        (pair[0], pair[1], ids[index], labels[index])
+        for index, pair in enumerate(required[: len(ids)])
+        if isinstance(pair, (list, tuple)) and len(pair) == 2
+    )
+
+
+def _repair_q1(runs):
+    """Restore Q1's explicit 3-by-theory/microstructure comparison matrix.
+
+    Providers commonly submit the old three-run formulation, or substitute an exponential
+    IBA run for the requested non-sticky hard-sphere comparison. Q1 is a registered paper
+    protocol, so these unambiguous presentation/configuration repairs are made auditable in
+    the review card rather than sending the same incomplete proposal back to the model.
+    """
+    protocol = q1_protocol()
+    fixed = protocol.get("fixed") or {}
+    matrix = q1_matrix()
+    coefficient_runs = [
+        run for run in runs
+        if run.get("model") == "smrt"
+        and (run.get("parameters") or {}).get("output") == "coefficients"
+        and str(run.get("stage") or "main").lower() not in ("baseline", "diagnostic")
+    ]
+    if not coefficient_runs:
+        return []
+
+    repairs = []
+    by_pair = {}
+    for run in coefficient_runs:
+        spec = run.get("parameters") or {}
+        pair = (spec.get("electromagnetic_model"), spec.get("microstructure_model"))
+        if pair in {(item[0], item[1]) for item in matrix} and pair not in by_pair:
+            by_pair[pair] = run
+
+    exponential_iba = next(
+        (
+            run for run in coefficient_runs
+            if (run.get("parameters") or {}).get("electromagnetic_model") == "iba"
+            and (run.get("parameters") or {}).get("microstructure_model") == "exponential"
+        ),
+        None,
+    )
+    if ("iba", "non_sticky_hard_spheres") not in by_pair and exponential_iba is not None:
+        by_pair[("iba", "non_sticky_hard_spheres")] = exponential_iba
+        repairs.append(
+            {
+                "run_id": exponential_iba.get("id"),
+                "field": "microstructure_model",
+                "from": "exponential",
+                "to": "non_sticky_hard_spheres",
+                "reason": "Q1 compares sphere microstructures; exponential IBA is not one of the six requested configurations",
+            }
+        )
+
+    sticky_template = by_pair.get(("dmrt_qcacp_shortrange", "sticky_hard_spheres"))
+    if sticky_template is None:
+        sticky_template = by_pair.get(("iba", "sticky_hard_spheres"))
+    sticky_value = (
+        (sticky_template.get("parameters") or {}).get("stickiness")
+        if sticky_template is not None
+        else None
+    )
+    if not isinstance(sticky_value, (int, float)):
+        sticky_value = 0.2
+
+    canonical_runs = []
+    source_ids = set()
+    for electromagnetic_model, microstructure_model, run_id, label in matrix:
+        existing_source = by_pair.get((electromagnetic_model, microstructure_model))
+        source = existing_source
+        if source is None and microstructure_model == "non_sticky_hard_spheres":
+            source = sticky_template
+        if source is None:
+            source = next(
+                (
+                    run for run in coefficient_runs
+                    if (run.get("parameters") or {}).get("electromagnetic_model") == electromagnetic_model
+                ),
+                coefficient_runs[0],
+            )
+        source_ids.add(source.get("id"))
+        run = dict(source)
+        spec = dict(source.get("parameters") or {})
+        # Keep an existing run ID so baseline_run_id and human review references remain
+        # valid. Only a newly synthesized missing matrix member receives its canonical ID.
+        output_run_id = source.get("id") if existing_source is not None else run_id
+        original_pair = (
+            spec.get("electromagnetic_model"),
+            spec.get("microstructure_model"),
+        )
+        spec.update(
+            {
+                "electromagnetic_model": electromagnetic_model,
+                "microstructure_model": microstructure_model,
+                "output": "coefficients",
+                "frequency_ghz": fixed.get("frequency_ghz", 37.0),
+                "radius_m": fixed.get("radius_m", 1.0e-4),
+                "sweep_parameter": fixed.get("sweep_parameter", "density_kg_m3"),
+                "sweep_start": fixed.get("sweep_start", 1.0),
+                "sweep_stop": fixed.get("sweep_stop", 96.0),
+                "sweep_points": max(
+                    int(fixed.get("minimum_sweep_points", 12)),
+                    int(spec.get("sweep_points") or 0),
+                ),
+            }
+        )
+        spec.pop("corr_length_m", None)
+        if microstructure_model == "sticky_hard_spheres":
+            spec["stickiness"] = sticky_value
+        else:
+            spec.pop("stickiness", None)
+        run.update(
+            {
+                "id": output_run_id,
+                "label": label,
+                "model": "smrt",
+                "parameters": spec,
+                "stage": "main",
+            }
+        )
+        if original_pair != (electromagnetic_model, microstructure_model):
+            repairs.append(
+                {
+                    "run_id": output_run_id,
+                    "field": "theory_or_microstructure",
+                    "from": "%s/%s" % original_pair,
+                    "to": "%s/%s" % (electromagnetic_model, microstructure_model),
+                    "reason": "restore Q1's six explicit theory/microstructure configurations",
+                }
+            )
+        if (source.get("parameters") or {}).get("radius_m") != fixed.get("radius_m", 1.0e-4):
+            repairs.append(
+                {
+                    "run_id": output_run_id,
+                    "field": "radius_m",
+                    "from": (source.get("parameters") or {}).get("radius_m"),
+                    "to": fixed.get("radius_m", 1.0e-4),
+                    "reason": "restore the Q1 paper radius of 100 micrometres",
+                }
+            )
+        canonical_runs.append(run)
+
+    if len(canonical_runs) != len(coefficient_runs) or {
+        run.get("id") for run in coefficient_runs
+    } != source_ids:
+        repairs.append(
+            {
+                "field": "runs",
+                "from": [run.get("id") for run in coefficient_runs],
+                "to": [run.get("id") for run in canonical_runs],
+                "reason": "replace extra or missing Q1 coefficient runs with the required six-run matrix",
+            }
+        )
+    runs[:] = [
+        run for run in runs
+        if not (
+            run.get("model") == "smrt"
+            and str(run.get("stage") or "main").lower() not in ("baseline", "diagnostic")
+        )
+    ] + canonical_runs
     return repairs
 
 
@@ -705,15 +910,50 @@ def _sweep_problems(runs, axis, start, stop, minimum_points=8):
 
 
 def _validate_q1(runs, charts, limitations):
-    coefficient_runs = _main_runs(runs, {"coefficients"})
+    fixed = q1_protocol().get("fixed") or {}
+    matrix = q1_matrix()
+    coefficient_runs = [
+        run for run in _main_runs(runs, {"coefficients"})
+        if str(run.get("stage") or "main").lower() not in ("baseline", "diagnostic")
+    ]
     problems = []
-    if len(coefficient_runs) < 3:
-        problems.append("Q1 requires at least three coefficient configurations for the common sparse limit")
-    problems.extend(_sweep_problems(coefficient_runs, "density_kg_m3", 1.0, 96.0, 12))
+    expected = {(item[0], item[1]): item[3] for item in matrix}
+    observed = {
+        (
+            (run.get("parameters") or {}).get("electromagnetic_model"),
+            (run.get("parameters") or {}).get("microstructure_model"),
+        )
+        for run in coefficient_runs
+    }
+    missing = [expected[key] for key in expected if key not in observed]
+    unexpected = sorted(
+        "%s/%s" % pair for pair in observed - set(expected)
+    )
+    if missing:
+        problems.append(
+            "Q1 requires six coefficient runs; missing: %s" % ", ".join(missing)
+        )
+    if unexpected:
+        problems.append(
+            "Q1 does not allow extra coefficient configurations: %s"
+            % ", ".join(unexpected)
+        )
+    problems.extend(
+        _sweep_problems(
+            coefficient_runs,
+            fixed.get("sweep_parameter", "density_kg_m3"),
+            fixed.get("sweep_start", 1.0),
+            fixed.get("sweep_stop", 96.0),
+            int(fixed.get("minimum_sweep_points", 12)),
+        )
+    )
     problems.extend(
         _common_reference_problems(
             coefficient_runs,
-            {"frequency_ghz": (37.0, 0.01), "radius_m": (1.0e-4, 1.0e-8)},
+            {
+                "frequency_ghz": (fixed.get("frequency_ghz", 37.0), 0.01),
+                "radius_m": (fixed.get("radius_m", 1.0e-4), 1.0e-8),
+            },
             "Q1",
         )
     )

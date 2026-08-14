@@ -302,7 +302,7 @@ def _pearson(left, right):
     return round(cov / math.sqrt(var_l * var_r), 4)
 
 
-def render(spec, series, preview=False):
+def render(spec, series, preview=False, temporary_dir=None):
     """Draw a chart and return a small record pointing at a server-owned PNG file."""
     import matplotlib
 
@@ -312,10 +312,10 @@ def render(spec, series, preview=False):
     families = _install_font()
     kind = spec.get("kind") if spec.get("kind") in KINDS else "line"
     with matplotlib.rc_context({"font.family": families + ["serif"] if families else ["serif"]}):
-        return _draw(plt, spec, series, kind, preview)
+        return _draw(plt, spec, series, kind, preview, temporary_dir=temporary_dir)
 
 
-def _draw(plt, spec, series, kind, preview=False):
+def _draw(plt, spec, series, kind, preview=False, temporary_dir=None):
     publication = spec.get("quality_profile") == "publication"
     figure, axes = plt.subplots(
         figsize=(7.2, 4.7) if publication else (5.8, 3.65),
@@ -439,7 +439,7 @@ def _draw(plt, spec, series, kind, preview=False):
     plt.close(figure)
     payload = buffer.getvalue()
     digest = hashlib.sha256(payload).hexdigest()[:24]
-    figure_dir = config.state_dir().resolve() / "figures"
+    figure_dir = Path(temporary_dir) if temporary_dir else config.state_dir().resolve() / "figures"
     figure_dir.mkdir(parents=True, exist_ok=True)
     image_path = figure_dir / ("%s.png" % digest)
     if not image_path.exists():

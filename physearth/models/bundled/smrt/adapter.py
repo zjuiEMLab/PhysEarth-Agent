@@ -9,6 +9,7 @@ MICROSTRUCTURE_ARGS = {
     "gaussian_random_field": ("corr_length_m", "corr_length"),
     "independent_sphere": ("radius_m", "radius"),
     "sticky_hard_spheres": ("radius_m", "radius"),
+    "non_sticky_hard_spheres": ("radius_m", "radius"),
 }
 
 DORT_DIAGONALIZATION_METHODS = (None, "shur", "shur_forcedtriu")
@@ -98,15 +99,24 @@ def _snowpack(spec, overrides=None):
     values.update(overrides or {})
     micro = values["microstructure_model"]
     source_key, target_key = MICROSTRUCTURE_ARGS[micro]
+    smrt_micro = (
+        "sticky_hard_spheres"
+        if micro == "non_sticky_hard_spheres"
+        else micro
+    )
     kwargs = {
         "thickness": [values["thickness_m"]],
-        "microstructure_model": micro,
+        "microstructure_model": smrt_micro,
         "density": [values["density_kg_m3"]],
         "temperature": [values["temperature_k"]],
         target_key: [values[source_key]],
     }
     if micro == "sticky_hard_spheres":
         kwargs["stickiness"] = [values["stickiness"]]
+    elif micro == "non_sticky_hard_spheres":
+        # SMRT represents the non-sticky limit as tau=infinity. Keep the public model
+        # name explicit so plans can compare it independently from sticky hard spheres.
+        kwargs["stickiness"] = [float("inf")]
     return make_snowpack(**kwargs)
 
 

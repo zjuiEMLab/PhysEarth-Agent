@@ -15,6 +15,7 @@ REPO = Path(__file__).resolve().parent.parent
 EVALUATION = REPO / "evaluation"
 TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
+DEMOS = EVALUATION / "demos"
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
 ARCHITECTURE_IMAGE = REPO / "assets" / "evaluation" / "agent-architecture.svg"
 
@@ -25,10 +26,11 @@ REPRESENTATIVE_CASES = (
         "Where does the sparse-medium limit break?",
         "Compare Rayleigh, IBA, and DMRT formulations as snow density increases.",
         "Scattering-coefficient curves, deviation thresholds, and a physical explanation.",
-        "Under what snow-density range do Rayleigh theory, DMRT-QCA-CP sticky and "
-        "DMRT-QCA-CP non-sticky hard spheres converge to the same first-order scattering "
-        "behavior, and at what density do particle correlation and dense-medium effects "
-        "cause their predictions to diverge?",
+        "Under what snow-density range do Rayleigh theory, DMRT-QCA-CP, and IBA across "
+        "independent spheres, non-sticky hard spheres, and sticky hard spheres converge to "
+        "the same first-order scattering behavior, and at what density do particle "
+        "correlation and dense-medium effects cause their predictions to diverge? Use the "
+        "six legal theory/microstructure combinations.",
     ),
     (
         "q2-dmrt-comparison",
@@ -76,15 +78,6 @@ BASIC_CASES = (
         "from 100 to 700 kg/m3 for a 1 m layer, plot it, and explain the trend.",
     ),
     (
-        "basic-tvc-observation",
-        "MODEL + MEASUREMENT",
-        "Compare SMRT with field observations",
-        "Put measured Trail Valley Creek backscatter beside a registered-model result.",
-        "Observed and simulated Ku-band series remain visibly and textually distinct.",
-        "At Trail Valley Creek, what Ku-band backscatter was actually measured, and how does "
-        "SMRT compare at the same incidence angles? Plot both.",
-    ),
-    (
         "basic-lband-moisture",
         "SENSITIVITY EXPERIMENT",
         "Probe L-band soil-moisture response",
@@ -92,23 +85,6 @@ BASIC_CASES = (
         "A Tau-Omega sensitivity plot with declared units and physical ranges.",
         "How does L-band brightness temperature respond to soil moisture from 0.05 to 0.45, "
         "and how much does vegetation optical depth change that?",
-    ),
-    (
-        "basic-model-comparability",
-        "COMPARABILITY",
-        "Check whether two outputs can be compared",
-        "Ask two registered models for a soil-moisture response without assuming common units.",
-        "A comparison only if the quantities are commensurable; otherwise an explicit refusal.",
-        "Compare what tau_omega and water_cloud predict as soil moisture rises. Are the two "
-        "results comparable?",
-    ),
-    (
-        "basic-density-refusal",
-        "PHYSICAL REFUSAL",
-        "Reject impossible snow density",
-        "Test whether a plausible-looking request above pure-ice density reaches SMRT.",
-        "No model execution and a clear explanation of the 917 kg/m3 physical bound.",
-        "Simulate a snowpack at 37 GHz with a density of 2000 kg/m3.",
     ),
     (
         "basic-tool-bypass",
@@ -403,7 +379,77 @@ def demo_cases():
     return _cases(REPRESENTATIVE_CASES)
 
 
+@lru_cache(maxsize=1)
+def guided_demo():
+    """Load evaluation-only demo expectations; never read a research protocol artifact."""
+    path = DEMOS / "smrt-q1.yaml"
+    return dict(_load_yaml(path))
+
+
+def guided_demo_cases():
+    """Return the one beginner-facing guided reproduction card."""
+    return [guided_demo()]
+
+
+def guided_demo_matches(question):
+    text = " ".join(str(question or "").lower().replace("-", " ").split())
+    return all(
+        marker in text
+        for marker in (
+            "snow density",
+            "rayleigh",
+            "dmrt qca cp",
+            "six legal theory/microstructure combinations",
+        )
+    )
+
+
 def demo_card(case):
+    if case.get("paper_intro"):
+        source = case.get("paper_url") or ""
+        source_html = (
+            "<a href='%s' target='_blank' rel='noopener'>Read the paper</a>"
+            % _e(source)
+            if source
+            else ""
+        )
+        runs = case.get("required_runs") or []
+        run_text = "; ".join(
+            "%s + %s" % (str(pair[0]).replace("_", " "), str(pair[1]).replace("_", " "))
+            for pair in runs
+            if isinstance(pair, (list, tuple)) and len(pair) == 2
+        )
+        fixed = case.get("fixed") or {}
+        fixed_text = ", ".join(
+            "%s=%s" % (key, value) for key, value in fixed.items() if key != "sweep_parameter"
+        )
+        workflow = "".join("<li>%s</li>" % _e(step) for step in case.get("workflow") or [])
+        return (
+            "<article class='eval-demo-card eval-demo-card--guided'>"
+            "<div class='eval-demo-card__eyebrow'>%s</div><h3>%s</h3>"
+            "<p>%s</p>%s"
+            "<div class='eval-demo-card__context'><b>Paper context</b><p>%s</p>"
+            "<p><b>Reproduce:</b> %s</p>"
+            "<p><b>Protocol:</b> %s; <b>Paper section:</b> %s; <b>Runs:</b> %s</p>"
+            "<p><b>Fixed conditions:</b> %s</p></div>"
+            "<div class='eval-demo-card__expect'><span>EXPECTED</span>%s</div>"
+            "<details class='eval-demo-card__workflow'><summary>What will happen</summary><ol>%s</ol></details>"
+            "</article>"
+            % (
+                _e(case.get("eyebrow", "")),
+                _e(case.get("title", "")),
+                _e(case.get("summary", "")),
+                source_html,
+                _e(case.get("paper_intro", "")),
+                _e(case.get("result_target", "")),
+                _e(case.get("protocol_title", "")),
+                _e(case.get("paper_section") or "not declared"),
+                _e(run_text or "declared by the paper protocol"),
+                _e(fixed_text or "declared by the paper protocol"),
+                _e(case.get("expected", "")),
+                workflow,
+            )
+        )
     return (
         "<article class='eval-demo-card'>"
         "<div class='eval-demo-card__eyebrow'>%s</div>"

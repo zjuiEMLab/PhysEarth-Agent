@@ -3,7 +3,8 @@
 A paper pulled in mid-session is readable and citable exactly like a bundled one, and is
 never confused with one. The corpus lives in the session object, so it disappears when
 the visitor clears the conversation and is invisible to every other visitor sharing the
-process. Nothing is written to disk.
+process. The session keeps bounded text for fast access, while the project artifact store keeps
+a manifest, extracted assets and source provenance under state_dir/projects/<session_id>.
 
 The three tiers of the citation contract meet here:
 
@@ -20,7 +21,7 @@ different marker.
 
 import re
 
-from physearth import knowledge, untrusted
+from physearth import artifacts, knowledge, untrusted
 from physearth.ingest import fulltext
 
 MAX_PAPERS = 4
@@ -85,7 +86,7 @@ def remember_abstracts(session, candidates):
         store.pop(next(iter(store)))
 
 
-def add(session, record):
+def add(session, record, persist=True):
     """Turn a fetched paper into a session card. Returns the card."""
     store = session.setdefault("corpus", {})
     if len(store) >= MAX_PAPERS:
@@ -134,7 +135,19 @@ def add(session, record):
         "scenarios": [],
         "outputs": [],
         "sections": sections,
+        "figures": [dict(item) for item in (record.get("figures") or [])],
+        "tables": [dict(item) for item in (record.get("tables") or [])],
     }
+    if persist:
+        artifact = artifacts.persist_paper(session.get("id") or "shared", card, record)
+        # Keep binary PDF/JATS assets out of gr.State.  The session holds metadata and points to
+        # the persistent artifact; the UI can request the asset by its manifest path.
+        card["figures"] = artifact["manifest"].get("figures") or []
+        card["artifact"] = {
+            "paper_id": artifact["paper_id"],
+            "root": artifact["root"],
+            "manifest": artifact["root"] + "/manifest.json",
+        }
     store[slug] = card
     return card
 

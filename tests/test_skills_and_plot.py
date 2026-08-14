@@ -304,5 +304,12 @@ def test_the_tool_count_did_not_grow_for_either_increment():
         "plot",
         "discover_literature",
         "ingest_paper",
+        "read_research_guideline",
+        "read_model_instruction",
+            "read_paper_figure",
+            "inspect_paper_figure",
+        "register_model_guideline",
+        "inspect_github_model_repo",
+        "register_github_model_repo",
         "research_plan",
     }

@@ -243,6 +243,13 @@ def test_switching_the_layer_off_leaves_the_offline_path_whole(monkeypatch):
     assert offered == {
         "list_literature",
         "read_literature",
+        "read_research_guideline",
+        "read_model_instruction",
+            "read_paper_figure",
+            "inspect_paper_figure",
+        "register_model_guideline",
+        "register_github_model_repo",
+        "ingest_paper",
         "list_models",
         "run_model",
         "run_planned_model",

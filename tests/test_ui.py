@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from physearth import agent, budget, knowledge
+from physearth import agent, budget, knowledge, prompt
 from physearth.ui import render, theme
 
 
@@ -42,11 +42,292 @@ def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypat
     assert "MODEL CALL" in frames[2][4]
 
 
+def test_execution_continuation_preserves_conversation_and_only_removes_plan_card(monkeypatch):
+    import app
+    from physearth import session as session_state
+
+    box = session_state.new_session("m")
+    turns = [{
+        "index": 1,
+        "question": "run the approved research plan",
+        "answer": "The plan is approved for execution.",
+        "events": [],
+        "faulted": False,
+        "state": {},
+    }]
+    state = session_state.new_state(box)
+    state["phase"] = "done"
+
+    def fake_stream(*_args, **_kwargs):
+        yield "The physical run completed.", [{"kind": "model_call", "index": 1}], state
+
+    monkeypatch.setattr(app.agent, "stream", fake_stream)
+    frames = list(app.resume_after_review("continue execution", turns, box, "m"))
+
+    # Neither the initial continuation frame nor the final result replaces the existing
+    # history subtree. The final answer is shown in the live result and merged into state.
+    assert frames[0][2].get("__type__") == "update"
+    assert frames[-1][2].get("__type__") == "update"
+    assert "The physical run completed." in frames[-1][3]
+    assert "The physical run completed." in frames[-1][8][-1]["answer"]
+
+
+def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
+    """Approving a plan must not invoke the full-output continuation as a reset."""
+    import app
+
+    called = []
+
+    def fake_stream(*_args, **_kwargs):
+        called.append(True)
+        yield "unexpected continuation", [], {"phase": "done"}
+
+    monkeypatch.setattr(app.agent, "stream", fake_stream)
+    frames = list(app.resume_after_review("", [], {}, "m"))
+
+    assert not called
+    assert len(frames) == 1
+    assert len(frames[0]) == 11
+    assert all(item.get("__type__") == "update" for item in frames[0])
+
+
+def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(monkeypatch):
+    """All user-facing case starters share the same direct-tool approval route."""
+    import app
+    from physearth import approval, evals, session as session_state
+
+    state = session_state.new_state(None)
+    state["phase"] = "done"
+
+    def fake_stream(*_args, **_kwargs):
+        yield "Approved run completed.", [{"kind": "model_call", "index": 1}], state
+
+    monkeypatch.setattr(app.agent, "stream", fake_stream)
+    turns = [{
+        "index": 1,
+        "question": "existing question",
+        "answer": "existing answer",
+        "events": [],
+        "faulted": False,
+        "state": {},
+    }]
+
+    sessions = []
+    for case in evals.basic_cases()[1:2]:
+        sessions.append(app.start_basic_case(case["question"], case["id"], "m")[9])
+    sessions.append(app.start_guided_demo(evals.guided_demo()["question"], "m")[9])
+
+    for box in sessions:
+        approval.request(box, "run_model", {"model": "smrt", "parameters": {}})
+        app.review_click(box, "primary")
+        assert box.get("preserve_conversation_on_resume") is True
+        frames = list(app.respond("approved continuation", turns, box, "m"))
+        assert frames[-1][2].get("__type__") == "update"
+        assert frames[-1][8][-1]["answer"].endswith("Approved run completed.")
+
+
+def test_direct_approval_hides_the_stale_card_until_the_agent_clears_it():
+    import app
+    from physearth import approval, session as session_state
+    from physearth.ui import render
+
+    box = session_state.new_session("m")
+    approval.set_mode(box, approval.ASK)
+    approval.request(box, "run_model", {"model": "smrt", "parameters": {}})
+
+    app.review_click(box, "primary")
+
+    assert box["approval_resuming"] is True
+    assert "hidden" in render.research_context(box)
+
+
 def test_answer_text_is_escaped_before_anything_else():
     out = render.answer_html("<script>alert(1)</script> and <img onerror=x>")
     assert "<script>" not in out
     assert "&lt;script&gt;" in out
     assert "onerror" not in out or "&lt;img" in out
+
+
+def test_equation_subscripts_and_superscripts_are_safe_allowlisted_markup():
+    out = render.answer_html("T<sub>B</sub> and k<sup>2</sup>")
+    assert "T<sub>B</sub>" in out
+    assert "k<sup>2</sup>" in out
+    unsafe = render.answer_html("<sub class='bad'>x</sub><script>alert(1)</script>")
+    assert "&lt;sub class=&#x27;bad&#x27;&gt;" in unsafe
+    assert "&lt;script&gt;" in unsafe
+
+
+def test_long_pasted_revision_text_preserves_lines_and_escapes_markup():
+    from physearth import session
+
+    pasted = "format: phys-earth/research-protocol\nplan_version: 2\nruns:\n  - id: density\n    label: <script>alert(1)</script>\ncharts:\n  - id: trend\nassumptions:\n  - dry snow"
+    out = render.history([{
+        "question": pasted,
+        "answer": "I will review the requested changes.",
+        "faulted": False,
+    }], session=session.new_session("m"))
+
+    assert "Pasted revision text · 9 lines" in out
+    assert "format: phys-earth/research-protocol\nplan_version: 2" in out
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in out
+    assert "<script>" not in out
+
+
+def test_research_plan_preview_is_structured_and_keeps_yaml_in_a_disclosure():
+    from physearth import session
+
+    box = session.new_session("m")
+    box["research"] = {
+        "phase": "plan_review",
+        "plan_version": 2,
+        "selected_charts": [],
+        "plan": {
+            "question": "How does density affect the output?",
+            "hypothesis": "The output changes with density.",
+            "runs": [{"id": "density", "label": "Density sweep", "model": "smrt", "parameters": {"sweep_start": 10, "sweep_stop": 100}}],
+            "charts": [{"id": "density_chart", "label": "Density", "x": "density", "y": "ks_per_m"}],
+            "literature_evidence": [{"evidence_ref": "paper#01", "purpose": "method"}],
+            "reproduction_targets": [{"id": "target", "source_type": "result", "source_id": "section-1", "target_quantity": "ks_per_m", "status": "partial", "run_ids": ["density"], "chart_ids": ["density_chart"]}],
+            "selected_models": [{"model": "smrt", "version": "1.0", "purpose": "test"}],
+            "parameter_mapping": [{"paper_concept": "density", "paper_value": 100, "model_input": "density_kg_m3", "mapped_value": 100, "provenance_class": "paper_explicit"}],
+            "paper_conditions": {"frequency_ghz": 37},
+            "condition_provenance": {"frequency_ghz": "paper#01"},
+            "validation_warnings": [{
+                "code": "paper_context_difference",
+                "field": "runs[density].parameters.sweep_start",
+                "expected": 10,
+                "actual": 1,
+                "blocking": False,
+            }],
+            "assumptions": ["homogeneous layer"],
+            "limitations": ["single model"],
+            "success_criteria": ["finite output"],
+            "outputs": ["ks_per_m"],
+            "steps": ["read", "run", "review"],
+            "revision_summary": {"from_version": 1, "to_version": 2, "changed": [{"field": "assumptions", "from": ["old"], "to": ["homogeneous layer"]}], "invalidated": ["pseudo_preview"], "preserved": ["runs", "charts"]},
+        },
+    }
+    out = render.approval_bar(box)
+
+    assert "Question and hypothesis" in out
+    assert "Literature evidence" in out
+    assert "Reproduction targets" in out
+    assert "Paper concept" in out and "Model input" in out
+    assert "Planned runs" in out and "Resolved parameters" in out
+    assert "Validation sources and warnings" in out
+    assert "paper_context_difference" in out
+    assert "non-blocking" in out
+    assert "REVISION SUMMARY · v001 → v002" in out
+    assert "Raw generated protocol YAML" in out
+    assert "research-plan-yaml" in out
+    assert "Pasted revision text" not in out
+
+
+def test_guided_research_context_shows_live_capability_and_agent_paper_session():
+    from physearth import session
+
+    box = session.new_session("m")
+    box["research_context"]["reproduction_case"] = "q1"
+    box["research_context"]["paper_session"] = {
+        "paper": "smrt-v1",
+        "source_section": "smrt-v1#08",
+        "paper_section": "3.1.1",
+        "doi": "10.5194/gmd-11-2763-2018",
+    }
+    box["research_context"]["capabilities"]["smrt"] = {
+        "name": "smrt",
+        "version": "1.5.1",
+        "runnable_here": True,
+        "outputs": ["ks_per_m", "ka_per_m"],
+        "parameter_options": {
+            "electromagnetic_model": ["rayleigh", "iba", "dmrt_qcacp_shortrange"],
+            "microstructure_model": ["independent_sphere", "sticky_hard_spheres"],
+        },
+    }
+    out = render.research_context(box)
+    status = render.conversation_head(0, box)
+    brief = render.guided_brief(box)
+
+    assert "PAPER BRIEF" not in out
+    assert "LIVE RESEARCH STATUS" not in out
+    assert "MODEL SUPPORT CHECK" not in status
+    assert "PAPER SESSION" in brief
+    assert status.count("LIVE RESEARCH STATUS") == 1
+    assert "Idle" in status
+    assert "FROM PAPER SECTIONS" in brief.upper()
+    assert "Open DOI / paper source" in brief
+    assert "rayleigh" not in status and "sticky_hard_spheres" not in status
+
+
+def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
+    import app
+    from physearth import evals
+
+    question = evals.guided_demo()["question"]
+    result = app.start_guided_demo(question, agent.default_model())
+    context_html = result[7]
+    brief_html = result[2]
+    guided_session = result[9]
+
+    assert result[10] == question
+    assert guided_session["research_required"] is False
+    assert "demo" not in guided_session["research_context"]
+    assert "FIXED REPRODUCTION BRIEF" not in context_html
+    assert "research-context' hidden" in context_html
+    assert "PAPER SESSION" not in brief_html
+
+    # The Evaluation card supplies the user-facing question only.  Its paper brief,
+    # fixed conditions, and run matrix must not be copied into the model prompt.
+    model_prompt = prompt.build(agent.new_state(guided_session))
+    assert "smrt-q1-guided" not in model_prompt
+    assert "Reproduce the SMRT sparse-medium comparison" not in model_prompt
+    assert "radius_m=0.0001" not in model_prompt
+    assert "q1_rayleigh_independent" not in model_prompt
+
+    guided_session["research"] = {
+        "reproduction_case": "q1",
+        "phase": "plan_review",
+        "plan_version": 1,
+        "plan": {
+            "question": question,
+            "reproduction_case": "q1",
+        "parameters": {"angle_deg": 55.0},
+        "paper_conditions": {"frequency_ghz": 37.0, "radius_m": 0.0001},
+        "condition_provenance": {
+            "frequency_ghz": "paper:smrt-v1#08",
+            "radius_m": "paper:smrt-v1#08",
+        },
+            "assumptions": ["dry snow"],
+            "quantities": ["ks_per_m"],
+            "runs": [{
+                "id": "q1_iba_sticky",
+                "label": "IBA with sticky hard spheres",
+                "parameters": {
+                    "electromagnetic_model": "iba",
+                    "microstructure_model": "sticky_hard_spheres",
+                    "output": "coefficients",
+                    "sweep_parameter": "density_kg_m3",
+                },
+            }],
+        },
+    }
+    guided_session["research_context"]["paper_session"] = {
+        "paper": "smrt-v1",
+        "source_section": "smrt-v1#08",
+        "paper_section": "3.1.1",
+        "doi": "10.5194/gmd-11-2763-2018",
+    }
+    updated = render.research_context(guided_session)
+    assert "FIXED REPRODUCTION BRIEF" not in updated
+    assert "LIVE RESEARCH STATUS" not in updated
+    assert "LIVE RESEARCH STATUS" in render.conversation_head(1, guided_session)
+    assert "3.1.1" in render.guided_brief(guided_session)
+    assert "AGENT PLAN: RUNS" in render.guided_brief(guided_session)
+    assert "AGENT PLAN: EXPECTED OUTPUTS" in render.guided_brief(guided_session)
+    assert "From paper sections" in render.guided_brief(guided_session)
+    assert "dry snow" in render.guided_brief(guided_session)
+    assert "q1_iba_sticky" in render.guided_brief(guided_session)
+    assert "q1_rayleigh_independent" not in render.guided_brief(guided_session)
 
 
 def test_conversation_renders_markdown_headings_inside_the_message_body():
@@ -164,6 +445,19 @@ def test_the_layout_has_resizable_and_hideable_panel_controls():
     assert 'minmax(180px, " + layout.ratios[index] + "fr)' in js
 
 
+def test_upload_workbench_is_separate_and_the_chat_context_has_one_scroll_surface():
+    source = (Path(__file__).parents[1] / "app.py").read_text(encoding="utf-8")
+    css = theme.css()
+    js = theme.js()
+
+    assert 'gr.Tab("Upload & Test"' in source
+    assert 'label="Upload paper PDF"' not in source
+    assert "scrollbar-gutter: stable" in css
+    assert "var forceLatest = !!context" not in js
+    assert "scrollToEnd(document.getElementById(\"pe-chat-scroll\"), true);" in js
+    assert "#pe-chat-scroll > #pe-approve" in css
+
+
 def test_the_quota_message_names_the_model_and_the_alternatives():
     event = {
         "kind": "harness_stop",
@@ -261,18 +555,18 @@ def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
     assert "not an answer" in out
 
 
-def test_clearing_the_session_does_not_disarm_the_approval_gate():
-    """The gate is off in the library and switched on per interface session. Clearing the
-    conversation makes a new one, and a gate that quietly stopped applying after the
-    visitor pressed Clear would be worse than having none."""
+def test_clearing_the_session_starts_in_normal_q_and_a_mode():
+    """Research is selected by the agent, while ordinary model calls retain approval."""
     import app
     from physearth import approval
 
     first = app._session(None, agent.default_model())
     assert approval.required(first)
+    assert first["research_required"] is False
 
     session = app.reset(agent.default_model())[9]
     assert approval.required(session)
+    assert session["research_required"] is False
     assert app._session(session, agent.default_model()) is session
     assert approval.required(session)
 

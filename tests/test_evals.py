@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from evaluation.metrics import score
+from evaluation.metrics import robustness, score
 from evaluation.runners import llm_robustness, model_registration
 from physearth import evals
 
@@ -55,14 +55,29 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
     assert "MEMLS" in cases[2]["question"]
 
 
-def test_basic_cases_restore_the_six_original_live_prompts():
+def test_guided_demo_is_one_data_driven_q1_card():
+    cases = evals.guided_demo_cases()
+    card = evals.demo_card(cases[0])
+
+    assert len(cases) == 1
+    assert cases[0]["id"] == "smrt-q1-guided"
+    assert "doi.org/10.5194/gmd-11-2763-2018" in card
+    assert "Paper context" in card
+    assert "Reproduce:" in card
+    assert "Paper section:</b> 3.1.1" in card
+    assert "smrt-v1#08" not in card
+    assert len(cases[0]["required_runs"]) == 6
+    assert cases[0]["fixed"]["radius_m"] == 0.0001
+
+
+def test_basic_cases_keep_the_three_supported_live_prompts():
     cases = evals.basic_cases()
 
-    assert len(cases) == 6
+    assert len(cases) == 3
     assert cases[0]["question"].startswith("Run SMRT to show how 37 GHz")
-    assert "Trail Valley Creek" in cases[1]["question"]
-    assert "tau_omega and water_cloud" in cases[3]["question"]
-    assert "2000 kg/m3" in cases[4]["question"]
+    assert "soil moisture" in cases[1]["question"]
+    assert "Do not use any tools" in cases[2]["question"]
+    assert all(case["id"] != "basic-tvc-observation" for case in cases)
 
 
 def test_architecture_comparison_is_embedded_as_a_maintainable_svg():
@@ -99,23 +114,29 @@ def test_old_recorded_specs_receive_new_model_defaults_when_replayed():
         assert numeric["within"] is True
 
 
-def test_gradio_exposes_two_tabs_and_demo_prefill_handlers():
+def test_gradio_exposes_evaluation_upload_and_agent_tabs_and_demo_prefill_handlers():
     import app
 
     assert app.main_tabs.get_config()["selected"] == "evaluation"
+    assert any(
+        component.get_config().get("elem_id") == "pe-upload-tab"
+        for component in app.demo.blocks.values()
+        if hasattr(component, "get_config")
+    )
     assert any(
         "Register a physical model" in str(component.get_config().get("value", ""))
         for component in app.demo.blocks.values()
         if component.__class__.__name__ == "HTML"
     )
-    assert len(app.basic_evaluation_cases) == 6
+    assert len(app.basic_evaluation_cases) == 3
     assert len(app.evaluation_cases) == 4
+    assert len(app.guided_evaluation_cases) == 1
     demo_handlers = [
         dependency
         for dependency in app.demo.fns.values()
         if getattr(getattr(dependency, "fn", None), "__name__", "") == "<lambda>"
     ]
-    assert len(demo_handlers) >= 10
+    assert len(demo_handlers) >= 4
 
 
 def test_dimension_a_reexecutes_schema_adapter_and_trace_checks():
