@@ -16,7 +16,7 @@ def test_evaluation_snapshot_covers_every_committed_case_and_run():
     assert data["tier0"]["n_checks"] == 38
     assert data["tier0"]["n_passed"] == 9
     assert len(data["tasks"]) == 12
-    assert len(data["scored"]) == 48
+    assert len(data["scored"]) == 50
     assert {item["config"] for item in data["scored"]} == set(evals.CONFIG_ORDER)
 
 

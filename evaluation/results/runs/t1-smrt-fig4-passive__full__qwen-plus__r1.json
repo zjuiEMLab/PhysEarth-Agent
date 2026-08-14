@@ -1,0 +1,393 @@
+{
+  "task": "t1-smrt-fig4-passive",
+  "suite": "tier2",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true
+  },
+  "llm": "qwen-plus",
+  "provider": {
+    "name": "ws-gv75io9sq3fcu9e0.cn-beijing.maas.aliyuncs.com",
+    "api_base_origin": "https://ws-gv75io9sq3fcu9e0.cn-beijing.maas.aliyuncs.com"
+  },
+  "prompt_profile": "P0_direct",
+  "temperature": null,
+  "seed": null,
+  "repeat": 1,
+  "build": "687da0e",
+  "question": "Use the SMRT Section 3 scientific-question demo on the sparse-medium approximation. Do not regenerate a paper figure. Instead, translate the question into a small, executable pilot and explain what would be required for the full study. The scientific question is: under what snow-density range do Rayleigh theory, DMRT-QCA-CP, and IBA across independent spheres, non-sticky hard spheres, and sticky hard spheres converge to the same first-order scattering behavior, and at what density do particle correlation and dense-medium effects cause their predictions to diverge? Use the six legal theory/microstructure combinations: Rayleigh plus independent spheres; IBA plus independent spheres; DMRT-QCA-CP plus non-sticky hard spheres; IBA plus non-sticky hard spheres; DMRT-QCA-CP plus sticky hard spheres; and IBA plus sticky hard spheres. Use 37 GHz and a 100 micrometre ice-sphere radius. Start with a small density pilot, compare legal SMRT configurations, report the scattering coefficient and finite-output checks, and state which conclusions are only hypotheses until the full density sweep is run.",
+  "answer": "I'll address this scientific question about snow microwave scattering theory convergence using SMRT. Let me start by understanding the requirements and planning a pilot study.\n\nFirst, I need to identify the relevant models and parameters for this investigation.\n\n\u001eNow I need to understand the scientific question better by reading the relevant literature about SMRT and snow scattering theories.\n\n\n\u001eLet me read Section 3 of the SMRT paper to understand the model architecture and how it relates to my question about theory convergence.\n\n\n\u001eLet me also read Section 4 about the Improved Born Approximation to understand the theoretical foundations better.\n\n\n\n\u001eNow I need to understand the constraints for combining electromagnetic models with microstructure models in SMRT, as this is crucial for my question about legal combinations.\n\n\n\n\u001eNow I'll run a pilot study with a small density range to test the convergence of the six legal theory/microstructure combinations. Since the question asks about the sparse-medium approximation and first-order scattering behavior, I'll start with low densities (50-100 kg/m³) where theories should converge.\n\nLet me run the six required configurations at 37 GHz with 100 micrometre radius (0.0001 m) and check the scattering coefficient (ks_per_m) as the key metric for convergence analysis.\n\n\n\u001eLet me run the second configuration: IBA with independent spheres.\n\n\n\n\u001eNow let me run DMRT-QCA-CP with non-sticky hard spheres.\n\n\n\n\n\u001eLet me run IBA with non-sticky hard spheres.\n\n\n\n\n\u001eLet me run DMRT-QCA-CP with sticky hard spheres.\n\n\n\n\n\n\u001eFinally, let me run IBA with sticky hard spheres.\n\n\n\n\n\n\u001eNow let me summarize the pilot results and explain what would be required for the full study.\n\nBased on the pilot study at 37 GHz with 100 micrometre ice-sphere radius and low density (50 kg/m³), I have computed the scattering coefficient (ks_per_m) for all six legal theory/microstructure combinations:\n\n1. **Rayleigh + independent spheres**: ks = 0.00699 m⁻¹\n2. **IBA + independent spheres**: ks = 0.00685 m⁻¹  \n3. **DMRT-QCA-CP + non-sticky hard spheres**: ks = 0.00503 m⁻¹\n4. **IBA + non-sticky hard spheres**: ks = 0.00472 m⁻¹\n5. **DMRT-QCA-CP + sticky hard spheres**: ks = 0.00842 m⁻¹\n6. **IBA + sticky hard spheres**: ks = 0.00786 m⁻¹\n\nAt this sparse-medium density (50 kg/m³), the theories show some convergence but not complete agreement. The Rayleigh and IBA approaches with independent spheres are closest (0.00699 vs 0.00685, ~2% difference), while the DMRT-based approaches show more variation depending on the stickiness assumption.\n\nFor the full study to answer the scientific question about convergence ranges and divergence points, the following would be required:\n\n**Required Full Study Components:**\n- A systematic density sweep from the sparse-medium limit (50 kg/m³) up to typical snow densities (300-500 kg/m³) where particle correlation and dense-medium effects become significant\n- For each density point, run all six legal theory/microstructure combinations\n- Analyze convergence by computing the standard deviation or coefficient of variation across the six ks_per_m values at each density\n- Identify the density range where the standard deviation falls below a threshold (e.g., <5%) indicating convergence to first-order behavior\n- Identify the density where the standard deviation begins to increase significantly, indicating the onset of particle correlation and dense-medium effects\n- Additional analysis of single scattering albedo and effective permittivity to understand how different physical mechanisms contribute to divergence\n\n**Key Constraints and Considerations:**\n- The SMRT model constraints must be respected: DMRT formulations only work with sticky/non-sticky hard sphere microstructures, and Rayleigh only works with sphere-based microstructures [model:smrt@1.5.1]\n- Temperature must be held constant (265 K) to isolate density effects\n- All other parameters (frequency=37 GHz, radius=100 μm, thickness=1 m) must remain fixed\n- The analysis should focus on electromagnetic properties (ks_per_m, ka_per_m, single_scattering_albedo) rather than brightness temperatures or backscatter, since the question is about medium properties rather than sensor response [guideline:smrt@1.0]\n\nThe pilot confirms that the six combinations are executable and provides initial evidence about their relative behavior at low density. However, the full density sweep is needed to determine the actual convergence range and divergence point, as these are hypotheses that require systematic testing across the density spectrum.\n\nThe convergence behavior is expected to follow theoretical expectations: at very low densities (sparse medium), all theories should approach the same first-order scattering behavior, but as density increases, the different assumptions about particle interactions (independent vs. correlated, sticky vs. non-sticky) will cause the predictions to diverge, with DMRT formulations being more sensitive to correlation effects than IBA or Rayleigh approaches.",
+  "elapsed_s": 63.7,
+  "stop_rule": null,
+  "model_calls": 12,
+  "tool_calls": 11,
+  "interventions": 0,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.5.1",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "03"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "04"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "rayleigh",
+          "microstructure_model": "independent_sphere",
+          "output": "coefficients",
+          "frequency_ghz": 37.0,
+          "radius_m": 0.0001,
+          "density_kg_m3": 50.0
+        }
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 50.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_995827c93df6",
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "independent_sphere",
+          "output": "coefficients",
+          "frequency_ghz": 37.0,
+          "radius_m": 0.0001,
+          "density_kg_m3": 50.0
+        }
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 50.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_8e1f55462ba9",
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "microstructure_model": "non_sticky_hard_spheres",
+          "output": "coefficients",
+          "frequency_ghz": 37.0,
+          "radius_m": 0.0001,
+          "density_kg_m3": 50.0
+        }
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 50.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_9bda2c9a3748",
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "non_sticky_hard_spheres",
+          "output": "coefficients",
+          "frequency_ghz": 37.0,
+          "radius_m": 0.0001,
+          "density_kg_m3": 50.0
+        }
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 50.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_304d4f69541e",
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "dmrt_qcacp_shortrange",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "coefficients",
+          "frequency_ghz": 37.0,
+          "radius_m": 0.0001,
+          "density_kg_m3": 50.0,
+          "stickiness": 0.2
+        }
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 50.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_ebbbe3d1db37",
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "name": "run_model",
+      "arguments": {
+        "model": "smrt",
+        "parameters": {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "sticky_hard_spheres",
+          "output": "coefficients",
+          "frequency_ghz": 37.0,
+          "radius_m": 0.0001,
+          "density_kg_m3": 50.0,
+          "stickiness": 0.2
+        }
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 50.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_eff6aeb4f389",
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "smrt-v1#03",
+      "smrt-v1#04"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_pass"
+  ]
+}
