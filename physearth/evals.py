@@ -16,7 +16,7 @@ EVALUATION = REPO / "evaluation"
 TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
-ARCHITECTURE_IMAGE = REPO / "assets" / "evaluation" / "agent-architecture.png"
+ARCHITECTURE_IMAGE = REPO / "assets" / "evaluation" / "agent-architecture.svg"
 
 REPRESENTATIVE_CASES = (
     (
@@ -415,18 +415,21 @@ def demo_card(case):
 
 @lru_cache(maxsize=1)
 def architecture():
-    """Render the repository architecture exported from the project presentation."""
+    """Render the research-harness comparison as a maintainable SVG asset."""
     if not ARCHITECTURE_IMAGE.is_file():
         return ""
     payload = base64.b64encode(ARCHITECTURE_IMAGE.read_bytes()).decode("ascii")
     return (
         "<div class='eval-dashboard'><section class='eval-section eval-architecture'>"
         "<div class='eval-section__head'><div><span class='eval-index'>04</span>"
-        "<h2>How the agent is built</h2></div><p>The harness keeps planning, physical "
-        "execution, quality control, evidence, and human approval outside the LLM.</p></div>"
-        "<figure><img alt='PhysEarth-Agent architecture' src='data:image/png;base64,%s'>"
-        "<figcaption>Agent architecture extracted from the project presentation. Every "
-        "control-plane box maps to a module in this repository.</figcaption></figure>"
+        "<h2>Why a research harness matters</h2></div><p>Compared with a plain LLM + RAG "
+        "+ model-code pipeline, the harness makes experiments repeatable and conclusions "
+        "evidence-constrained.</p></div>"
+        "<figure><img alt='PhysEarth-Agent architecture compared with a conventional LLM, "
+        "RAG and model-code pipeline' src='data:image/svg+xml;base64,%s'>"
+        "<figcaption>The LLM proposes and interprets; the harness authorizes, validates, "
+        "records and recovers. Control-plane labels map to implemented repository capabilities."
+        "</figcaption></figure>"
         "</section></div>" % payload
     )
 

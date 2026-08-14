@@ -65,11 +65,12 @@ def test_basic_cases_restore_the_six_original_live_prompts():
     assert "2000 kg/m3" in cases[4]["question"]
 
 
-def test_architecture_image_is_embedded_from_the_presentation_export():
+def test_architecture_comparison_is_embedded_as_a_maintainable_svg():
     page = evals.architecture()
 
-    assert "How the agent is built" in page
-    assert "data:image/png;base64," in page
+    assert "Why a research harness matters" in page
+    assert "plain LLM + RAG + model-code pipeline" in page
+    assert "data:image/svg+xml;base64," in page
     assert "PhysEarth-Agent architecture" in page
 
 
