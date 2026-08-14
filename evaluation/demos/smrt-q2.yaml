@@ -1,0 +1,56 @@
+id: smrt-q2-guided
+paper: smrt-v1
+protocol_id: q2
+protocol_title: Passive and active comparison with DMRT reference models
+paper_section: 3.1.2
+button_label: Start guided Q2 reproduction
+title: Reproduce the SMRT DMRT comparison
+summary: >-
+  This guided demo asks whether the registered SMRT implementation can reproduce the
+  passive and active observables discussed alongside DMRT-ML and DMRT-QMS, while keeping
+  local model results separate from external reference-model evidence.
+expected: >-
+  Establish which passive brightness-temperature and active-backscatter quantities can be
+  tested with the local SMRT model, identify unavailable DMRT-ML and DMRT-QMS dependencies,
+  and explain which discrepancies remain unresolved without those reference implementations.
+question: >-
+  Can SMRT reproduce the passive brightness temperatures and active backscatter predicted by
+  DMRT-ML and DMRT-QMS under identical snow and observation conditions, and can the remaining
+  discrepancies be attributed to the electromagnetic formulation, the short-range
+  approximation, or the radiative-transfer solver?
+paper_url: https://doi.org/10.5194/gmd-11-2763-2018
+paper_intro: >-
+  The paper evaluates SMRT against independent reference models for snow microwave emission
+  and backscatter. The comparison is useful for separating electromagnetic-model effects,
+  microstructure assumptions, short-range approximations, and radiative-transfer solver
+  effects, but a valid cross-model claim requires every reference implementation to be
+  available under the same conditions.
+result_target: >-
+  The target is the paper's passive and active comparison in Section 3.1.2. The Agent must
+  identify the relevant paper evidence, inspect the registered SMRT declaration, generate a
+  reviewable plan, and label external-model comparisons as unavailable when they cannot be
+  executed locally.
+fixed:
+  frequency_ghz: 37.0
+  density_kg_m3: 300.0
+  temperature_k: 256.0
+  radius_m: 0.0001
+  stickiness: 0.5
+  angle_deg: [10.0, 35.0, 60.0]
+required_runs:
+  - [dmrt_qcacp_shortrange, sticky_hard_spheres]
+  - [dmrt_qca_shortrange, sticky_hard_spheres]
+required_outputs: [tb_v, tb_h, sigma_vv_db, sigma_hh_db]
+unavailable_models:
+  - DMRT-ML
+  - DMRT-QMS
+workflow:
+  - Read the paper subsection and locate the passive and active comparison evidence.
+  - Check the registered SMRT outputs, legal combinations, and runnable status.
+  - Distinguish local SMRT runs from unavailable external reference models.
+  - Generate and review a research plan before any physical execution.
+  - Approve the preview, figures, and formal execution through the normal workflow.
+limitations:
+  - This card is a guided research demo, not a fixed execution protocol.
+  - Two SMRT configurations must not be presented as independent DMRT-ML and DMRT-QMS implementations.
+  - No attribution claim is valid without controlled reference-model runs.

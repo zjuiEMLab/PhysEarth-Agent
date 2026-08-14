@@ -606,10 +606,10 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                         "<div class='eval-dashboard'><section "
                         "class='eval-section eval-section--demos'>"
                         "<div class='eval-section__head'><div><span class='eval-index'>03</span>"
-                        "<h2>Start a guided paper reproduction</h2></div><p>Begin with one "
+                        "<h2>Start a guided paper reproduction</h2></div><p>Begin with a "
                         "paper-grounded SMRT question. The agent will explain the paper, check "
-                        "model support, generate a six-run plan, and wait for your review before "
-                        "any physical execution.</p>"
+                        "model support, generate a reviewable plan, and wait for your review "
+                        "before any physical execution.</p>"
                         "</div></section></div>",
                         elem_classes=["pe-eval-slot"],
                     )
@@ -618,11 +618,11 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                             with gr.Column(elem_classes=["eval-demo-cell"]):
                                 gr.HTML(evals.demo_card(case), elem_classes=["pe-eval-slot"])
                                 button = gr.Button(
-                                    "Start guided Q1 reproduction",
+                                    case.get("button_label", "Start guided reproduction"),
                                     elem_classes=["eval-demo-button"],
                                 )
                                 guided_demo_buttons.append((button, case["question"]))
-                    gr.HTML(evals.reproduction_evaluation(), elem_classes=["pe-eval-slot"])
+                    gr.HTML(evals.q1_comparison(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.architecture(), elem_classes=["pe-eval-slot"])
 
             with gr.Tab("Upload & Test", id="upload", elem_id="pe-upload-tab"):

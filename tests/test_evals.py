@@ -56,19 +56,72 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
     assert "MEMLS" in cases[2]["question"]
 
 
-def test_guided_demo_is_one_data_driven_q1_card():
+def test_guided_demos_are_data_driven_q1_and_q2_cards():
     cases = evals.guided_demo_cases()
-    card = evals.demo_card(cases[0])
+    q1_card = evals.demo_card(cases[0])
+    q2_card = evals.demo_card(cases[1])
 
-    assert len(cases) == 1
+    assert len(cases) == 2
     assert cases[0]["id"] == "smrt-q1-guided"
-    assert "doi.org/10.5194/gmd-11-2763-2018" in card
-    assert "Paper context" in card
-    assert "Reproduce:" in card
-    assert "Paper section:</b> 3.1.1" in card
-    assert "smrt-v1#08" not in card
+    assert cases[1]["id"] == "smrt-q2-guided"
+    assert cases[0]["button_label"] == "Start guided Q1 reproduction"
+    assert cases[1]["button_label"] == "Start guided Q2 reproduction"
+    assert "doi.org/10.5194/gmd-11-2763-2018" in q1_card
+    assert "Paper context" in q1_card
+    assert "Reproduce:" in q1_card
+    assert "Paper section:</b> 3.1.1" in q1_card
+    assert "smrt-v1#08" not in q1_card
     assert len(cases[0]["required_runs"]) == 6
     assert cases[0]["fixed"]["radius_m"] == 0.0001
+    assert "Paper section:</b> 3.1.2" in q2_card
+    assert "DMRT-ML" in q2_card and "DMRT-QMS" in q2_card
+    assert "smrt-v1#08" not in q2_card
+
+
+def test_q1_comparison_rejects_stale_question_and_accepts_shared_pair(monkeypatch):
+    task = yaml.safe_load(
+        Path("evaluation/tasks/tier2/smrt-q1-sparse-medium.yaml").read_text(encoding="utf-8")
+    )
+    base = {
+        "task": "t1-smrt-fig4-passive",
+        "question": task["question"],
+        "llm": "test-model",
+        "build": "current-build",
+        "repeat": 1,
+        "answer": "result",
+        "model_calls": 2,
+        "tool_calls": 3,
+        "figures": [{"provenance": ["model_run"]}],
+        "evidence": {"sections": ["paper#section"]},
+        "qc_failures": 0,
+        "elapsed_s": 1.2,
+        "stop_rule": None,
+    }
+    stale = dict(base, config="full", question="old Q1 question")
+    assert evals._q1_comparison_sets({"tasks": {"t1-smrt-fig4-passive": task}, "runs": [stale]}) == []
+
+    records = [dict(base, config="full"), dict(base, config="no-harness")]
+    scored = []
+    for config_name in ("full", "no-harness"):
+        scored.append(
+            {
+                "task": "t1-smrt-fig4-passive",
+                "config": config_name,
+                "llm": "test-model",
+                "build": "current-build",
+                "repeat": 1,
+                "completed": True,
+                "citations": {"resolved_fraction": 1.0},
+                "config_match": {"fraction": 1.0},
+                "illegal_call_rate": 0.0,
+            }
+        )
+    data = {"tasks": {"t1-smrt-fig4-passive": task}, "runs": records, "scored": scored}
+    monkeypatch.setattr(evals, "snapshot", lambda: data)
+    page = evals.q1_comparison()
+    assert "LLM + RAG + registered model tool" in page
+    assert "Current PhysEarth-Agent" in page
+    assert "Q1 comparison not recorded yet" not in page
 
 
 def test_basic_cases_keep_the_three_supported_live_prompts():
@@ -134,12 +187,14 @@ def test_gradio_exposes_evaluation_upload_and_agent_tabs_and_demo_prefill_handle
     assert "What the evaluation shows" not in page_html
     assert "Inspect the recorded score tables" not in page_html
     assert "RUNNABLE MODELS" not in page_html
+    assert "LLM + RAG + registered model tool" in page_html
+    assert "Current PhysEarth-Agent" in page_html
     css = Path("assets/ui.css").read_text(encoding="utf-8")
     workflow_css = re.search(r"\.eval-workflow\s*\{(?P<body>.*?)\}", css, re.DOTALL)
     assert workflow_css and "font-size: 14px" in workflow_css.group("body")
     assert len(app.basic_evaluation_cases) == 3
     assert len(app.evaluation_cases) == 4
-    assert len(app.guided_evaluation_cases) == 1
+    assert len(app.guided_evaluation_cases) == 2
     demo_handlers = [
         dependency
         for dependency in app.demo.fns.values()

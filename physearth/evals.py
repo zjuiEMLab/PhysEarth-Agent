@@ -17,6 +17,12 @@ TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 DEMOS = EVALUATION / "demos"
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
+Q1_TASK_ID = "t1-smrt-fig4-passive"
+Q1_COMPARISON_CONFIGS = ("no-harness", "full")
+Q1_COMPARISON_LABELS = {
+    "no-harness": "LLM + RAG + registered model tool",
+    "full": "Current PhysEarth-Agent",
+}
 ARCHITECTURE_IMAGE = REPO / "assets" / "evaluation" / "agent-architecture.svg"
 
 REPRESENTATIVE_CASES = (
@@ -355,6 +361,107 @@ def reproduction_evaluation():
     )
 
 
+def _q1_comparison_sets(data):
+    """Return only current-question full/no-harness pairs with shared provenance."""
+    task = (data.get("tasks") or {}).get(Q1_TASK_ID) or {}
+    question = task.get("question")
+    if not question:
+        return []
+    grouped = defaultdict(dict)
+    for record in data.get("runs") or []:
+        if (
+            record.get("task") == Q1_TASK_ID
+            and record.get("config") in Q1_COMPARISON_CONFIGS
+            and record.get("question") == question
+        ):
+            key = (str(record.get("llm") or ""), str(record.get("build") or ""), record.get("repeat"))
+            grouped[key][record.get("config")] = record
+    return [
+        {"key": key, "records": pair}
+        for key, pair in sorted(grouped.items())
+        if key[0] and key[1] and all(config in pair for config in Q1_COMPARISON_CONFIGS)
+    ]
+
+
+def q1_comparison():
+    """Render the controlled Q1 comparison between the baseline and full agent."""
+    data = snapshot()
+    task = (data.get("tasks") or {}).get(Q1_TASK_ID) or {}
+    scored = {
+        (str(item.get("llm") or ""), str(item.get("build") or ""), item.get("repeat"), item.get("config")): item
+        for item in data.get("scored") or []
+        if item.get("task") == Q1_TASK_ID
+    }
+    comparison_sets = _q1_comparison_sets(data)
+    rows = []
+    for comparison in comparison_sets:
+        llm, build, repeat = comparison["key"]
+        run_set = "%s / r%s" % (build, repeat)
+        for config_name in Q1_COMPARISON_CONFIGS:
+            record = comparison["records"][config_name]
+            item = scored.get((llm, build, repeat, config_name)) or {}
+            citations = item.get("citations") or {}
+            config_match = item.get("config_match") or {}
+            rows.append(
+                [
+                    Q1_COMPARISON_LABELS[config_name],
+                    "PASS" if item.get("completed") else "STOPPED",
+                    record.get("llm") or "-",
+                    run_set,
+                    len((record.get("evidence") or {}).get("sections") or []),
+                    record.get("model_calls") or 0,
+                    record.get("tool_calls") or 0,
+                    len(record.get("figures") or []),
+                    _pct(citations.get("resolved_fraction")),
+                    _pct(config_match.get("fraction")),
+                    _pct(item.get("illegal_call_rate")),
+                    record.get("qc_failures") or 0,
+                    "%ss" % _num(record.get("elapsed_s"), 1),
+                    record.get("stop_rule") or "-",
+                ]
+            )
+    if rows:
+        body = _table(
+            [
+                "System",
+                "Result",
+                "LLM",
+                "Shared build / repeat",
+                "Evidence sections",
+                "Model calls",
+                "Tool calls",
+                "Figures",
+                "Citations resolve",
+                "Config match",
+                "Illegal calls",
+                "QC failures",
+                "Elapsed",
+                "Stop reason",
+            ],
+            rows,
+            "eval-table--q1-comparison",
+        )
+        status = "<p class='eval-na-note'>Only paired records with the same question, LLM, build, and repeat are shown.</p>"
+    else:
+        body = (
+            "<div class='eval-empty'><strong>Q1 comparison not recorded yet</strong>"
+            "<p>Run the full and no-harness Q1 pair with the current task question and shared build.</p></div>"
+        )
+        status = ""
+    return (
+        "<div class='eval-dashboard'><section class='eval-section eval-section--q1-comparison'>"
+        "<div class='eval-section__head'><div><span class='eval-index'>05</span>"
+        "<h2>Q1: LLM + RAG + tool vs Current PhysEarth-Agent</h2></div>"
+        "<p>Controlled comparison using the same Q1 question, LLM, build, repeat, paper evidence, "
+        "and registered SMRT model.</p></div>"
+        "<div class='eval-comparison-legend'><article><strong>LLM + RAG + registered model tool</strong>"
+        "<span><code>no-harness</code>: the same literature and tool access, without research-harness "
+        "validation and evidence gates.</span></article><article><strong>Current PhysEarth-Agent</strong>"
+        "<span><code>full</code>: evidence-first planning, registered-model validation, approval, QC, and citation checks.</span></article></div>"
+        "%s%s</section></div>" % (body, status)
+    )
+
+
 def _cases(records):
     cases = []
     for task_id, eyebrow, title, summary, expected, question in records:
@@ -382,13 +489,22 @@ def demo_cases():
 @lru_cache(maxsize=1)
 def guided_demo():
     """Load evaluation-only demo expectations; never read a research protocol artifact."""
-    path = DEMOS / "smrt-q1.yaml"
-    return dict(_load_yaml(path))
+    return dict(guided_demos()[0])
+
+
+@lru_cache(maxsize=1)
+def guided_demos():
+    """Load the beginner-facing paper cards from evaluation-only data files."""
+    return tuple(
+        dict(_load_yaml(DEMOS / filename))
+        for filename in ("smrt-q1.yaml", "smrt-q2.yaml")
+        if (DEMOS / filename).is_file()
+    )
 
 
 def guided_demo_cases():
-    """Return the one beginner-facing guided reproduction card."""
-    return [guided_demo()]
+    """Return the beginner-facing guided reproduction cards."""
+    return [dict(case) for case in guided_demos()]
 
 
 def guided_demo_matches(question):
@@ -423,6 +539,11 @@ def demo_card(case):
         fixed_text = ", ".join(
             "%s=%s" % (key, value) for key, value in fixed.items() if key != "sweep_parameter"
         )
+        unavailable = ", ".join(str(item) for item in case.get("unavailable_models") or ())
+        unavailable_html = (
+            "<p><b>Unavailable external models:</b> %s</p>" % _e(unavailable)
+            if unavailable else ""
+        )
         workflow = "".join("<li>%s</li>" % _e(step) for step in case.get("workflow") or [])
         return (
             "<article class='eval-demo-card eval-demo-card--guided'>"
@@ -431,7 +552,7 @@ def demo_card(case):
             "<div class='eval-demo-card__context'><b>Paper context</b><p>%s</p>"
             "<p><b>Reproduce:</b> %s</p>"
             "<p><b>Protocol:</b> %s; <b>Paper section:</b> %s; <b>Runs:</b> %s</p>"
-            "<p><b>Fixed conditions:</b> %s</p></div>"
+            "<p><b>Fixed conditions:</b> %s</p>%s</div>"
             "<div class='eval-demo-card__expect'><span>EXPECTED</span>%s</div>"
             "<details class='eval-demo-card__workflow'><summary>What will happen</summary><ol>%s</ol></details>"
             "</article>"
@@ -446,6 +567,7 @@ def demo_card(case):
                 _e(case.get("paper_section") or "not declared"),
                 _e(run_text or "declared by the paper protocol"),
                 _e(fixed_text or "declared by the paper protocol"),
+                unavailable_html,
                 _e(case.get("expected", "")),
                 workflow,
             )
