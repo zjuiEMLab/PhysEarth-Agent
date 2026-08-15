@@ -1,3 +1,24 @@
+# Line endings. The repository had 129 pure-CRLF files, 204 pure-LF, and 31 with both
+# mixed inside one file. Every tool that rewrote a file normalised it, so a two-line
+# edit showed up as a several-hundred-line diff. Text is LF here, in the repository and
+# in the working tree; the rules below this line win over it for anything binary.
+* text=auto eol=lf
+
+# Binary assets git must never touch. text=auto would usually detect these, but the
+# cost of it guessing wrong on a font or a NetCDF file is a corrupted asset.
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.nc binary
+*.whl binary
+
+# Hugging Face LFS template, unchanged.
 *.7z filter=lfs diff=lfs merge=lfs -text
 *.arrow filter=lfs diff=lfs merge=lfs -text
 *.bin filter=lfs diff=lfs merge=lfs -text
