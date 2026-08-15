@@ -114,3 +114,68 @@ def test_a_planned_run_is_rewritten_to_the_registered_spelling():
     )[:2]
     assert not any("unknown model" in str(p) for p in problems), problems
     assert runs and runs[0]["model"] == "smrt"
+
+
+# --- the plan must speak one spelling -----------------------------------------------
+#
+# The fix above canonicalised the run's model name, which made a second bug deterministic:
+# reproduction_targets still carried the paper's spelling, so every downstream check
+# compared `smrt` against `SMRT` and reported the model missing from its own coverage.
+# That is where "4 target coverage issue(s), 1 parameter mapping issue(s)" came from.
+
+
+def test_a_target_covered_by_its_own_run_reports_no_coverage_problem():
+    from physearth.research.coverage import _target_coverage
+
+    targets = [{
+        "id": "t1", "status": "planned", "run_ids": ["r1"], "chart_ids": ["c1"],
+        "reference_models": ["SMRT"], "requested_outputs": [],
+    }]
+    runs = [{"id": "r1", "model": "smrt", "parameters": {}}]
+    problems, _, _ = _target_coverage(targets, runs, [{"id": "c1"}])
+    assert problems == [], problems
+
+
+def test_an_unregistered_reference_model_is_still_a_coverage_problem():
+    """The tolerance must not swallow the signal the check exists to give."""
+    from physearth.research.coverage import _target_coverage
+
+    targets = [{
+        "id": "t2", "status": "planned", "run_ids": ["r1"], "chart_ids": [],
+        "reference_models": ["MEMLS"], "requested_outputs": [],
+    }]
+    runs = [{"id": "r1", "model": "smrt", "parameters": {}}]
+    problems, _, _ = _target_coverage(targets, runs, [])
+    assert any("MEMLS" in p for p in problems), problems
+
+
+def test_the_plan_stores_one_spelling_for_every_model_it_names():
+    from physearth.research.normalise import (
+        _clean_parameter_mapping,
+        _clean_reproduction_targets,
+        _clean_selected_models,
+    )
+
+    targets = _clean_reproduction_targets(
+        [{"id": "t1", "reference_models": ["SMRT", "tau-omega", "MEMLS"]}]
+    )
+    assert targets[0]["reference_models"] == ["smrt", "tau_omega", "MEMLS"], (
+        "registered models take their registered spelling; MEMLS is not registered and "
+        "must survive as written so it is still reported"
+    )
+
+    selected = _clean_selected_models([{"model": "SMRT"}, {"model": "Water Cloud"}])
+    assert [item["model"] for item in selected] == ["smrt", "water_cloud"]
+
+    mapping = _clean_parameter_mapping(
+        [{"model": "SMRT", "paper_name": "density", "model_input": "density"}]
+    )
+    assert mapping and mapping[0]["model"] == "smrt"
+
+
+def test_the_registered_parameter_index_finds_a_model_named_as_the_paper_names_it():
+    from physearth.research.mapping import _registered_parameter_index
+
+    index = _registered_parameter_index(None, ["SMRT"])
+    assert index, "a paper-spelled model contributed no declared parameters"
+    assert any("density_kg_m3" in params for params in index.values())

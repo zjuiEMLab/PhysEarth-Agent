@@ -92,7 +92,7 @@ def _clean_reproduction_targets(values):
                     item.get("expected_comparison") or item.get("comparison") or ""
                 ).strip(),
                 "reference_models": [
-                    str(model).strip()
+                    _canonical_model(model)
                     for model in (
                         item.get("reference_models")
                         or item.get("comparison_models")
@@ -122,6 +122,26 @@ def _clean_reproduction_targets(values):
     return cleaned
 
 
+def _canonical_model(value):
+    """The registered spelling of a model name, or the name unchanged if it is not one.
+
+    A plan arrives carrying more than one spelling of the same model: the paper's `SMRT`
+    in reproduction_targets and selected_models, the registered `smrt` in runs. Every
+    downstream check then compares those two strings and reports the model as missing --
+    target coverage, parameter mapping and output coverage all at once, none of which is
+    a real problem with the plan.
+
+    So the plan speaks one spelling from here on. Unresolvable names are left exactly as
+    written, because an unregistered model is a genuine problem and must survive to be
+    reported as one.
+    """
+    name = str(value or "").strip()
+    if not name:
+        return name
+    entry, canonical = registry.resolve(name)
+    return canonical if entry is not None else name
+
+
 def _clean_selected_models(values, runs=None, derive=True):
     cleaned = []
     raw_values = [{"model": values}] if isinstance(values, str) else (values or [])
@@ -130,7 +150,7 @@ def _clean_selected_models(values, runs=None, derive=True):
         if not record.get("model") and record.get("name"):
             record["model"] = record["name"]
         if record.get("model"):
-            record["model"] = str(record["model"]).strip()
+            record["model"] = _canonical_model(record["model"])
             cleaned.append(record)
     if not cleaned and derive:
         names = []
@@ -183,7 +203,7 @@ def _clean_parameter_mapping(values):
         ).strip()
         record.update(
             {
-                "model": str(item.get("model") or item.get("model_name") or "").strip(),
+                "model": _canonical_model(item.get("model") or item.get("model_name")),
                 "paper_concept": str(
                     item.get("paper_concept") or item.get("paper_parameter") or item.get("concept") or ""
                 ).strip(),

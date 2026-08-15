@@ -61,9 +61,14 @@ def _registered_parameter_index(session, model_names):
     """Return declared parameter names grouped by registered model."""
     index = {}
     for model in sorted({str(name).strip() for name in model_names if str(name).strip()}):
-        entry = registry.get(model, session)
+        # Through resolution, so a plan still holding the paper's spelling indexes the
+        # model it names instead of contributing nothing and reporting every one of its
+        # mappings as unmatched.
+        entry, canonical = registry.resolve(model, session)
         if entry:
             index[model] = dict(entry.card.get("parameters") or {})
+            if canonical != model:
+                index[canonical] = index[model]
     return index
 
 
