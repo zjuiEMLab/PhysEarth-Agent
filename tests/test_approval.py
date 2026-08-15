@@ -116,7 +116,7 @@ def test_unrepairable_tool_arguments_are_not_replayed_to_provider(monkeypatch):
         [_Chunk(_Delta(content="I could not form the tool call."))],
     ]
     client, sent = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     final_events = []
     for _, final_events, _ in agent.stream("inspect the models", session=box):
@@ -132,7 +132,7 @@ def test_normal_question_does_not_force_research_plan(monkeypatch):
     box = _asking()
     script = [[_Chunk(_Delta(content="A direct explanation."))]]
     client, _ = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     answer, events, _ = agent.run("What is brightness temperature?", session=box)
 
@@ -155,7 +155,7 @@ def test_guided_reproduction_preflight_selects_research_mode_before_model_plan(m
         [_Chunk(_Delta(content="The plan is ready for review."))],
     ]
     client, _ = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     def fake_call(name, arguments, **_kwargs):
         assert name == "research_plan"
@@ -187,7 +187,7 @@ def test_research_plan_call_selects_research_mode(monkeypatch):
         [_Chunk(_Delta(content="The plan is waiting for your review."))],
     ]
     client, _ = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     def fake_call(name, arguments, **_kwargs):
         assert name == "research_plan"
@@ -217,7 +217,7 @@ def test_research_plan_gate_allows_five_no_progress_answers(monkeypatch):
         [_Chunk(_Delta(content="The fifth answer still has no plan."))],
     ]
     client, sent = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     answer, events, _ = agent.run("Run a scientific comparison", session=box)
 
@@ -242,7 +242,7 @@ def test_research_plan_mapping_stop_exposes_exact_structured_repair(monkeypatch)
         for _ in range(5)
     ]
     client, _ = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
     problem = {
         "field": "parameter_mapping[0].model_input",
         "source": "registered_model_declaration",
@@ -281,7 +281,7 @@ def test_chart_axis_failure_adds_a_targeted_revision_instruction(monkeypatch):
         for _ in range(5)
     ]
     client, sent = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     def fake_call(name, arguments, **_kwargs):
         assert name == "research_plan"
@@ -318,7 +318,7 @@ def test_research_plan_resource_error_forces_the_missing_read_before_retry(monke
         [_Chunk(_Delta(content="The plan is waiting for review."))],
     ]
     client, _ = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
     called = []
 
     def fake_call(name, arguments, **_kwargs):
@@ -364,7 +364,7 @@ def test_successful_plan_revision_does_not_make_a_redundant_follow_up_llm_call(m
         '{"action":"revise_plan","changes":{"assumptions":["updated"]}}',
     )]]
     client, sent = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
     summary = {
         "from_version": 1,
         "to_version": 2,
@@ -417,7 +417,7 @@ def test_citation_rewrite_discards_invalid_marker_from_pre_tool_narration(monkey
         [_Chunk(_Delta(content="Verified local model run declaration [model:smrt@1.5.1]."))],
     ]
     client, _ = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     answer, events, _ = agent.run("inspect smrt", session=box)
     assert "smrt-v1#03" not in answer
@@ -484,7 +484,7 @@ def test_a_declined_call_reaches_the_model_as_a_tool_result(monkeypatch):
         [_Chunk(_Delta(content="I could not run it, so here is what I can say."))],
     ]
     client, sent = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     steps = agent.stream("run smrt for me", session=box)
     phases = []
@@ -507,7 +507,7 @@ def test_source_figure_inspection_sends_the_image_to_the_model(monkeypatch):
         [_Chunk(_Delta(content="I inspected the source figure axes and legend."))],
     ]
     client, sent = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     list(agent.stream("Inspect the source figure", session=box))
 
@@ -532,7 +532,7 @@ def test_an_approved_call_runs_and_the_gate_is_recorded(monkeypatch):
         [_Chunk(_Delta(content="It ran [model:smrt@1.5.1]."))],
     ]
     client, _ = _fake_client(script)
-    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
     kinds = []
     for _, events, state in agent.stream("run smrt", session=box):
