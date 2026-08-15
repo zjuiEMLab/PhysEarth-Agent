@@ -2,8 +2,8 @@
 
 import json
 
-from physearth import knowledge
-from physearth.ui.render.text import _e
+from frontend.views.text import _e
+from physearth.api import knowledge
 
 
 def _reproduction_state(session):

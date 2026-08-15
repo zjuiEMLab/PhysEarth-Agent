@@ -1,13 +1,13 @@
 """The approval bar: what the human is being asked to approve, and in what words."""
 
-from physearth import research
-from physearth.ui.render.parts import (
+from frontend.views.parts import (
     _mapping_text,
     _plan_cell,
     _plan_disclosure,
     _plan_table,
 )
-from physearth.ui.render.text import _e
+from frontend.views.text import _e
+from physearth.api import research
 
 
 def _revision_changes_html(summary):
@@ -196,7 +196,7 @@ def _structured_approval_bar(session, project, research):
 
 def approval_bar(session):
     """Render either the research review card or the physical-run approval gate."""
-    from physearth import approval as gate
+    from physearth.api import approval as gate
 
     project = (session or {}).get("research") or {}
     if project and project.get("phase") not in ("approved", "completed"):

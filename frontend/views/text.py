@@ -10,7 +10,7 @@ This module is the bottom of that: escaping, icons, citation markers, prose.
 import html
 import re
 
-from physearth import agent
+from physearth.api import agent
 
 CITE = re.compile(r"\[([a-z0-9][a-z0-9-]*)#(\d{1,3})\]")
 MODEL_CITE = re.compile(r"\[model:([A-Za-z0-9_-]+)@([^\]\s]+)\]")

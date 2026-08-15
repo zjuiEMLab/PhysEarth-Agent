@@ -1,8 +1,8 @@
 """The research panel: where the plan stands, and what the agent is doing now."""
 
-from physearth.ui.render.parts import _reproduction_state
-from physearth.ui.render.review import approval_bar
-from physearth.ui.render.text import _e
+from frontend.views.parts import _reproduction_state
+from frontend.views.review import approval_bar
+from frontend.views.text import _e
 
 
 def research_context(session):
@@ -11,7 +11,7 @@ def research_context(session):
     Capability and paper progress is rendered above Conversation, not as a persistent
     panel beside the composer.
     """
-    from physearth import approval as gate
+    from physearth.api import approval as gate
 
     session = session if isinstance(session, dict) else {}
     project = session.get("research") or {}
@@ -106,7 +106,7 @@ def research_context(session):
 
 def research_status(session):
     """Render the dynamic research status above the Conversation transcript."""
-    from physearth import approval as gate
+    from physearth.api import approval as gate
 
     session = session if isinstance(session, dict) else {}
     context = session.get("research_context") or {}

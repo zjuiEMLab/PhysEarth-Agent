@@ -545,7 +545,7 @@ def test_an_approved_call_runs_and_the_gate_is_recorded(monkeypatch):
 
 
 def test_the_trace_names_what_is_waiting_and_what_was_decided():
-    from physearth.ui import render
+    from frontend import views as render
 
     waiting = {
         "kind": "approval_wait",
@@ -569,7 +569,7 @@ def test_the_trace_names_what_is_waiting_and_what_was_decided():
 
 
 def test_the_approval_bar_appears_only_while_something_waits():
-    from physearth.ui import render
+    from frontend import views as render
 
     box = _asking()
     assert "hidden" in render.approval_bar(box)

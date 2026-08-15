@@ -2,9 +2,9 @@
 
 import json
 
-from physearth import budget
-from physearth.ui.render.parts import _disclosure, _kv, _meter
-from physearth.ui.render.text import _e, _mono, _svg
+from frontend.views.parts import _disclosure, _kv, _meter
+from frontend.views.text import _e, _mono, _svg
+from physearth.api import budget
 
 BADGES = {
     "model_call": ("badge--mono", "MODEL CALL", "step-card--model"),
@@ -138,7 +138,7 @@ def _event_body(event, index):
         )
 
     if kind == "approval_wait":
-        from physearth import approval as gate
+        from physearth.api import approval as gate
 
         described = gate.describe(event.get("name"), event.get("arguments"))
         rows = [(k, v, "") for k, v in sorted(described["parameters"].items())]

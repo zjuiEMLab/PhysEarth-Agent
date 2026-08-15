@@ -26,12 +26,19 @@ figure-inspection tests fail in a way that looks like a code defect but is not.
 
 ## Layout
 
-- `app.py` — Gradio entry point. **The only file in the repository that may import
-  `gradio`.** The ModelScope deployspec in the README front-matter pins this filename;
-  it cannot be renamed, only reduced to a shim.
+- `app.py` — a shim. The ModelScope deployspec in the README front-matter pins this
+  filename, so it stays at the root; everything it does lives in `frontend/studio.py`.
+- `frontend/` — everything the visitor sees. `studio.py` is the Gradio wiring, `views/`
+  is every pixel of the interface as plain strings, `static/` holds `ui.css` and `ui.js`,
+  `theme.py` assembles the stylesheet. `views/` imports no Gradio, so it is testable
+  without a browser.
 - `physearth/` — the importable package. Agent loop, tools, harness, research planning.
-- `physearth/ui/` — every pixel of the interface as plain strings. Imports no Gradio, so
-  it is testable without a browser.
+- `physearth/api.py` — the declared surface between the two. The frontend imports this
+  and nothing else from the package.
+- `assets/` — shared, not frontend. `fonts/` is read by `frontend/theme.py` *and* by
+  `physearth/plotting.py`, which registers the same faces with matplotlib so a rendered
+  figure carries the interface's type. `evaluation/` holds the architecture diagram
+  `physearth/evals.py` reads.
 - `physearth/models/bundled/` — six model cards and adapters. Being moved to a top-level
   user-owned `models/`; see the reorganisation note below.
 - `knowledge/` — bundled CC-BY literature, method notes, reference data. Resolved from the
@@ -78,11 +85,18 @@ Never commit `.env`. Never put a real token in a test fixture.
 
 ## Reorganisation in progress
 
-The repository is moving to a backend/frontend split (Option C): `frontend/` for the
-Gradio app and views, `backend/physearth/` for the package, with `prompts/`, `models/` and
-`evaluation/` as top-level user-facing content. Phases land one commit at a time, each
-green. Two invariants arrive with the frontend split and are enforced by tests:
+The repository is moving to a backend/frontend split (Option C). Phases land one commit at
+a time, each green. Done: the four oversized modules split into packages, and the frontend
+lifted out. Still to come: the package moves under `backend/`, prompts become levelled
+files under `prompts/`, and `models/` and `evaluation/` are consolidated as top-level
+user-facing content.
 
-- nothing under `backend/` may import `gradio`;
-- nothing under `frontend/` may import `research`, `tools` or `agent` directly — it goes
-  through `backend/physearth/api.py`.
+Three invariants are enforced by `tests/test_boundaries.py`:
+
+- nothing under `physearth/` may import `gradio`;
+- nothing under `frontend/` may import anything from the package except `physearth.api`;
+- `app.py` exists at the root and delegates to `frontend.studio`.
+
+`physearth/api.py` declares the boundary rather than narrowing it: the interface uses 62
+names across 14 modules, and reducing that is separate work from moving the files. What it
+buys now is that the coupling is in one place and cannot grow by accident.

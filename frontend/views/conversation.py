@@ -1,9 +1,9 @@
 """The conversation itself: the hero, the composer, one message, the guided brief."""
 
-from physearth import agent
-from physearth.ui.render.context import current_activity_status
-from physearth.ui.render.parts import _mapping_text, _reproduction_state
-from physearth.ui.render.text import _e, _paragraphs, _svg, answer_html
+from frontend.views.context import current_activity_status
+from frontend.views.parts import _mapping_text, _reproduction_state
+from frontend.views.text import _e, _paragraphs, _svg, answer_html
+from physearth.api import agent
 
 PLACEHOLDER = (
     "Run a small SMRT pilot at 37 GHz for snow densities 1, 25, 50, 75 and 96 kg/m3, "

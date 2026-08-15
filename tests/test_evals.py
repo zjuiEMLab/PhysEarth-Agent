@@ -203,7 +203,7 @@ def test_old_recorded_specs_receive_new_model_defaults_when_replayed():
 
 
 def test_gradio_exposes_evaluation_upload_and_agent_tabs_and_demo_prefill_handlers():
-    import app
+    from frontend import studio as app
 
     assert app.main_tabs.get_config()["selected"] == "evaluation"
     upload_tabs = [
@@ -226,7 +226,7 @@ def test_gradio_exposes_evaluation_upload_and_agent_tabs_and_demo_prefill_handle
     assert "RUNNABLE MODELS" not in page_html
     assert "LLM + RAG + registered model tool" in page_html
     assert "Current PhysEarth-Agent" in page_html
-    css = Path("assets/ui.css").read_text(encoding="utf-8")
+    css = Path("frontend/static/ui.css").read_text(encoding="utf-8")
     workflow_css = re.search(r"\.eval-workflow\s*\{(?P<body>.*?)\}", css, re.DOTALL)
     assert workflow_css and "font-size: 14px" in workflow_css.group("body")
     assert len(app.basic_evaluation_cases) == 3

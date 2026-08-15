@@ -2,24 +2,25 @@ import re
 from pathlib import Path
 
 from physearth import agent, budget, knowledge, prompt
-from physearth.ui import render, theme
+from frontend import theme
+from frontend import views as render
 
 
 def test_optimistic_ui_never_replaces_gradio_managed_html():
     """Direct innerHTML writes detach streamed answer slots from Gradio updates."""
-    source = (Path(__file__).parents[1] / "assets" / "ui.js").read_text()
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.js").read_text()
     assert ".innerHTML =" not in source
 
 
 def test_trace_cards_do_not_replay_an_entry_animation_on_every_gradio_frame():
     """The entire trace subtree is replaced; :last-child animation would keep restarting."""
-    source = (Path(__file__).parents[1] / "assets" / "ui.css").read_text()
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text()
     assert ".step-card:last-child {\n  animation:" not in source
 
 
 def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypatch):
     """A tool lifecycle event must not remount the unchanged streamed transcript."""
-    import app
+    from frontend import studio as app
     from physearth import session as session_state
 
     box = session_state.new_session(agent.default_model())
@@ -43,7 +44,7 @@ def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypat
 
 
 def test_execution_continuation_preserves_conversation_and_only_removes_plan_card(monkeypatch):
-    import app
+    from frontend import studio as app
     from physearth import session as session_state
 
     box = session_state.new_session("m")
@@ -74,7 +75,7 @@ def test_execution_continuation_preserves_conversation_and_only_removes_plan_car
 
 def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
     """Approving a plan must not invoke the full-output continuation as a reset."""
-    import app
+    from frontend import studio as app
 
     called = []
 
@@ -93,7 +94,7 @@ def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
 
 def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(monkeypatch):
     """All user-facing case starters share the same direct-tool approval route."""
-    import app
+    from frontend import studio as app
     from physearth import approval, evals, session as session_state
 
     state = session_state.new_state(None)
@@ -127,9 +128,9 @@ def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(mo
 
 
 def test_direct_approval_hides_the_stale_card_until_the_agent_clears_it():
-    import app
+    from frontend import studio as app
     from physearth import approval, session as session_state
-    from physearth.ui import render
+    from frontend import views as render
 
     box = session_state.new_session("m")
     approval.set_mode(box, approval.ASK)
@@ -270,8 +271,8 @@ def test_revised_plan_card_is_collapsed_while_revision_summary_remains_visible()
 def test_plan_review_exposes_only_the_two_review_controls():
     from pathlib import Path
 
-    app_source = (Path(__file__).parents[1] / "app.py").read_text(encoding="utf-8")
-    js_source = (Path(__file__).parents[1] / "assets" / "ui.js").read_text(encoding="utf-8")
+    app_source = (Path(__file__).parents[1] / "frontend" / "studio.py").read_text(encoding="utf-8")
+    js_source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.js").read_text(encoding="utf-8")
     assert "Revise / Regenerate" not in app_source
     assert 'gr.Button("Pause"' not in app_source
     assert "pe-approve-no" not in app_source and "pe-approve-no" not in js_source
@@ -316,7 +317,7 @@ def test_guided_research_context_shows_live_capability_and_agent_paper_session()
 
 
 def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
-    import app
+    from frontend import studio as app
     from physearth import evals
 
     question = evals.guided_demo()["question"]
@@ -502,7 +503,7 @@ def test_the_layout_has_resizable_and_hideable_panel_controls():
 
 
 def test_upload_workbench_is_separate_and_the_chat_context_has_one_scroll_surface():
-    source = (Path(__file__).parents[1] / "app.py").read_text(encoding="utf-8")
+    source = (Path(__file__).parents[1] / "frontend" / "studio.py").read_text(encoding="utf-8")
     css = theme.css()
     js = theme.js()
 
@@ -550,7 +551,7 @@ def test_a_spent_daily_quota_is_not_retried():
 
 
 def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
-    import app
+    from frontend import studio as app
 
     used_before = budget.used()
     hero, head, history, live, trace, metrics, evidence, approve, turns, session, box = app.reset(
@@ -588,7 +589,7 @@ def test_a_withdrawn_model_is_not_retried_either():
 
 
 def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
-    import app
+    from frontend import studio as app
 
     fault = [{"kind": "harness_stop", "rule": "quota", "reason": "rate limited"}]
     good = [{"kind": "harness_pass", "rule": "citation_integrity", "markers": []}]
@@ -613,7 +614,7 @@ def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
 
 def test_clearing_the_session_starts_in_normal_q_and_a_mode():
     """Research is selected by the agent, while ordinary model calls retain approval."""
-    import app
+    from frontend import studio as app
     from physearth import approval
 
     first = app._session(None, agent.default_model())
@@ -673,7 +674,7 @@ def test_provider_neutral_llm_config_falls_back_to_modelscope(monkeypatch):
 
 def test_only_one_route_reaches_the_agent():
     """Two bindings would let a stray submit start a second run against one session."""
-    import app
+    from frontend import studio as app
 
     handlers = [
         dep for dep in app.demo.fns.values()
@@ -683,7 +684,7 @@ def test_only_one_route_reaches_the_agent():
 
 
 def test_chart_click_records_the_human_choice_without_an_llm_turn():
-    import app
+    from frontend import studio as app
     from physearth import research, session
 
     box = session.new_session("m")
@@ -758,7 +759,7 @@ def test_the_client_script_actually_parses():
     import shutil
     import subprocess
 
-    from physearth.ui import theme
+    from frontend import theme
 
     node = shutil.which("node")
     if not node:
@@ -766,7 +767,7 @@ def test_the_client_script_actually_parses():
 
         pytest.skip("node is not available to parse the script")
     result = subprocess.run(
-        [node, "--check", str(theme.ASSETS / "ui.js")],
+        [node, "--check", str(theme.STATIC / "ui.js")],
         capture_output=True, text=True, timeout=60,
     )
     assert result.returncode == 0, result.stderr
@@ -798,7 +799,7 @@ def test_the_opening_hint_steps_aside_for_a_question_in_flight():
 
 def test_the_optimistic_acknowledgement_leaves_output_slots_to_gradio():
     """Client feedback must not detach streamed HTML components from Gradio."""
-    from physearth.ui import theme
+    from frontend import theme
 
     js = theme.js()
     assert "optimisticSend" in js and "optimisticClear" in js
@@ -815,7 +816,7 @@ def test_the_optimistic_acknowledgement_leaves_output_slots_to_gradio():
 
 def test_clear_is_wired_as_a_cancellation_boundary_for_streaming_send():
     """A reset must cancel the active generator before its next frame repaints the UI."""
-    source = Path(__file__).resolve().parents[1].joinpath("app.py").read_text(encoding="utf-8")
+    source = Path(__file__).resolve().parents[1].joinpath("frontend", "studio.py").read_text(encoding="utf-8")
     assert "send_event = send.click(respond, inputs, outputs)" in source
     assert "active_stream_events = [send_event]" in source
     assert "active_stream_events.append(resume_event)" in source

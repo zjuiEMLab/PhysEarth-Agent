@@ -5,14 +5,14 @@ that reaches the page goes through `html.escape` first: literature text, dataset
 and model output are all untrusted input on a public deployment.
 
 Split by panel. Everything the interface imported from the single-module `render` is
-re-exported here, so `from physearth.ui import render` and every `render.x` call keep
+re-exported here, so the Gradio layer keeps calling `render.x` unchanged
 working unchanged.
 """
 
 # Re-exported for the Gradio layer and the interface tests.
 # ruff: noqa: F401
 
-from physearth.ui.render.context import (
+from frontend.views.context import (
     current_activity_status,
     research_context,
     research_status,
@@ -20,7 +20,7 @@ from physearth.ui.render.context import (
 
 # The remaining names the single-module version exposed, kept reachable at the same
 # address so nothing outside this package has to know the split happened.
-from physearth.ui.render.conversation import (
+from frontend.views.conversation import (
     PLACEHOLDER,
     _message,
     _plan_run_rows,
@@ -32,7 +32,7 @@ from physearth.ui.render.conversation import (
     live,
     live_result,
 )
-from physearth.ui.render.evidence import (
+from frontend.views.evidence import (
     SOURCE_BADGE,
     _abstract_card,
     _agreement_row,
@@ -45,7 +45,7 @@ from physearth.ui.render.evidence import (
     _section_card,
     evidence,
 )
-from physearth.ui.render.parts import (
+from frontend.views.parts import (
     _disclosure,
     _kv,
     _mapping_text,
@@ -55,12 +55,12 @@ from physearth.ui.render.parts import (
     _plan_table,
     _reproduction_state,
 )
-from physearth.ui.render.review import (
+from frontend.views.review import (
     _revision_changes_html,
     _structured_approval_bar,
     approval_bar,
 )
-from physearth.ui.render.text import (
+from frontend.views.text import (
     ABS_CITE,
     BOLD,
     CITE,
@@ -79,7 +79,7 @@ from physearth.ui.render.text import (
     _svg,
     answer_html,
 )
-from physearth.ui.render.trace import (
+from frontend.views.trace import (
     APPROVAL_WORDS,
     BADGES,
     _event_body,
