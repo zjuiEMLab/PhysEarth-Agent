@@ -8,7 +8,7 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKEND = ROOT / "physearth"
+BACKEND = ROOT / "backend" / "physearth"
 FRONTEND = ROOT / "frontend"
 
 
@@ -25,7 +25,16 @@ def _imports(path):
 
 
 def _sources(root):
-    return [p for p in root.rglob("*.py") if "__pycache__" not in str(p)]
+    """Every source file under `root`, and never an empty list by accident.
+
+    A rule that scans a directory which has moved passes without checking anything. That
+    happened once already, when the package went under backend/ and this file still named
+    the old path, so the emptiness is the assertion.
+    """
+    assert root.is_dir(), "%s does not exist; this rule would pass without checking" % root
+    found = [p for p in root.rglob("*.py") if "__pycache__" not in str(p)]
+    assert found, "no sources under %s; this rule would pass without checking" % root
+    return found
 
 
 def test_the_backend_never_imports_gradio():

@@ -11,7 +11,6 @@ import hashlib
 import json
 import shutil
 import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -20,9 +19,6 @@ import yaml
 from PIL import Image, ImageFilter, ImageOps
 
 REPO = Path(__file__).resolve().parents[2]
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
-
 from physearth import agent, approval, config, research  # noqa: E402
 
 TASK_DIR = REPO / "evaluation" / "tasks" / "tier2"

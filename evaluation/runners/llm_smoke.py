@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common  # noqa: E402
 
-sys.path.insert(0, str(common.REPO))
 from physearth import config  # noqa: E402
 
 MANIFEST = common.ROOT / "competition.yaml"

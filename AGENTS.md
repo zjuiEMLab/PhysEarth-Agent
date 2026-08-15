@@ -32,17 +32,20 @@ figure-inspection tests fail in a way that looks like a code defect but is not.
   is every pixel of the interface as plain strings, `static/` holds `ui.css` and `ui.js`,
   `theme.py` assembles the stylesheet. `views/` imports no Gradio, so it is testable
   without a browser.
-- `physearth/` — the importable package. Agent loop, tools, harness, research planning.
-- `physearth/api.py` — the declared surface between the two. The frontend imports this
+- `backend/physearth/` — the importable package. Agent loop, tools, harness, research planning.
+- `backend/physearth/api.py` — the declared surface between the two. The frontend imports this
   and nothing else from the package.
 - `assets/` — shared, not frontend. `fonts/` is read by `frontend/theme.py` *and* by
-  `physearth/plotting.py`, which registers the same faces with matplotlib so a rendered
+  `backend/physearth/plotting.py`, which registers the same faces with matplotlib so a rendered
   figure carries the interface's type. `evaluation/` holds the architecture diagram
-  `physearth/evals.py` reads.
-- `physearth/models/bundled/` — six model cards and adapters. Being moved to a top-level
+  `backend/physearth/evals.py` reads.
+- `backend/physearth/models/bundled/` — six model cards and adapters. Being moved to a top-level
   user-owned `models/`; see the reorganisation note below.
-- `knowledge/` — bundled CC-BY literature, method notes, reference data. Resolved from the
-  package by relative path, so it must travel with any move of `physearth/`.
+- `knowledge/` — bundled CC-BY literature, method notes, reference data. Not part of the
+  distribution: the package finds it through `backend/physearth/paths.py`, which walks up
+  for a directory holding both `knowledge/` and `evaluation/`, or takes `PHYSEARTH_ROOT`.
+  Never reach for it with `Path(__file__).parent.parent` again — that is what made these
+  constants fail silently, as an empty corpus rather than an error.
 - `evaluation/` — task set, ablation configs, runners, and committed result records.
 - `docs/` — design notes and research task documents. Not runnable.
 
@@ -77,7 +80,7 @@ Say so in the commit message.
 
 ## Configuration
 
-All runtime configuration is environment variables with defaults in `physearth/config.py`;
+All runtime configuration is environment variables with defaults in `backend/physearth/config.py`;
 `.env.example` documents them. `PHYSEARTH_ONLINE=0` closes the live-literature layer
 entirely and nothing else changes. Budgets default to `0`, meaning unlimited.
 
@@ -86,14 +89,20 @@ Never commit `.env`. Never put a real token in a test fixture.
 ## Reorganisation in progress
 
 The repository is moving to a backend/frontend split (Option C). Phases land one commit at
-a time, each green. Done: the four oversized modules split into packages, and the frontend
-lifted out. Still to come: the package moves under `backend/`, prompts become levelled
+a time, each green. Done: the four oversized modules split into packages, the frontend
+lifted out, and the package moved under `backend/`. Still to come: prompts become levelled
 files under `prompts/`, and `models/` and `evaluation/` are consolidated as top-level
 user-facing content.
 
+The wheel ships `physearth/` only. `knowledge/`, `evaluation/`, `assets/` and `frontend/`
+stay in the repository, so an installed distribution needs `PHYSEARTH_ROOT` pointing at a
+checkout. Verify a packaging change by building and importing from a clean venv with a
+neutral working directory — from the repository root, `.` is on `sys.path` and hides the
+difference.
+
 Three invariants are enforced by `tests/test_boundaries.py`:
 
-- nothing under `physearth/` may import `gradio`;
+- nothing under `backend/` may import `gradio`;
 - nothing under `frontend/` may import anything from the package except `physearth.api`;
 - `app.py` exists at the root and delegates to `frontend.studio`.
 

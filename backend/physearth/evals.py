@@ -10,11 +10,10 @@ from pathlib import Path
 
 import yaml
 
-from evaluation.metrics import score as scoring
-from physearth import knowledge
+from physearth import knowledge, paths
 
-REPO = Path(__file__).resolve().parent.parent
-EVALUATION = REPO / "evaluation"
+REPO = paths.root()
+EVALUATION = paths.evaluation()
 TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 DEMOS = EVALUATION / "demos"
@@ -25,7 +24,7 @@ Q1_COMPARISON_LABELS = {
     "no-harness": "LLM + RAG + registered model tool",
     "full": "Current PhysEarth-Agent",
 }
-ARCHITECTURE_IMAGE = REPO / "assets" / "evaluation" / "agent-architecture.svg"
+ARCHITECTURE_IMAGE = paths.assets() / "evaluation" / "agent-architecture.svg"
 
 REPRESENTATIVE_CASES = (
     (
@@ -240,6 +239,12 @@ def snapshot():
         if robustness_path.is_file()
         else None
     )
+    # evaluation/ is beside the package, not inside it, so it is absent from an installed
+    # wheel. Importing it here rather than at module scope keeps physearth importable in a
+    # deployment that ships only the distribution, and fails at the one place that needs
+    # the scorer instead of at `import physearth`.
+    from evaluation.metrics import score as scoring
+
     tasks = {task["id"]: task for suite in ("tier1", "probe") for task in _load_tasks(suite)}
     run_paths = sorted((RESULTS / "runs").glob("*.json"))
     runs = [json.loads(path.read_text(encoding="utf-8")) for path in run_paths]

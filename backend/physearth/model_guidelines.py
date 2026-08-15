@@ -10,9 +10,9 @@ import hashlib
 import re
 from pathlib import Path
 
-from physearth import config
+from physearth import config, paths
 
-ROOT = Path(__file__).resolve().parent.parent / "knowledge" / "model_guidelines"
+ROOT = paths.knowledge() / "model_guidelines"
 MAX_CHARS = 24000
 SAFE_NAME = re.compile(r"^[a-zA-Z0-9_.-]+$")
 

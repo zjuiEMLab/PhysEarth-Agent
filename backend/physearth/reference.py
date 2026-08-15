@@ -1,8 +1,9 @@
 import json
 import statistics
-from pathlib import Path
 
-REFERENCE_DIR = Path(__file__).resolve().parent.parent / "knowledge" / "reference"
+from physearth import paths
+
+REFERENCE_DIR = paths.knowledge() / "reference"
 MAX_SAMPLE_ROWS = 20
 
 _CACHE = None

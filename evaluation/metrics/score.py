@@ -8,10 +8,6 @@ system to its own opinion of itself and every configuration would score perfectl
 """
 
 import math
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from physearth import harness, validation  # noqa: E402
 from physearth.models import registry  # noqa: E402

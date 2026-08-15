@@ -5,7 +5,6 @@ be imported from a notebook or another script without side effects.
 """
 
 import json
-import sys
 from pathlib import Path
 
 import yaml
@@ -15,10 +14,6 @@ REPO = ROOT.parent
 TASKS = ROOT / "tasks"
 CONFIGS = ROOT / "configs"
 RESULTS = ROOT / "results"
-
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
-
 
 def load_yaml(path):
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
