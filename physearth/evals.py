@@ -489,7 +489,35 @@ def basic_cases():
 
 
 def demo_cases():
-    return _cases(REPRESENTATIVE_CASES)
+    """Return the four paper-reproduction questions from evaluation task data.
+
+    The presentation copy remains local to the dashboard, but the actual questions and
+    figure targets come from the same reproduction task files used by the runner. This
+    prevents the UI from silently asking a shorter question than the reproducibility
+    evaluation.
+    """
+    cases = _cases(REPRESENTATIVE_CASES)
+    tasks = {
+        task.get("id"): task
+        for task in _load_tasks("reproduction")
+        if isinstance(task, dict) and task.get("id")
+    }
+    for case in cases:
+        task = tasks.get(case["id"])
+        if not task:
+            continue
+        case.update(
+            {
+                "question": task.get("question", case["question"]),
+                "paper": task.get("paper", ""),
+                "paper_title": task.get("paper_title", ""),
+                "paper_doi": task.get("paper_doi", ""),
+                "paper_section": task.get("paper_section", ""),
+                "paper_figures": list(task.get("paper_figures") or []),
+                "figure_targets": list(task.get("figure_targets") or []),
+            }
+        )
+    return cases
 
 
 @lru_cache(maxsize=1)
@@ -501,16 +529,69 @@ def guided_demo():
 @lru_cache(maxsize=1)
 def guided_demos():
     """Load the beginner-facing paper cards from evaluation-only data files."""
-    return tuple(
-        dict(_load_yaml(DEMOS / filename))
-        for filename in ("smrt-q1.yaml", "smrt-q2.yaml")
-        if (DEMOS / filename).is_file()
-    )
+    cards = []
+    for filename in ("smrt-q1.yaml", "smrt-q2.yaml"):
+        path = DEMOS / filename
+        if not path.is_file():
+            continue
+        case = dict(_load_yaml(path))
+        # Keep the card itself as the source of the prompt, but make the copy sent
+        # to Live Agent self-describing.  This is deliberately generic: paper title,
+        # section and figure targets come from the evaluation data, never from the
+        # global prompt or a fixed SMRT workflow.
+        case["question"] = guided_agent_question(case)
+        cards.append(case)
+    return tuple(cards)
 
 
 def guided_demo_cases():
     """Return the beginner-facing guided reproduction cards."""
     return [dict(case) for case in guided_demos()]
+
+
+def _figure_target_label(item):
+    """Return a readable source-figure label without hard-coding a paper."""
+    if isinstance(item, dict):
+        label = str(item.get("label") or item.get("id") or "").strip()
+        return label
+    raw = str(item or "").strip()
+    stem = raw.rsplit("/", 1)[-1].rsplit("\\", 1)[-1].rsplit(".", 1)[0]
+    suffix = stem[3:] if stem.lower().startswith("fig") else ""
+    if suffix.isdigit():
+        return "Figure %d" % int(suffix)
+    return raw
+
+
+def guided_agent_question(case):
+    """Build the concise paper/figure request copied into the Live Agent box.
+
+    The evaluation YAML remains the only source for these demo details.  The helper
+    adds only the reproduction target to the user-facing request; it does not copy
+    execution conditions, run matrices, or an execution protocol.
+    """
+    question = str(case.get("question") or "").strip()
+    title = str(case.get("paper_title") or case.get("paper") or "").strip()
+    doi = str(case.get("paper_doi") or "").strip()
+    section = str(case.get("paper_section") or "").strip()
+    figures = [
+        _figure_target_label(item)
+        for item in (case.get("figure_targets") or case.get("paper_figures") or [])
+    ]
+    figures = [item for item in figures if item]
+    if not any((title, doi, section, figures)):
+        return question
+    figure_phrase = ", ".join(figures) if figures else "the relevant figure(s)"
+    paper_phrase = title or str(case.get("paper") or "the paper")
+    if doi:
+        paper_phrase += " (DOI: %s)" % doi
+    lines = ["Reproduce %s from %s%s." % (
+        figure_phrase,
+        paper_phrase,
+        "; Section %s" % section if section else "",
+    )]
+    if question:
+        lines.extend(["", "Answer the following question:", question])
+    return "\n".join(lines)
 
 
 def guided_demo_matches(question):
@@ -545,6 +626,10 @@ def demo_card(case):
         fixed_text = ", ".join(
             "%s=%s" % (key, value) for key, value in fixed.items() if key != "sweep_parameter"
         )
+        figure_text = ", ".join(
+            str(item.get("id") if isinstance(item, dict) else item)
+            for item in case.get("paper_figures") or case.get("figure_targets") or ()
+        )
         unavailable = ", ".join(str(item) for item in case.get("unavailable_models") or ())
         unavailable_html = (
             "<p><b>Unavailable external models:</b> %s</p>" % _e(unavailable)
@@ -557,7 +642,7 @@ def demo_card(case):
             "<p>%s</p>%s"
             "<div class='eval-demo-card__context'><b>Paper context</b><p>%s</p>"
             "<p><b>Reproduce:</b> %s</p>"
-            "<p><b>Protocol:</b> %s; <b>Paper section:</b> %s; <b>Runs:</b> %s</p>"
+            "<p><b>Protocol:</b> %s; <b>Paper section:</b> %s; <b>Figures:</b> %s; <b>Runs:</b> %s</p>"
             "<p><b>Fixed conditions:</b> %s</p>%s</div>"
             "<div class='eval-demo-card__expect'><span>EXPECTED</span>%s</div>"
             "<details class='eval-demo-card__workflow'><summary>What will happen</summary><ol>%s</ol></details>"
@@ -571,6 +656,7 @@ def demo_card(case):
                 _e(case.get("result_target", "")),
                 _e(case.get("protocol_title", "")),
                 _e(case.get("paper_section") or "not declared"),
+                _e(figure_text or "declared by the paper protocol"),
                 _e(run_text or "declared by the paper protocol"),
                 _e(fixed_text or "declared by the paper protocol"),
                 unavailable_html,

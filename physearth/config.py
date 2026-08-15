@@ -10,6 +10,10 @@ _DEFAULTS = {
     "MODELSCOPE_NAMESPACE": "",
     "MODELSCOPE_API_BASE": "https://api-inference.modelscope.cn/v1",
     "MODELSCOPE_MODEL": "Qwen/Qwen3.5-122B-A10B",
+    # Source-paper figure inspection should include the image by default. Providers that
+    # do not expose a vision-capable endpoint can opt out with PHYSEARTH_LLM_VISION=0;
+    # vector labels and captions are still extracted when available.
+    "PHYSEARTH_LLM_VISION": "1",
     "PHYSEARTH_ONLINE": "1",
     "PHYSEARTH_STATE_DIR": "_state",
     # Zero means unlimited. Provider quotas and context checks remain independent.

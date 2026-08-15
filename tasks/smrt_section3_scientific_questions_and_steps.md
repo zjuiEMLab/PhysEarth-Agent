@@ -1,6 +1,6 @@
 # Scientific Questions and SMRT Reproduction Steps for Section 3
 
-**Reference paper:** Picard et al. (2018), *Simulation of the microwave emission of multi-layered snowpacks using the Dense Media Radiative transfer theory: the SMRT model*, Geoscientific Model Development, 11, 2763–2788.
+**Reference paper:** Picard et al. (2018), *SMRT: an active-passive microwave radiative transfer model for snow with multiple microstructure and scattering formulations (v1.0)*, Geoscientific Model Development, 11, 2763–2788. DOI: 10.5194/gmd-11-2763-2018.
 
 **Objective:** Reproduce and verify the numerical experiments in Section 3 using SMRT, while separating differences caused by electromagnetic theory, microstructure representation, radiative-transfer solvers, and numerical implementation.
 
@@ -455,7 +455,7 @@ The references are used as design guidance, not as a claim that there is one uni
 
 ---
 
-## 1. The Sparse Medium Approximation （Section 3.1.1）
+## 1. The Sparse Medium Approximation （Section 3.1.1; reproduce Figure 3）
 
 ### Scientific question
 
@@ -500,10 +500,11 @@ Under what snow-density range do 1) Rayleigh theory, 2) DMRT-QCA-CP sticky and 3
 - Relative deviation from the Rayleigh limit.
 - Estimated validity range of the sparse-medium approximation.
 - Separate assessment of electromagnetic-theory and microstructure effects.
+- A model-generated Figure 3 comparison linked to the stored source figure; numeric curve digitization is a separate user-reviewed operation.
 
 ---
 
-## 2. Comparison of SMRT to DMRT-Based Models
+## 2. Comparison of SMRT to DMRT-Based Models （Section 3.1.2; reproduce Figures 4 and 5）
 
 ### Scientific question
 
@@ -548,10 +549,11 @@ Under what snow-density range do 1) Rayleigh theory, 2) DMRT-QCA-CP sticky and 3
 - Radius-stickiness validity map for the short-range approximation.
 - Records of numerical warnings and nonphysical cases.
 - Attribution of discrepancies to electromagnetic or radiative-transfer components.
+- Model-generated charts linked separately to source Figures 4 and 5; unavailable DMRT-ML/DMRT-QMS outputs remain explicitly partial.
 
 ---
 
-## 3. Comparison of SMRT to MEMLS-IBA
+## 3. Comparison of SMRT to MEMLS-IBA （Section 3.1.3; reproduce Figure 6）
 
 ### Scientific question
 
@@ -596,10 +598,11 @@ Under what snow-density range do 1) Rayleigh theory, 2) DMRT-QCA-CP sticky and 3
 - Polarization-specific error metrics.
 - DORT stream-convergence assessment.
 - Quantified contributions from absorption and radiative-transfer formulations.
+- A model-generated Figure 6 comparison, with MEMLS marked unavailable rather than replaced by SMRT.
 
 ---
 
-## 4. On the Equivalence of Microstructure Models
+## 4. On the Equivalence of Microstructure Models （Section 3.2; reproduce Figures 7 and 8）
 
 ### Scientific question
 
@@ -654,6 +657,7 @@ Under what snow-density range do 1) Rayleigh theory, 2) DMRT-QCA-CP sticky and 3
 - Density-dependent equivalence curves.
 - Root residuals and uniqueness diagnostics.
 - Cross-frequency, angular, polarization, and active/passive transferability tests.
+- Model-generated equivalence charts linked separately to source Figures 7 and 8.
 
 ---
 

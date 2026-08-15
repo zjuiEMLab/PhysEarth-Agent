@@ -693,7 +693,8 @@ def _repair_reproduction_metadata(
     inspected_figures = {
         _normalise_evidence_ref(item.get("reference"))
         for item in _ledger_entries(session, "figure_inspection")
-        if item.get("analysis_status") not in ("unavailable",) and item.get("reference")
+        if item.get("analysis_status") not in ("unavailable", "metadata_only")
+        and item.get("reference")
     }
     ledger_sections = _ledger_entries(session, "section")
     ledger_figures = _ledger_entries(session, "figure") + _ledger_entries(session, "figure_inspection")
@@ -1042,7 +1043,8 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
     inspected_figures = {
         _normalise_evidence_ref(item.get("reference"))
         for item in _ledger_entries(session, "figure_inspection")
-        if item.get("analysis_status") not in ("unavailable",) and item.get("reference")
+        if item.get("analysis_status") not in ("unavailable", "metadata_only")
+        and item.get("reference")
     }
     if not sections:
         problems.append({

@@ -27,7 +27,7 @@ from physearth import agent, approval, config, research, results  # noqa: E402
 
 TASK_DIR = REPO / "evaluation" / "tasks" / "reproduction"
 RESULT_DIR = REPO / "evaluation" / "results" / "reproduction"
-PAPER_FIGURE_DIR = REPO.parent / "research_materials" / "smrt" / "figures"
+PAPER_FIGURE_DIR = REPO / "knowledge" / "literature" / "smrt-v1" / "figures"
 CONTINUE = (
     "I approve formal execution of the reviewed research plan. Continue now: run every "
     "missing registered physical-model experiment, create and quality-review every selected "

@@ -39,6 +39,19 @@ them into three groups and keep the groups distinct in your head and in the answ
 A number reported without saying which group its configuration came from cannot be checked
 by anyone, including you.
 
+## When reproducing a paper figure or result
+
+Read the paper section and the target figure before fixing the run. The caption and surrounding
+paragraphs identify the observable, axes, units, legend series, panels, annotations, plotted range,
+and the conditions used by the authors. Record those observations as evidence, not as silently
+resolved model inputs. If the source image is unavailable, mark the target partial or unavailable
+and explain what cannot be checked. Never infer numeric curve values from pixels without a separate
+user-reviewed digitization step and a named reference-data artifact.
+
+Keep the paper result, the model-generated figure, and any measured or digitized reference data as
+separate provenance classes. A visual trend can support a qualitative comparison, but it cannot by
+itself establish numeric agreement or a correct parameter value.
+
 ## Check the run is inside the model before running it
 
 Read the declaration with list_models rather than assuming a range. Two questions to settle:

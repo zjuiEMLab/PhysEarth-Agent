@@ -52,6 +52,23 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
     assert len(cases) == 4
     assert len({case["id"] for case in cases}) == len(cases)
     assert all(case["id"].startswith("q") for case in cases)
+    assert all(case["paper"] == "smrt-v1" for case in cases)
+    assert all("SMRT:" in case["paper_title"] for case in cases)
+    assert all(case["paper_doi"] == "10.5194/gmd-11-2763-2018" for case in cases)
+    assert [case["paper_section"] for case in cases] == ["3.1.1", "3.1.2", "3.1.3", "3.2"]
+    assert [case["paper_figures"] for case in cases] == [
+        ["fig03.png"],
+        ["fig04.png", "fig05.png"],
+        ["fig06.png"],
+        ["fig07.png", "fig08.png"],
+    ]
+    figure_root = Path("knowledge/literature/smrt-v1/figures")
+    assert all(
+        (figure_root / figure).is_file()
+        for case in cases
+        for figure in case["paper_figures"]
+    )
+    assert all("Reproduce Figure" in case["question"] or "Reproduce Figures" in case["question"] for case in cases)
     assert "DMRT-ML" in cases[1]["question"]
     assert "MEMLS" in cases[2]["question"]
 
@@ -70,12 +87,29 @@ def test_guided_demos_are_data_driven_q1_and_q2_cards():
     assert "Paper context" in q1_card
     assert "Reproduce:" in q1_card
     assert "Paper section:</b> 3.1.1" in q1_card
+    assert "Figure 3" in q1_card
     assert "smrt-v1#08" not in q1_card
     assert len(cases[0]["required_runs"]) == 6
     assert cases[0]["fixed"]["radius_m"] == 0.0001
     assert "Paper section:</b> 3.1.2" in q2_card
+    assert "Figures 4 and 5" in q2_card
     assert "DMRT-ML" in q2_card and "DMRT-QMS" in q2_card
     assert "smrt-v1#08" not in q2_card
+
+    # The question copied into Live Agent must identify the paper and the source
+    # figures explicitly, rather than relying on the card that the user just left.
+    assert cases[0]["question"].startswith("Reproduce Figure 3: Sparse-medium scattering coefficient comparison")
+    assert "SMRT:" in cases[0]["question"]
+    assert "DOI: 10.5194/gmd-11-2763-2018" in cases[0]["question"]
+    assert "Section 3.1.1" in cases[0]["question"]
+    assert "Answer the following question:" in cases[0]["question"]
+    assert "Use the six legal" not in cases[0]["question"]
+    assert "registered model" not in cases[0]["question"]
+    assert cases[1]["question"].startswith("Reproduce Figure 4:")
+    assert "Figure 5: Radius and stickiness sensitivity" in cases[1]["question"]
+    assert "Section 3.1.2" in cases[1]["question"]
+    assert "Answer the following question:" in cases[1]["question"]
+    assert "under identical snow and observation conditions" not in cases[1]["question"]
 
 
 def test_q1_comparison_rejects_stale_question_and_accepts_shared_pair(monkeypatch):

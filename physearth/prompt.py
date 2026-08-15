@@ -55,8 +55,14 @@ model's instruction with read_model_instruction. For a paper reproduction, first
 paper evidence: use list_literature or the session paper, read the relevant sections with
 read_literature, and open each source figure that is a reproduction target with
 read_paper_figure. When the figure asset is available, inspect it with inspect_paper_figure to
-record axes, legends, panels, annotations, and qualitative trends. Do not treat a figure image
-as digitized numerical data; numeric curve extraction requires a separate user-reviewed step.
+record axes, units, legends, panels, annotations, and qualitative trends. If the source figure is
+unavailable, record the target as partial or unavailable with the reason; do not invent a figure
+citation. Do not treat a figure image as digitized numerical data; numeric curve extraction requires
+a separate user-reviewed step and a separately identified reference-data artifact. A figure target
+without a source asset may not receive a visual-similarity claim. A caption-only or metadata-only
+inspection is not a visual inspection: use the attached source image when it is available, and
+do not claim that axes, legends, or trends were checked unless they are present in the inspection
+evidence or in the model's image-based review.
 There is no stored
 paper protocol to copy: do not call or look for protocol.yaml. These resources are the source
 of procedure, model semantics, and paper conditions; do not reconstruct them from memory or
@@ -90,6 +96,12 @@ as a revision turn: preserve every unaffected field, submit only the requested c
 not re-read unchanged resources or regenerate the complete run matrix. After a successful
 revise_plan call, use the returned revision summary and wait for the user to review the new
 version; do not call research_plan again merely to restate that status.
+
+Keep research_plan JSON compact. Use concise field values and do not repeat explanatory prose
+inside tool arguments. If a tool call is truncated or malformed, resubmit a compact proposal;
+when a rejected draft is retained, use revise_plan with only the affected fields in changes.
+For a chart-axis error, preserve unrelated runs and repair only the producing runs/charts so
+that every plotted run uses the exact common sweep parameter named by the chart axis.
 
 If research_plan returns a structured error, use its error_code, problems, expected values and
 repair_hints. Read any resource it names before submitting a complete corrected proposal. Do

@@ -873,12 +873,21 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 gate_key = "invalid_tool_json:%s" % (call.get("name") or "unknown")
                 attempts = review_attempts.get(gate_key, 0) + 1
                 review_attempts[gate_key] = attempts
+                argument_text = str(call.get("arguments") or "")
+                output_truncated = bool(
+                    call.get("name") == "research_plan"
+                    and completion.completion_tokens is not None
+                    and completion.completion_tokens >= MAX_OUTPUT_TOKENS
+                )
                 events.append(
                     _event(
                         "tool_arguments_invalid",
                         rule="invalid_tool_json",
                         tool=call.get("name") or "unknown",
                         detail=detail,
+                        argument_chars=len(argument_text),
+                        completion_tokens=completion.completion_tokens,
+                        output_truncated=output_truncated,
                     )
                 )
                 if attempts >= harness.max_interventions(tool=call.get("name")):
@@ -899,17 +908,43 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 # validates historical function.arguments and would reject every retry.
                 if completion.content and completion.content.strip():
                     messages.append({"role": "assistant", "content": completion.content})
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": (
-                            "Your %s function arguments were not a valid JSON object (%s). "
-                            "Generate the tool call again with strict JSON: double-quoted keys "
-                            "and strings, no Markdown fence, comments, trailing comma, or prose."
-                            % (call.get("name") or "tool", detail)
-                        ),
-                    }
-                )
+                if call.get("name") == "research_plan":
+                    has_recovery_state = bool(
+                        session.get("research") or session.get("research_draft")
+                    )
+                    if output_truncated:
+                        retry_content = (
+                            "The previous research_plan arguments reached the output limit and "
+                            "were truncated. "
+                        )
+                    else:
+                        retry_content = (
+                            "The previous research_plan arguments were incomplete. Keep the next "
+                            "tool call compact. "
+                        )
+                    if has_recovery_state:
+                        retry_content += (
+                            "Use action=revise_plan with only the affected fields inside changes; "
+                            "preserve existing runs, charts, evidence, and physical values. "
+                        )
+                    else:
+                        retry_content += (
+                            "Use a concise action=propose with short strings and no repeated "
+                            "explanatory prose inside the JSON. "
+                        )
+                    retry_content += (
+                        "Arguments must be one strict JSON object with double-quoted keys and "
+                        "strings, no Markdown fence, comments, trailing comma, or prose. "
+                        "Parser detail: " + detail
+                    )
+                else:
+                    retry_content = (
+                        "Your %s function arguments were not a valid JSON object (%s). "
+                        "Generate the tool call again with strict JSON: double-quoted keys "
+                        "and strings, no Markdown fence, comments, trailing comma, or prose."
+                        % (call.get("name") or "tool", detail)
+                    )
+                messages.append({"role": "user", "content": retry_content})
                 yield answer, events, state
                 continue
             # Prose the model wrote before reaching for a tool is a finished block: the next
@@ -1239,19 +1274,17 @@ def stream(question, history=None, model=None, session=None, switches=None):
 
                 payload = {k: v for k, v in result.items() if k not in ("qc", "ui")}
                 tool_content = json.dumps(payload, ensure_ascii=False)
-                # A figure inspection may carry one bounded image part for a configured
-                # multimodal endpoint. Keep the base64 out of the textual tool transcript;
-                # text-only providers receive the explicit metadata-only result instead.
+                # A figure inspection carries one bounded image part for a configured
+                # multimodal endpoint. Keep the base64 out of the tool transcript and send
+                # the image as a user content block, which is the OpenAI-compatible format
+                # accepted by vision models. The textual tool result remains auditable.
                 image_data_url = (result.get("data") or {}).get("image_data_url")
                 if image_data_url:
                     text_payload = json.loads(tool_content)
                     text_data = dict(text_payload.get("data") or {})
                     text_data.pop("image_data_url", None)
                     text_payload["data"] = text_data
-                    tool_content = [
-                        {"type": "text", "text": json.dumps(text_payload, ensure_ascii=False)},
-                        {"type": "image_url", "image_url": {"url": image_data_url}},
-                    ]
+                    tool_content = json.dumps(text_payload, ensure_ascii=False)
                 messages.append(
                     {
                         "role": "tool",
@@ -1259,6 +1292,24 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         "content": tool_content,
                     }
                 )
+                if image_data_url:
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        "Inspect the attached source-paper figure itself. Read the "
+                                        "axes, units, legend, panels, annotations, and visible "
+                                        "qualitative trends. Use the image as evidence; do not "
+                                        "digitize curve values automatically."
+                                    ),
+                                },
+                                {"type": "image_url", "image_url": {"url": image_data_url}},
+                            ],
+                        }
+                    )
                 if (
                     name == "research_plan"
                     and result["status"] == "terminal_error"
@@ -1266,6 +1317,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         "reproduction_evidence_incomplete",
                         "research_plan_validation",
                         "paper_condition_conflict",
+                        "chart_axis_mismatch",
                     )
                 ):
                     problems = (result.get("data") or {}).get("problems") or []
@@ -1277,7 +1329,19 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         str(item.get("field", "")).startswith("parameter_mapping")
                         for item in blocking_problems
                     )
-                    if mapping_only:
+                    failure_code = (result.get("data") or {}).get("error_code")
+                    if failure_code == "chart_axis_mismatch":
+                        recovery_instruction = (
+                            "This is a chart-axis repair. Preserve all evidence, reproduction "
+                            "targets, outputs, physical parameters, and unrelated runs. Submit "
+                            "action=revise_plan with changes containing only the runs that produce "
+                            "the affected charts and those charts if necessary. Every compared run "
+                            "must use the exact same numeric sweep_parameter as chart.x and include "
+                            "sweep_start, sweep_stop, and sweep_points. If the source figure has "
+                            "an axis sweep, derive that axis from the inspected figure. Do not "
+                            "resubmit the complete plan or change an unrelated experiment."
+                        )
+                    elif mapping_only:
                         recovery_instruction = (
                             "These are mapping-only errors. Preserve every existing run, chart, "
                             "evidence reference, physical parameter, sweep range, output, and "
@@ -1302,9 +1366,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             "content": (
                                 "Repair the submitted reproduction plan using the structured "
                                 "validation problems below. %s "
-                                "For a paper-condition conflict, correct the run's explicit value "
-                                "to the paper value named by the validator; never retain a conflicting "
-                                "backend default. Problems: %s"
+                                "Paper conditions are provenance/context, not model-validity "
+                                "constraints; only registered model declarations and opened model "
+                                "instructions determine legal model inputs. Problems: %s"
                                 % (recovery_instruction, json.dumps(problems, ensure_ascii=False))
                             ),
                         }

@@ -273,6 +273,41 @@ def test_research_plan_mapping_stop_exposes_exact_structured_repair(monkeypatch)
     assert "allowed_values" in answer
 
 
+def test_chart_axis_failure_adds_a_targeted_revision_instruction(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    script = [
+        [_call_chunk("research_plan", '{"action":"propose"}')]
+        for _ in range(5)
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    def fake_call(name, arguments, **_kwargs):
+        assert name == "research_plan"
+        return {
+            "status": "terminal_error",
+            "summary": "The proposed chart cannot be produced by the planned runs.",
+            "data": {
+                "error_code": "chart_axis_mismatch",
+                "problems": ["chart x=angle_deg has no common angle sweep"],
+                "candidate_numeric_axes": ["stickiness"],
+            },
+            "error": "chart axis mismatch",
+        }
+
+    monkeypatch.setattr(agent.tools, "call", fake_call)
+    agent.run("Reproduce the paper figure", session=box)
+
+    recovery_messages = [
+        message.get("content", "")
+        for message in sent[1]
+        if message.get("role") == "user"
+    ]
+    assert any("chart-axis repair" in message for message in recovery_messages)
+    assert any("only the runs that produce" in message for message in recovery_messages)
+
+
 def test_research_plan_resource_error_forces_the_missing_read_before_retry(monkeypatch):
     box = _asking()
     box["research_required"] = True
@@ -463,6 +498,31 @@ def test_a_declined_call_reaches_the_model_as_a_tool_result(monkeypatch):
     assert tool_messages, "the model was never told what happened"
     assert "declined" in tool_messages[-1]["content"]
     assert box["model_runs"] == 0
+
+
+def test_source_figure_inspection_sends_the_image_to_the_model(monkeypatch):
+    box = _asking()
+    script = [
+        [_call_chunk("inspect_paper_figure", '{"paper":"smrt-v1","figure_id":"fig03"}')],
+        [_Chunk(_Delta(content="I inspected the source figure axes and legend."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    list(agent.stream("Inspect the source figure", session=box))
+
+    image_messages = [
+        message
+        for turn in sent
+        for message in turn
+        if message.get("role") == "user" and isinstance(message.get("content"), list)
+    ]
+    assert image_messages
+    assert any(part.get("type") == "image_url" for part in image_messages[0]["content"])
+    tool_messages = [
+        message for turn in sent for message in turn if message.get("role") == "tool"
+    ]
+    assert tool_messages and "image_data_url" not in tool_messages[0]["content"]
 
 
 def test_an_approved_call_runs_and_the_gate_is_recorded(monkeypatch):

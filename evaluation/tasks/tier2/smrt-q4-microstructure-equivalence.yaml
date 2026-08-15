@@ -3,11 +3,12 @@ suite: tier2
 tier: 2
 legacy_id: t1-smrt-fig6-memls-iba
 evaluation_kind: scientific_question_demo
-figure_target: none
+figure_target: fig07
+paper_figures: [fig07, fig08]
 title: SMRT scientific question 4, microstructure equivalence
 source:
   document: tasks/smrt_section3_scientific_questions_and_steps.md
-  section: "3.1.4"
+  section: "3.2"
   paper: smrt-v1
   doi: 10.5194/gmd-11-2763-2018
 quality: complete
@@ -15,15 +16,16 @@ shape: research_demo
 observable: equivalence_mapping
 models: [smrt]
 question: >-
-  Use the SMRT Section 3 scientific-question demo on microstructure equivalence. Do not
-  regenerate a paper figure. Demonstrate the equivalence workflow on one carefully declared
-  calibration case before discussing transferability. The scientific question is: can sticky
-  hard spheres, scaled non-sticky spheres, and exponential autocorrelation functions be
-  parameterized to produce equivalent microwave brightness temperatures for snow with the
-  same density and specific surface area, and is that equivalence unique and transferable
-  across densities, frequencies, incidence angles, and polarizations? Use SMRT IBA with DORT,
-  a 265 K homogeneous snow layer, a 100 micrometre reference radius, 37 GHz, and 55 degrees
-  for the initial calibration. Check root bracketing, residuals, and multiple solutions.
+  Reproduce Figures 7 and 8, "Grain-size scaling equivalence" and "Exponential-correlation
+  scaling equivalence", from the paper "SMRT: an active-passive microwave radiative
+  transfer model for snow with multiple microstructure and scattering formulations (v1.0)"
+  by Picard et al. (2018, DOI: 10.5194/gmd-11-2763-2018), Section 3.2. Read and inspect
+  both source figures, then answer whether sticky hard spheres, scaled non-sticky spheres,
+  and exponential autocorrelation functions can be parameterized to produce equivalent
+  microwave brightness temperatures for snow with the same density and specific surface
+  area, and whether that equivalence is unique and transferable across density, frequency,
+  incidence angle, and polarization. Compare generated charts with Figures 7 and 8 and
+  report root, residual, and transferability limitations.
 demo:
   source_question: >-
     Can different snow microstructure representations be mapped to equivalent brightness
@@ -44,10 +46,11 @@ demo:
     - explicit treatment of multiple roots and missing brackets
     - a follow-up plan for density, frequency, angle, polarization, and active transfer tests
   required_behaviors:
+    - read and inspect paper Figures 7 and 8 before proposing the chart package
     - do not call one-point agreement general equivalence
     - keep the calibration channel distinct from transferability tests
     - report solver failures and non-unique solutions as results
     - cite and apply the source relation for exponential correlation length
   limitations:
-    - this task is a scientific-question demo, not a digitized paper-figure reproduction
+    - this task is a paper-figure reproduction pilot; numeric curve digitization requires a separate user-reviewed step
     - the one-density pilot cannot establish uniqueness or transferability

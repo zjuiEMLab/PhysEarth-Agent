@@ -32,7 +32,7 @@ def test_every_tier0_task_declares_tier_kind_and_executable_checks():
     assert len(tasks) == 9
 
 
-def test_scientific_question_demos_are_tier2_and_not_figure_targets():
+def test_scientific_question_demos_are_tier2_paper_figure_targets():
     paths = sorted((EVALUATION / "tasks" / "tier2").glob("*.yaml"))
     assert len(paths) == 4
     for path in paths:
@@ -41,7 +41,11 @@ def test_scientific_question_demos_are_tier2_and_not_figure_targets():
         assert task["suite"] == "tier2"
         assert task["legacy_id"] == task["id"]
         assert task["evaluation_kind"] == "scientific_question_demo"
-        assert task["figure_target"] == "none"
+        assert task["figure_target"].startswith("fig")
+        assert task["paper_figures"]
+        assert "Reproduce Figure" in task["question"] or "Reproduce Figures" in task["question"]
+        assert "10.5194/gmd-11-2763-2018" in task["question"]
+        assert "inspect" in task["question"].lower()
         assert task["source"]["document"] == "tasks/smrt_section3_scientific_questions_and_steps.md"
         assert task["demo"]["pilot"]
         assert task["demo"]["expected_outputs"]

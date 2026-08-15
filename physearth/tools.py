@@ -43,6 +43,139 @@ def _temporary_figure_dir(session):
         session["temporary_figure_dir"] = path
     return path
 
+
+def _figure_id_key(value):
+    """Return a tolerant comparison key for paper figure identifiers.
+
+    Literature providers use several equivalent spellings (``fig03``, ``fig-03``,
+    ``figure 3`` and filenames such as ``fig03.png``).  An LLM can also repeat the
+    namespace prefix and produce ``fig-fig03``.  Normalisation is only used to find
+    an already-declared figure; it never creates a missing figure or changes the
+    citation identifier returned to the agent.
+    """
+    text = str(value or "").strip().lower().replace("\\", "/").rsplit("/", 1)[-1]
+    text = re.sub(r"\.(?:png|jpg|jpeg|pdf|svg|webp)$", "", text)
+    text = re.sub(r"^figure[\s_-]*", "fig", text)
+    while text.startswith("fig-fig"):
+        text = "fig" + text[len("fig-fig") :]
+    while text.startswith("fig-"):
+        text = "fig" + text[len("fig-") :]
+    match = re.fullmatch(r"fig(\d+)", text)
+    if match:
+        return "fig%d" % int(match.group(1))
+    return text
+
+
+def _paper_figure(item, figure_id):
+    requested_key = _figure_id_key(figure_id)
+    for figure in item.get("figures") or []:
+        if _figure_id_key(figure.get("id")) == requested_key:
+            return figure
+    return None
+
+
+def _trusted_asset_bytes(item, asset_path):
+    """Read a paper asset only from a managed literature or artifact directory."""
+    if not asset_path:
+        return None, None
+    try:
+        state_root = config.state_dir().resolve()
+        trusted_roots = [state_root, knowledge.KNOWLEDGE_DIR.resolve()]
+        artifact_root = ((item.get("artifact") or {}).get("root") or "").strip()
+        if artifact_root:
+            trusted_roots.append(Path(artifact_root).resolve())
+        raw_candidate = Path(str(asset_path))
+        candidates = [raw_candidate]
+        if not raw_candidate.is_absolute():
+            for root in trusted_roots:
+                candidates.append(root / raw_candidate)
+            paper_dir = item.get("_dir")
+            if paper_dir:
+                candidates.append(Path(str(paper_dir)) / raw_candidate)
+        for candidate in candidates:
+            resolved = candidate.resolve()
+            if resolved.is_file() and any(
+                resolved.is_relative_to(root) for root in trusted_roots
+            ):
+                return resolved.read_bytes(), str(resolved)
+    except (OSError, RuntimeError, ValueError):
+        pass
+    return None, str(asset_path)
+
+
+def _extract_vector_figure_observations(raw_pdf):
+    """Extract labels and ticks from a vector source figure without digitizing curves.
+
+    Publisher figure PDFs commonly retain axis and legend text even when the raster preview
+    has no OCR layer. This gives the agent auditable labels and ranges while keeping plotted
+    lines as visual evidence rather than silently converting pixels into numeric data.
+    """
+    if not raw_pdf:
+        return {}
+    try:
+        import fitz
+
+        document = fitz.open(stream=raw_pdf, filetype="pdf")
+        if not document:
+            return {}
+        page = document[0]
+        width, height = float(page.rect.width), float(page.rect.height)
+        blocks = page.get_text("blocks")
+        text_lines = []
+        axes = []
+        x_ticks = []
+        y_ticks = []
+        legend = []
+
+        def clean(text):
+            value = re.sub(r"\s+", " ", str(text or "")).strip()
+            # Superscripts are often emitted as a separate line by PDF text extraction.
+            value = re.sub(r"\bm\s+(-?\d+)\b", r"m^\1", value)
+            return value
+
+        for block in blocks:
+            if len(block) < 5:
+                continue
+            x0, y0, x1, y1, raw_text = block[:5]
+            value = clean(raw_text)
+            if not value:
+                continue
+            lines = [clean(line) for line in str(raw_text).splitlines() if clean(line)]
+            text_lines.extend(lines)
+            block_width, block_height = x1 - x0, y1 - y0
+            numeric_lines = [line for line in lines if re.fullmatch(r"[-+]?\d*\.?\d+", line)]
+            if y0 >= height * 0.86 and numeric_lines:
+                x_ticks.extend(numeric_lines)
+            if x0 <= width * 0.10 and numeric_lines:
+                y_ticks.extend(numeric_lines)
+            if y0 >= height * 0.78 and block_width > block_height and not numeric_lines:
+                axes.append(value)
+            if x0 <= width * 0.18 and block_height > block_width and not numeric_lines:
+                axes.append(value)
+            if (
+                len(lines) >= 2
+                and block_width > block_height
+                and y0 <= height * 0.55
+                and x0 >= width * 0.12
+            ):
+                legend.extend(lines)
+
+        def unique(values):
+            return list(dict.fromkeys(value for value in values if value))
+
+        return {
+            "source": "publisher figure PDF text layer",
+            "axes": unique(axes),
+            "legend": unique(legend),
+            "x_ticks": unique(x_ticks),
+            "y_ticks": unique(y_ticks),
+            "panels": 1,
+            "panel_detection": "single source-page asset",
+            "text": unique(text_lines),
+        }
+    except (ImportError, OSError, RuntimeError, ValueError):
+        return {}
+
 SPECS = [
     {
         "type": "function",
@@ -154,9 +287,10 @@ PAPER_FIGURE_INSPECTION_SPEC = {
     "function": {
         "name": "inspect_paper_figure",
         "description": (
-            "Inspect an extracted source-paper figure. Return visual metadata and qualitative "
-            "observations about axes, legends, panels, annotations and visible trends. It never "
-            "digitizes curve values and never treats a source image as model data."
+            "Inspect the extracted source-paper figure itself, not only its caption. Return the "
+            "source image when a vision-capable endpoint is configured, plus auditable visual "
+            "observations about axes, units, legends, panels, annotations and visible trends. "
+            "It never digitizes curve values and never treats a source image as model data."
         ),
         "parameters": {
             "type": "object",
@@ -487,7 +621,9 @@ RESEARCH_PLAN_SPEC = {
             "research protocol; it is not loaded from a paper protocol file. For paper "
             "reproduction, the proposal must include opened literature evidence, explicit "
             "reproduction targets, selected models, paper-to-model parameter mappings and "
-            "target coverage."
+            "target coverage. Keep initial proposals concise enough to fit one tool call. "
+            "For revise_plan, send only the affected fields in changes; the backend retains "
+            "unchanged runs, charts, evidence, and mappings."
         ),
         "parameters": {
             "type": "object",
@@ -615,8 +751,9 @@ RESEARCH_PLAN_SPEC = {
                         "and condition_provenance only when explicitly changing the source reference; "
                         "paper conditions are comparison context, not model-validity constraints. Update "
                         "reproduction_targets and parameter_mapping when changing evidence, targets, "
-                        "or paper-to-model translation; do "
-                        "not edit pseudo-data as if it were a model result."
+                        "or paper-to-model translation; do not edit pseudo-data as if it were a "
+                        "model result. For a focused revision, omit unchanged fields and do not "
+                        "resend the complete protocol."
                     ),
                 },
             },
@@ -859,29 +996,30 @@ def read_paper_figure(paper, figure_id, _session=None):
     item = live.card(_session, str(paper or "").strip())
     if not item:
         return _fail("Unknown paper %r." % paper)
-    figure = next((fig for fig in item.get("figures") or [] if str(fig.get("id")) == str(figure_id)), None)
+    figure = _paper_figure(item, figure_id)
+    resolved_figure_id = str(figure.get("id")) if figure else _figure_id_key(figure_id)
     if figure is None:
         _ledger(
             _session,
             "figure",
             {
-                "reference": "%s#%s" % (paper, figure_id),
+                "reference": "%s#%s" % (paper, resolved_figure_id),
                 "paper": paper,
-                "figure_id": str(figure_id),
+                "figure_id": resolved_figure_id,
                 "caption": "",
                 "source": "paper artifact",
                 "asset_available": False,
             },
         )
-        return _fail("Paper %s has no extracted figure %s." % (paper, figure_id))
-    citation_key = "%s#fig-%s" % (paper, figure_id)
+        return _fail("Paper %s has no extracted figure %s." % (paper, resolved_figure_id))
+    citation_key = "%s#fig-%s" % (paper, resolved_figure_id)
     payload = dict(figure)
     payload.pop("asset_bytes", None)
     payload["citation_key"] = citation_key
     if _session is not None:
-        _session.setdefault("paper_figures_read", set()).add("%s#%s" % (paper, figure_id))
+        _session.setdefault("paper_figures_read", set()).add("%s#%s" % (paper, resolved_figure_id))
     result = _ok(
-        "Source-paper figure %s is available. It is not model output and has not been digitized." % figure_id,
+        "Source-paper figure %s is available. It is not model output and has not been digitized." % resolved_figure_id,
         {"paper": paper, "figure": payload, "citation_key": citation_key},
     )
     _ledger(
@@ -890,7 +1028,7 @@ def read_paper_figure(paper, figure_id, _session=None):
         {
             "reference": citation_key.replace("#fig-", "#"),
             "paper": paper,
-            "figure_id": str(figure_id),
+            "figure_id": resolved_figure_id,
             "caption": payload.get("caption", ""),
             "source": payload.get("source_uri") or payload.get("source_url") or "paper artifact",
             "asset_available": bool(
@@ -913,11 +1051,9 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
     item = live.card(_session, str(paper or "").strip())
     if not item:
         return _fail("Unknown paper %r." % paper)
-    figure = next(
-        (fig for fig in item.get("figures") or [] if str(fig.get("id")) == str(figure_id)),
-        None,
-    )
-    reference = "%s#fig-%s" % (paper, figure_id)
+    figure = _paper_figure(item, figure_id)
+    resolved_figure_id = str(figure.get("id")) if figure else _figure_id_key(figure_id)
+    reference = "%s#fig-%s" % (paper, resolved_figure_id)
     if figure is None:
         _ledger(
             _session,
@@ -925,7 +1061,7 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
             {
                 "reference": reference.replace("#fig-", "#"),
                 "paper": paper,
-                "figure_id": str(figure_id),
+                "figure_id": resolved_figure_id,
                 "asset_available": False,
                 "analysis_status": "unavailable",
                 "availability_reason": "figure asset was not extracted from the paper",
@@ -933,20 +1069,18 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
         )
         return _fail(
             "Cannot inspect paper %s figure %s: no extracted source asset is available." %
-            (paper, figure_id)
+            (paper, resolved_figure_id)
         )
 
     payload = dict(figure)
     raw = payload.get("asset_bytes")
     asset_path = payload.get("asset_path") or payload.get("asset_uri")
-    if raw is None and asset_path:
-        try:
-            candidate = Path(str(asset_path)).resolve()
-            state_root = config.state_dir().resolve()
-            if candidate.is_file() and candidate.is_relative_to(state_root):
-                raw = candidate.read_bytes()
-        except (OSError, RuntimeError, ValueError):
-            raw = None
+    if raw is None:
+        raw, asset_path = _trusted_asset_bytes(item, asset_path)
+    original_raw, original_asset_path = _trusted_asset_bytes(
+        item, payload.get("original_asset_path")
+    )
+    vector_observations = _extract_vector_figure_observations(original_raw)
 
     asset_available = bool(raw)
     asset_format = str(payload.get("asset_format") or Path(str(asset_path or "")).suffix.lstrip("."))
@@ -963,25 +1097,44 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
             pass
 
     caption = str(payload.get("caption") or "").strip()
-    analysis_status = "vision_payload_ready" if asset_available and _vision_enabled() else (
-        "metadata_only" if asset_available else "unavailable"
+    analysis_status = (
+        "vision_payload_ready"
+        if asset_available and _vision_enabled()
+        else "text_extracted"
+        if asset_available and vector_observations.get("axes") or vector_observations.get("legend")
+        else "metadata_only"
+        if asset_available
+        else "unavailable"
     )
     availability_reason = ""
     if not asset_available:
         availability_reason = "paper artifact contains metadata but no extracted image asset"
-    elif analysis_status == "metadata_only":
+    elif analysis_status == "vision_payload_ready":
+        availability_reason = (
+            "source image attached to the next multimodal model request; vector labels were "
+            "also extracted when a publisher PDF was available"
+        )
+    elif analysis_status == "text_extracted":
+        availability_reason = (
+            "axis and legend text were extracted from the publisher figure PDF; qualitative "
+            "line trends still require visual review"
+        )
+    else:
         availability_reason = (
             "the configured language-model endpoint has no enabled multimodal image path; "
-            "caption and asset provenance were retained without visual claims"
+            "the source image is retained but no vector labels were available"
         )
     visual = {
-        "axes": [],
-        "legend": [],
-        "panels": None,
+        "axes": vector_observations.get("axes") or [],
+        "legend": vector_observations.get("legend") or [],
+        "panels": vector_observations.get("panels"),
         "visible_trends": [],
         "annotations": [],
         "focus": str(focus or "").strip(),
     }
+    for key in ("x_ticks", "y_ticks", "panel_detection", "source", "text"):
+        if vector_observations.get(key):
+            visual[key] = vector_observations[key]
     if caption:
         visual["caption_context"] = caption
     if width and height:
@@ -994,7 +1147,7 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
 
     data = {
         "paper": paper,
-        "figure_id": str(figure_id),
+        "figure_id": resolved_figure_id,
         "citation_key": reference,
         "caption": caption,
         "source_page": payload.get("page"),
@@ -1002,6 +1155,7 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
         "asset_available": asset_available,
         "asset_format": asset_format or None,
         "asset_path": asset_path,
+        "original_asset_path": original_asset_path,
         "analysis_status": analysis_status,
         "availability_reason": availability_reason,
         "visual_observations": visual,
@@ -1015,31 +1169,41 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
         {
             "reference": reference,
             "paper": paper,
-            "figure_id": str(figure_id),
+            "figure_id": resolved_figure_id,
             "caption": caption,
             "source": data["source"],
             "asset_available": asset_available,
             "analysis_status": analysis_status,
             "availability_reason": availability_reason,
+            "visual_observations": visual,
             "numeric_digitization": "not performed",
         },
     )
     if _session is not None:
-        _session.setdefault("paper_figures_inspected", set()).add("%s#%s" % (paper, figure_id))
-    summary = (
-        "Inspected source-paper figure %s. %s Numeric curve digitization was not performed."
-        % (
-            figure_id,
-            "A bounded visual payload is ready for a multimodal model."
-            if image_data_url
-            else ("Only metadata/caption are available; no visual trend was inferred." if not asset_available or analysis_status == "metadata_only" else "Visual metadata recorded."),
+        _session.setdefault("paper_figures_inspected", set()).add("%s#%s" % (paper, resolved_figure_id))
+    if image_data_url:
+        inspection_note = (
+            "The source image is attached for visual review; extracted axes and legend text "
+            "are included as an audit aid."
         )
+    elif analysis_status == "text_extracted":
+        inspection_note = (
+            "Axes and legend text were extracted from the source figure PDF; line trends "
+            "still require a vision-capable model."
+        )
+    elif not asset_available:
+        inspection_note = "No source image asset is available."
+    else:
+        inspection_note = "Only metadata/caption are available; visual review is unavailable."
+    summary = "Inspected source-paper figure %s. %s Numeric curve digitization was not performed." % (
+        resolved_figure_id,
+        inspection_note,
     )
     return _ok(summary, data, citations=[reference])
 
 
 def _vision_enabled():
-    return str(os.environ.get("PHYSEARTH_LLM_VISION", "0")).strip().lower() in {
+    return str(config.get("PHYSEARTH_LLM_VISION") or os.environ.get("PHYSEARTH_LLM_VISION", "1")).strip().lower() in {
         "1", "true", "yes", "on"
     }
 

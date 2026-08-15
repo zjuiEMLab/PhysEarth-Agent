@@ -47,6 +47,9 @@ def _valid_plan(box, question="How does density affect the registered model outp
 def test_prompt_is_general_and_does_not_embed_smrt_protocols():
     text = prompt.build(session.new_state(session.new_session("m")))
     assert "Earth-science physical-modeling agent" in text
+    assert "axes, units, legends, panels, annotations" in text
+    assert "separately identified reference-data artifact" in text
+    assert "visual-similarity claim" in text
     assert "Q1 sparse-medium requires exactly six" not in text
     assert "radius_m=0.0001" not in text
     assert "smrt-v1#08" not in text
@@ -522,36 +525,73 @@ def test_reproduction_revision_accepts_user_range_inside_registered_model_bounds
     )
 
 
-def test_unavailable_bundled_figure_remains_an_explicit_partial_target():
+def test_bundled_smrt_figures_are_readable_and_not_digitized_automatically():
     box = session.new_session("m")
     _q1_resources(box)
-    missing = tools.call(
+    read = tools.call(
         "read_paper_figure",
         {"paper": "smrt-v1", "figure_id": "fig03"},
         session=box,
     )
-    assert missing["status"] == "terminal_error"
-    assert any(
-        item.get("kind") == "figure" and item.get("asset_available") is False
-        for item in box["evidence_ledger"]
+    assert read["status"] == "success", read
+    figure = read["data"]["figure"]
+    assert figure["asset_path"] == "figures/fig03.png"
+    assert figure["original_asset_path"] == "figures/fig03.pdf"
+    assert figure["source_uri"].endswith("gmd-11-2763-2018-f03.pdf")
+
+    inspected = tools.call(
+        "inspect_paper_figure",
+        {"paper": "smrt-v1", "figure_id": "fig03", "focus": "axes, legend, and trends"},
+        session=box,
     )
-    fields = _q1_plan_fields(_q1_runs())
-    fields["reproduction_targets"] = [{
-        "id": "fig03-result",
-        "source_type": "figure",
-        "source_id": "fig03",
-        "target_quantity": "ks_per_m",
-        "evidence_refs": ["smrt-v1#08"],
-        "expected_comparison": "compare the coefficient trend with Figure 3",
-        "status": "partial",
-        "availability_reason": "source figure asset unavailable",
-    }]
-    result = tools.call("research_plan", fields, session=box)
-    assert result["status"] == "needs_input", result
-    target = box["research"]["plan"]["reproduction_targets"][0]
-    assert target["source_type"] == "figure"
-    assert target["status"] == "partial"
-    assert target["evidence_refs"] == ["smrt-v1#08"]
+    assert inspected["status"] == "success", inspected
+    assert inspected["data"]["asset_available"] is True
+    assert inspected["data"]["numeric_digitization"] == "not performed"
+    assert inspected["data"]["analysis_status"] in {"vision_payload_ready", "text_extracted"}
+    assert any("Density" in axis for axis in inspected["data"]["visual_observations"]["axes"])
+    assert any("Scattering coefficient" in axis for axis in inspected["data"]["visual_observations"]["axes"])
+    assert len(inspected["data"]["visual_observations"]["legend"]) >= 6
+    assert inspected["data"].get("image_data_url", "").startswith("data:image/")
+    assert inspected["data"]["visual_observations"]["dimensions_px"]["width"] > 0
+    assert inspected["data"]["visual_observations"]["dimensions_px"]["height"] > 0
+    assert "smrt-v1#fig03" in box["paper_figures_read"]
+    assert "smrt-v1#fig03" in box["paper_figures_inspected"]
+
+
+def test_paper_figure_ids_are_normalized_without_changing_the_source_identifier():
+    box = session.new_session("m")
+    read = tools.call(
+        "read_paper_figure",
+        {"paper": "smrt-v1", "figure_id": "fig-fig03.png"},
+        session=box,
+    )
+    assert read["status"] == "success", read
+    assert read["data"]["figure"]["id"] == "fig03"
+    assert read["data"]["citation_key"] == "smrt-v1#fig-fig03"
+
+    inspected = tools.call(
+        "inspect_paper_figure",
+        {"paper": "smrt-v1", "figure_id": "figure 3"},
+        session=box,
+    )
+    assert inspected["status"] == "success", inspected
+    assert inspected["data"]["figure_id"] == "fig03"
+    assert inspected["data"]["asset_available"] is True
+
+
+def test_bundled_smrt_card_declares_all_publisher_figures_with_assets():
+    from physearth import knowledge
+
+    card = knowledge.card("smrt-v1")
+    assert [figure["id"] for figure in card["figures"]] == [
+        "fig01", "fig02", "fig03", "fig04", "fig05", "fig06", "fig07", "fig08"
+    ]
+    for figure in card["figures"]:
+        asset = card["_dir"] / figure["asset_path"]
+        original = card["_dir"] / figure["original_asset_path"]
+        assert asset.is_file(), asset
+        assert original.is_file(), original
+        assert figure["license"] == "CC-BY-4.0"
 
 
 def test_research_workflow_does_not_offer_or_require_a_stored_paper_protocol():

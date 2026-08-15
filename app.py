@@ -50,7 +50,7 @@ def _session(box, model_id):
     return _new_session(model_id)
 
 
-def start_guided_demo(question, model_id):
+def start_guided_demo(question, model_id, demo_id="smrt-q1-guided"):
     """Start the guided demo without injecting evaluation data into the agent session."""
     session = _new_session(model_id)
     session["research_required"] = True
@@ -59,7 +59,7 @@ def start_guided_demo(question, model_id):
     audit.emit(
         "guided_demo_started",
         session=session,
-        demo_id="smrt-q1-guided",
+        demo_id=demo_id,
         context_source="evaluation_only",
     )
     return (
@@ -621,7 +621,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                                     case.get("button_label", "Start guided reproduction"),
                                     elem_classes=["eval-demo-button"],
                                 )
-                                guided_demo_buttons.append((button, case["question"]))
+                                guided_demo_buttons.append((button, case["question"], case["id"]))
                     gr.HTML(evals.q1_comparison(), elem_classes=["pe-eval-slot"])
                     gr.HTML(evals.architecture(), elem_classes=["pe-eval-slot"])
 
@@ -860,9 +860,11 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
             queue=False,
             cancels=active_stream_events,
         )
-    for button, demo_question in guided_demo_buttons:
+    for button, demo_question, demo_id in guided_demo_buttons:
         button.click(
-            lambda model_id, text=demo_question: start_guided_demo(text, model_id),
+            lambda model_id, text=demo_question, case_id=demo_id: start_guided_demo(
+                text, model_id, case_id
+            ),
             inputs=[model_bridge],
             outputs=outputs + [main_tabs],
             queue=False,

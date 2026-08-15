@@ -22,6 +22,13 @@ Every cell is checkpointed under `evaluation/results/reproduction/<llm>/<questio
 its full trace, final answer, figures, token accounting, stop reason, and SHA-256 digest.
 Completed cells are reused unless `--force` is supplied.
 
+Each Q1–Q4 task names the SMRT paper, DOI, public paper section, and source figure(s).
+The question sent to the agent requires it to read and inspect those figures, generate
+model figures from approved registered-model runs, compare the two sources, and answer the
+scientific question. A missing external reference model or missing digitized curve is
+reported as partial/unavailable; it is never silently substituted or treated as a complete
+reproduction.
+
 ## Metrics
 
 - **Success:** the research phase is `completed`, at least one formal figure exists, and a

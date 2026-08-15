@@ -3,7 +3,8 @@ suite: tier2
 tier: 2
 legacy_id: t1-smrt-fig5-iba-shs
 evaluation_kind: scientific_question_demo
-figure_target: none
+figure_target: fig06
+paper_figures: [fig06]
 title: SMRT scientific question 3, comparison with MEMLS-IBA
 source:
   document: tasks/smrt_section3_scientific_questions_and_steps.md
@@ -15,15 +16,15 @@ shape: research_demo
 observable: passive_brightness_temperature
 models: [smrt]
 question: >-
-  Use the SMRT Section 3 scientific-question demo on comparison with MEMLS-IBA. Do not
-  regenerate a paper figure or present SMRT as MEMLS. Demonstrate a small pilot with an exponential
-  microstructure, first checking whether MEMLS is available, then running the two local SMRT
-  IBA variants that can be compared. The scientific question is: when SMRT and MEMLS use the
-  same exponential microstructure and snowpack properties, how closely do they reproduce the
-  same electromagnetic coefficients and brightness temperatures, and how much of the
-  difference is caused by the IBA absorption formulation versus the DORT and six-flux
-  radiative-transfer solvers? Use 37 GHz, 265 K, density 300 kg/m3, correlation length 100
-  micrometres, and a few incidence angles for the pilot.
+  Reproduce Figure 6, "Comparison with MEMLS-IBA", from the paper "SMRT: an active-passive
+  microwave radiative transfer model for snow with multiple microstructure and scattering
+  formulations (v1.0)" by Picard et al. (2018, DOI: 10.5194/gmd-11-2763-2018), Section
+  3.1.3. Read and inspect Figure 6, first check whether MEMLS is available, and then answer:
+  when SMRT and MEMLS use the same exponential microstructure and snowpack properties, how
+  closely do they reproduce the electromagnetic coefficients and brightness temperatures,
+  and how much of the difference can be attributed to IBA absorption versus DORT and
+  six-flux radiative-transfer solvers? Do not present SMRT as MEMLS; compare the generated
+  local chart with Figure 6 and mark unavailable external results explicitly.
 demo:
   source_question: >-
     When SMRT and MEMLS use the same exponential microstructure and snowpack properties, how
@@ -43,10 +44,11 @@ demo:
     - a comparison of IBA formulation effects within SMRT
     - a controlled plan for separating electromagnetic and solver contributions
   required_behaviors:
+    - read and inspect paper Figure 6 before proposing the chart package
     - distinguish unavailable MEMLS execution from a negative scientific result
     - cite the source for the exponential representation and correlation length
     - keep density, temperature, boundary, and angle conventions explicit
     - avoid claiming equivalence from one pilot channel
   limitations:
-    - this task is a scientific-question demo, not a digitized paper-figure reproduction
+    - this task is a paper-figure reproduction pilot; numeric curve digitization requires a separate user-reviewed step
     - no MEMLS result may be fabricated when the external package is unavailable
