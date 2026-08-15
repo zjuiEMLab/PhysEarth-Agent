@@ -356,7 +356,7 @@ def test_a_runaway_model_is_stopped_by_the_wall_clock_limit(monkeypatch):
     from physearth.models import registry
 
     entry = registry.get("smrt")
-    monkeypatch.setattr(tools, "MAX_RUN_SECONDS", 0.2)
+    monkeypatch.setattr(tools.runs, "MAX_RUN_SECONDS", 0.2)
     monkeypatch.setattr(entry, "run", lambda spec: _time.sleep(5))
     result = tools.call("run_model", {"model": "smrt", "parameters": {}})
     assert result["status"] == "terminal_error"
