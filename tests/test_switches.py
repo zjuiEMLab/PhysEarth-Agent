@@ -56,7 +56,7 @@ def test_the_corpus_ablation_removes_every_literature_tool_and_the_catalogue():
         "list_models", "read_model_instruction", "register_model_guideline",
         "register_github_model_repo", "inspect_github_model_repo", "run_model",
         "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart",
-        "research_plan",
+        "research_plan", "research_capability_check",
     }
     assert tools.call("read_literature", {"slug": "smrt-v1"}, switches_in=off)["status"] == (
         "terminal_error"

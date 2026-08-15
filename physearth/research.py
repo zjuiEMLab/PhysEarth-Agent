@@ -61,7 +61,7 @@ def is_reproduction_question(question, session=None):
     text = re.sub(r"\s+", " ", str(question or "").lower())
     return bool(
         re.search(r"\b(?:reproduce|reproduced|reproduction|replicate|replicated|replication|recreate|recreated)\b", text)
-        and re.search(r"\b(?:paper|article|study|literature|published|figure|table|result)\b", text)
+        and re.search(r"\b(?:papers?|articles?|stud(?:y|ies)|literature|published|figures?|tables?|results?)\b", text)
     )
 
 
@@ -132,6 +132,25 @@ def _clean_reproduction_targets(values):
                 "expected_comparison": str(
                     item.get("expected_comparison") or item.get("comparison") or ""
                 ).strip(),
+                "reference_models": [
+                    str(model).strip()
+                    for model in (
+                        item.get("reference_models")
+                        or item.get("comparison_models")
+                        or item.get("models")
+                        or []
+                    )
+                    if str(model).strip()
+                ],
+                "requested_outputs": [
+                    str(output).strip()
+                    for output in (
+                        item.get("requested_outputs")
+                        or item.get("outputs")
+                        or []
+                    )
+                    if str(output).strip()
+                ],
                 "status": str(item.get("status") or "planned").strip().lower(),
                 "availability_reason": str(
                     item.get("availability_reason") or item.get("reason") or ""
@@ -256,7 +275,7 @@ def _read_evidence_refs(session):
     return sections, figures
 
 
-def _target_coverage(targets, runs, charts):
+def _target_coverage(targets, runs, charts, session=None):
     run_ids = {run.get("id") for run in runs}
     chart_ids = {chart.get("id") for chart in charts}
     problems = []
@@ -274,6 +293,50 @@ def _target_coverage(targets, runs, charts):
             problems.append("target %s has no run_ids or chart_ids coverage" % target_id)
         if target.get("status") in ("partial", "unavailable") and not target.get("availability_reason"):
             problems.append("target %s is %s without an availability_reason" % (target_id, target.get("status")))
+        reference_models = {
+            str(model).strip()
+            for model in target.get("reference_models") or ()
+            if str(model).strip()
+        }
+        requested_outputs = {
+            str(output).strip()
+            for output in target.get("requested_outputs") or ()
+            if str(output).strip()
+        }
+        if reference_models:
+            for run_id in target.get("run_ids") or ():
+                run = next((item for item in runs if item.get("id") == run_id), None)
+                if run is None:
+                    continue
+                run_model = str(run.get("model") or "").strip()
+                if run_model not in reference_models:
+                    problems.append(
+                        "target %s run %s uses %s, not one of reference_models: %s"
+                        % (target_id, run_id, run_model, ", ".join(sorted(reference_models)))
+                    )
+                if requested_outputs:
+                    parameters = run.get("resolved_parameters") or run.get("parameters") or {}
+                    output_group = str(parameters.get("output") or "").strip()
+                    entry = registry.get(run_model, session)
+                    output_groups = (entry.card.get("output_groups") or {}) if entry else {}
+                    declared_outputs = set(output_groups.get(output_group) or ())
+                    if not declared_outputs.intersection(requested_outputs):
+                        problems.append(
+                            "target %s run %s does not declare a requested output: %s"
+                            % (target_id, run_id, ", ".join(sorted(requested_outputs)))
+                        )
+            if (
+                target.get("status") not in ("partial", "unavailable")
+                and not any(
+                    (run.get("model") in reference_models)
+                    for run in runs
+                    if run.get("id") in (target.get("run_ids") or ())
+                )
+            ):
+                problems.append(
+                    "target %s has no run coverage for reference_models: %s"
+                    % (target_id, ", ".join(sorted(reference_models)))
+                )
         for run_id in target.get("run_ids") or ():
             if run_id in linked_runs:
                 linked_runs[run_id].append(target_id)
@@ -685,17 +748,6 @@ def _repair_reproduction_metadata(
     repairs = []
     problems = []
     sections, figures = _read_evidence_refs(session)
-    inspectable_figures = {
-        _normalise_evidence_ref(item.get("reference"))
-        for item in _ledger_entries(session, "figure")
-        if item.get("asset_available", True) is not False and item.get("reference")
-    }
-    inspected_figures = {
-        _normalise_evidence_ref(item.get("reference"))
-        for item in _ledger_entries(session, "figure_inspection")
-        if item.get("analysis_status") not in ("unavailable", "metadata_only")
-        and item.get("reference")
-    }
     ledger_sections = _ledger_entries(session, "section")
     ledger_figures = _ledger_entries(session, "figure") + _ledger_entries(session, "figure_inspection")
     opened = []
@@ -801,7 +853,15 @@ def _repair_reproduction_metadata(
     for index, target in enumerate(reproduction_targets):
         if target.get("run_ids") or target.get("chart_ids"):
             continue
+        # A partial/unavailable reference target must remain visibly uncovered.  In
+        # particular, a local exploratory chart must not be auto-attached to an external
+        # paper model merely because it plots the same quantity.
+        if target.get("status") in ("partial", "unavailable"):
+            continue
         quantity = str(target.get("target_quantity") or "").lower()
+        reference_models = {
+            str(model).strip() for model in target.get("reference_models") or () if str(model).strip()
+        }
         output_names = {
             str(value.get("name") or value.get("output") or "").lower()
             for value in outputs or () if isinstance(value, dict)
@@ -817,10 +877,23 @@ def _repair_reproduction_metadata(
         ]
         if not chart_ids:
             chart_ids = [chart.get("id") for chart in charts or () if chart.get("purpose") in ("result", "comparison")]
-        run_ids = [
-            run.get("id") for run in runs or ()
-            if not target_outputs or str((run.get("parameters") or {}).get("output") or "").lower() in target_outputs
-        ]
+        run_ids = []
+        for run in runs or ():
+            if not run.get("id"):
+                continue
+            if reference_models and str(run.get("model") or "").strip() not in reference_models:
+                continue
+            output_group = str((run.get("resolved_parameters") or run.get("parameters") or {}).get("output") or "").strip()
+            entry = registry.get(str(run.get("model") or "").strip(), session)
+            declared_outputs = set()
+            if entry:
+                declared_outputs.update(
+                    str(value).lower()
+                    for value in (entry.card.get("output_groups") or {}).get(output_group) or ()
+                )
+            declared_outputs.add(output_group.lower())
+            if not target_outputs or target_outputs.intersection(declared_outputs):
+                run_ids.append(run.get("id"))
         if run_ids or chart_ids:
             target["run_ids"] = [item for item in run_ids if item]
             target["chart_ids"] = [item for item in chart_ids if item]
@@ -878,7 +951,6 @@ def _repair_reproduction_metadata(
         run_id = run.get("id")
         run_model = str(run.get("model") or "").strip()
         resolution = by_run.get(run_id) or {}
-        requested = resolution.get("requested_parameters") or {}
         resolved = resolution.get("resolved_parameters") or run.get("parameters") or {}
         defaulted = set(resolution.get("defaulted_parameters") or ())
         for model_input, value in resolved.items():
@@ -1084,6 +1156,24 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
             problems.append({"field": prefix + ".target_quantity", "source": "research_plan", "expected": "quantity or result being reproduced", "repair": "Name the paper quantity or result."})
         if not target.get("expected_comparison"):
             problems.append({"field": prefix + ".expected_comparison", "source": "research_plan", "expected": "comparison intent", "repair": "Explain how the model output will be compared with the paper result."})
+        if not target.get("reference_models"):
+            problems.append({
+                "field": prefix + ".reference_models",
+                "source": "opened_paper_evidence",
+                "actual": [],
+                "expected": "paper reference-model identity or an explicitly unavailable target",
+                "repair": "Record the model identity named by the paper; do not let a different local model satisfy this target.",
+                "blocking": True,
+            })
+        if not target.get("requested_outputs"):
+            problems.append({
+                "field": prefix + ".requested_outputs",
+                "source": "opened_paper_evidence",
+                "actual": [],
+                "expected": "the output quantity represented by the paper target",
+                "repair": "Record the requested paper output and validate it against the registered model declaration.",
+                "blocking": True,
+            })
         refs = {_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()}
         if not refs:
             problems.append({"field": prefix + ".evidence_refs", "source": "research_plan", "expected": "opened paper evidence", "repair": "Read and cite the relevant section, figure, or table."})
@@ -1185,9 +1275,54 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
             "provenance": "backend_default",
             "blocking": False,
         })
-    coverage_problems, _, _ = _target_coverage(reproduction_targets, runs, charts)
+    coverage_problems, _, _ = _target_coverage(reproduction_targets, runs, charts, session)
     for problem in coverage_problems:
-        problems.append({"field": "reproduction_targets.coverage", "source": "runs/charts", "expected": "known run_ids or chart_ids", "repair": problem})
+        target_index = next(
+            (
+                index for index, target in enumerate(reproduction_targets)
+                if str(target.get("id") or "target") in str(problem)
+            ),
+            None,
+        )
+        target = reproduction_targets[target_index] if target_index is not None else {}
+        if "not one of reference_models" in problem or "no run coverage for reference_models" in problem:
+            field = (
+                "reproduction_targets[%d].run_ids" % target_index
+                if target_index is not None else "reproduction_targets.coverage"
+            )
+            problems.append({
+                "field": field,
+                "source": "registered_model_declaration",
+                "actual": target.get("run_ids") or [],
+                "expected": "run.model must match the paper reference_models",
+                "allowed_values": target.get("reference_models") or [],
+                "repair": "Replace only the target coverage with runs using the exact reference model identity, or mark the target partial/unavailable.",
+                "blocking": True,
+                "message": problem,
+            })
+        elif "does not declare a requested output" in problem:
+            field = (
+                "reproduction_targets[%d].run_ids" % target_index
+                if target_index is not None else "reproduction_targets.coverage"
+            )
+            problems.append({
+                "field": field,
+                "source": "registered_model_declaration",
+                "actual": target.get("run_ids") or [],
+                "expected": "run output must declare one of requested_outputs",
+                "allowed_values": target.get("requested_outputs") or [],
+                "repair": "Use a run whose registered output group contains the requested paper quantity; do not rename a local output.",
+                "blocking": True,
+                "message": problem,
+            })
+        else:
+            problems.append({
+                "field": "reproduction_targets.coverage",
+                "source": "runs/charts",
+                "expected": "known run_ids or chart_ids",
+                "repair": problem,
+                "blocking": True,
+            })
     if not outputs:
         problems.append({"field": "outputs", "source": "research_plan", "expected": "model outputs used to evaluate the target", "repair": "Declare the quantities/outputs that will be compared."})
     return problems
@@ -1629,7 +1764,7 @@ def propose(
             },
         )
     coverage_problems, linked_runs, linked_charts = _target_coverage(
-        reproduction_targets, runs, charts
+        reproduction_targets, runs, charts, session
     )
     if not coverage_problems:
         for run in runs:
@@ -1719,12 +1854,19 @@ def propose(
         "baseline_run_id": baseline_run_id,
         "automatic_repairs": automatic_repairs,
         "validation_warnings": list(context_warnings) + nonblocking_evidence_warnings,
-        "capability_gaps": _capability_gaps(question),
+        "capability_gaps": _capability_gaps(question, session),
+        "capability_review": copy.deepcopy(session.get("capability_review") or {}),
         "reference_sections": sorted(session.get("sections_read") or ()),
         "reference_paper_sections": [paper_section] if paper_section else [],
         "approval_state": "plan_review",
     }
-    plan["outcome_scope"] = "partial" if plan["capability_gaps"] else "full"
+    capability_review = plan.get("capability_review") or {}
+    plan["outcome_scope"] = (
+        "partial"
+        if plan["capability_gaps"]
+        or capability_review.get("user_decision") == "partial"
+        else "full"
+    )
     session["research"] = {
         "question": question,
         "plan_version": 1,
@@ -2034,7 +2176,7 @@ def revise(session, changes=None, note=""):
         )
     targets = plan.get("reproduction_targets") or []
     coverage_problems, linked_runs, linked_charts = _target_coverage(
-        targets, plan.get("runs") or [], plan.get("charts") or []
+        targets, plan.get("runs") or [], plan.get("charts") or [], session
     )
     if not coverage_problems:
         for run in plan.get("runs") or []:
@@ -3193,10 +3335,10 @@ def _question_coverage_problems(question, runs, charts):
     return problems
 
 
-def _capability_gaps(question):
+def _capability_gaps(question, session=None):
     """Named literature models that have no executable registry entry."""
     text = _normal_name(question)
-    registered = {_normal_name(name) for name in registry.names()}
+    registered = {_normal_name(name) for name in registry.names(session=session)}
     gaps = []
     for item in knowledge.catalogue():
         card = knowledge.card(item["slug"]) or {}
@@ -3205,6 +3347,204 @@ def _capability_gaps(question):
             if normalized and normalized in text and normalized not in registered:
                 gaps.append(str(alias))
     return sorted(set(gaps))
+
+
+def _capability_strings(values):
+    if isinstance(values, str):
+        values = [values]
+    return list(dict.fromkeys(
+        str(value).strip() for value in (values or ()) if str(value).strip()
+    ))
+
+
+def capability_check(
+    session,
+    question="",
+    reference_models=None,
+    requested_outputs=None,
+    local_models=None,
+    targets=None,
+    decision="check",
+):
+    """Create a session-scoped capability checkpoint before reproduction planning.
+
+    The report is derived from resources already opened in this session.  It deliberately
+    does not inspect Evaluation YAML or a stored protocol and it never treats a runnable
+    local model as an alias for a different paper reference model.
+    """
+    decision = str(decision or "check").strip().lower()
+    current = session.get("capability_review") if session else None
+    if decision == "reject":
+        report = dict(current or {})
+        report.update({"status": "rejected", "user_decision": "reject"})
+        if session is not None:
+            session["capability_review"] = report
+        return report
+    if decision in ("confirm_partial", "confirm"):
+        if not current or current.get("status") not in ("waiting_user", "ready"):
+            return {
+                "status": "error",
+                "error_code": "capability_review_missing",
+                "message": "Run the capability check before confirming a partial scope.",
+            }
+        report = dict(current)
+        report.update({"status": "confirmed", "user_decision": "partial"})
+        if session is not None:
+            session["capability_review"] = report
+        return report
+
+    context = (session or {}).get("research_context") or {}
+    refs = _capability_strings(reference_models)
+    if not refs:
+        refs = _capability_gaps(question, session)
+    outputs = _capability_strings(requested_outputs)
+    candidates = _capability_strings(local_models)
+    if not candidates:
+        candidates = _capability_strings((context.get("capabilities") or {}).keys())
+
+    supported = []
+    unavailable = []
+    resource_gaps = []
+    for name in refs:
+        entry = registry.get(name, session)
+        if entry is None:
+            unavailable.append({
+                "model": name,
+                "reason": "not registered in the current model registry",
+                "source": "registered_model_registry",
+            })
+            continue
+        card = entry.card
+        model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
+        instruction = (context.get("instructions") or {}).get(entry.name) or {}
+        instruction_key = "%s@%s" % (
+            entry.name,
+            instruction.get("version") or card.get("instruction_version") or "1.0",
+        )
+        model_resources_missing = False
+        if model_key not in set(session.get("models_inspected") or ()):
+            resource_gaps.append({"model": entry.name, "resource": "list_models", "expected": model_key})
+            model_resources_missing = True
+        if instruction_key not in set(session.get("model_instructions_read") or ()):
+            resource_gaps.append({"model": entry.name, "resource": "read_model_instruction", "expected": instruction_key})
+            model_resources_missing = True
+        detail = {
+            "model": entry.name,
+            "version": card.get("version"),
+            "runnable_here": bool(entry.runnable),
+            "parameters": sorted((card.get("parameters") or {}).keys()),
+            "combinations": list(card.get("combinations") or []),
+            "outputs": sorted((card.get("outputs") or {}).keys()),
+            "source": "list_models + read_model_instruction",
+        }
+        if entry.runnable and not model_resources_missing:
+            supported.append({**detail, "reference_model": True})
+        elif not entry.runnable:
+            unavailable.append({
+                **detail,
+                "reference_model": True,
+                "reason": entry.unavailable_reason,
+                "source": "registered_model_declaration",
+            })
+
+    # Also report explicitly selected registered local candidates.  They are useful for a
+    # partial exploratory plan, but their presence never upgrades an unavailable paper
+    # reference target into a comparable result.
+    for name in candidates:
+        if name in refs:
+            continue
+        entry = registry.get(name, session)
+        if entry is None:
+            continue
+        card = entry.card
+        model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
+        instruction = (context.get("instructions") or {}).get(entry.name) or {}
+        instruction_key = "%s@%s" % (
+            entry.name,
+            instruction.get("version") or card.get("instruction_version") or "1.0",
+        )
+        model_resources_missing = False
+        if model_key not in set(session.get("models_inspected") or ()):
+            resource_gaps.append({"model": entry.name, "resource": "list_models", "expected": model_key})
+            model_resources_missing = True
+        if instruction_key not in set(session.get("model_instructions_read") or ()):
+            resource_gaps.append({"model": entry.name, "resource": "read_model_instruction", "expected": instruction_key})
+            model_resources_missing = True
+        detail = {
+            "model": entry.name,
+            "version": card.get("version"),
+            "runnable_here": bool(entry.runnable),
+            "parameters": sorted((card.get("parameters") or {}).keys()),
+            "combinations": list(card.get("combinations") or []),
+            "outputs": sorted((card.get("outputs") or {}).keys()),
+            "reference_model": False,
+            "role": "local_candidate",
+            "source": "list_models + read_model_instruction",
+        }
+        if entry.runnable and not model_resources_missing:
+            supported.append(detail)
+        elif not entry.runnable:
+            unavailable.append({
+                **detail,
+                "reason": entry.unavailable_reason,
+                "source": "registered_model_declaration",
+            })
+
+    supported_outputs = sorted({
+        output
+        for item in supported
+        for output in item.get("outputs") or ()
+    })
+    unavailable_outputs = [
+        output for output in outputs if output not in supported_outputs
+    ]
+    not_comparable = []
+    if unavailable:
+        for missing in unavailable:
+            if missing.get("reference_model") is False:
+                continue
+            for local in candidates:
+                if local != missing.get("model"):
+                    not_comparable.append({
+                        "reference_model": missing.get("model"),
+                        "local_model": local,
+                        "reason": "a local model/configuration is not an equivalent reference implementation",
+                        "source": "registered_model_registry",
+                    })
+
+    evidence = [
+        item.get("reference")
+        for item in (session or {}).get("evidence_ledger") or ()
+        if isinstance(item, dict) and item.get("reference")
+        and item.get("kind") in ("section", "figure", "figure_inspection")
+    ]
+    evidence = list(dict.fromkeys(evidence))
+    status = (
+        "waiting_user"
+        if unavailable or not_comparable or unavailable_outputs
+        else "waiting_resources"
+        if resource_gaps
+        else "ready"
+    )
+    report = {
+        "status": status,
+        "supported": supported,
+        "unavailable": unavailable,
+        "not_comparable": not_comparable,
+        "requested_models": refs,
+        "requested_outputs": outputs,
+        "supported_outputs": supported_outputs,
+        "unavailable_outputs": unavailable_outputs,
+        "resource_gaps": resource_gaps,
+        "evidence": evidence,
+        "targets": _capability_strings(
+            item.get("id") for item in (targets or ()) if isinstance(item, dict)
+        ),
+        "user_decision": None,
+    }
+    if session is not None:
+        session["capability_review"] = report
+    return report
 
 
 def report_warnings(session, answer):

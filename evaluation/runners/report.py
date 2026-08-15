@@ -197,7 +197,11 @@ def per_task_table(scored):
 
 def build():
     runs = load_runs()
-    tasks = {t["id"]: t for suite in ("tier2", "probe") for t in common.load_tasks(suite)}
+    tasks = {}
+    for task in (t for suite in ("tier2", "probe") for t in common.load_tasks(suite)):
+        tasks[task["id"]] = task
+        if task.get("legacy_id"):
+            tasks[task["legacy_id"]] = task
     references = {}
     scored = []
     for record in runs:

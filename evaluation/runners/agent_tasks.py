@@ -214,7 +214,11 @@ def main(argv=None):
     configs = common.load_configs(args.configs)
     tasks = [t for suite in args.suites for t in common.load_tasks(suite)]
     if args.tasks:
-        tasks = [t for t in tasks if t["id"] in args.tasks]
+        requested = set(args.tasks)
+        tasks = [
+            t for t in tasks
+            if t["id"] in requested or t.get("legacy_id") in requested
+        ]
     RUNS.mkdir(parents=True, exist_ok=True)
 
     print("%d task(s) x %d config(s) x %d repeat(s) = %d run(s) at build %s"

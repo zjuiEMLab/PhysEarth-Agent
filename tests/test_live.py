@@ -245,6 +245,7 @@ def test_switching_the_layer_off_leaves_the_offline_path_whole(monkeypatch):
         "read_literature",
         "read_research_guideline",
         "read_model_instruction",
+        "research_capability_check",
             "read_paper_figure",
             "inspect_paper_figure",
         "register_model_guideline",

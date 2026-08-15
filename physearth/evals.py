@@ -3,6 +3,7 @@
 import base64
 import html
 import json
+import re
 from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 import yaml
 
 from evaluation.metrics import score as scoring
+from physearth import knowledge
 
 REPO = Path(__file__).resolve().parent.parent
 EVALUATION = REPO / "evaluation"
@@ -17,7 +19,7 @@ TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 DEMOS = EVALUATION / "demos"
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
-Q1_TASK_ID = "t1-smrt-fig4-passive"
+Q1_TASK_ID = "q1-sparse-medium"
 Q1_COMPARISON_CONFIGS = ("no-harness", "full")
 Q1_COMPARISON_LABELS = {
     "no-harness": "LLM + RAG + registered model tool",
@@ -32,11 +34,7 @@ REPRESENTATIVE_CASES = (
         "Where does the sparse-medium limit break?",
         "Compare Rayleigh, IBA, and DMRT formulations as snow density increases.",
         "Scattering-coefficient curves, deviation thresholds, and a physical explanation.",
-        "Under what snow-density range do Rayleigh theory, DMRT-QCA-CP, and IBA across "
-        "independent spheres, non-sticky hard spheres, and sticky hard spheres converge to "
-        "the same first-order scattering behavior, and at what density do particle "
-        "correlation and dense-medium effects cause their predictions to diverge? Use the "
-        "six legal theory/microstructure combinations.",
+        "",
     ),
     (
         "q2-dmrt-comparison",
@@ -44,10 +42,7 @@ REPRESENTATIVE_CASES = (
         "Can SMRT reproduce DMRT reference models?",
         "Reproduce the paper's passive and active comparison under identical conditions.",
         "Angular TB and backscatter figures with errors attributed to EM or RT components.",
-        "Can SMRT reproduce the passive brightness temperatures and active backscatter "
-        "predicted by DMRT-ML and DMRT-QMS under identical snow and observation conditions, "
-        "and can the remaining discrepancies be attributed to the electromagnetic formulation, "
-        "the short-range approximation, or the radiative-transfer solver?",
+        "",
     ),
     (
         "q3-memls-comparison",
@@ -55,10 +50,7 @@ REPRESENTATIVE_CASES = (
         "How closely do SMRT and MEMLS agree?",
         "Compare electromagnetic coefficients before separating absorption and solver effects.",
         "Coefficient and angular TB comparisons, limitations, and solver-convergence evidence.",
-        "When SMRT and MEMLS use the same exponential microstructure and snowpack properties, "
-        "how closely do they reproduce the same electromagnetic coefficients and brightness "
-        "temperatures, and how much of their difference is caused by the IBA absorption "
-        "formulation versus the DORT and six-flux radiative-transfer solvers?",
+        "",
     ),
     (
         "q4-microstructure-equivalence",
@@ -66,10 +58,7 @@ REPRESENTATIVE_CASES = (
         "Is microstructure equivalence transferable?",
         "Fit mappings among sticky, non-sticky, and exponential microstructure representations.",
         "Equivalence maps plus uniqueness tests across density, frequency, angle, and polarization.",
-        "Can sticky hard spheres, scaled non-sticky spheres, and exponential autocorrelation "
-        "functions be parameterized to produce equivalent microwave brightness temperatures "
-        "for snow with the same density and specific surface area, and is that equivalence "
-        "unique and transferable across densities, frequencies, incidence angles, and polarizations?",
+        "",
     ),
 )
 
@@ -114,6 +103,99 @@ def _load_yaml(path):
 
 def _load_tasks(suite):
     return [_load_yaml(path) for path in sorted((TASKS / suite).glob("*.yaml"))]
+
+
+def canonical_tasks():
+    """Load the single authoritative scientific-question task set."""
+    return [
+        task for task in _load_tasks("tier2")
+        if (
+            isinstance(task, dict)
+            and task.get("id")
+            and task.get("evaluation_kind") == "scientific_question_demo"
+        )
+    ]
+
+
+def canonical_task(task_id):
+    wanted = str(task_id or "").strip()
+    for task in canonical_tasks():
+        if wanted in {str(task.get("id")), str(task.get("legacy_id") or "")}:
+            return dict(task)
+    return None
+
+
+def _task_aliases(task):
+    return {
+        str(task.get("id")),
+        str(task.get("legacy_id") or ""),
+    } - {""}
+
+
+def _guided_task_fields(task):
+    source = task.get("source") or {}
+    paper = source.get("paper") or task.get("paper") or ""
+    card = knowledge.card(paper) or {}
+    demo = task.get("demo") or {}
+    figures = list(task.get("paper_figures") or [])
+    targets = list(task.get("figure_targets") or [])
+    if not targets:
+        paper_figure_index = {
+            str(item.get("id") or "").lower(): item
+            for item in card.get("figures") or ()
+            if isinstance(item, dict)
+        }
+        targets = []
+        for item in figures:
+            key = str(item).rsplit("/", 1)[-1].rsplit(".", 1)[0].lower()
+            metadata = paper_figure_index.get(key) or {}
+            basic = _figure_target_label(item)
+            title = str(metadata.get("title") or "").strip()
+            targets.append({
+                "id": item,
+                "label": "%s: %s" % (basic, title) if title else basic,
+            })
+    labels = [_figure_target_label(item) for item in targets or figures]
+    numbers = [
+        str(int(re.search(r"(?:figure|fig\.?)[^0-9]*(\d+)", label, re.I).group(1)))
+        for label in labels
+        if re.search(r"(?:figure|fig\.?)[^0-9]*(\d+)", label, re.I)
+    ]
+    if len(numbers) > 1:
+        target_label = "Figures " + ", ".join(numbers[:-1]) + " and " + numbers[-1]
+    elif numbers:
+        target_label = "Figure " + numbers[0]
+    else:
+        target_label = "the declared paper figure(s)"
+    return {
+        "paper": paper,
+        "paper_title": card.get("title") or task.get("paper_title") or paper,
+        "paper_doi": source.get("doi") or card.get("doi") or task.get("paper_doi") or "",
+        "paper_url": card.get("url") or "",
+        "paper_section": source.get("section") or task.get("paper_section") or "",
+        "paper_figures": figures,
+        "figure_targets": targets,
+        "paper_intro": card.get("description") or "",
+        "result_target": "%s: %s" % (
+            target_label,
+            task.get("title") or task.get("question") or "",
+        ),
+        "fixed": demo.get("fixed_parameters") or {},
+        "required_runs": list(demo.get("required_runs") or []),
+        "demo_question": demo.get("source_question") or "",
+        "expected": "; ".join(str(item) for item in demo.get("expected_outputs") or ())
+        or task.get("expected") or "",
+        "workflow": [
+            "Read and inspect the paper evidence before proposing a plan.",
+            "Check registered model capabilities and generate a reviewable plan.",
+            "Approve the plan, figures, and formal execution through the normal workflow.",
+        ],
+        "unavailable_models": list(
+            task.get("unavailable_models")
+            or demo.get("unavailable_models")
+            or task.get("reference_models") or []
+        ) if task.get("unavailable_models") or demo.get("unavailable_models") else [],
+    }
 
 
 def _mean(values):
@@ -370,10 +452,11 @@ def _q1_comparison_sets(data):
     question = task.get("question")
     if not question:
         return []
+    aliases = _task_aliases(task)
     grouped = defaultdict(dict)
     for record in data.get("runs") or []:
         if (
-            record.get("task") == Q1_TASK_ID
+            record.get("task") in aliases
             and record.get("config") in Q1_COMPARISON_CONFIGS
             and record.get("question") == question
         ):
@@ -498,25 +581,16 @@ def demo_cases():
     """
     cases = _cases(REPRESENTATIVE_CASES)
     tasks = {
-        task.get("id"): task
-        for task in _load_tasks("reproduction")
-        if isinstance(task, dict) and task.get("id")
+        alias: task
+        for task in canonical_tasks()
+        for alias in _task_aliases(task)
     }
     for case in cases:
         task = tasks.get(case["id"])
         if not task:
             continue
-        case.update(
-            {
-                "question": task.get("question", case["question"]),
-                "paper": task.get("paper", ""),
-                "paper_title": task.get("paper_title", ""),
-                "paper_doi": task.get("paper_doi", ""),
-                "paper_section": task.get("paper_section", ""),
-                "paper_figures": list(task.get("paper_figures") or []),
-                "figure_targets": list(task.get("figure_targets") or []),
-            }
-        )
+        case.update(_guided_task_fields(task))
+        case["question"] = task.get("question", case["question"])
     return cases
 
 
@@ -534,12 +608,20 @@ def guided_demos():
         path = DEMOS / filename
         if not path.is_file():
             continue
-        case = dict(_load_yaml(path))
+        overlay = dict(_load_yaml(path))
+        task = canonical_task(overlay.get("task_id"))
+        if not task:
+            continue
+        case = {**task, **_guided_task_fields(task), **overlay}
+        case["id"] = overlay.get("id") or task.get("id")
+        case["task_id"] = task.get("id")
         # Keep the card itself as the source of the prompt, but make the copy sent
         # to Live Agent self-describing.  This is deliberately generic: paper title,
         # section and figure targets come from the evaluation data, never from the
         # global prompt or a fixed SMRT workflow.
-        case["question"] = guided_agent_question(case)
+        case["question"] = guided_agent_question(
+            {**task, **case, "question": case.get("demo_question") or task.get("question")}
+        )
         cards.append(case)
     return tuple(cards)
 

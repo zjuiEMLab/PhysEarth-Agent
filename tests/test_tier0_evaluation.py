@@ -39,7 +39,8 @@ def test_scientific_question_demos_are_tier2_paper_figure_targets():
         task = yaml.safe_load(path.read_text(encoding="utf-8"))
         assert task["tier"] == 2
         assert task["suite"] == "tier2"
-        assert task["legacy_id"] == task["id"]
+        assert task["legacy_id"] != task["id"]
+        assert task["id"].startswith("q")
         assert task["evaluation_kind"] == "scientific_question_demo"
         assert task["figure_target"].startswith("fig")
         assert task["paper_figures"]
@@ -54,10 +55,10 @@ def test_scientific_question_demos_are_tier2_paper_figure_targets():
     # dashboard and replay tests. The invariant here is about the current Tier 2 demos,
     # not about deleting those historical fixtures.
     assert [yaml.safe_load(path.read_text(encoding="utf-8"))["id"] for path in paths] == [
-        "t1-smrt-fig4-passive",
-        "t1-smrt-fig4-active",
-        "t1-smrt-fig5-iba-shs",
-        "t1-smrt-fig6-memls-iba",
+        "q1-sparse-medium",
+        "q2-dmrt-comparison",
+        "q3-memls-comparison",
+        "q4-microstructure-equivalence",
     ]
 
 

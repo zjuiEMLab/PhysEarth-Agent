@@ -74,6 +74,7 @@ def new_session(model=None):
         "evidence_ledger": [],
         "model_declarations": {},
         "run_parameter_resolution": {},
+        "capability_review": None,
         "research": None,
         "max_model_calls": MAX_SESSION_MODEL_CALLS,
         "max_tool_calls": MAX_SESSION_TOOL_CALLS,
@@ -197,6 +198,25 @@ def held_block(session):
         lines.append("Research guidelines already read: %s." % ", ".join(sorted(session["research_guidelines_read"])))
     if session.get("model_instructions_read"):
         lines.append("Model instructions already read: %s." % ", ".join(sorted(session["model_instructions_read"])))
+    capability = session.get("capability_review") or {}
+    if capability:
+        supported = ", ".join(
+            "%s@%s" % (item.get("model"), item.get("version"))
+            for item in capability.get("supported") or ()
+        ) or "none"
+        unavailable = ", ".join(
+            str(item.get("model")) for item in capability.get("unavailable") or ()
+        ) or "none"
+        lines.append(
+            "Reproduction capability checkpoint: status=%s; supported=%s; unavailable=%s; "
+            "not_comparable=%d."
+            % (
+                capability.get("status", "unknown"),
+                supported,
+                unavailable,
+                len(capability.get("not_comparable") or ()),
+            )
+        )
     evidence = (session.get("research_context") or {}).get("paper_evidence") or []
     if evidence:
         lines.append(

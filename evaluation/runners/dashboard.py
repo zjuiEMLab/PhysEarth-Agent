@@ -28,11 +28,12 @@ PROMPTS = common.ROOT / "prompts"
 
 
 def task_index():
-    return {
-        task["id"]: task
-        for suite in ("tier2", "probe")
-        for task in common.load_tasks(suite)
-    }
+    tasks = {}
+    for task in (item for suite in ("tier2", "probe") for item in common.load_tasks(suite)):
+        tasks[task["id"]] = task
+        if task.get("legacy_id"):
+            tasks[task["legacy_id"]] = task
+    return tasks
 
 
 def load_json(path, fallback=None):

@@ -137,6 +137,69 @@ def test_q2_named_external_models_are_recorded_as_capability_gaps():
     assert gaps == ["DMRT-ML", "DMRT-QMS"]
 
 
+def test_capability_checkpoint_pauses_before_an_unavailable_reference_plan():
+    box = session.new_session("m")
+    tools.call("list_models", {"model": "smrt"}, session=box)
+    tools.call("read_model_instruction", {"model": "smrt"}, session=box)
+    check = tools.call(
+        "research_capability_check",
+        {
+            "action": "check",
+            "reference_models": ["DMRT-ML", "DMRT-QMS"],
+            "requested_outputs": ["tb_v", "sigma_vv_db"],
+            "local_models": ["smrt"],
+        },
+        session=box,
+    )
+
+    assert check["status"] == "needs_input"
+    report = box["capability_review"]
+    assert report["status"] == "waiting_user"
+    assert {item["model"] for item in report["unavailable"]} == {"DMRT-ML", "DMRT-QMS"}
+    assert report["not_comparable"]
+    assert box["research"] is None
+    if research.registry.get("smrt", box).runnable:
+        assert any(item["model"] == "smrt" for item in report["supported"])
+
+    blocked_plan = tools.call(
+        "research_plan",
+        {
+            "action": "propose",
+            "question": "Can the paper reproduce DMRT-ML and DMRT-QMS figures?",
+            "runs": [],
+        },
+        session=box,
+    )
+    assert blocked_plan["status"] == "terminal_error"
+    assert blocked_plan["data"]["error_code"] == "capability_review_required"
+
+    confirmed = tools.call(
+        "research_capability_check", {"action": "confirm_partial"}, session=box
+    )
+    assert confirmed["status"] == "success"
+    assert box["capability_review"]["status"] == "confirmed"
+
+
+def test_local_run_cannot_cover_a_different_reference_model_target():
+    problems, _, _ = research._target_coverage(
+        [{
+            "id": "external-figure",
+            "reference_models": ["DMRT-ML"],
+            "requested_outputs": ["tb_v"],
+            "status": "planned",
+            "run_ids": ["local"],
+            "chart_ids": [],
+        }],
+        [{
+            "id": "local",
+            "model": "smrt",
+            "parameters": {"output": "tb"},
+        }],
+        [],
+    )
+    assert any("not one of reference_models" in problem for problem in problems)
+
+
 
 
 def test_plan_revision_preview_chart_and_execution_gate():

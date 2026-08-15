@@ -1,64 +1,6 @@
 id: smrt-q1-guided
-paper: smrt-v1
-paper_title: "SMRT: an active-passive microwave radiative transfer model for snow with multiple microstructure and scattering formulations (v1.0)"
-paper_doi: 10.5194/gmd-11-2763-2018
-paper_figures: [fig03]
-figure_targets:
-  - id: fig03
-    label: "Figure 3: Sparse-medium scattering coefficient comparison"
-protocol_id: q1
-protocol_title: Sparse-medium first-order scattering comparison
-button_label: Start guided Q1 reproduction
-source_section: smrt-v1#08
-paper_section: 3.1.1
-fixed:
-  frequency_ghz: 37.0
-  radius_m: 0.0001
-  sweep_parameter: density_kg_m3
-  sweep_start: 1.0
-  sweep_stop: 96.0
-  minimum_sweep_points: 12
-required_runs:
-  - [rayleigh, independent_sphere]
-  - [iba, independent_sphere]
-  - [dmrt_qcacp_shortrange, non_sticky_hard_spheres]
-  - [iba, non_sticky_hard_spheres]
-  - [dmrt_qcacp_shortrange, sticky_hard_spheres]
-  - [iba, sticky_hard_spheres]
-required_outputs: [ks_per_m, ka_per_m]
-notes:
-  - Use one explicit common stickiness value for both sticky runs.
-  - Do not substitute exponential for non_sticky_hard_spheres.
-eyebrow: GUIDED PAPER REPRODUCTION
-title: Reproduce the SMRT sparse-medium comparison
+task_id: q1-sparse-medium
+title: Reproduce the SMRT sparse-medium result
 summary: >-
-  SMRT is an active-passive microwave radiative-transfer model for snow. This guided demo
-  shows how its electromagnetic theory and snow-microstructure choices are compared before
-  any physical model run is approved.
-expected: >-
-  Reproduce the paper-grounded first-order scattering comparison across six theory and
-  microstructure combinations, identify the common sparse-medium range, and show where
-  particle correlation and dense-medium effects separate the predictions.
-question: >-
-  Under what snow-density range do the first-order scattering predictions converge, and at
-  what density do particle-correlation and dense-medium effects cause them to diverge?
-paper_url: https://doi.org/10.5194/gmd-11-2763-2018
-paper_intro: >-
-  The paper introduces SMRT as a snow microwave radiative-transfer model that separates the
-  electromagnetic formulation from the representation of snow microstructure. It can expose
-  medium coefficients or continue to passive brightness temperature and active backscatter,
-  making it useful for checking whether differences come from scattering physics or the
-  radiative-transfer calculation.
-result_target: >-
-  The evaluation target is Figure 3, "Sparse-medium scattering coefficient comparison", in
-  Section 3.1.1 of the paper. The agent must read the paper section and Figure 3, generate a
-  new protocol, identify paper-derived conditions, label assumptions, compare the six
-  expected configurations, and answer the density-convergence/divergence question using
-  actual model outputs. It must state whether the result is a complete or partial figure
-  reproduction.
-workflow:
-  - Read the paper context and derive a new research protocol from the paper section.
-  - Check SMRT's declared outputs, legal combinations, and local runnable status.
-  - Generate and review a six-run research plan.
-  - Edit the plan in chat if the scope, controls, or figures are not right.
-  - Approve the preview, figures, and formal physical-model execution separately.
+  A beginner-friendly entry point for the canonical Q1 paper-reproduction task.
+button_label: Start guided Q1 reproduction

@@ -29,10 +29,10 @@ def test_frozen_competition_matrix_is_four_llms_three_prompts_two_repeats():
     )
     assert len(cells) == 5 * 3 * 1 * 4 * 2
     assert {cell[0]["id"] for cell in cells} == {
-        "t1-smrt-fig4-passive",
-        "t1-smrt-fig4-active",
-        "t1-smrt-fig5-iba-shs",
-        "t1-smrt-fig6-memls-iba",
+        "q1-sparse-medium",
+        "q2-dmrt-comparison",
+        "q3-memls-comparison",
+        "q4-microstructure-equivalence",
         "p-smrt-density-above-ice",
     }
     assert {cell[1]["id"] for cell in cells} == {

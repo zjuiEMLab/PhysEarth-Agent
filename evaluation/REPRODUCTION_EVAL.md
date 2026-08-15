@@ -1,6 +1,7 @@
 # Q1–Q4 paper-reproduction evaluation
 
-This evaluation runs the four Section 3 scientific questions with the three LLMs configured
+This evaluation runs the four canonical Section 3 scientific questions in
+`evaluation/tasks/tier2/` with the three LLMs configured
 for the deployed application (`qwen-plus`, `qwen-turbo`, and `qwen-max`). Each cell uses a
 fresh session and the production research state machine:
 

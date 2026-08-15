@@ -23,9 +23,9 @@ REPO = Path(__file__).resolve().parents[2]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from physearth import agent, approval, config, research, results  # noqa: E402
+from physearth import agent, approval, config, research  # noqa: E402
 
-TASK_DIR = REPO / "evaluation" / "tasks" / "reproduction"
+TASK_DIR = REPO / "evaluation" / "tasks" / "tier2"
 RESULT_DIR = REPO / "evaluation" / "results" / "reproduction"
 PAPER_FIGURE_DIR = REPO / "knowledge" / "literature" / "smrt-v1" / "figures"
 CONTINUE = (
@@ -330,6 +330,20 @@ def load_all_records():
     ]
 
 
+def load_canonical_tasks():
+    """Load Tier-2 scientific questions without duplicating IDs in the runner."""
+    tasks = []
+    for path in sorted(TASK_DIR.glob("*.yaml")):
+        task = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        if (
+            task.get("suite") == "tier2"
+            and task.get("tier") == 2
+            and task.get("evaluation_kind") == "scientific_question_demo"
+        ):
+            tasks.append(task)
+    return tasks
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--models", nargs="*", default=None)
@@ -339,9 +353,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
     config.load_dotenv()
     models = args.models or config.llm_models()
-    tasks = [yaml.safe_load(path.read_text(encoding="utf-8")) for path in sorted(TASK_DIR.glob("*.yaml"))]
+    tasks = load_canonical_tasks()
     if args.tasks:
-        tasks = [task for task in tasks if task["id"] in args.tasks]
+        requested = set(args.tasks)
+        tasks = [
+            task for task in tasks
+            if task.get("id") in requested or task.get("legacy_id") in requested
+        ]
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     records = []
     total = len(models) * len(tasks)

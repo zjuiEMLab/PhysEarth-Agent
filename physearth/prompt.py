@@ -68,8 +68,15 @@ paper protocol to copy: do not call or look for protocol.yaml. These resources a
 of procedure, model semantics, and paper conditions; do not reconstruct them from memory or
 from a prompt example. Before proposing the plan, give the user a concise capability check:
 what the selected model can compute, which outputs and parameter combinations are supported,
-what is unavailable in the current environment, and which paper result will be reproduced.
-This is an orientation step, not a physical result.
+what is unavailable in the current environment, which paper reference models are required,
+and which paper result will be reproduced. Record that checkpoint with
+research_capability_check using the results already returned by list_models,
+read_model_instruction, and the opened paper evidence. This is an enforced workflow stage,
+not merely an orientation paragraph. If any required reference model or output is unavailable,
+stop before research_plan, list Supported, Unavailable, and Not comparable components, and ask
+the user whether to generate a partial plan. Only after explicit confirmation may you call
+research_capability_check(action=confirm_partial) and then propose a partial plan. Never label
+a local model or formulation as a different paper reference model.
 
 Then translate the paper concepts into exact registered model inputs using the declarations and
 model instruction. Mark every mapping as paper_explicit, paper_inferred, user_specified,
@@ -275,6 +282,12 @@ def status_block(state):
         status += (
             " Research mode is active for this turn. Complete the resource reads and submit "
             "research_plan before any run_model call; do not answer with a direct simulation."
+        )
+    capability = session.get("capability_review") or {}
+    if capability.get("status") == "waiting_user":
+        status += (
+            " A reproduction capability checkpoint is waiting for explicit user confirmation "
+            "of partial scope; do not call research_plan until the user confirms."
         )
     return status
 

@@ -4,7 +4,7 @@ The default command is deliberately a no-cost plan. Add ``--execute`` to make LL
 Every cell is cached independently by task, prompt profile, LLM, config and repeat.
 
     python evaluation/runners/competition.py
-    python evaluation/runners/competition.py --execute --tasks t1-smrt-fig4-passive
+    python evaluation/runners/competition.py --execute --tasks q1-sparse-medium
 """
 
 import argparse
@@ -64,6 +64,8 @@ def load_task_index():
     for suite in ("tier0", "tier2", "probe"):
         for task in common.load_tasks(suite):
             tasks[task["id"]] = task
+            if task.get("legacy_id"):
+                tasks[task["legacy_id"]] = task
     return tasks
 
 

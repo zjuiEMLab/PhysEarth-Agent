@@ -266,6 +266,51 @@ MODEL_INSTRUCTION_SPEC = {
     },
 }
 
+CAPABILITY_CHECK_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "research_capability_check",
+        "description": (
+            "Create the capability checkpoint immediately before a paper-reproduction plan. "
+            "Use only models and outputs named in the opened paper evidence and the current "
+            "question. It reports supported, unavailable and non-comparable components. If "
+            "anything required is unavailable, the user must confirm a partial scope before "
+            "research_plan(action=propose) is allowed. A local model is never an alias for a "
+            "different paper reference model."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["check", "confirm_partial", "reject"],
+                },
+                "question": {"type": "string"},
+                "reference_models": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Models the paper target explicitly compares against.",
+                },
+                "requested_outputs": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "local_models": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Registered local candidates; never treated as equivalent automatically.",
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {"type": "object"},
+                    "description": "Paper target metadata already identified from opened evidence.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
+}
+
 PAPER_FIGURE_SPEC = {
     "type": "function",
     "function": {
@@ -357,6 +402,7 @@ SPECS.extend(
     [
         RESEARCH_GUIDELINE_SPEC,
         MODEL_INSTRUCTION_SPEC,
+        CAPABILITY_CHECK_SPEC,
         PAPER_FIGURE_SPEC,
         PAPER_FIGURE_INSPECTION_SPEC,
         MODEL_GUIDELINE_REGISTRATION_SPEC,
@@ -620,7 +666,8 @@ RESEARCH_PLAN_SPEC = {
             "to human plan review. The returned protocol_yaml is a session-scoped, generated "
             "research protocol; it is not loaded from a paper protocol file. For paper "
             "reproduction, the proposal must include opened literature evidence, explicit "
-            "reproduction targets, selected models, paper-to-model parameter mappings and "
+            "reproduction targets with reference-model identities, selected models, "
+            "paper-to-model parameter mappings and "
             "target coverage. Keep initial proposals concise enough to fit one tool call. "
             "For revise_plan, send only the affected fields in changes; the backend retains "
             "unchanged runs, charts, evidence, and mappings."
@@ -649,7 +696,7 @@ RESEARCH_PLAN_SPEC = {
                 },
                 "reproduction_targets": {
                     "type": "array",
-                    "description": "Paper figures, tables, or results to reproduce. Each target needs evidence_refs and run_ids or chart_ids coverage.",
+                    "description": "Paper figures, tables, or results to reproduce. Include reference_models and requested_outputs so coverage cannot be satisfied by a different local model.",
                     "items": {"type": "object"},
                 },
                 "selected_models": {
@@ -990,6 +1037,106 @@ def read_model_instruction(model, section=None, _session=None, _switches=None):
         },
     )
     return result
+
+
+def research_capability_check(
+    action="check",
+    question="",
+    reference_models=None,
+    requested_outputs=None,
+    local_models=None,
+    targets=None,
+    _session=None,
+):
+    if _session is None:
+        return _fail("research_capability_check requires a session.")
+    report = research.capability_check(
+        _session,
+        question=question,
+        reference_models=reference_models,
+        requested_outputs=requested_outputs,
+        local_models=local_models,
+        targets=targets,
+        decision=action,
+    )
+    if report.get("status") == "error":
+        return _fail(
+            report.get("message") or "Capability review could not be created.",
+            report,
+        )
+    supported = report.get("supported") or []
+    unavailable = report.get("unavailable") or []
+    not_comparable = report.get("not_comparable") or []
+    resource_gaps = report.get("resource_gaps") or []
+    supported_text = "; ".join(
+        "%s@%s (%s)" % (
+            item.get("model"), item.get("version"),
+            ", ".join(item.get("outputs") or ()) or "outputs not declared",
+        )
+        for item in supported
+    ) or "none"
+    unavailable_text = "; ".join(
+        "%s: %s" % (item.get("model"), item.get("reason"))
+        for item in unavailable
+    ) or "none"
+    incomparable_text = "; ".join(
+        "%s is not an equivalent implementation of %s" % (
+            item.get("local_model"), item.get("reference_model")
+        )
+        for item in not_comparable
+    ) or "none"
+    if resource_gaps:
+        return {
+            "status": "needs_input",
+            "summary": "Complete the capability checkpoint resources before planning: %s."
+            % "; ".join(
+                "%s requires %s" % (item.get("model"), item.get("resource"))
+                for item in resource_gaps
+            ),
+            "data": {
+                "error_code": "capability_resources_required",
+                "capability_review": report,
+                "required_resources": resource_gaps,
+                "repair": "Call list_models and read_model_instruction for every local model, then run the capability check again.",
+            },
+            "citations": [], "qc": None, "ui": None,
+            "error": "capability resources required",
+        }
+    summary = (
+        "Capability check\n\nSupported: %s\n\nUnavailable: %s\n\n"
+        "Not comparable: %s"
+        % (supported_text, unavailable_text, incomparable_text)
+    )
+    if report.get("status") == "waiting_user":
+        summary += (
+            "\n\nExact reproduction is not possible with the currently registered models. "
+            "Would you like me to generate a partial plan using only the supported components?"
+        )
+        return {
+            "status": "needs_input",
+            "summary": summary,
+            "data": {
+                "error_code": "capability_review_required",
+                "capability_review": report,
+                "source": "session.capability_review",
+                "expected": "explicit user confirmation for partial scope",
+                "repair": "Ask the user whether to generate a plan for supported components.",
+                "blocking": True,
+            },
+            "citations": [], "qc": None, "ui": None,
+            "error": "capability review requires user confirmation",
+        }
+    if report.get("status") == "rejected":
+        return {
+            "status": "needs_input",
+            "summary": "Capability review rejected. No partial research plan was created.",
+            "data": {"capability_review": report},
+            "citations": [], "qc": None, "ui": None,
+            "error": "partial research scope rejected",
+        }
+    return _ok(summary + "\n\nThe capability checkpoint is complete; a research plan may now be proposed.", {
+        "capability_review": report,
+    })
 
 
 def read_paper_figure(paper, figure_id, _session=None):
@@ -1521,6 +1668,25 @@ def research_plan(
             or condition_provenance
         ):
             _session.setdefault("research_context", {})["reproduction_case"] = "paper-reproduction"
+
+    if action == "propose" and research.is_reproduction_question(question, _session):
+        capability_review = _session.get("capability_review") or {}
+        if capability_review.get("status") not in ("ready", "confirmed"):
+            return research._fail(
+                "A capability checkpoint is required before proposing a reproduction plan.",
+                {
+                    "error_code": "capability_review_required",
+                    "source": "session.capability_review",
+                    "expected": "ready or confirmed capability checkpoint",
+                    "actual": capability_review.get("status") or "missing",
+                    "repair": (
+                        "Call research_capability_check after the paper/model resources are read. "
+                        "If a required reference is unavailable, ask the user to confirm a partial scope."
+                    ),
+                    "blocking": True,
+                    "capability_review": capability_review,
+                },
+            )
 
     def resource_gate():
         """Require data resources to be opened before a proposal can be accepted."""
@@ -2340,6 +2506,7 @@ DISPATCH = {
     "read_literature": read_literature,
     "read_research_guideline": read_research_guideline,
     "read_model_instruction": read_model_instruction,
+    "research_capability_check": research_capability_check,
     "read_paper_figure": read_paper_figure,
     "inspect_paper_figure": inspect_paper_figure,
     "register_model_guideline": register_model_guideline,
@@ -2362,6 +2529,7 @@ OWNER_SCOPED = ("run_model", "run_planned_model", "read_reference_dataset", "plo
 SWITCH_AWARE = ("run_model", "run_planned_model", "list_models")
 SESSION_SCOPED = (
     "list_literature", "read_literature", "list_models", "read_research_guideline", "read_model_instruction",
+    "research_capability_check",
     "read_paper_figure", "inspect_paper_figure", "register_model_guideline",
     "inspect_github_model_repo", "register_github_model_repo", "discover_literature", "ingest_paper"
 )

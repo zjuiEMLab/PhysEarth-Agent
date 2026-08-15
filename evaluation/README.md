@@ -6,12 +6,21 @@ directory. Nothing is hidden behind a notebook, a service or a private dataset.
 ```
 tasks/tier0/   deterministic model checks, no language model involved
 tasks/tier1/   figures of the SMRT paper, reproduced through the agent
-tasks/probe/   questions built to separate the ablations
+tasks/tier2/   canonical Q1-Q4 scientific-question definitions
+tasks/probe/   adversarial and underspecified questions
+demos/         UI-only overlays that reference tier2 task IDs
 configs/       the four ablation configurations
 runners/       tier0.py, agent_tasks.py, report.py
 metrics/       identities.py, score.py
 results/       tier0.json and one JSON record per agent run
 ```
+
+`tasks/tier2/` is the single source of truth for the four scientific reproduction questions.
+The files under `demos/` contain only beginner-facing titles, summaries and button labels;
+the UI joins them to the canonical task by `task_id`. Figure pilots in `tier1`, deterministic
+checks in `tier0`, and adversarial probes remain separate because they have different scoring
+purposes. Historical task IDs are retained as `legacy_id` aliases for audit records, but they
+are not separate task definitions.
 
 ## Running it
 

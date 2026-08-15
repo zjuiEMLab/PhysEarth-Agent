@@ -306,6 +306,7 @@ def test_the_tool_count_did_not_grow_for_either_increment():
         "ingest_paper",
         "read_research_guideline",
         "read_model_instruction",
+        "research_capability_check",
             "read_paper_figure",
             "inspect_paper_figure",
         "register_model_guideline",

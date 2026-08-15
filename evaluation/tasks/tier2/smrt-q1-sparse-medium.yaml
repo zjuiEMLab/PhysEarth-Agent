@@ -1,10 +1,10 @@
-id: t1-smrt-fig4-passive
+id: q1-sparse-medium
 suite: tier2
 tier: 2
 legacy_id: t1-smrt-fig4-passive
 evaluation_kind: scientific_question_demo
 figure_target: fig03
-paper_figures: [fig03]
+paper_figures: [fig03.png]
 title: SMRT scientific question 1, sparse-medium approximation
 source:
   document: tasks/smrt_section3_scientific_questions_and_steps.md
@@ -31,6 +31,13 @@ demo:
     Under what snow-density range do Rayleigh theory, DMRT-QCA-CP sticky and DMRT-QCA-CP
     non-sticky hard sphere converge to the same first-order scattering behavior, and when do
     particle-correlation and dense-medium effects cause divergence?
+  required_runs:
+    - [rayleigh, independent_sphere]
+    - [iba, independent_sphere]
+    - [dmrt_qcacp_shortrange, non_sticky_hard_spheres]
+    - [iba, non_sticky_hard_spheres]
+    - [dmrt_qcacp_shortrange, sticky_hard_spheres]
+    - [iba, sticky_hard_spheres]
   fixed_parameters:
     frequency_ghz: 37.0
     radius_m: 0.0001

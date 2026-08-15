@@ -125,6 +125,18 @@ def _reproduction_resources(box):
     tools.call("read_research_guideline", {}, session=box)
     tools.call("list_models", {"model": "smrt"}, session=box)
     tools.call("read_model_instruction", {"model": "smrt"}, session=box)
+    capability = tools.call(
+        "research_capability_check",
+        {
+            "action": "check",
+            "reference_models": ["smrt"],
+            "requested_outputs": ["ks_per_m"],
+            "local_models": ["smrt"],
+        },
+        session=box,
+    )
+    if capability["status"] == "needs_input":
+        tools.call("research_capability_check", {"action": "confirm_partial"}, session=box)
 
 
 def _reproduction_plan_fields():
@@ -140,6 +152,8 @@ def _reproduction_plan_fields():
             "target_quantity": "ks_per_m",
             "evidence_refs": ["smrt-v1#08", "smrt-v1#fig03"],
             "expected_comparison": "compare the coefficient trend with Figure 3",
+            "reference_models": ["smrt"],
+            "requested_outputs": ["ks_per_m"],
             "run_ids": ["density"],
             "chart_ids": ["density"],
         }],
@@ -282,6 +296,18 @@ def _q1_resources(box):
     tools.call("read_literature", {"slug": "smrt-v1", "section_id": "08"}, session=box)
     tools.call("list_models", {"model": "smrt"}, session=box)
     tools.call("read_model_instruction", {"model": "smrt"}, session=box)
+    capability = tools.call(
+        "research_capability_check",
+        {
+            "action": "check",
+            "reference_models": ["smrt"],
+            "requested_outputs": ["ks_per_m"],
+            "local_models": ["smrt"],
+        },
+        session=box,
+    )
+    if capability["status"] == "needs_input":
+        tools.call("research_capability_check", {"action": "confirm_partial"}, session=box)
 
 
 def _q1_runs(radius=0.0001):
@@ -344,6 +370,8 @@ def _q1_plan_fields(runs):
             "target_quantity": "ks_per_m",
             "evidence_refs": ["smrt-v1#08"],
             "expected_comparison": "Compare the planned model curves with the opened paper result.",
+            "reference_models": ["smrt"],
+            "requested_outputs": ["ks_per_m"],
         }],
         "runs": runs,
     }
@@ -605,9 +633,20 @@ def test_research_workflow_does_not_offer_or_require_a_stored_paper_protocol():
 def test_smrt_protocol_is_data_and_contains_the_six_q1_runs():
     demo = evals.guided_demo()
     assert demo["fixed"]["radius_m"] == 0.0001
+    task = evals.canonical_task("q1-sparse-medium")
+    assert "six" in task["question"]
     assert len(demo["required_runs"]) == 6
     assert ["iba", "non_sticky_hard_spheres"] in demo["required_runs"]
     assert ["iba", "sticky_hard_spheres"] in demo["required_runs"]
+    assert demo["task_id"] == "q1-sparse-medium"
+
+
+def test_capability_checkpoint_rules_are_generic_and_not_in_global_prompt():
+    assert "research_capability_check" in prompt.RESEARCH_WORKFLOW
+    assert "DMRT" not in prompt.RESEARCH_WORKFLOW
+    assert "SMRT" not in prompt.RESEARCH_WORKFLOW
+    assert "Q1" not in prompt.RESEARCH_WORKFLOW
+    assert "Q2" not in prompt.RESEARCH_WORKFLOW
 
 
 def test_jats_assets_are_persisted_separately_from_section_text(tmp_path, monkeypatch):

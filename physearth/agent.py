@@ -475,6 +475,10 @@ def _record_tool_result(name, result, state, events):
         model = data.get("model")
         version = data.get("version")
         if model:
+            context.setdefault("instructions", {})[model] = {
+                "version": version or "1.0",
+                "instruction_id": data.get("instruction_id") or model,
+            }
             state.setdefault("model_instructions_read", set()).add(
                 "%s@%s" % (model, version or "1.0")
             )
@@ -1135,6 +1139,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                                 "reference_read_required": "read_literature",
                                 "research_guideline_read_required": "read_research_guideline",
                                 "model_instruction_read_required": "read_model_instruction",
+                                "capability_review_required": "research_capability_check",
+                                "capability_resources_required": "research_capability_check",
                             }.get(failure_code, "research_plan")
 
                 if result["status"] == "needs_input" and (
@@ -1176,6 +1182,25 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             elapsed_s=round(time.perf_counter() - started_tool, 3),
                         )
                     )
+                if (
+                    name == "research_capability_check"
+                    and result["status"] == "needs_input"
+                    and (
+                        (result.get("data") or {}).get("error_code") == "capability_review_required"
+                        or arguments.get("action") == "reject"
+                    )
+                ):
+                    answer = result["summary"]
+                    events.append(
+                        _event(
+                            "research_wait",
+                            phase="capability_review",
+                            detail="Capability review requires the user's partial-scope decision.",
+                        )
+                    )
+                    state["phase"] = "done"
+                    yield answer, events, state
+                    return
                 yield answer, events, state
 
                 # A valid revision already has a complete, validated status message from
