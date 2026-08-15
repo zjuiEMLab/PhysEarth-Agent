@@ -63,3 +63,8 @@ def assets():
 def evaluation():
     """The task set, configurations and committed result records."""
     return root() / "evaluation"
+
+
+def prompts():
+    """The levelled system-prompt text: identity, policy, workflow."""
+    return root() / "prompts"

@@ -46,6 +46,8 @@ figure-inspection tests fail in a way that looks like a code defect but is not.
   for a directory holding both `knowledge/` and `evaluation/`, or takes `PHYSEARTH_ROOT`.
   Never reach for it with `Path(__file__).parent.parent` again — that is what made these
   constants fail silently, as an empty corpus rather than an error.
+- `prompts/` — what the agent is told, one file per block, levelled L0–L2. Plain text, no
+  build step. `prompts/README.md` explains the stack and where L3–L5 live.
 - `evaluation/` — task set, ablation configs, runners, and committed result records.
 - `docs/` — design notes and research task documents. Not runnable.
 
@@ -76,7 +78,10 @@ deterministic and must reproduce their committed JSON byte-for-byte; if they dri
 a real defect.
 
 Changing prompt text or tool contracts invalidates comparisons against existing records.
-Say so in the commit message.
+Say so in the commit message. `tests/test_prompt_layers.py` pins all 48 combinations of
+the ablation switches, the online layer and the session state by digest, so an accidental
+change fails loudly; a deliberate one is regenerated with
+`PHYSEARTH_UPDATE_PROMPT_FIXTURES=1`.
 
 ## Configuration
 
@@ -90,12 +95,13 @@ Never commit `.env`. Never put a real token in a test fixture.
 
 The repository is moving to a backend/frontend split (Option C). Phases land one commit at
 a time, each green. Done: the four oversized modules split into packages, the frontend
-lifted out, and the package moved under `backend/`. Still to come: prompts become levelled
-files under `prompts/`, and `models/` and `evaluation/` are consolidated as top-level
+lifted out, the package moved under `backend/`, and the prompt text levelled into
+`prompts/`. Still to come: `models/` and `evaluation/` consolidated as top-level
 user-facing content.
 
 The wheel ships `physearth/` only. `knowledge/`, `evaluation/`, `assets/` and `frontend/`
-stay in the repository, so an installed distribution needs `PHYSEARTH_ROOT` pointing at a
+stay in the repository, as does `prompts/`, so an installed distribution needs
+`PHYSEARTH_ROOT` pointing at a
 checkout. Verify a packaging change by building and importing from a clean venv with a
 neutral working directory — from the repository root, `.` is on `sys.path` and hides the
 difference.
