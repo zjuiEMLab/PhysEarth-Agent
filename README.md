@@ -98,14 +98,14 @@ the PRMS process chain over the official five-year Sagehen Creek domain and answ
 water in that surface is doing, which is why the harness is not written around any one
 physics: the same parameter validation, quality control and citation rules apply to a
 hydrologic model that never emits a photon. See
-[`tasks/pywatershed-prms-3.0.0.md`](tasks/pywatershed-prms-3.0.0.md).
+[`docs/pywatershed-prms-3.0.0.md`](docs/pywatershed-prms-3.0.0.md).
 
 Its pinned Sagehen domain is fetched once into the state directory and checksummed on first
 use; it is not redistributed here.
 
 ## Next steps
 
-- [Reproduce the SMRT v1 Section 3 experiments](tasks/smrt_section3_scientific_questions_and_steps.md):
+- [Reproduce the SMRT v1 Section 3 experiments](docs/smrt_section3_scientific_questions_and_steps.md):
   the paper's sparse-medium, reference-model and microstructure-equivalence investigations
   as an end-to-end research-agent baseline. Reading that document is what prompted the
   `coefficients` output, `iba_original`, cross-polarised backscatter and the widened

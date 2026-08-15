@@ -47,7 +47,7 @@ def test_scientific_question_demos_are_tier2_paper_figure_targets():
         assert "Reproduce Figure" in task["question"] or "Reproduce Figures" in task["question"]
         assert "10.5194/gmd-11-2763-2018" in task["question"]
         assert "inspect" in task["question"].lower()
-        assert task["source"]["document"] == "tasks/smrt_section3_scientific_questions_and_steps.md"
+        assert task["source"]["document"] == "docs/smrt_section3_scientific_questions_and_steps.md"
         assert task["demo"]["pilot"]
         assert task["demo"]["expected_outputs"]
         assert task["demo"]["required_behaviors"]
