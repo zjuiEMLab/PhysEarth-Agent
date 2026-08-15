@@ -1,6 +1,7 @@
 import importlib
 import importlib.util
 import os
+import re
 import shutil
 import sys
 from contextlib import contextmanager
@@ -258,6 +259,43 @@ def get(name, session=None):
     if name in temporary:
         return temporary[name]
     return _REGISTRY.get(name)
+
+
+def _spelling_key(value):
+    """How a name is spelled, ignoring only case and the separators people vary."""
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+
+def resolve(name, session=None):
+    """Find a model from a name written the way a person or a paper writes it.
+
+    A paper says SMRT, the card says `smrt`. It says tau-omega, the card says `tau_omega`.
+    Treating those as unregistered is what made a reproduction stop and ask the user to
+    confirm a partial scope for a model that was sitting in the registry, runnable.
+
+    This is deliberately narrow. It ignores case and non-alphanumeric characters and
+    nothing else, so MEMLS and DMRT-ML still do not resolve -- they genuinely are not
+    registered, and reporting that is the whole point of the capability check. It is not
+    fuzzy matching: no edit distance, no prefixes, no synonyms. A model that is nearly
+    named like a registered one is not that model.
+
+    Ambiguity is refused rather than guessed. If two registered models differ only by
+    those characters, no name can pick between them and this returns None.
+
+    Returns (model, canonical_name) or (None, None). `get` stays exact: once a name is
+    resolved, everything downstream uses the registered spelling.
+    """
+    exact = get(name, session)
+    if exact is not None:
+        return exact, name
+    key = _spelling_key(name)
+    if not key:
+        return None, None
+    matches = {n: m for n, m in all_models(session).items() if _spelling_key(n) == key}
+    if len(matches) != 1:
+        return None, None
+    canonical, model = next(iter(matches.items()))
+    return model, canonical
 
 
 def names(runnable_only=False, session=None):

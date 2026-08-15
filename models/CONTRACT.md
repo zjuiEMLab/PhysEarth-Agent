@@ -69,6 +69,20 @@ combinations:
   the call is refused, so it must explain the physics well enough to choose differently.
   A rule the agent cannot understand produces a retry loop against the same wall.
 
+## How a name is matched
+
+The card's `name` is the identifier, exactly as written, and everything downstream uses
+it: validation, execution, and the `[model:name@version]` marker.
+
+Names arriving from prose are resolved once, at the edge. A paper writes `SMRT` and the
+card says `smrt`; `tau-omega` and `tau_omega` are the same model. `registry.resolve`
+ignores **case and non-alphanumeric characters, and nothing else**, so `MEMLS` and
+`DMRT-ML` still do not resolve — they are genuinely not registered, and saying so is what
+the capability check is for. It is not fuzzy matching: `smrtt` is not `smrt`. Two models
+whose names differ only in those characters are ambiguous, and neither resolves.
+
+Once resolved, the registered spelling is what is recorded. `registry.get` stays exact.
+
 ## The adapter
 
 ```python

@@ -25,6 +25,7 @@ from physearth.registry.loader import (
     register_session_directory,
     rejected,
     reload,
+    resolve,
     session_context,
     summary,
     undeclared_parameters,

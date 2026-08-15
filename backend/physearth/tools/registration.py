@@ -8,7 +8,7 @@ from physearth.tools.common import _fail, _ledger, _offline_note, _ok
 
 
 def register_model_guideline(model, content, version="1.0", _session=None):
-    entry = registry.get(str(model or "").strip(), _session)
+    entry, _canonical = registry.resolve(str(model or "").strip(), _session)
     if entry is None:
         return _fail("Unknown model %r. Register the model before its guideline." % model)
     if _session is None:
@@ -71,7 +71,7 @@ def list_models(model=None, _switches=None, _session=None):
             "%d registered model(s), %d rejected." % (len(rows), len(rejected)),
             {"models": rows, "rejected": rejected},
         )
-    entry = registry.get(model, _session)
+    entry, _canonical = registry.resolve(model, _session)
     if entry is None:
         return _fail(
             "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names(session=_session)) or "none")

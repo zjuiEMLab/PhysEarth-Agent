@@ -60,8 +60,12 @@ def capability_check(
     supported = []
     unavailable = []
     resource_gaps = []
+    resolved_names = []
     for name in refs:
-        entry = registry.get(name, session)
+        # A paper writes SMRT and the card says `smrt`. Resolving that spelling is not
+        # the same as guessing: only case and separators are ignored, so MEMLS and
+        # DMRT-ML still report as unregistered, which is what this check exists to say.
+        entry, canonical = registry.resolve(name, session)
         if entry is None:
             unavailable.append({
                 "model": name,
@@ -69,6 +73,8 @@ def capability_check(
                 "source": "registered_model_registry",
             })
             continue
+        if canonical != name:
+            resolved_names.append({"asked": name, "registered": canonical})
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
         instruction = (context.get("instructions") or {}).get(entry.name) or {}
@@ -108,9 +114,11 @@ def capability_check(
     for name in candidates:
         if name in refs:
             continue
-        entry = registry.get(name, session)
+        entry, canonical = registry.resolve(name, session)
         if entry is None:
             continue
+        if canonical != name:
+            resolved_names.append({"asked": name, "registered": canonical})
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
         instruction = (context.get("instructions") or {}).get(entry.name) or {}
@@ -191,6 +199,9 @@ def capability_check(
         "supported_outputs": supported_outputs,
         "unavailable_outputs": unavailable_outputs,
         "resource_gaps": resource_gaps,
+        # Visible rather than silent: if the paper's spelling was not the registered one,
+        # the report says which name it was matched to, so a reader can object.
+        "resolved_names": resolved_names,
         "evidence": evidence,
         "targets": _capability_strings(
             item.get("id") for item in (targets or ()) if isinstance(item, dict)

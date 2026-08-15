@@ -362,7 +362,11 @@ def _clean_runs(runs):
             })
             continue
         model = str(run.get("model") or "").strip()
-        entry = registry.get(model)
+        entry, canonical = registry.resolve(model)
+        if entry is not None and canonical != model:
+            # The plan keeps the registered spelling, so validation, execution and the
+            # citation marker all name the same thing.
+            run["model"] = model = canonical
         if entry is None:
             message = "planned run %d uses unknown model %r" % (index + 1, model)
             problems.append(message)

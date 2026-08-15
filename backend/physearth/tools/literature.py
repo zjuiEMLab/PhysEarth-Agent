@@ -115,7 +115,7 @@ def read_research_guideline(topic="planning", _session=None):
 
 
 def read_model_instruction(model, section=None, _session=None, _switches=None):
-    entry = registry.get(str(model or "").strip(), _session)
+    entry, _canonical = registry.resolve(str(model or "").strip(), _session)
     if entry is None:
         return _fail("Unknown model %r. Call list_models first." % model)
     instruction = model_guidelines.read(entry.name, entry.card, _session)

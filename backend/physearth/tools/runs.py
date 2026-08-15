@@ -55,11 +55,14 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
     guarded = switches.resolve(_switches)["harness"]
     parameters = dict(parameters or {})
     parameters.update(extra)
-    entry = registry.get(model, _session)
+    entry, _canonical = registry.resolve(model, _session)
     if entry is None:
         return _fail(
             "Unknown model %r. Registered models: %s." % (model, ", ".join(registry.names(session=_session)) or "none")
         )
+    # The registered spelling from here on, so the run record and every marker written
+    # against it name the model the registry knows.
+    model = entry.name
     if not entry.runnable:
         return _fail(
             entry.unavailable_reason,

@@ -105,7 +105,7 @@ def research_plan(
         missing_models = []
         missing_instructions = []
         for model_name in model_names:
-            entry = registry.get(model_name, _session)
+            entry, _canonical = registry.resolve(model_name, _session)
             instruction = model_guidelines.read(entry.name, entry.card, _session) if entry else None
             version = instruction.get("version", "1.0") if instruction else "?"
             key = "%s@%s" % (model_name, version)
