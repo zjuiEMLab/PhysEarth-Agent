@@ -21,7 +21,7 @@ def test_temporary_evaluation_guideline_is_session_scoped():
 
 
 def test_temporary_model_overlay_can_run_without_global_registration(tmp_path):
-    source = Path(__file__).resolve().parent.parent / "examples" / "toy_model"
+    source = Path(__file__).resolve().parent.parent / "models" / "examples" / "toy_model"
     copied = tmp_path / "toy_model"
     copied.mkdir()
     for name in ("model_card.yaml", "adapter.py"):

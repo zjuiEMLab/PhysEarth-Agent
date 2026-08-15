@@ -5,7 +5,7 @@ import pytest
 from physearth import tools, validation
 from physearth.models import contract, registry
 
-EXAMPLE = __import__("pathlib").Path(__file__).resolve().parent.parent / "examples" / "toy_model"
+EXAMPLE = __import__("pathlib").Path(__file__).resolve().parent.parent / "models" / "examples" / "toy_model"
 
 
 @pytest.fixture

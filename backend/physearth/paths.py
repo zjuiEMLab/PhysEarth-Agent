@@ -68,3 +68,13 @@ def evaluation():
 def prompts():
     """The levelled system-prompt text: identity, policy, workflow."""
     return root() / "prompts"
+
+
+def models():
+    """Registered models: the bundled cards and adapters, the template, the examples.
+
+    Outside the package on purpose. A model here is content a user reads, copies and
+    edits, not library code, and an operator's own model joins it through the same
+    directory rather than through a different mechanism.
+    """
+    return root() / "models"

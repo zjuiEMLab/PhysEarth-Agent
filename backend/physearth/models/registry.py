@@ -9,9 +9,10 @@ from pathlib import Path
 
 import yaml
 
+from physearth import paths
 from physearth.models import contract
 
-BUNDLED_DIR = Path(__file__).resolve().parent / "bundled"
+BUNDLED_DIR = paths.models() / "bundled"
 ENTRY_POINT_GROUP = "physearth.models"
 EXTRA_DIRS_ENV = "PHYSEARTH_MODEL_PATH"
 

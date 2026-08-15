@@ -3,17 +3,43 @@
 Everything needed to reproduce the numbers in [REPORT.md](REPORT.md) is in this
 directory. Nothing is hidden behind a notebook, a service or a private dataset.
 
+Start here:
+
+```bash
+python evaluation/run.py            # what can be run, and what each costs
+python evaluation/run.py tier0      # free, deterministic, ~20 s
 ```
+
+```
+run.py         one entry point; the runners still work directly
 tasks/tier0/   deterministic model checks, no language model involved
 tasks/tier1/   figures of the SMRT paper, reproduced through the agent
 tasks/tier2/   canonical Q1-Q4 scientific-question definitions
 tasks/probe/   adversarial and underspecified questions
+tiers/         capability tiers: what each dimension claims, and from which tasks
 demos/         UI-only overlays that reference tier2 task IDs
 configs/       the four ablation configurations
 runners/       tier0.py, agent_tasks.py, report.py
 metrics/       identities.py, score.py
 results/       tier0.json and one JSON record per agent run
 ```
+
+## `tasks/` and `tiers/` are two different things
+
+They are easy to confuse, and the numbers deliberately do not line up.
+
+**`tasks/<suite>/`** is storage. A suite is a folder of task definitions, loaded by
+`common.load_tasks("tier2")`. The suite name is part of how a task is found.
+
+**`tiers/t*/`** is a claim. Each manifest declares what a capability dimension asserts,
+which runners produce the evidence for it, and which tasks it draws on — and it draws
+across suites. `t2_paper_reconstruction` claims `t1-smrt-fig4-passive`, which lives in
+`tasks/tier1/`, together with probes from `tasks/probe/`.
+
+So a tier is not a suite with a different name, and merging the two would collapse a
+scoring dimension into a directory listing. `t3_independent_reproduction` is the one
+exception: its manifest declares itself a `compatibility_alias` for t2, kept so existing
+links resolve.
 
 `tasks/tier2/` is the single source of truth for the four scientific reproduction questions.
 The files under `demos/` contain only beginner-facing titles, summaries and button labels;
@@ -25,13 +51,16 @@ are not separate task definitions.
 ## Running it
 
 ```bash
-python evaluation/runners/tier0.py                    # free, deterministic, ~20 s
-python evaluation/runners/model_registration.py       # dimension A, deterministic
-python evaluation/runners/llm_robustness.py            # dimension D, rebuild from raw runs
-python evaluation/runners/agent_tasks.py --dry-run    # show the plan and the cache state
-python evaluation/runners/agent_tasks.py --repeats 3  # needs MODELSCOPE_TOKEN
-python evaluation/runners/report.py                   # rebuild REPORT.md from the cache
+python evaluation/run.py tier0                # free, deterministic, ~20 s
+python evaluation/run.py registration         # dimension A, deterministic
+python evaluation/run.py robustness           # dimension D, rebuild from raw runs
+python evaluation/run.py agent --dry-run      # show the plan and the cache state
+python evaluation/run.py agent --repeats 3    # needs MODELSCOPE_TOKEN
+python evaluation/run.py report               # rebuild REPORT.md from the cache
 ```
+
+Each of those is the corresponding script under `runners/`, called with the arguments you
+pass. `python evaluation/runners/tier0.py` still works and does the same thing.
 
 ## Competition dimensions A and D
 
@@ -91,9 +120,9 @@ One puts a model run next to a measurement in the same chart.
 | `no-capability` | the declared ranges, enums, defaults and legal combinations, from the prompt and from `list_models` |
 | `no-literature` | the corpus: both literature tools, the catalogue, the method notes and the literature marker |
 
-An ablation is a value in a YAML file, not an edit to the code. `physearth/switches.py`
+An ablation is a value in a YAML file, not an edit to the code. `backend/physearth/switches.py`
 resolves it, and the switch reaches the agent as an argument from the process that started
-the run. It is never reachable from a prompt or a tool call, and `app.py` never passes
+the run. It is never reachable from a prompt or a tool call, and `frontend/studio.py` never passes
 one, so the deployed application always runs with everything on.
 
 ## Why the metrics are recomputed

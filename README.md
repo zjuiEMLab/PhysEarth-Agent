@@ -376,7 +376,7 @@ my_model = "my_package:model_dir"
 
 ```
 # or contribute it, by dropping the folder into
-backend/physearth/models/bundled/
+models/bundled/
 ```
 
 Start the app and it is there:

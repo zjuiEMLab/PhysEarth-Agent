@@ -1,0 +1,52 @@
+# Copy this directory to models/bundled/<your_model>/ and edit both files.
+# Rules and rationale: models/CONTRACT.md. A card that breaks one is rejected, not
+# repaired, and registry.rejected() will tell you which rule.
+
+name: my_model                 # TODO: the identifier in [model:name@version] markers
+version: "0.1.0"               # TODO: quoted, so 1.10 does not become 1.1
+tier: demo                     # demo runs anywhere; local needs requires_import below
+entrypoint: adapter:run
+license: Apache-2.0            # TODO: your model's licence, not this repository's
+citation: >-                   # TODO: not optional, including for a toy
+  Author, A. (Year). Title. Journal, volume, pages. doi:...
+description: >-                # TODO: what it computes, in one or two sentences
+  One or two sentences on what this model computes and for which physical regime.
+
+# For tier: local only -- the module whose presence decides whether this can run here.
+# Delete this line for a demo model; declaring it there is an error.
+# requires_import: some_package
+
+parameters:
+  # Every numeric parameter MUST declare minimum and maximum. Without a range the
+  # physical domain check passes everything while still appearing in the run trace.
+  # Write exponents with an explicit sign: 1.0e+9, never 1.0e9, or YAML loads the
+  # bound as text and the range check becomes meaningless.
+  temperature:
+    type: number
+    unit: K
+    description: TODO. Physical meaning, not a restatement of the name.
+    minimum: 180.0
+    maximum: 320.0
+    default: 273.15
+  formulation:
+    type: string
+    unit: none
+    description: TODO. Which formulation to use.
+    enum: [simple, detailed]
+    default: simple
+    required: false
+
+outputs:
+  # Every output MUST declare a unit. The unit is what stops this model being
+  # differenced against one that answers in different units.
+  result:
+    unit: K
+    description: TODO. What the returned array holds.
+
+# Optional. Which parameter values are legal together. `reason` is handed to the agent
+# when a call is refused, so it has to explain the physics well enough to choose again.
+# combinations:
+#   - when: {formulation: [detailed]}
+#     allow: {temperature: [273.15]}
+#     reason: >-
+#       TODO: why this pairing has no derivation behind it.
