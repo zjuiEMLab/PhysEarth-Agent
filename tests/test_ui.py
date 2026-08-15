@@ -835,3 +835,54 @@ def test_clear_is_wired_as_a_cancellation_boundary_for_streaming_send():
     assert "active_stream_events.append(resume_event)" in source
     assert "cancels=active_stream_events" in source
     assert "clear.click(" in source and "queue=False" in source
+
+
+def test_the_run_trace_is_rebuilt_per_checkpoint_not_per_token(monkeypatch):
+    """The trace changes on a checkpoint, not on a token.
+
+    It used to be rebuilt and string-compared on every streamed chunk -- a few hundred
+    milliseconds a turn, growing with the length of the trace, to produce HTML that was
+    then thrown away because it had not changed. What the browser receives is the same;
+    the work behind it is not.
+
+    The assertion is about scaling rather than an absolute count, because a turn also
+    renders the trace a fixed number of times outside the streaming loop: once for the
+    pending layout, once to seed the comparison, once for the final frame.
+    """
+    from physearth import session as session_state
+
+    from frontend import studio as app
+
+    def renders_for(content_chunks):
+        box = session_state.new_session(agent.default_model())
+        state = session_state.new_state(box)
+        state["phase"] = "calling_model"
+        events = [{"kind": "model_call", "at": "00:00:00", "index": 1}]
+
+        def fake_stream(*_args, **_kwargs):
+            answer = ""
+            for i in range(content_chunks):
+                answer += "word%d " % i
+                yield answer, events, state
+            yield answer, events + [
+                {"kind": "harness_pass", "at": "00:00:01", "index": 2}
+            ], state
+
+        rendered = []
+        original = app.render.trace
+
+        def counting_trace(*args, **kwargs):
+            rendered.append(1)
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(app.agent, "stream", fake_stream)
+        monkeypatch.setattr(app.render, "trace", counting_trace)
+        list(app.respond("question", [], box, agent.default_model()))
+        monkeypatch.undo()
+        return len(rendered)
+
+    few, many = renders_for(3), renders_for(60)
+    assert few == many, (
+        "the trace was rebuilt %d times for 3 tokens and %d times for 60: it still "
+        "scales with content rather than with checkpoints" % (few, many)
+    )

@@ -125,6 +125,45 @@ def _evidence_key(session):
     )
 
 
+def _trace_key(events, state, running):
+    """What the run trace is showing. Events are append-only, so the count is enough."""
+    return (len(events), bool(running), state.get("phase"))
+
+
+def _metrics_key(state):
+    """The counters under the trace, and nothing else on the page moves them."""
+    session = state.get("session") or {}
+    return (
+        state.get("model_calls"),
+        state.get("tool_calls"),
+        state.get("model_runs"),
+        state.get("rejected_calls"),
+        state.get("qc_failures"),
+        state.get("boundary_flags"),
+        state.get("interventions"),
+        state.get("prompt_tokens"),
+        state.get("completion_tokens"),
+        session.get("model_calls"),
+        session.get("tool_calls"),
+        session.get("turns"),
+    )
+
+
+def _head_key(events, state, session):
+    """The conversation head and the research card, which both follow the phase."""
+    research = session.get("research") or {}
+    capability = session.get("capability_review") or {}
+    return (
+        len(events),
+        state.get("phase"),
+        research.get("phase"),
+        research.get("version"),
+        capability.get("status"),
+        bool(session.get("research_required")),
+        session.get("evidence_revision"),
+    )
+
+
 def _faulted(events):
     """True when the turn ended on an upstream fault rather than on an answer."""
     return any(
@@ -235,6 +274,15 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
     metrics_html = render.trace_metrics(agent.new_state(model_id, session))
     approval_html = render.research_context(session)
     head_html = render.conversation_head(index, session=session, events=events, state=state)
+    # Only the Conversation changes on a content token. The trace, the metrics, the head
+    # and the research card change on a checkpoint -- an event appended, a counter moved,
+    # a phase changed -- which happens tens of times a turn rather than thousands. They
+    # were being rebuilt and string-compared on every token anyway, at a few hundred
+    # milliseconds a turn and growing with the length of the trace. These keys are the
+    # same idea as _evidence_key above, applied to the rest of the page.
+    trace_key = _trace_key(events, state, True)
+    metrics_key = _metrics_key(state)
+    head_key = _head_key(events, state, session)
     logged_agent_events = 0
     try:
         for answer, events, state in agent.stream(question, seen, model_id, session):
@@ -271,24 +319,47 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
                 if preserve_conversation
                 else render.live(question, answer, running=running)
             )
-            next_trace = render.trace(
-                events, state, running=running, include_footer=False
-            )
-            next_metrics = render.trace_metrics(state)
-            next_approval = render.research_context(session)
-            next_head = render.conversation_head(index, session=session, events=events, state=state)
-            head_update = next_head if next_head != head_html else gr.update()
             live_update = next_live if next_live != live_html else gr.update()
-            trace_update = next_trace if next_trace != trace_html else gr.update()
-            metrics_update = next_metrics if next_metrics != metrics_html else gr.update()
-            approval_update = (
-                next_approval if next_approval != approval_html else gr.update()
-            )
             live_html = next_live
-            trace_html = next_trace
-            metrics_html = next_metrics
-            approval_html = next_approval
-            head_html = next_head
+
+            # Each panel below is rebuilt only when its own key moves. The string compare
+            # that follows still decides whether the frame is pushed, so what reaches the
+            # browser is unchanged; what is saved is rendering a trace that nobody asked
+            # for, once per token.
+            trace_update = gr.update()
+            next_trace_key = _trace_key(events, state, running)
+            if next_trace_key != trace_key:
+                trace_key = next_trace_key
+                next_trace = render.trace(
+                    events, state, running=running, include_footer=False
+                )
+                if next_trace != trace_html:
+                    trace_update = next_trace
+                    trace_html = next_trace
+
+            metrics_update = gr.update()
+            next_metrics_key = _metrics_key(state)
+            if next_metrics_key != metrics_key:
+                metrics_key = next_metrics_key
+                next_metrics = render.trace_metrics(state)
+                if next_metrics != metrics_html:
+                    metrics_update = next_metrics
+                    metrics_html = next_metrics
+
+            head_update = approval_update = gr.update()
+            next_head_key = _head_key(events, state, session)
+            if next_head_key != head_key:
+                head_key = next_head_key
+                next_head = render.conversation_head(
+                    index, session=session, events=events, state=state
+                )
+                if next_head != head_html:
+                    head_update = next_head
+                    head_html = next_head
+                next_approval = render.research_context(session)
+                if next_approval != approval_html:
+                    approval_update = next_approval
+                    approval_html = next_approval
             yield (
                 gr.update(),
                 head_update,
