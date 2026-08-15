@@ -65,3 +65,11 @@ __all__ = [
     "tools",
     "transcript",
 ]
+
+# The remaining names the single-module version exposed, kept reachable at the same
+# address so nothing outside this package has to know the split happened.
+from physearth.agent.catalogue import (
+    _MODEL_LABELS,
+    _model_card,
+)
+from physearth.agent.constants import _TOOL_BYPASS_PATTERNS

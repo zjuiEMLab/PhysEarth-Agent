@@ -17,8 +17,14 @@ from physearth.ui.render.context import (
     research_context,
     research_status,
 )
+
+# The remaining names the single-module version exposed, kept reachable at the same
+# address so nothing outside this package has to know the split happened.
 from physearth.ui.render.conversation import (
     PLACEHOLDER,
+    _message,
+    _plan_run_rows,
+    _user_body,
     conversation_head,
     guided_brief,
     hero,
@@ -26,8 +32,59 @@ from physearth.ui.render.conversation import (
     live,
     live_result,
 )
-from physearth.ui.render.evidence import _dataset_card, evidence
-from physearth.ui.render.parts import _mapping_text, _reproduction_state
-from physearth.ui.render.review import approval_bar
-from physearth.ui.render.text import _e, _markers, _mono, _svg, answer_html
-from physearth.ui.render.trace import trace, trace_metrics
+from physearth.ui.render.evidence import (
+    SOURCE_BADGE,
+    _abstract_card,
+    _agreement_row,
+    _comparison_table,
+    _corpus_card,
+    _dataset_card,
+    _figure_card,
+    _model_card,
+    _rejected_card,
+    _section_card,
+    evidence,
+)
+from physearth.ui.render.parts import (
+    _disclosure,
+    _kv,
+    _mapping_text,
+    _meter,
+    _plan_cell,
+    _plan_disclosure,
+    _plan_table,
+    _reproduction_state,
+)
+from physearth.ui.render.review import (
+    _revision_changes_html,
+    _structured_approval_bar,
+    approval_bar,
+)
+from physearth.ui.render.text import (
+    ABS_CITE,
+    BOLD,
+    CITE,
+    CODE,
+    DATA_CITE,
+    ICONS,
+    MODEL_CITE,
+    SAFE_SUB,
+    SECTION_PREVIEW_CHARS,
+    SKILL_CITE,
+    _e,
+    _inline,
+    _markers,
+    _mono,
+    _paragraphs,
+    _svg,
+    answer_html,
+)
+from physearth.ui.render.trace import (
+    APPROVAL_WORDS,
+    BADGES,
+    _event_body,
+    _event_card,
+    _trace_metrics,
+    trace,
+    trace_metrics,
+)

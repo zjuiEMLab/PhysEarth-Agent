@@ -118,3 +118,39 @@ def call(name, arguments, owner=None, switches_in=None, session=None):
             return handler(**arguments)
     except TypeError as exc:
         return _fail("Bad arguments for %s: %s" % (name, exc))
+
+# The remaining names the single-module version exposed, kept reachable at the same
+# address so nothing outside this package has to know the split happened.
+from physearth.tools.charts import (
+    _condition_subtitle,
+    _review_planned_figure,
+    _temporary_figure_dir,
+)
+from physearth.tools.common import _offline_note
+from physearth.tools.figures import (
+    _extract_vector_figure_observations,
+    _figure_id_key,
+    _paper_figure,
+    _trusted_asset_bytes,
+)
+from physearth.tools.literature import _vision_enabled
+from physearth.tools.runs import _model_failure
+from physearth.tools.specs import (
+    CAPABILITY_CHECK_SPEC,
+    DISCOVER_SPEC,
+    GITHUB_INSPECT_SPEC,
+    GITHUB_REGISTER_SPEC,
+    INGEST_SPEC,
+    LIST_MODELS_SPEC,
+    MODEL_GUIDELINE_REGISTRATION_SPEC,
+    MODEL_INSTRUCTION_SPEC,
+    PAPER_FIGURE_INSPECTION_SPEC,
+    PAPER_FIGURE_SPEC,
+    PLOT_PLANNED_CHART_SPEC,
+    PLOT_SPEC,
+    READ_REFERENCE_SPEC,
+    RESEARCH_GUIDELINE_SPEC,
+    RESEARCH_PLAN_SPEC,
+    RUN_MODEL_SPEC,
+    RUN_PLANNED_MODEL_SPEC,
+)
