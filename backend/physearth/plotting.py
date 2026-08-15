@@ -11,7 +11,8 @@ import math
 from pathlib import Path
 from urllib.parse import quote
 
-from physearth import config, paths, results
+from physearth import config, paths
+from physearth.harness import results
 
 FONT_DIR = paths.assets() / "fonts"
 KINDS = ("line", "scatter", "line+markers")

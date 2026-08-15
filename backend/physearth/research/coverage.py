@@ -1,6 +1,6 @@
 """Whether the runs and charts actually cover the reproduction targets."""
 
-from physearth.models import registry
+from physearth import registry
 
 
 def _target_coverage(targets, runs, charts, session=None):

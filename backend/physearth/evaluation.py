@@ -10,9 +10,10 @@ import shutil
 import time
 from pathlib import Path
 
-from physearth import agent, github_models, model_guidelines, results, tools
+from physearth import agent, github_models, registry, tools
+from physearth.corpus import model_guidelines
+from physearth.harness import results
 from physearth.ingest import http
-from physearth.models import registry
 
 SESSION_TTL_SECONDS = 60 * 60
 

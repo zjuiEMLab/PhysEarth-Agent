@@ -14,7 +14,6 @@ is closed: the bundled corpus, the models and the reference data do not go throu
 """
 
 import json
-import socket
 import ssl
 import time
 import urllib.error
@@ -84,7 +83,7 @@ def get_bytes(url, timeout=TIMEOUT_S, max_bytes=MAX_BYTES):
             payload = response.read(max_bytes + 1)
     except urllib.error.HTTPError as exc:
         raise Upstream(host, "HTTP %s" % exc.code) from exc
-    except (urllib.error.URLError, socket.timeout, TimeoutError, ssl.SSLError) as exc:
+    except (urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
         raise Upstream(host, "%s: %s" % (type(exc).__name__, exc)) from exc
     if len(payload) > max_bytes:
         raise Upstream(host, "the document is larger than the %d byte ceiling" % max_bytes)

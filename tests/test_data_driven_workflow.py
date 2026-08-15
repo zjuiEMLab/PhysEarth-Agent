@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from physearth import evals, harness, live, prompt, research, session, tools
+from physearth import evals, harness, prompt, research, session, tools
+from physearth.corpus import live
 from physearth.ingest import jats
 
 FIXTURE = Path(__file__).parent / "fixtures" / "jats_sample.xml"
@@ -608,7 +609,7 @@ def test_paper_figure_ids_are_normalized_without_changing_the_source_identifier(
 
 
 def test_bundled_smrt_card_declares_all_publisher_figures_with_assets():
-    from physearth import knowledge
+    from physearth.corpus import knowledge
 
     card = knowledge.card("smrt-v1")
     assert [figure["id"] for figure in card["figures"]] == [

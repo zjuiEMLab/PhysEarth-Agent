@@ -1,3 +1,4 @@
+import concurrent.futures
 import json
 import os
 import platform
@@ -7,7 +8,6 @@ import sys
 import time
 import urllib.error
 import urllib.request
-import concurrent.futures
 from datetime import datetime, timezone
 from importlib import metadata
 
@@ -174,7 +174,7 @@ def smrt_warmup():
 
 def model_registry_report():
     """Which models registered, and why each rejection was rejected."""
-    from physearth.models import registry
+    from physearth import registry
 
     return {
         "registered": [

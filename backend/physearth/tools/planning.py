@@ -1,7 +1,7 @@
 """The research_plan tool: the model proposes, the harness disposes."""
 
-from physearth import model_guidelines, research
-from physearth.models import registry
+from physearth import registry, research
+from physearth.corpus import model_guidelines
 
 
 def research_plan(

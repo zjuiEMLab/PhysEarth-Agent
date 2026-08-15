@@ -2,8 +2,8 @@
 
 import re
 
-from physearth import knowledge
-from physearth.models import registry
+from physearth import registry
+from physearth.corpus import knowledge
 
 
 def _figure_satisfies(figure, expected):

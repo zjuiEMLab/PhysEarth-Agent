@@ -25,7 +25,6 @@ import os
 from pathlib import Path
 
 import pytest
-
 from physearth import paths, prompt
 from physearth import session as session_state
 

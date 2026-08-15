@@ -6,11 +6,11 @@ import json
 import re
 from collections import defaultdict
 from functools import lru_cache
-from pathlib import Path
 
 import yaml
 
-from physearth import knowledge, paths
+from physearth import paths
+from physearth.corpus import knowledge
 
 REPO = paths.root()
 EVALUATION = paths.evaluation()

@@ -8,9 +8,9 @@ single-module `tools` is re-exported here, so this split changes no import elsew
 # Re-exported for callers that reach for them through this package.
 # ruff: noqa: F401
 
-from physearth import switches
+from physearth import registry
+from physearth.harness import switches
 from physearth.ingest import http
-from physearth.models import registry
 from physearth.tools import charts, common, figures, literature, planning, registration, runs, specs
 from physearth.tools.charts import plot, plot_planned_chart
 from physearth.tools.common import _fail, _ledger, _ok

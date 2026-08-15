@@ -9,8 +9,11 @@ system to its own opinion of itself and every configuration would score perfectl
 
 import math
 
-from physearth import harness, validation  # noqa: E402
-from physearth.models import registry  # noqa: E402
+from physearth import (
+    harness,  # noqa: E402
+    registry,  # noqa: E402
+)
+from physearth.harness import validation  # noqa: E402
 
 NUMERIC_TOOLS = ("run_model", "run_planned_model")
 

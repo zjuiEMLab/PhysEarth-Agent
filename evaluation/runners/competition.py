@@ -20,8 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import agent_tasks  # noqa: E402
 import common  # noqa: E402
-
-from physearth import agent, approval, config, harness, research  # noqa: E402
+from physearth import agent, config, harness, research  # noqa: E402
+from physearth.harness import approval  # noqa: E402
 
 MANIFEST = common.ROOT / "competition.yaml"
 PROMPTS = common.ROOT / "prompts"

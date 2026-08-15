@@ -16,7 +16,6 @@ from openai import OpenAI
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common  # noqa: E402
-
 from physearth import config  # noqa: E402
 
 MANIFEST = common.ROOT / "competition.yaml"

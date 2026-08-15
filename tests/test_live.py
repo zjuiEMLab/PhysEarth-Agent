@@ -10,8 +10,8 @@ between a service failing and a paper not existing.
 from pathlib import Path
 
 import pytest
-
-from physearth import harness, live, prompt, session, tools
+from physearth import harness, prompt, session, tools
+from physearth.corpus import live
 from physearth.ingest import fulltext, http, jats
 
 FIXTURE = Path(__file__).parent / "fixtures" / "jats_sample.xml"

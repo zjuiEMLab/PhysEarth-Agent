@@ -7,7 +7,8 @@ only from a path that resolves inside it.
 import re
 from pathlib import Path
 
-from physearth import config, knowledge
+from physearth import config
+from physearth.corpus import knowledge
 
 
 def _figure_id_key(value):

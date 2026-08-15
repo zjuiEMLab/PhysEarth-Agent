@@ -9,8 +9,9 @@ so this split changes no import elsewhere.
 
 # The single-module `research` carried these as attributes of itself, and callers reach
 # for them that way (research.registry). Keep the address.
-from physearth import audit, knowledge, plotting, validation
-from physearth.models import registry
+from physearth import plotting, registry
+from physearth.corpus import knowledge
+from physearth.harness import audit, validation
 from physearth.research.approval import (
     _clear_previews,
     _preview_bounds,

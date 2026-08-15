@@ -1,4 +1,5 @@
-from physearth import harness, knowledge, tools
+from physearth import harness, tools
+from physearth.corpus import knowledge
 
 
 def test_markers_resolve_only_against_sections_read():
@@ -64,7 +65,7 @@ def test_a_short_refusal_is_not_treated_as_an_unsupported_claim():
 
 
 def test_the_deployment_budget_blocks_when_the_window_is_full():
-    from physearth import budget
+    from physearth.harness import budget
 
     original = budget.MAX_RUNS_PER_WINDOW
     budget._STARTS.clear()
@@ -80,7 +81,7 @@ def test_the_deployment_budget_blocks_when_the_window_is_full():
 
 
 def test_the_deployment_budget_is_unlimited_when_cap_is_zero():
-    from physearth import budget
+    from physearth.harness import budget
 
     original = budget.MAX_RUNS_PER_WINDOW
     budget._STARTS.clear()

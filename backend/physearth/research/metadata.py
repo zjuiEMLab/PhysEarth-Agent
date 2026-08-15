@@ -1,6 +1,6 @@
 """Repairing the reproduction metadata a paper-grounded plan has to carry."""
 
-from physearth.models import registry
+from physearth import registry
 from physearth.research.common import _provenance_confidence
 from physearth.research.mapping import (
     _ledger_entries,

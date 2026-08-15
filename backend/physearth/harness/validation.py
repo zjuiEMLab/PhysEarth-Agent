@@ -5,7 +5,7 @@ model registered through the contract. Neither is a tool the agent can choose
 to skip: validation runs before the call and quality control runs after it.
 """
 
-from physearth.models import contract
+from physearth.registry import contract
 
 
 def _coerce(name, spec, value, problems):

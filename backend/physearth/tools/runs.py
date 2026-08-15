@@ -3,8 +3,9 @@
 import concurrent.futures
 import time
 
-from physearth import artifacts, reference, research, results, switches, validation
-from physearth.models import registry
+from physearth import artifacts, registry, research
+from physearth.corpus import reference
+from physearth.harness import results, switches, validation
 from physearth.tools.common import _fail, _ok
 
 MAX_RUN_SECONDS = 45.0

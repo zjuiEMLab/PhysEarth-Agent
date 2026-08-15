@@ -5,7 +5,8 @@ from pathlib import Path
 
 import yaml
 
-from physearth.models import contract, registry
+from physearth import registry
+from physearth.registry import contract
 
 
 def main(argv):

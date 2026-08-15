@@ -32,7 +32,13 @@ figure-inspection tests fail in a way that looks like a code defect but is not.
   is every pixel of the interface as plain strings, `static/` holds `ui.css` and `ui.js`,
   `theme.py` assembles the stylesheet. `views/` imports no Gradio, so it is testable
   without a browser.
-- `backend/physearth/` — the importable package. Agent loop, tools, harness, research planning.
+- `backend/physearth/` — the importable package, grouped by concern:
+  `agent/` the loop, `tools/` what the agent may call, `research/` planning and review,
+  `harness/` the guarantees (validation, approval, audit, budget, untrusted, results,
+  switches, gates), `corpus/` what may be read (knowledge, live, reference, model
+  guidelines), `registry/` how a model is loaded and refused, `ingest/` fetching and
+  parsing sources. What is left at the top level is genuinely cross-cutting: `config.py`,
+  `session.py`, `paths.py`, `plotting.py`, `api.py`.
 - `backend/physearth/api.py` — the declared surface between the two. The frontend imports this
   and nothing else from the package.
 - `assets/` — shared, not frontend. `fonts/` is read by `frontend/theme.py` *and* by
@@ -75,9 +81,12 @@ These are the product, not conventions. Breaking one silently is worse than a cr
 ## Evidence and evaluation
 
 `evaluation/results/` is committed evidence behind `REPORT.md`, not build output. Do not
-regenerate or delete records to make something pass. Tier 0 and the registration runner are
-deterministic and must reproduce their committed JSON byte-for-byte; if they drift, that is
-a real defect.
+regenerate or delete records to make something pass. Tier 0 and the registration runner are deterministic
+in what they *assert*: `9/9 tasks, 38 checks` and `20/20 checks`. Those are the gate.
+They do **not** reproduce their committed JSON byte-for-byte — re-running them shifts
+values by 1e-16 to 1e-11 through BLAS and library round-off, which is why a verification
+run leaves `results/tier0.json` and `results/model_registration.json` modified. Revert
+them; do not commit the drift.
 
 Changing prompt text or tool contracts invalidates comparisons against existing records.
 Say so in the commit message. `tests/test_prompt_layers.py` pins all 48 combinations of
@@ -113,6 +122,17 @@ Three invariants are enforced by `tests/test_boundaries.py`:
 - nothing under `frontend/` may import anything from the package except `physearth.api`;
 - `app.py` exists at the root and delegates to `frontend.studio`.
 
-`physearth/api.py` declares the boundary rather than narrowing it: the interface uses 62
-names across 14 modules, and reducing that is separate work from moving the files. What it
-buys now is that the coupling is in one place and cannot grow by accident.
+`backend/physearth/api.py` declares the boundary rather than narrowing it: the interface
+uses 62 names across 14 modules, and reducing that is separate work from moving the files.
+What it buys now is that the coupling is in one place and cannot grow by accident.
+
+Two names that look alike and are not:
+
+- `models/` (top level) is **content** — the cards and adapters, read and copied by users.
+- `backend/physearth/registry/` is the **mechanism** — what counts as a model, how a card
+  is validated, and how a bad one is refused. It was called `physearth/models/` until the
+  collision with the top-level directory became actively confusing.
+
+The remaining `sys.path.insert` calls in `evaluation/` exist because `evaluation/runners/`
+is not a package; the runners import each other as top-level modules. Making it one is the
+last piece of tidying and would change how each runner is invoked directly.

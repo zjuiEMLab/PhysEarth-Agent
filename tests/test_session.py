@@ -1,4 +1,6 @@
-from physearth import agent, harness, results, session, tools
+from physearth import agent, harness, session, tools
+from physearth.harness import results
+
 from frontend import views as render
 
 

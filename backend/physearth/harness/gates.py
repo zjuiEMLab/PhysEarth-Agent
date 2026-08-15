@@ -1,6 +1,6 @@
 import re
 
-from physearth import switches
+from physearth.harness import switches
 
 CITATION_PATTERN = re.compile(r"\[([a-z0-9-]+)#(\d{1,3})\]")
 MODEL_PATTERN = re.compile(r"\[(?:model:)?([A-Za-z0-9_-]+)@([^\]\s]+)\]")

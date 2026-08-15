@@ -1,6 +1,7 @@
 import json
 
-from physearth import audit, session
+from physearth import session
+from physearth.harness import audit
 
 
 def test_structured_audit_log_is_persistent_session_scoped_and_redacted(tmp_path, monkeypatch):

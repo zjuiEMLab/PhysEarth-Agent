@@ -1,7 +1,6 @@
 import pytest
-
-from physearth import harness, prompt, session, switches, tools, validation
-from physearth.models import registry
+from physearth import harness, prompt, registry, session, tools
+from physearth.harness import switches, validation
 
 
 def _state(flags=None):

@@ -4,9 +4,6 @@ import time
 from pathlib import Path
 
 import gradio as gr
-
-from frontend import theme
-from frontend import views as render
 from physearth.api import (
     agent,
     approval,
@@ -17,6 +14,9 @@ from physearth.api import (
     evaluation,
     research,
 )
+
+from frontend import theme
+from frontend import views as render
 
 config.load_dotenv()
 audit.configure()

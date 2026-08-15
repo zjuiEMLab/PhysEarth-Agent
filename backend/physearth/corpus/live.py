@@ -21,7 +21,9 @@ different marker.
 
 import re
 
-from physearth import artifacts, knowledge, untrusted
+from physearth import artifacts
+from physearth.corpus import knowledge
+from physearth.harness import untrusted
 from physearth.ingest import fulltext
 
 MAX_PAPERS = 4

@@ -11,9 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common  # noqa: E402
-
-from physearth import validation  # noqa: E402
-from physearth.models import contract, registry  # noqa: E402
+from physearth import registry  # noqa: E402
+from physearth.harness import validation  # noqa: E402
+from physearth.registry import contract  # noqa: E402
 
 SCHEMA_VERSION = "tier0-registry-contract-v2"
 

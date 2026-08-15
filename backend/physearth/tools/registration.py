@@ -1,8 +1,9 @@
 """Inspecting and registering a model: the guideline, the repository, the catalogue."""
 
-from physearth import github_models, model_guidelines, switches
+from physearth import github_models, registry
+from physearth.corpus import model_guidelines
+from physearth.harness import switches
 from physearth.ingest import http
-from physearth.models import registry
 from physearth.tools.common import _fail, _ledger, _offline_note, _ok
 
 

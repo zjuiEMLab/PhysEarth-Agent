@@ -12,9 +12,9 @@ from pathlib import Path
 
 import yaml
 
-from physearth import artifacts
+from physearth import artifacts, registry
 from physearth.ingest import http
-from physearth.models import contract, registry
+from physearth.registry import contract
 
 REPO = re.compile(r"^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$")
 MAX_FILE = 300_000

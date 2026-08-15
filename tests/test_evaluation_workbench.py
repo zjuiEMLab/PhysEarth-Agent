@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from physearth import evaluation, live, tools
-from physearth.models import registry
+from physearth import evaluation, registry, tools
+from physearth.corpus import live
 
 
 def test_temporary_evaluation_guideline_is_session_scoped():

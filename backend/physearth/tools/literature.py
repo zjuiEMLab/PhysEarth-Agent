@@ -6,16 +6,10 @@ import os
 import re
 from pathlib import Path
 
-from physearth import (
-    config,
-    knowledge,
-    live,
-    model_guidelines,
-    research,
-    untrusted,
-)
+from physearth import config, registry, research
+from physearth.corpus import knowledge, live, model_guidelines
+from physearth.harness import untrusted
 from physearth.ingest import discover, fulltext, http, pdf
-from physearth.models import registry
 from physearth.tools.common import _fail, _ledger, _offline_note, _ok
 from physearth.tools.figures import (
     _extract_vector_figure_observations,

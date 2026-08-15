@@ -20,10 +20,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common  # noqa: E402
 import tier0  # noqa: E402
-
-from physearth import results, tools  # noqa: E402
-from physearth.models import contract, registry  # noqa: E402
-
+from physearth import (
+    registry,  # noqa: E402
+    tools,  # noqa: E402
+)
+from physearth.harness import results  # noqa: E402
+from physearth.registry import contract  # noqa: E402
 
 FIXTURE = common.ROOT / "fixtures" / "invalid_model_card.yaml"
 OWNER = "evaluation:model-registration"

@@ -19,7 +19,8 @@ import yaml
 from PIL import Image, ImageFilter, ImageOps
 
 REPO = Path(__file__).resolve().parents[2]
-from physearth import agent, approval, config, research  # noqa: E402
+from physearth import agent, config, research  # noqa: E402
+from physearth.harness import approval  # noqa: E402
 
 TASK_DIR = REPO / "evaluation" / "tasks" / "tier2"
 RESULT_DIR = REPO / "evaluation" / "results" / "reproduction"

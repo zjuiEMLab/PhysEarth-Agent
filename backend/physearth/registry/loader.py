@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 
 from physearth import paths
-from physearth.models import contract
+from physearth.registry import contract
 
 BUNDLED_DIR = paths.models() / "bundled"
 ENTRY_POINT_GROUP = "physearth.models"
@@ -283,7 +283,7 @@ def summary(session=None):
                 "instruction_id": model.card.get("instruction_id") or model.name,
                 "instruction_version": str(model.card.get("instruction_version") or "1.0"),
                 "instruction_available": bool(
-                    (model.card.get("instruction_path") or "")
+                    model.card.get("instruction_path") or ""
                 ),
             }
         )

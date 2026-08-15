@@ -1,6 +1,6 @@
 """Whether the registered models can answer the question that was asked."""
 
-from physearth.models import registry
+from physearth import registry
 from physearth.research.charts import _capability_gaps
 
 

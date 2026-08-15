@@ -2,8 +2,8 @@
 
 import re
 
-from physearth import validation
-from physearth.models import registry
+from physearth import registry
+from physearth.harness import validation
 from physearth.research.common import _clean_list
 
 

@@ -2,7 +2,7 @@
 
 import time
 
-from physearth import audit
+from physearth.harness import audit
 
 
 def _event(kind, **fields):

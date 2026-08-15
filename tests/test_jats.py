@@ -91,7 +91,7 @@ def test_nothing_in_the_parser_survives_between_two_calls():
 
 
 def test_the_bundled_corpus_still_matches_its_declared_section_sizes():
-    from physearth import knowledge
+    from physearth.corpus import knowledge
 
     for slug in knowledge.slugs(kind="paper"):
         for declared in knowledge.section_index(slug):

@@ -18,13 +18,12 @@ import subprocess
 import sys
 import time
 import traceback
-from urllib.parse import urlparse
 from pathlib import Path
+from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common  # noqa: E402
-
 from physearth import agent, config, harness  # noqa: E402
 
 RUNS = common.RESULTS / "runs"

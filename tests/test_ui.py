@@ -1,7 +1,10 @@
 import re
 from pathlib import Path
 
-from physearth import agent, budget, knowledge, prompt
+from physearth import agent, prompt
+from physearth.corpus import knowledge
+from physearth.harness import budget
+
 from frontend import theme
 from frontend import views as render
 
@@ -20,8 +23,9 @@ def test_trace_cards_do_not_replay_an_entry_animation_on_every_gradio_frame():
 
 def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypatch):
     """A tool lifecycle event must not remount the unchanged streamed transcript."""
-    from frontend import studio as app
     from physearth import session as session_state
+
+    from frontend import studio as app
 
     box = session_state.new_session(agent.default_model())
     state = session_state.new_state(box)
@@ -44,8 +48,9 @@ def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypat
 
 
 def test_execution_continuation_preserves_conversation_and_only_removes_plan_card(monkeypatch):
-    from frontend import studio as app
     from physearth import session as session_state
+
+    from frontend import studio as app
 
     box = session_state.new_session("m")
     turns = [{
@@ -94,8 +99,11 @@ def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
 
 def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(monkeypatch):
     """All user-facing case starters share the same direct-tool approval route."""
+    from physearth import evals
+    from physearth import session as session_state
+    from physearth.harness import approval
+
     from frontend import studio as app
-    from physearth import approval, evals, session as session_state
 
     state = session_state.new_state(None)
     state["phase"] = "done"
@@ -128,8 +136,10 @@ def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(mo
 
 
 def test_direct_approval_hides_the_stale_card_until_the_agent_clears_it():
+    from physearth import session as session_state
+    from physearth.harness import approval
+
     from frontend import studio as app
-    from physearth import approval, session as session_state
     from frontend import views as render
 
     box = session_state.new_session("m")
@@ -317,8 +327,9 @@ def test_guided_research_context_shows_live_capability_and_agent_paper_session()
 
 
 def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
-    from frontend import studio as app
     from physearth import evals
+
+    from frontend import studio as app
 
     question = evals.guided_demo()["question"]
     result = app.start_guided_demo(question, agent.default_model())
@@ -614,8 +625,9 @@ def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
 
 def test_clearing_the_session_starts_in_normal_q_and_a_mode():
     """Research is selected by the agent, while ordinary model calls retain approval."""
+    from physearth.harness import approval
+
     from frontend import studio as app
-    from physearth import approval
 
     first = app._session(None, agent.default_model())
     assert approval.required(first)
@@ -633,7 +645,7 @@ def test_the_evidence_panel_is_cheap_enough_to_redraw():
     it once cost thirty seconds a chunk."""
     import time
 
-    from physearth import reference
+    from physearth.corpus import reference
 
     started = time.perf_counter()
     render._dataset_card("tvc-backscatter")
@@ -684,8 +696,9 @@ def test_only_one_route_reaches_the_agent():
 
 
 def test_chart_click_records_the_human_choice_without_an_llm_turn():
-    from frontend import studio as app
     from physearth import research, session
+
+    from frontend import studio as app
 
     box = session.new_session("m")
     research.propose(

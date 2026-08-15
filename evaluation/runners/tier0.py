@@ -20,9 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common  # noqa: E402
-
-from physearth import validation  # noqa: E402
-from physearth.models import registry  # noqa: E402
+from physearth import registry  # noqa: E402
+from physearth.harness import validation  # noqa: E402
 
 sys.path.insert(0, str(common.ROOT))
 from metrics import identities  # noqa: E402

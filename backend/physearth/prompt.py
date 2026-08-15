@@ -28,9 +28,10 @@ The levels, and where each one lives:
 `prompts/README.md` says the same thing for a reader who is not in Python.
 """
 
-from physearth import knowledge, paths, reference, switches, untrusted
+from physearth import paths, registry
 from physearth import session as session_state
-from physearth.models import registry
+from physearth.corpus import knowledge, reference
+from physearth.harness import switches, untrusted
 
 
 def _text(name):

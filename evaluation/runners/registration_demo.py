@@ -8,9 +8,7 @@ the current host.  The result is meant for the human-facing dashboard.
 import json
 from pathlib import Path
 
-from physearth import tools
-from physearth.models import registry
-
+from physearth import registry, tools
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "results" / "registration_demo.json"

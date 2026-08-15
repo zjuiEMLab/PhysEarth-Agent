@@ -6,21 +6,20 @@ file.  Secrets are redacted before serialization, and logging failures never int
 scientific run.
 """
 
-from contextvars import ContextVar
-from datetime import datetime, timezone
 import json
 import logging
-from logging.handlers import RotatingFileHandler
 import os
-from pathlib import Path
 import re
 import threading
 import time
 import traceback
 import uuid
+from contextvars import ContextVar
+from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from physearth import config
-
 
 _CONTEXT = ContextVar("physearth_audit_context", default={})
 _SESSION = ContextVar("physearth_audit_session", default=None)

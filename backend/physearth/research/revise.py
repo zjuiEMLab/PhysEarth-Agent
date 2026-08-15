@@ -3,8 +3,8 @@
 import copy
 import json
 
-from physearth import audit
-from physearth.models import registry
+from physearth import registry
+from physearth.harness import audit
 from physearth.research.approval import _clear_previews
 from physearth.research.charts import _chart_y_names, _run_produces_chart, _validate_chart_runs
 from physearth.research.common import _clean_list, _fail, _needs, _ok, _public, _require

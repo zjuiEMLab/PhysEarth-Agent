@@ -15,21 +15,17 @@ from moving the files.
 
 from physearth import (
     agent,
-    approval,
     artifacts,
-    audit,
-    budget,
     config,
     diagnostics,
     evals,
     evaluation,
-    knowledge,
-    live,
-    reference,
+    registry,
     research,
     tools,
 )
-from physearth.models import registry
+from physearth.corpus import knowledge, live, reference
+from physearth.harness import approval, audit, budget
 
 __all__ = [
     "agent",

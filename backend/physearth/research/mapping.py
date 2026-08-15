@@ -3,7 +3,7 @@
 import math
 import re
 
-from physearth.models import registry
+from physearth import registry
 from physearth.research.common import (
     PARAMETER_CONFIDENCE,
     PARAMETER_PROVENANCE,

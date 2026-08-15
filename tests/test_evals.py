@@ -3,10 +3,10 @@ import re
 from pathlib import Path
 
 import yaml
-
-from evaluation.metrics import robustness, score
-from evaluation.runners import llm_robustness, model_registration
 from physearth import evals
+
+from evaluation.metrics import score
+from evaluation.runners import llm_robustness, model_registration
 
 
 def test_evaluation_snapshot_covers_every_committed_case_and_run():

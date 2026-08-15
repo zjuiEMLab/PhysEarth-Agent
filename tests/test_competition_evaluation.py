@@ -337,7 +337,7 @@ def test_llm_smoke_manifest_has_no_cross_provider_duplicates():
 
 def test_registry_contract_covers_every_discovered_model():
     runner = _load_runner("registry_contract")
-    from physearth.models import registry
+    from physearth import registry
 
     records = [runner.inspect_model(model) for model in registry.all_models().values()]
     assert records

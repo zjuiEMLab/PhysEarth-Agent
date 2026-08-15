@@ -3,17 +3,8 @@
 import json
 import time
 
-from physearth import (
-    approval,
-    audit,
-    budget,
-    harness,
-    prompt,
-    research,
-    tools,
-)
+from physearth import harness, prompt, research, tools
 from physearth import session as session_state
-from physearth import switches as switch_flags
 from physearth.agent import completion as _completion
 from physearth.agent.catalogue import CATALOGUE, new_session, new_state, resolve_model
 from physearth.agent.completion import _Completion, _tool_arguments
@@ -29,6 +20,8 @@ from physearth.agent.faults import _dead_for_today, _fault, _rate_limited, _upst
 from physearth.agent.messages import _compact_messages, _messages, transcript
 from physearth.agent.results import _allowed_marker_correction, _record_tool_result
 from physearth.agent.trace import _event
+from physearth.harness import approval, audit, budget
+from physearth.harness import switches as switch_flags
 
 
 def _requests_tool_bypass(question):

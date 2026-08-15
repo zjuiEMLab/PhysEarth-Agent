@@ -2,9 +2,10 @@
 
 import json
 
+from physearth.api import budget
+
 from frontend.views.parts import _disclosure, _kv, _meter
 from frontend.views.text import _e, _mono, _svg
-from physearth.api import budget
 
 BADGES = {
     "model_call": ("badge--mono", "MODEL CALL", "step-card--model"),

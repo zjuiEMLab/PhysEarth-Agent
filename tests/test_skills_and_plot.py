@@ -8,8 +8,8 @@ mode of the tool that already knows what a chart of them would look like.
 from pathlib import Path
 
 import pytest
-
-from physearth import harness, knowledge, plotting, prompt, session, tools
+from physearth import harness, plotting, prompt, session, tools
+from physearth.corpus import knowledge
 
 
 def _own():

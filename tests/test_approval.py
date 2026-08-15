@@ -3,7 +3,8 @@
 import threading
 import time
 
-from physearth import agent, approval, session, tools
+from physearth import agent, session, tools
+from physearth.harness import approval
 
 
 def _asking():
