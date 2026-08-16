@@ -104,10 +104,12 @@ def capability_check(
     resource_gaps = []
     resolved_names = []
     for name in refs:
-        # A paper writes SMRT and the card says `smrt`. Resolving that spelling is not
-        # the same as guessing: only case and separators are ignored, so MEMLS and
-        # DMRT-ML still report as unregistered, which is what this check exists to say.
-        entry, canonical = registry.resolve(name, session)
+        # A paper writes SMRT and the card says `smrt`; it writes SMRT IBA and the card
+        # says electromagnetic_model: iba. Resolving either is not guessing: the spelling
+        # match ignores only case and separators, and the formulation must be a value the
+        # card actually declares. MEMLS and DMRT-QMS still report as unregistered, which
+        # is what this check exists to say.
+        entry, canonical, configuration = registry.resolve_configuration(name, session)
         if entry is None:
             unavailable.append({
                 "model": name,
@@ -116,7 +118,13 @@ def capability_check(
             })
             continue
         if canonical != name:
-            resolved_names.append({"asked": name, "registered": canonical})
+            resolved_names.append({
+                "asked": name,
+                "registered": canonical,
+                # Named so a reader can object: this says which configuration of the
+                # registered model the paper's name was taken to mean.
+                "configuration": configuration or None,
+            })
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
         instruction = (context.get("instructions") or {}).get(entry.name) or {}
@@ -139,6 +147,7 @@ def capability_check(
             "combinations": list(card.get("combinations") or []),
             "outputs": sorted((card.get("outputs") or {}).keys()),
             "source": "list_models + read_model_instruction",
+            "configuration": configuration or {},
         }
         if entry.runnable and not model_resources_missing:
             supported.append({**detail, "reference_model": True})

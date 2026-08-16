@@ -298,6 +298,54 @@ def resolve(name, session=None):
     return model, canonical
 
 
+def resolve_configuration(name, session=None):
+    """Find a model named as a formulation of itself: "SMRT IBA", "SMRT QCA short range".
+
+    A paper names the theory, not the package. SMRT IBA and SMRT QCA short range are one
+    registered model with `electromagnetic_model` set two ways -- the card says so, in the
+    declared enum. Treating them as unregistered models made the capability check report
+    that smrt "is not an equivalent implementation of SMRT IBA", which is exactly backwards:
+    it is that implementation, configured.
+
+    Returns (model, canonical_name, {parameter: value}) or (None, None, {}).
+
+    As narrow as `resolve`. The prefix must resolve to a registered model, the remainder
+    must match a value the card actually declares, and an exact enum match wins over a
+    contained one -- otherwise "IBA" could not choose between `iba` and `iba_original`.
+    Ambiguity is refused rather than guessed, and DMRT-QMS still resolves to nothing,
+    because no registered card declares it.
+    """
+    model, canonical = resolve(name, session)
+    if model is not None:
+        return model, canonical, {}
+    key = _spelling_key(name)
+    if not key:
+        return None, None, {}
+    for registered, candidate in sorted(all_models(session).items()):
+        prefix = _spelling_key(registered)
+        if not prefix or not key.startswith(prefix) or key == prefix:
+            continue
+        remainder = key[len(prefix):]
+        if not remainder:
+            continue
+        exact, contained = [], []
+        for parameter, spec in (candidate.card.get("parameters") or {}).items():
+            for value in (spec or {}).get("enum") or ():
+                value_key = _spelling_key(value)
+                if not value_key:
+                    continue
+                if value_key == remainder:
+                    exact.append((parameter, value))
+                elif remainder in value_key:
+                    contained.append((parameter, value))
+        chosen = exact or contained
+        if len(chosen) != 1:
+            continue
+        parameter, value = chosen[0]
+        return candidate, registered, {parameter: value}
+    return None, None, {}
+
+
 def names(runnable_only=False, session=None):
     session = session if session is not None else _ACTIVE_SESSION.get()
     return [n for n, m in all_models(session).items() if m.runnable or not runnable_only]

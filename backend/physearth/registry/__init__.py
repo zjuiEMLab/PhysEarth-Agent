@@ -23,6 +23,7 @@ from physearth.registry.loader import (
     names,
     register_directory,
     register_session_directory,
+    resolve_configuration,
     rejected,
     reload,
     resolve,
