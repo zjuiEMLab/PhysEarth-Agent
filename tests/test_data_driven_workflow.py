@@ -719,7 +719,17 @@ def test_reading_a_section_says_what_the_paper_figures_are_called():
     assert figures, "reading a section must say which figures the paper declares"
     ids = {figure["figure_id"] for figure in figures}
     assert "fig03" in ids
-    assert all(figure["caption"] for figure in figures), "an id with no caption cannot be chosen"
+    assert all(figure["title"] for figure in figures), "an id with no title cannot be chosen"
+
+    # Titles, not captions. A caption carries the figure's scientific content, and
+    # listing every one of them put figure 4's reference models -- DMRT-ML, DMRT-QMS --
+    # into the answer to a question about figure 3, where they do not belong.
+    import json as _json
+
+    payload = _json.dumps(result)
+    assert "DMRT-ML" not in payload and "DMRT-QMS" not in payload, (
+        "another figure's caption leaked into this section read"
+    )
 
     # and an id learned this way must actually open
     opened = literature.read_paper_figure("smrt-v1", sorted(ids)[2], _session=box)

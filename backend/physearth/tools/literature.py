@@ -81,15 +81,19 @@ def read_literature(slug, section_id=None, _session=None):
             "source": opened["source"],
             "text": opened["text"],
             "external_source_findings": opened["findings"],
-            # What this paper's figures are called. The reproduction workflow requires a
-            # figure target to carry a figure actually opened with read_paper_figure,
-            # and that tool takes a figure_id -- but nothing told the agent which ids
-            # exist, so it could only guess. It looped instead: read a section, propose,
-            # be refused for the missing figure evidence, read another section. Listing
-            # them here, at the moment the agent is deciding what to reproduce, is what
-            # makes the requirement satisfiable rather than merely stated.
+            # What this paper's figures are called, so a figure_id can be chosen: the
+            # reproduction workflow requires a figure target to carry a figure actually
+            # opened with read_paper_figure, and nothing else says which ids exist.
+            #
+            # Titles, not captions. Listing every caption put other figures' scientific
+            # content into the answer to a question about one section: reproducing
+            # figure 3, the agent read figure 4's caption -- "simulated by SMRT QCA,
+            # SMRT QCA-CP, DMRT-ML and DMRT-QMS" -- and carried those two external
+            # models into figure 3's reference set, where they do not appear. A title
+            # is enough to choose; read_paper_figure returns the caption of the one
+            # actually chosen.
             "figures": [
-                {"figure_id": figure.get("id"), "caption": figure.get("caption", "")}
+                {"figure_id": figure.get("id"), "title": figure.get("title", "")}
                 for figure in (item.get("figures") or ())
                 if figure.get("id")
             ],
