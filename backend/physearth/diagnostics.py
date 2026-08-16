@@ -137,9 +137,23 @@ def network_probes(timeout=6.0):
 def smrt_warmup():
     entry = {"available": False}
     try:
-        from physearth.models.bundled.smrt.adapter import _ensure_smrt_importable
+        # The bundled adapters are content under models/ and are not importable as a
+        # package path. The registry loads each one from its directory, so ask the
+        # registry for smrt and then reach the module it loaded. Before the models moved
+        # this was `from physearth.models.bundled.smrt.adapter import ...`, which broke
+        # silently: the failure was caught below and written into the report as a field,
+        # so nothing failed loudly and no test noticed.
+        import sys
 
-        _ensure_smrt_importable()
+        from physearth import registry
+
+        if registry.get("smrt") is None:
+            raise RuntimeError("smrt is not registered")
+        adapter = sys.modules.get("physearth_model_smrt_adapter")
+        ensure = getattr(adapter, "_ensure_smrt_importable", None)
+        if ensure is None:
+            raise RuntimeError("the smrt adapter did not expose its import guard")
+        ensure()
         from smrt import make_model, make_snowpack, sensor_list
     except Exception as exc:
         entry["error"] = "%s: %s" % (type(exc).__name__, exc)

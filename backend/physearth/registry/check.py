@@ -1,17 +1,16 @@
-"""Validate a model card before relying on it: python -m physearth.models.check <dir>"""
+"""Validate a model card before relying on it: python -m physearth.registry.check <dir>"""
 
 import sys
 from pathlib import Path
 
 import yaml
 
-from physearth import registry
-from physearth.registry import contract
+from physearth.registry import contract, loader
 
 
 def main(argv):
     if len(argv) != 2:
-        print("usage: python -m physearth.models.check <model directory>")
+        print("usage: python -m physearth.registry.check <model directory>")
         return 2
 
     directory = Path(argv[1])
@@ -35,7 +34,7 @@ def main(argv):
 
     print("card is valid: %s v%s (tier %s)" % (card["name"], card["version"], card["tier"]))
     try:
-        model = registry._load_directory(directory, "check")
+        model = loader._load_directory(directory, "check")
     except contract.DeclarationError as exc:
         print("the card is valid but the adapter could not be loaded: %s" % exc)
         return 1

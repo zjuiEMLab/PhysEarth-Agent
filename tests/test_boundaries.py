@@ -72,3 +72,51 @@ def test_the_root_entry_point_the_deployspec_names_still_exists():
     app = ROOT / "app.py"
     assert app.is_file()
     assert "frontend.studio" in app.read_text(encoding="utf-8")
+
+
+def test_no_module_still_refers_to_the_old_models_package_path():
+    """`physearth.models` became `physearth.registry`, and the cards moved out entirely.
+
+    diagnostics kept importing `physearth.models.bundled.smrt.adapter` after the move.
+    It failed inside a try/except that wrote the exception into a report field, so the
+    startup banner quietly said the SMRT warm-up was unavailable and nothing else
+    noticed. A stale import that cannot raise is worse than one that can.
+    """
+    offenders = []
+    for path in _sources(BACKEND) + _sources(FRONTEND):
+        for name in _imports(path):
+            # From the AST, not the text: a comment recording what the import used to be
+            # is history worth keeping, and only a real import can break.
+            if name == "physearth.models" or name.startswith("physearth.models."):
+                offenders.append("%s imports %s" % (path.relative_to(ROOT), name))
+    assert offenders == [], offenders
+
+
+def test_the_smrt_warm_up_actually_warms_up():
+    """The banner reports this, and a report field is not a test."""
+    from physearth import diagnostics
+
+    entry = diagnostics.smrt_warmup()
+    assert "physearth.models" not in str(entry.get("error") or ""), entry
+    assert entry.get("available") is True, entry
+
+
+def test_the_card_checker_runs_end_to_end():
+    """The command its own docstring documents has to work.
+
+    `registry._load_directory` moved into loader.py during the models/ -> registry/
+    rename, and the package __init__ re-exports only public names. So the checker printed
+    "card is valid" and then died on an AttributeError, one line further down, for every
+    model. Nothing imported it, so nothing noticed.
+    """
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "physearth.registry.check", "models/bundled/smrt"],
+        cwd=ROOT, capture_output=True, text=True, timeout=120,
+    )
+    assert result.returncode == 0, result.stderr[-400:]
+    assert "card is valid" in result.stdout
+    assert "adapter loaded" in result.stdout
+    assert "Traceback" not in result.stderr
