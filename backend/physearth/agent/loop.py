@@ -109,6 +109,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
     last_plan_error = ""
     last_plan_problems = []
     forced_tool_name = None
+    # A turn that reaches the review gate without having called research_plan has not
+    # acted on what the user asked; see the gate below.
+    plan_tool_called = False
+    revision_forced = False
     segments = []
 
     allowed, message = budget.acquire()
@@ -376,6 +380,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
             )
             for call, arguments, _canonical, repair_note in parsed_calls:
                 name = call["name"]
+                if name == "research_plan":
+                    plan_tool_called = True
                 success_signature = "%s:%s" % (
                     name,
                     json.dumps(arguments, sort_keys=True, ensure_ascii=False),
@@ -868,6 +874,38 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 "pseudo_preview": "Click one of the named chart options inside Research review; confirming the plan again does not select a chart.",
                 "chart_selected": "Click Approve execution to authorize the registered physical-model run.",
             }.get(phase, "Use the active control in Research review to continue.")
+            # The gate exists so a fluent literature paragraph is never mistaken for a
+            # reproduced result. But it also caught the turn where the user had just
+            # described the changes they wanted: the agent answered in prose, the gate
+            # replaced it with "describe the changes you want in Conversation", and the
+            # revision was lost. So a review phase gets one forced attempt at
+            # research_plan first, and only a turn that still will not call it is paused.
+            if phase in ("plan_review", "plan_approved") and not plan_tool_called and not revision_forced:
+                revision_forced = True
+                forced_tool_name = "research_plan"
+                events.append(
+                    _event(
+                        "research_block",
+                        rule="revision_required",
+                        detail=(
+                            "The turn reached the review gate without calling research_plan. "
+                            "Submit the requested change as revise_plan, or say why it cannot "
+                            "be made."
+                        ),
+                    )
+                )
+                messages.append({"role": "assistant", "content": completion.content or ""})
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Apply that as a revision: call research_plan with "
+                        "action=revise_plan and only the fields that change. If nothing "
+                        "should change, say so plainly instead."
+                    ),
+                })
+                state["phase"] = "calling_model"
+                yield transcript(segments), events, state
+                continue
             answer = (
                 "Research is paused at the human-review stage (%s). No formal physical result "
                 "has been computed yet. %s"

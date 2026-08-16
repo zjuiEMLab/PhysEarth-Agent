@@ -13,6 +13,7 @@ from physearth.research.charts import (
 )
 from physearth.research.common import _clean_list, _fail, _needs, _public
 from physearth.research.coverage import _target_coverage
+from physearth.research import evidence
 from physearth.research.evidence import _evidence_plan_problems, _evidence_problem_summary
 from physearth.research.mapping import _is_paper_context_problem
 from physearth.research.metadata import _repair_reproduction_metadata
@@ -346,7 +347,11 @@ def propose(
         "limitations": limitations,
         "baseline_run_id": baseline_run_id,
         "automatic_repairs": automatic_repairs,
-        "validation_warnings": list(context_warnings) + nonblocking_evidence_warnings,
+        "validation_warnings": (
+            list(context_warnings)
+            + nonblocking_evidence_warnings
+            + evidence.legend_coverage_warnings(session, reproduction_targets, runs)
+        ),
         "capability_gaps": _capability_gaps(question, session),
         "capability_review": copy.deepcopy(session.get("capability_review") or {}),
         "reference_sections": sorted(session.get("sections_read") or ()),

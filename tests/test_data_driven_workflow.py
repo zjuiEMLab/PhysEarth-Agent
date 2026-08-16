@@ -724,3 +724,35 @@ def test_reading_a_section_says_what_the_paper_figures_are_called():
     # and an id learned this way must actually open
     opened = literature.read_paper_figure("smrt-v1", sorted(ids)[2], _session=box)
     assert opened["status"] == "success", opened
+
+
+def test_a_plan_thinner_than_the_figure_legend_is_flagged_at_review():
+    """A figure is reproduced from its axes, labels and legend, not its caption alone.
+
+    The legend says how many curves are on the figure, and the inspection already
+    extracts it. A plan with one run against a legend of six is reproducing one line of
+    that figure. Advisory, not blocking: a legend entry is not always a run.
+    """
+    from physearth import session as session_state
+    from physearth.research import evidence
+    from physearth.tools import literature
+
+    box = session_state.new_session("m")
+    literature.read_literature("smrt-v1", "03", _session=box)
+    inspected = literature.inspect_paper_figure(
+        "smrt-v1", "fig03", focus="axes and legend", _session=box
+    )
+    reference = inspected["citations"][0]
+    legend = (inspected["data"].get("visual_observations") or {}).get("legend") or []
+    assert len(legend) > 1, "this figure needs a multi-series legend for the test to mean anything"
+
+    thin = [{"id": "t1", "status": "planned", "evidence_refs": [reference], "run_ids": ["r1"]}]
+    warnings = evidence.legend_coverage_warnings(box, thin, [{"id": "r1"}])
+    assert len(warnings) == 1, warnings
+    assert "legend" in warnings[0] and legend[0] in warnings[0]
+
+    covered = [dict(thin[0], run_ids=["r%d" % n for n in range(len(legend) + 1)])]
+    assert evidence.legend_coverage_warnings(box, covered, []) == []
+
+    unavailable = [dict(thin[0], status="unavailable")]
+    assert evidence.legend_coverage_warnings(box, unavailable, []) == []

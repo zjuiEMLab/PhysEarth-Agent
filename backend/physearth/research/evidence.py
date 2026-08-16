@@ -272,3 +272,51 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
     if not outputs:
         problems.append({"field": "outputs", "source": "research_plan", "expected": "model outputs used to evaluate the target", "repair": "Declare the quantities/outputs that will be compared."})
     return problems
+
+def legend_coverage_warnings(session, targets, runs):
+    """Say when a figure's legend names more series than the plan has runs.
+
+    A figure is reproduced from its axes, its labels and its legend. The legend is what
+    says how many curves are on it -- the inspection already extracts it -- and a plan
+    with one run against a legend of five is not reproducing that figure, it is
+    reproducing one line of it.
+
+    Advisory rather than blocking. A legend entry is not always a run: some name a
+    measurement, a shaded band, or the same model at a second frequency already covered
+    by a sweep. So this is surfaced at review, where a human can see both lists and
+    decide, rather than refused where it would have to guess.
+    """
+    inspected = {
+        _normalise_evidence_ref(item.get("reference")): item
+        for item in _ledger_entries(session, "figure_inspection")
+        if item.get("reference")
+    }
+    if not inspected:
+        return []
+    warnings = []
+    for target in targets or ():
+        if target.get("status") in ("partial", "unavailable"):
+            continue
+        run_ids = [run_id for run_id in (target.get("run_ids") or ())]
+        for ref in target.get("evidence_refs") or ():
+            entry = inspected.get(_normalise_evidence_ref(ref))
+            if not entry:
+                continue
+            legend = [
+                str(item).strip()
+                for item in ((entry.get("visual_observations") or {}).get("legend") or ())
+                if str(item).strip()
+            ]
+            if len(legend) > max(len(run_ids), 1) and len(legend) > 1:
+                warnings.append(
+                    "target %s covers %d run(s) but the legend of %s names %d series: %s. "
+                    "Check whether each is a separate run before approving."
+                    % (
+                        target.get("id") or "target",
+                        len(run_ids),
+                        entry.get("reference"),
+                        len(legend),
+                        "; ".join(legend[:6]) + ("; ..." if len(legend) > 6 else ""),
+                    )
+                )
+    return warnings
