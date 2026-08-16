@@ -250,9 +250,25 @@ def research_plan(
                 "error": result.get("error") or result.get("summary"),
                 "data": dict(result.get("data") or {}),
             }
+            # Patch it, do not rewrite it. The draft above is kept precisely so the next
+            # attempt can be a delta: one traced turn spent 69 seconds re-authoring an
+            # entire plan to fill five missing fields of a single reproduction target,
+            # and the revise path does that same work in about 25. revise_plan merges
+            # `changes` over the retained draft, so only the fields the problems name
+            # need to be sent. Full validation still runs on the merged result, so a
+            # stale field elsewhere is caught rather than carried through.
+            fields = sorted({
+                str(problem.get("field") or "").split("[")[0].split(".")[0]
+                for problem in (result.get("data") or {}).get("problems") or []
+                if problem.get("field")
+            })
             result.setdefault("data", {})["recovery"] = (
-                "The rejected proposal is retained. Submit a corrected complete proposal; "
-                "research_plan(action='status') can retrieve its structured failure context."
+                "The rejected proposal is retained. Correct it with "
+                "research_plan(action='revise_plan', changes={...}) sending only the "
+                "fields the problems name%s -- the retained draft supplies the rest. "
+                "Submit a complete proposal again only if the plan has to change shape. "
+                "research_plan(action='status') retrieves the structured failure context."
+                % (" (%s)" % ", ".join(fields) if fields else "")
             )
         return result
 
