@@ -99,7 +99,7 @@ def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
 
 def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(monkeypatch):
     """All user-facing case starters share the same direct-tool approval route."""
-    from physearth import evals
+    from frontend.views import evaluation as evals
     from physearth import session as session_state
     from physearth.harness import approval
 
@@ -327,7 +327,7 @@ def test_guided_research_context_shows_live_capability_and_agent_paper_session()
 
 
 def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
-    from physearth import evals
+    from frontend.views import evaluation as evals
 
     from frontend import studio as app
 

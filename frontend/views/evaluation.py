@@ -1,4 +1,16 @@
-"""Read and render the committed evaluation evidence for the competition UI."""
+"""Read and render the committed evaluation evidence for the Evaluation tab.
+
+This is a view. It reads `evaluation/` -- the task set, the tier-0 results, the committed
+run records -- and renders them as HTML.
+
+It used to be `physearth.evals`, where it was the one backend module importing the
+top-level `evaluation/` tree. That tree is not part of the distribution, so the import had
+to be made lazy for an installed wheel to be importable at all. Here the dependency is
+ordinary: the frontend already runs from the repository.
+
+Not to be confused with `physearth.evaluation`, the session-scoped workbench for
+uploading and testing a model. Two names one letter apart, for two different jobs.
+"""
 
 import base64
 import html
@@ -8,9 +20,9 @@ from collections import defaultdict
 from functools import lru_cache
 
 import yaml
+from physearth.api import knowledge, paths
 
-from physearth import paths
-from physearth.corpus import knowledge
+from evaluation.metrics import score as scoring
 
 REPO = paths.root()
 EVALUATION = paths.evaluation()
@@ -239,12 +251,6 @@ def snapshot():
         if robustness_path.is_file()
         else None
     )
-    # evaluation/ is beside the package, not inside it, so it is absent from an installed
-    # wheel. Importing it here rather than at module scope keeps physearth importable in a
-    # deployment that ships only the distribution, and fails at the one place that needs
-    # the scorer instead of at `import physearth`.
-    from evaluation.metrics import score as scoring
-
     tasks = {task["id"]: task for suite in ("tier1", "probe") for task in _load_tasks(suite)}
     run_paths = sorted((RESULTS / "runs").glob("*.json"))
     runs = [json.loads(path.read_text(encoding="utf-8")) for path in run_paths]

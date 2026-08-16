@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from physearth import evals, harness, prompt, research, session, tools
+from frontend.views import evaluation as evals
+from physearth import harness, prompt, research, session, tools
 from physearth.corpus import live
 from physearth.ingest import jats
 

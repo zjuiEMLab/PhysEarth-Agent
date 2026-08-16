@@ -41,6 +41,10 @@ figure-inspection tests fail in a way that looks like a code defect but is not.
   `session.py`, `paths.py`, `plotting.py`, `api.py`.
 - `backend/physearth/api.py` — the declared surface between the two. The frontend imports this
   and nothing else from the package.
+- `frontend/views/evaluation.py` — renders the committed evidence under `evaluation/` for
+  the Evaluation tab. It is a view, not agent code; it was `physearth.evals` and was the
+  package's only dependency on the `evaluation/` tree. Not to be confused with
+  `backend/physearth/evaluation.py`, the session-scoped upload-and-test workbench.
 - `assets/` — shared, not frontend. `fonts/` is read by `frontend/theme.py` *and* by
   `backend/physearth/plotting.py`, which registers the same faces with matplotlib so a rendered
   figure carries the interface's type. `evaluation/` holds the architecture diagram
@@ -109,7 +113,8 @@ each green: the four oversized modules split into packages, the frontend lifted 
 package moved under `backend/`, the prompt text levelled into `prompts/`, and the models
 lifted into `models/`.
 
-The wheel ships `physearth/` only — 75 files, no models and no corpus. `knowledge/`,
+The wheel ships `physearth/` only — no models and no corpus, and since the evaluation
+view moved to the frontend, no dependency on the `evaluation/` tree either. `knowledge/`,
 `models/`, `prompts/`, `evaluation/`, `assets/` and `frontend/` stay in the repository, so
 an installed distribution needs `PHYSEARTH_ROOT` pointing at a
 checkout. Verify a packaging change by building and importing from a clean venv with a

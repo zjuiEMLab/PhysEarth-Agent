@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 import yaml
-from physearth import evals
+from frontend.views import evaluation as evals
 
 from evaluation.metrics import score
 from evaluation.runners import llm_robustness, model_registration

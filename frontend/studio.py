@@ -10,10 +10,11 @@ from physearth.api import (
     audit,
     config,
     diagnostics,
-    evals,
     evaluation,
     research,
 )
+
+from frontend.views import evaluation as evals
 
 from frontend import theme
 from frontend import views as render

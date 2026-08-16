@@ -168,7 +168,7 @@ def test_guided_reproduction_preflight_selects_research_mode_before_model_plan(m
         }
 
     monkeypatch.setattr(agent.tools, "call", fake_call)
-    from physearth import evals
+    from frontend.views import evaluation as evals
 
     answer, events, _ = agent.run(evals.guided_demo()["question"], session=box)
 
