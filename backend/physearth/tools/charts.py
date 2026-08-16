@@ -118,6 +118,24 @@ def plot(
     return _ok(summary, data, ui={"figure": figure})
 
 
+
+def _runs_still_missing(_session, requirement):
+    """Planned runs this chart draws that have not produced a result yet.
+
+    Only the runs the chart itself names. A plan may legitimately hold runs this chart
+    does not plot, and a target marked partial or unavailable is not waiting on anything.
+    """
+    chart = requirement.get("chart") or {}
+    wanted = [str(run_id).strip() for run_id in (chart.get("run_ids") or ()) if str(run_id).strip()]
+    if not wanted:
+        return []
+    drawn = {
+        str(item.get("run_id") or "").strip()
+        for item in requirement.get("series") or ()
+    }
+    return [run_id for run_id in wanted if run_id not in drawn]
+
+
 def plot_planned_chart(chart_id, action="render", _owner=None, _session=None):
     if action == "review":
         return _review_planned_figure(chart_id, _owner=_owner, _session=_session)
@@ -135,6 +153,24 @@ def plot_planned_chart(chart_id, action="render", _owner=None, _session=None):
             "data": {"chart_id": chart_id, "selected_chart_ids": ids},
             "citations": [], "qc": None, "ui": None,
             "error": "unknown planned chart_id",
+        }
+    # A chart drawn before its runs exist is a wrong chart. The loop-level gate already
+    # catches it, but a whole round trip later: the agent plotted four of six runs, the
+    # gate blocked, the two missing runs were forced, and the chart was drawn twice more.
+    # Refusing here, where the runs the chart names are already known, costs one tool
+    # call instead.
+    pending = _runs_still_missing(_session, requirement)
+    if pending:
+        return {
+            "status": "needs_input",
+            "summary": (
+                "Chart %s plots %d planned run(s) that have not run yet: %s. Run them with "
+                "run_planned_model first; a chart drawn now would be missing those series."
+                % (chart_id, len(pending), ", ".join(pending))
+            ),
+            "data": {"chart_id": chart_id, "missing_run_ids": pending},
+            "citations": [], "qc": None, "ui": None,
+            "error": "planned runs incomplete",
         }
     if not requirement["series"]:
         return {

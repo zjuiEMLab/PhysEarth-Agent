@@ -252,6 +252,18 @@ def stream(question, history=None, model=None, session=None, switches=None):
         # again with the exact error in context.
         forced_tool_name = None
 
+        # The research guideline is a precondition of proposing, not a judgement about
+        # the proposal: research_plan refuses outright until it has been read. Leaving
+        # that to be discovered on submission cost a whole authoring round trip -- the
+        # model wrote a complete plan, was refused for a two-second read, and wrote the
+        # plan again. Asked for here instead, from the second call onward: the first move
+        # of a turn stays the agent's own, which is what the no-progress gate expects.
+        if (
+            reproduction_preflight
+            and "research-planning" not in set(session.get("research_guidelines_read") or ())
+        ):
+            forced_tool_name = "read_research_guideline"
+
         session_state.bump(state, "model_calls")
         session_state.bump(state, "prompt_tokens", completion.prompt_tokens or 0)
         session_state.bump(state, "completion_tokens", completion.completion_tokens or 0)

@@ -5,7 +5,41 @@ model registered through the contract. Neither is a tool the agent can choose
 to skip: validation runs before the call and quality control runs after it.
 """
 
+import re
+
 from physearth.registry import contract
+
+
+def _spelling_key(value):
+    """How a value is spelled, ignoring only case and the separators people vary."""
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+
+def _near_miss(value, allowed):
+    """Name the legal values a rejected one is close to, when there are few enough.
+
+    A plan asked for `hard_spheres` where the card declares non_sticky_hard_spheres and
+    sticky_hard_spheres: the shared stem of two legal values. The message listed all six
+    and named neither, so the model guessed again and lost another round trip. This is
+    the same near-miss the model-name resolver already handles, one layer down.
+
+    Containment only, in either direction, and no edit distance -- a value that merely
+    looks similar is not a suggestion, it is a guess.
+    """
+    key = _spelling_key(value)
+    if not key:
+        return ""
+    close = [
+        option for option in allowed
+        if key and (key in _spelling_key(option) or _spelling_key(option) in key)
+    ]
+    if not close or len(close) == len(list(allowed)):
+        return ""
+    if len(close) == 1:
+        return ". Did you mean %s?" % close[0]
+    return ". Closest declared values: %s" % ", ".join(map(str, close))
+
+
 
 
 def _coerce(name, spec, value, problems):
@@ -77,7 +111,13 @@ def resolve(card, arguments, enforce=True):
 
         if param["type"] == "string" and param.get("enum") and value not in param["enum"]:
             problems.append(
-                "%s must be one of %s, got %r" % (name, ", ".join(map(str, param["enum"])), value)
+                "%s must be one of %s, got %r%s"
+                % (
+                    name,
+                    ", ".join(map(str, param["enum"])),
+                    value,
+                    _near_miss(value, param["enum"]),
+                )
             )
             if enforce:
                 continue

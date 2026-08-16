@@ -314,3 +314,44 @@ def test_the_tool_count_did_not_grow_for_either_increment():
         "register_github_model_repo",
         "research_plan",
     }
+
+
+# --- three refusals that used to cost a round trip each --------------------------------
+
+
+def test_an_enum_near_miss_names_the_values_it_is_close_to():
+    """`hard_spheres` is the shared stem of two legal values; the message named neither.
+
+    It listed all six declared values, so the model guessed again and lost another round
+    trip. The same near-miss the model-name resolver already handles, one layer down.
+    """
+    from physearth.harness import validation
+
+    hint = validation._near_miss(
+        "hard_spheres",
+        ["exponential", "sticky_hard_spheres", "non_sticky_hard_spheres", "independent_sphere"],
+    )
+    assert "sticky_hard_spheres" in hint and "non_sticky_hard_spheres" in hint
+
+    assert "Did you mean exponential?" in validation._near_miss("exponentia", ["exponential", "gaussian"])
+    assert validation._near_miss("zzz", ["exponential", "gaussian"]) == ""
+    # a value close to everything says nothing: that is a list, not a suggestion
+    assert validation._near_miss("s", ["s_one", "s_two"]) == ""
+
+
+def test_a_chart_is_refused_while_its_runs_are_outstanding():
+    """Drawing before the runs exist produced a wrong chart, then two redraws."""
+    from physearth.tools import charts
+
+    requirement = {
+        "chart": {"id": "c1", "run_ids": ["r1", "r2", "r3"]},
+        "series": [{"run_id": "r1"}, {"run_id": "r2"}],
+    }
+    missing = charts._runs_still_missing(None, requirement)
+    assert missing == ["r3"]
+
+    complete = {**requirement, "series": [{"run_id": "r%d" % n} for n in (1, 2, 3)]}
+    assert charts._runs_still_missing(None, complete) == []
+
+    # a chart that names no runs is not waiting on any
+    assert charts._runs_still_missing(None, {"chart": {"id": "c2"}, "series": []}) == []

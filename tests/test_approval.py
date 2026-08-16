@@ -581,3 +581,53 @@ def test_the_approval_bar_appears_only_while_something_waits():
     approval.decide(box, "approve")
     approval.wait(box, timeout=1.0)
     assert "hidden" in render.approval_bar(box)
+
+
+def test_the_research_guideline_is_asked_for_before_the_plan_is_authored(monkeypatch):
+    """A precondition should not be discovered by submitting a plan and being refused.
+
+    research_plan refuses outright until the guideline has been read, and that was
+    discovered on submission: the model wrote a complete plan, was refused for a
+    two-second read, and wrote the plan again. Measured at 64 seconds on one turn, with
+    the guideline finally read on the ninth call.
+
+    The first call of the turn stays unconstrained -- the no-progress gate depends on the
+    agent getting one free move -- so the request lands on the second.
+    """
+    box = _asking()
+    box["research_required"] = True
+    script = [
+        [_call_chunk("list_literature", "{}")],
+        [_Chunk(_Delta(content="Now I will plan."))],
+    ]
+    client, _sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+
+    agent.run("Reproduce figure 3 of the SMRT paper", session=box)
+
+    assert client.tool_choices[0] == "auto", "the agent's first move is its own"
+    assert client.tool_choices[1] == {
+        "type": "function",
+        "function": {"name": "read_research_guideline"},
+    }, client.tool_choices[:2]
+
+
+def test_a_guideline_already_read_is_not_asked_for_again(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    box["research_guidelines_read"] = {"research-planning"}
+    script = [
+        [_call_chunk("list_literature", "{}")],
+        [_Chunk(_Delta(content="Still thinking."))],
+    ]
+    client, _sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+
+    agent.run("Reproduce figure 3 of the SMRT paper", session=box)
+
+    forced = [
+        choice for choice in client.tool_choices
+        if isinstance(choice, dict)
+        and choice.get("function", {}).get("name") == "read_research_guideline"
+    ]
+    assert forced == [], "the guideline was already read"
