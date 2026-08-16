@@ -15,8 +15,13 @@ def _same_model(left, right, session=None):
     left, right = str(left or "").strip(), str(right or "").strip()
     if left == right:
         return True
-    left_entry, left_name = registry.resolve(left, session)
-    right_entry, right_name = registry.resolve(right, session)
+    # Through resolve_configuration, not resolve: a target's reference model is the
+    # paper's name for a formulation -- DMRT-QCA, IBA -- and the run that answers it is
+    # the registered model configured that way. Comparing with plain resolution meant
+    # `smrt` never matched `DMRT-QCA`, so a plan covering a figure was told, five times
+    # running, that its runs did not cover it.
+    left_entry, left_name, _cfg, _opts = registry.resolve_configuration(left, session)
+    right_entry, right_name, _rcfg, _ropts = registry.resolve_configuration(right, session)
     if left_entry is None or right_entry is None:
         return False
     return left_name == right_name

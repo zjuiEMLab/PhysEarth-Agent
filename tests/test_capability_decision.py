@@ -332,3 +332,27 @@ def test_a_rejected_proposal_survives_a_mixed_problem_list():
     if problems:
         kinds = {type(problem).__name__ for problem in problems}
         assert kinds, "the refusal recorded no problems at all"
+
+
+def test_a_run_covers_a_target_named_by_the_paper_formulation():
+    """The target names the theory; the run names the model configured that way.
+
+    A figure-4 plan declared reference_models ['IBA', 'DMRT-QCA', 'DMRT-QCAP'] -- the
+    paper's names -- and ran smrt. Coverage compared through plain resolution, which
+    cannot see a formulation, so it reported that the run did not cover the target. Five
+    identical refusals later the turn was stopped for no progress.
+    """
+    from physearth.research.coverage import _target_coverage
+
+    targets = [{
+        "id": "t1", "status": "planned", "run_ids": ["r1"], "chart_ids": ["c1"],
+        "reference_models": ["IBA", "DMRT-QCA", "DMRT-QCAP"], "requested_outputs": [],
+    }]
+    runs = [{"id": "r1", "model": "smrt", "parameters": {}}]
+    problems, _, _ = _target_coverage(targets, runs, [{"id": "c1"}])
+    assert problems == [], problems
+
+    # and a model no card declares is still uncovered
+    unregistered = [dict(targets[0], reference_models=["DMRT-ML"])]
+    still = _target_coverage(unregistered, runs, [{"id": "c1"}])[0]
+    assert any("DMRT-ML" in problem for problem in still), still
