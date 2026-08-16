@@ -52,6 +52,19 @@ def _disclosure(key, label, text):
     )
 
 
+def _disclosure_markup(key, label, markup):
+    """Like `_disclosure`, for a body that is already rendered and already escaped.
+
+    The plain one escapes its text into a <pre>, which is right for a JSON blob and
+    wrong for a block of cards that were each escaped as they were built.
+    """
+    return (
+        "<details class='disclosure disclosure--markup' data-key='%s'>"
+        "<summary>%s</summary><div class='disclosure__body'>%s</div></details>"
+        % (_e(key), _e(label), markup)
+    )
+
+
 def _meter(label, value, cap, tone="", note=""):
     pct = 0 if not cap else min(100, round(100.0 * value / cap))
     cap_label = cap if cap else "∞"

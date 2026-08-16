@@ -4332,3 +4332,81 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   font-size: 13px;
   line-height: 1.45;
 }
+
+/* ---- Run trace: routine steps collapse, gates stay open --------------------
+   A research turn produces forty-odd events, of which two or three are things a
+   human is being asked to act on. Those keep the full card. The rest render as one
+   row, and consecutive rows of the same kind fold into a counted group. Nothing is
+   hidden: every step is one click from where it always was. */
+
+.step-card--row {
+  padding: 7px 13px 7px 15px;
+  margin-bottom: 5px;
+  background: var(--paper-2, var(--paper));
+}
+
+.step-card--row .step-card__head {
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
+.step-card__line--inline {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.step-card--row > .disclosure {
+  margin: 6px 0 0;
+}
+
+.step-card--group {
+  padding: 0;
+  margin-bottom: 5px;
+  overflow: hidden;
+}
+
+.step-card--group > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 7px 13px 7px 15px;
+  margin: 0;
+  align-items: center;
+}
+
+.step-card--group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.step-card--group > summary::after {
+  content: "▸";
+  margin-left: auto;
+  opacity: 0.5;
+  font-size: 0.8em;
+  flex: none;
+}
+
+.step-card--group[open] > summary::after {
+  content: "▾";
+}
+
+.step-card--group > summary:hover {
+  background: var(--line-soft, rgba(0, 0, 0, 0.02));
+}
+
+.step-card__group-body {
+  padding: 0 8px 6px 8px;
+  border-top: 1px solid var(--line);
+}
+
+.step-card__group-body .step-card--row {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+.disclosure--markup > .disclosure__body {
+  padding-top: 6px;
+}

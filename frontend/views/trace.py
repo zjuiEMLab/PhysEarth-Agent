@@ -4,7 +4,7 @@ import json
 
 from physearth.api import budget
 
-from frontend.views.parts import _disclosure, _kv, _meter
+from frontend.views.parts import _disclosure, _disclosure_markup, _kv, _meter
 from frontend.views.text import _e, _mono, _svg
 
 BADGES = {
@@ -229,6 +229,160 @@ def _event_card(event, index):
     )
 
 
+# The steps that are the machine doing its job. They stay in the trace -- nothing is
+# hidden, and every one of them is one click away -- but they no longer compete for
+# attention with the moments a human is being asked to act on. Everything not listed
+# here renders expanded: the refusals, the gates, the boundary flags, the upstream
+# faults. `harness_pass` is here because a check that passed is reassurance, not news;
+# the collapsed row still counts them.
+ROUTINE_KINDS = frozenset(
+    {"model_call", "tool_call", "tool_start", "harness_pass", "literature_tier"}
+)
+
+
+def _step_line(event):
+    """One routine step, in one line."""
+    kind = event["kind"]
+    if kind == "model_call":
+        return "%s prompt, %s completion tokens" % (
+            event.get("prompt_tokens") or "?",
+            event.get("completion_tokens") or "?",
+        )
+    return str(event.get("summary") or event.get("detail") or "").strip()
+
+
+def _routine_detail(event, index):
+    """What is left of a routine step once its one line is already on the row.
+
+    Not `_event_body`: that opens with the same summary the row now carries inline, and
+    wraps the arguments in a disclosure of their own. Repeating the line and nesting the
+    disclosure made the collapsed trace larger than the expanded one it replaced.
+    """
+    kind = event["kind"]
+    if kind == "model_call":
+        rows = [
+            (
+                "tokens",
+                "%s in / %s out"
+                % (event.get("prompt_tokens") or "?", event.get("completion_tokens") or "?"),
+                "",
+            )
+        ]
+        if event.get("reasoning_chars"):
+            rows.append(("reasoning", "%d characters, not shown" % event["reasoning_chars"], ""))
+        return _kv(rows)
+
+    if kind == "tool_call":
+        rows = []
+        data = event.get("data") or {}
+        if data.get("handle"):
+            rows.append(("handle", data["handle"], ""))
+        if event.get("qc") is not None:
+            rows.append(
+                (
+                    "qc",
+                    "declared units, range, missing values and axis alignment all checked",
+                    "good" if event["qc"] else "bad",
+                )
+            )
+        arguments = event.get("arguments")
+        return "%s%s" % (
+            _kv(rows) if rows else "",
+            "<pre>%s</pre>" % _e(json.dumps(arguments, ensure_ascii=False, indent=1))
+            if arguments
+            else "",
+        )
+
+    if kind == "harness_pass":
+        markers = sorted(set(event.get("markers") or []))
+        if not markers:
+            return ""
+        return "<div class='marker-list'>%s</div>" % "".join(
+            "<span class='badge badge--mono'>%s</span>" % _e(m) for m in markers
+        )
+
+    if kind == "tool_start":
+        return ""
+    return _event_body(event, index)
+
+
+def _step_row(event, index):
+    """A routine step as a single row, with its detail behind a disclosure."""
+    badge_class, badge_text, _card = BADGES.get(
+        event["kind"], ("badge--mute", event["kind"].upper(), "")
+    )
+    name = _mono(event.get("name") or event.get("rule") or "")
+    right = ""
+    if event.get("elapsed_s") is not None:
+        right = "%.2fs" % event["elapsed_s"]
+    body = _routine_detail(event, index)
+    return (
+        "<div class='step-card step-card--row'><div class='step-card__head'>"
+        "<span class='step-card__n'>%02d</span>"
+        "<span class='badge %s'>%s</span>%s"
+        "<span class='step-card__line step-card__line--inline'>%s</span>"
+        "<span class='step-card__time'>%s</span></div>"
+        "%s</div>"
+        % (
+            index,
+            badge_class,
+            _e(badge_text),
+            name,
+            _e(_step_line(event)),
+            _e(right),
+            _disclosure_markup("step-%d" % index, "detail", body) if body else "",
+        )
+    )
+
+
+def _step_group(events, first_index):
+    """Consecutive steps of one kind, as a counted row that opens to the steps."""
+    if len(events) == 1:
+        return _step_row(events[0], first_index)
+    badge_class, badge_text, _card = BADGES.get(
+        events[0]["kind"], ("badge--mute", events[0]["kind"].upper(), "")
+    )
+    named = [str(e.get("name") or e.get("rule") or "").strip() for e in events]
+    trail = " → ".join(n for n in named if n) or "%d steps" % len(events)
+    inner = "".join(
+        _step_row(event, first_index + offset) for offset, event in enumerate(events)
+    )
+    return (
+        "<details class='step-card step-card--group'>"
+        "<summary class='step-card__head'>"
+        "<span class='step-card__n'>%02d</span>"
+        "<span class='badge %s'>%s ×%d</span>"
+        "<span class='step-card__line step-card__line--inline'>%s</span>"
+        "</summary><div class='step-card__group-body'>%s</div></details>"
+        % (first_index, badge_class, _e(badge_text), len(events), _e(trail), inner)
+    )
+
+
+def _grouped(events):
+    """Walk the trace, gathering consecutive same-kind routine steps.
+
+    Same-kind only. Grouping across kinds collapsed more, but the summary line then had
+    to describe a mixture and stopped being readable at a glance.
+    """
+    blocks, index, position = [], 0, 1
+    while index < len(events):
+        event = events[index]
+        if event["kind"] not in ROUTINE_KINDS:
+            blocks.append(_event_card(event, position))
+            index += 1
+            position += 1
+            continue
+        run = [event]
+        cursor = index + 1
+        while cursor < len(events) and events[cursor]["kind"] == event["kind"]:
+            run.append(events[cursor])
+            cursor += 1
+        blocks.append(_step_group(run, position))
+        position += len(run)
+        index = cursor
+    return "".join(blocks)
+
+
 def _trace_metrics(state):
     used, cap = budget.used()
     session = state.get("session") or state
@@ -281,7 +435,7 @@ def trace(events, state, running=False, include_footer=True):
             "refusal appears here as it happens.</div></div>"
         )
     else:
-        body = "".join(_event_card(event, n) for n, event in enumerate(events, 1))
+        body = _grouped(events)
         if running:
             body += (
                 "<div class='step-card step-card--thinking' style='display:block'>"
