@@ -676,6 +676,28 @@ function peBoot() {
   });
   observer.observe(app, { childList: true, subtree: true });
 
+  /* ---------- suggested next step ----------
+     The server renders a suggestion onto the conversation head when the session is at a
+     point where the next move is a sentence. Fill it in only when the composer is empty
+     and not focused: the box may already hold the next question, typed while the last
+     one was still running, and that is not ours to overwrite. */
+  var lastSuggestion = "";
+  function offerNextStep() {
+    var carrier = document.querySelector("[data-next-step]");
+    var suggestion = carrier ? carrier.getAttribute("data-next-step") : "";
+    if (!suggestion || suggestion === lastSuggestion) return;
+    var box = textarea();
+    if (!box || box.value.trim() || box === document.activeElement) return;
+    var proto = window.HTMLTextAreaElement.prototype;
+    var setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+    setter.call(box, suggestion);
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    box.selectionStart = box.selectionEnd = suggestion.length;
+    lastSuggestion = suggestion;
+  }
+  observer.observe(app, { childList: true, subtree: true });
+  setInterval(offerNextStep, 400);
+
   /* The model bridge is offscreen but still an editable textbox in the tab order.
      Keyboard users tabbing through the composer would land in an invisible field. */
   function silenceBridge() {

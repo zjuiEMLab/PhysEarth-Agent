@@ -322,6 +322,104 @@ def _rejected_card(item):
     )
 
 
+
+def _plan_table(headers, rows):
+    if not rows:
+        return ""
+    head = "".join("<th>%s</th>" % _e(h) for h in headers)
+    body = "".join(
+        "<tr>%s</tr>" % "".join("<td>%s</td>" % _e(cell) for cell in row) for row in rows
+    )
+    return (
+        "<div class='plan-table'><table class='table'><thead><tr>%s</tr></thead>"
+        "<tbody>%s</tbody></table></div>" % (head, body)
+    )
+
+
+def _plan_pane(session):
+    """The research plan as a document, because a chat message cannot hold a table.
+
+    The plan is a matrix -- runs by parameters, targets by coverage -- and the model was
+    being asked to render one in prose. It reads here instead, beside the evidence it
+    was built from.
+    """
+    project = session.get("research") or {}
+    plan = project.get("plan") or {}
+    if not plan:
+        return ""
+    parts = []
+    header = "<div class='plan-head'><b>%s</b><span class='badge badge--mono'>v%d</span>" % (
+        _e(plan.get("objective") or plan.get("question") or "Research plan"),
+        int(project.get("plan_version", 1)),
+    )
+    scope = plan.get("outcome_scope")
+    if scope:
+        header += "<span class='badge badge--%s'>%s scope</span>" % (
+            "warn" if scope == "partial" else "ok", _e(scope)
+        )
+    parts.append(header + "</div>")
+
+    targets = plan.get("reproduction_targets") or []
+    parts.append("<h4>Targets</h4>" + _plan_table(
+        ["id", "quantity", "status", "runs", "charts"],
+        [
+            [
+                t.get("id", ""), t.get("target_quantity", ""), t.get("status", "planned"),
+                ", ".join(t.get("run_ids") or []) or "-",
+                ", ".join(t.get("chart_ids") or []) or "-",
+            ]
+            for t in targets
+        ],
+    ) if targets else "")
+
+    runs = plan.get("runs") or []
+    parts.append("<h4>Runs</h4>" + _plan_table(
+        ["id", "model", "parameters"],
+        [
+            [
+                r.get("id", ""), r.get("model", ""),
+                ", ".join("%s=%s" % (k, v) for k, v in sorted((r.get("parameters") or {}).items()))
+                or "-",
+            ]
+            for r in runs
+        ],
+    ) if runs else "")
+
+    charts = plan.get("charts") or []
+    parts.append("<h4>Charts</h4>" + _plan_table(
+        ["id", "title", "x", "y", "from runs"],
+        [
+            [
+                c.get("id", ""), c.get("title", ""), c.get("x", ""),
+                ", ".join(c.get("y") or []) if isinstance(c.get("y"), list) else c.get("y", ""),
+                ", ".join(c.get("run_ids") or []) or "-",
+            ]
+            for c in charts
+        ],
+    ) if charts else "")
+
+    mapping = plan.get("parameter_mapping") or []
+    parts.append("<h4>Parameter mapping</h4>" + _plan_table(
+        ["paper name", "model input", "value", "provenance", "confidence"],
+        [
+            [
+                m.get("paper_name", ""), m.get("model_input", ""), m.get("value", ""),
+                m.get("provenance", ""), m.get("confidence", ""),
+            ]
+            for m in mapping
+        ],
+    ) if mapping else "")
+
+    for label, key in (("Assumptions", "assumptions"), ("Limitations", "limitations")):
+        items = plan.get(key) or []
+        if items:
+            parts.append(
+                "<h4>%s</h4><ul class='plan-list'>%s</ul>"
+                % (label, "".join("<li>%s</li>" % _e(i) for i in items))
+            )
+    return "".join(parts)
+
+
 def evidence(session=None, figures=None, sections=None, datasets=None):
     """Everything the conversation holds. Defaults come from the session, so a figure
     drawn in the first question is still on screen during the third."""
@@ -380,29 +478,41 @@ def evidence(session=None, figures=None, sections=None, datasets=None):
         "target='_blank' rel='noopener'>Read the tutorial</a>.</div>" % len(rows)
     )
 
-    def tab(index, key, icon, name, count):
-        return (
-            "<label class='tab' for='pe-tab-%s'>%s<span class='tab-name'>%s</span>"
-            "<span class='tab-count'>%d</span></label>" % (key, _svg(icon, "tab-icon"), name, count)
-        )
+    plan_pane = _plan_pane(session)
 
+    # Only the panes that have something in them. A tab that is always present and
+    # always empty teaches people to ignore the tabset; one that appears when the plan
+    # is generated is a signal in itself.
+    panes = []
+    if plan_pane:
+        panes.append((
+            "plan", "trace", "Plan",
+            len(((session.get("research") or {}).get("plan") or {}).get("runs") or []),
+            plan_pane,
+        ))
+    # Figures, Sources and Models stay. They are not empty on a fresh session: Sources
+    # lists the bundled corpus, Models the six registered ones, and the Figures pane
+    # carries the copy that tells a first visitor how a chart gets made. Only the plan
+    # is genuinely absent until it is generated, so only the plan is conditional.
+    panes.append(("figures", "figure", "Figures", len(figures), figures_pane))
+    panes.append(("sources", "sources", "Sources", len(sections) + len(datasets), sources_pane))
+    panes.append(("models", "models", "Models", len(rows), models_pane))
+
+    inputs = "".join(
+        "<input class='tab-input' type='radio' name='pe-evtab' id='pe-tab-%s'%s>"
+        % (key, " checked" if n == 0 else "")
+        for n, (key, _icon, _name, _count, _html) in enumerate(panes)
+    )
+    bar = "".join(
+        "<label class='tab' for='pe-tab-%s'>%s<span class='tab-name'>%s</span>"
+        "<span class='tab-count'>%d</span></label>" % (key, _svg(icon, "tab-icon"), name, count)
+        for key, icon, name, count, _html in panes
+    )
+    body = "".join(
+        "<div class='tab-pane'><div class='pane-scroll'>%s</div></div>" % html
+        for _key, _icon, _name, _count, html in panes
+    )
     return (
-        "<div class='tabset'>"
-        "<input class='tab-input' type='radio' name='pe-evtab' id='pe-tab-figures' checked>"
-        "<input class='tab-input' type='radio' name='pe-evtab' id='pe-tab-sources'>"
-        "<input class='tab-input' type='radio' name='pe-evtab' id='pe-tab-models'>"
-        "<div class='tabbar'>%s%s%s</div>"
-        "<div class='tab-panes'>"
-        "<div class='tab-pane'><div class='pane-scroll'>%s</div></div>"
-        "<div class='tab-pane'><div class='pane-scroll'>%s</div></div>"
-        "<div class='tab-pane'><div class='pane-scroll'>%s</div></div>"
-        "</div></div>"
-        % (
-            tab(1, "figures", "figure", "Figures", len(figures)),
-            tab(2, "sources", "sources", "Sources", len(sections) + len(datasets)),
-            tab(3, "models", "models", "Models", len(rows)),
-            figures_pane,
-            sources_pane,
-            models_pane,
-        )
+        "<div class='tabset tabset--%d'>%s<div class='tabbar'>%s</div>"
+        "<div class='tab-panes'>%s</div></div>" % (len(panes), inputs, bar, body)
     )

@@ -21,6 +21,7 @@ from frontend.views.context import (
 # The remaining names the single-module version exposed, kept reachable at the same
 # address so nothing outside this package has to know the split happened.
 from frontend.views.conversation import (
+    next_step,
     PLACEHOLDER,
     _message,
     _plan_run_rows,

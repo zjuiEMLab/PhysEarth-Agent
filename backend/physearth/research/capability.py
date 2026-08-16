@@ -12,6 +12,38 @@ def _capability_strings(values):
     ))
 
 
+def _scope_signature(unavailable, not_comparable, unavailable_outputs):
+    """Exactly what the user was asked to accept when they confirmed a partial scope."""
+    return {
+        "unavailable": sorted(
+            str(item.get("model") or "") for item in unavailable or ()
+        ),
+        "not_comparable": sorted(
+            "%s/%s" % (item.get("reference_model") or "", item.get("local_model") or "")
+            for item in not_comparable or ()
+        ),
+        "outputs": sorted(str(item) for item in unavailable_outputs or ()),
+    }
+
+
+def _within_confirmed_scope(signature, confirmed):
+    """True when nothing has become unavailable since the user decided.
+
+    A capability check is recomputed every time the agent calls it, and it used to reset
+    the decision each time: the user confirmed a partial scope, the agent checked again
+    before proposing, and the confirmation was gone, so the plan was refused and the same
+    question asked again. The decision stands until the scope actually widens -- and if a
+    reference model that was available has since become unavailable, that is a different
+    question and worth asking again.
+    """
+    if not confirmed:
+        return False
+    return all(
+        set(signature.get(key) or ()) <= set(confirmed.get(key) or ())
+        for key in ("unavailable", "not_comparable", "outputs")
+    )
+
+
 def capability_check(
     session,
     question="",
@@ -43,7 +75,17 @@ def capability_check(
                 "message": "Run the capability check before confirming a partial scope.",
             }
         report = dict(current)
-        report.update({"status": "confirmed", "user_decision": "partial"})
+        report.update({
+            "status": "confirmed",
+            "user_decision": "partial",
+            # What was accepted, so a later re-check can tell whether it is still the
+            # same question. Without this the decision is forgotten on the next check.
+            "confirmed_scope": _scope_signature(
+                current.get("unavailable"),
+                current.get("not_comparable"),
+                current.get("unavailable_outputs"),
+            ),
+        })
         if session is not None:
             session["capability_review"] = report
         return report
@@ -189,6 +231,17 @@ def capability_check(
         if resource_gaps
         else "ready"
     )
+    signature = _scope_signature(unavailable, not_comparable, unavailable_outputs)
+    previous = current or {}
+    confirmed_scope = previous.get("confirmed_scope")
+    decision = None
+    if (
+        status == "waiting_user"
+        and previous.get("user_decision") == "partial"
+        and _within_confirmed_scope(signature, confirmed_scope)
+    ):
+        status = "confirmed"
+        decision = "partial"
     report = {
         "status": status,
         "supported": supported,
@@ -206,7 +259,8 @@ def capability_check(
         "targets": _capability_strings(
             item.get("id") for item in (targets or ()) if isinstance(item, dict)
         ),
-        "user_decision": None,
+        "user_decision": decision,
+        "confirmed_scope": confirmed_scope if decision else None,
     }
     if session is not None:
         session["capability_review"] = report

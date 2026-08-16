@@ -55,12 +55,18 @@ def hero(model_id=None, running=False, status=""):
 
 
 def conversation_head(count, session=None, events=None, state=None):
+    # The suggestion rides on the head because the head is re-rendered on a phase
+    # change, which is exactly when the suggestion changes. ui.js reads the attribute
+    # and fills the composer only if it is empty and unfocused.
+    running = bool(state) and state.get("phase") not in (None, "done")
+    suggestion = "" if running else next_step(session, state)
     return (
-        "<div class='subpanel' style='padding-bottom:0'><div class='sec-head'>%s"
+        "<div class='subpanel' style='padding-bottom:0'%s><div class='sec-head'>%s"
         "<span class='sec-title'>Conversation</span>"
         "<span class='sec-count'>%d question%s</span></div></div>"
         "%s"
         % (
+            " data-next-step='%s'" % _e(suggestion) if suggestion else "",
             _svg("chat", "sec-icon"),
             count,
             "" if count == 1 else "s",
@@ -244,3 +250,38 @@ def live_result(answer, running=False):
     return "<div class='msg-group'>%s</div>" % _message(
         "physearth", answer, running=running
     )
+
+# What to type next, given where the session actually is. The gates themselves are
+# buttons in the review card -- this is for the moments where the next move is a
+# sentence, and the composer is empty because the turn just ended.
+NEXT_STEP = {
+    "completed": "Explain what this result does and does not establish, and what would "
+    "make it stronger.",
+    "approved": "Run the approved plan and report the result.",
+    "chart_selected": "Confirm the chart selection and continue.",
+    "pseudo_preview": "The preview looks right; continue with the plan.",
+    "plan_approved": "Show me the pseudo-data preview of the planned charts.",
+    "plan_review": "Revise the plan: ",
+}
+
+
+def next_step(session, state=None):
+    """A suggested next message, or "" when the next move is not a message.
+
+    Deliberately empty while a gate is open. If the interface is waiting for a decision
+    on an approval card, putting a sentence in the composer invites the user to type
+    past the thing that is actually blocking them.
+    """
+    session = session or {}
+    capability = session.get("capability_review") or {}
+    if capability.get("status") == "waiting_user":
+        return ""
+    project = session.get("research") or {}
+    phase = project.get("phase")
+    if phase in NEXT_STEP:
+        return NEXT_STEP[phase]
+    if session.get("research_required") and not project:
+        return "Propose a research plan for this question."
+    if session.get("turns"):
+        return ""
+    return ""
