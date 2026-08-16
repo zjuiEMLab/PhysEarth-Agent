@@ -355,7 +355,63 @@ def resolve_configuration(name, session=None):
             parameter, value = chosen[0]
             return candidate, registered, {parameter: value}, []
         return candidate, registered, {}, [{p: v} for p, v in chosen]
-    return None, None, {}, []
+
+    # No model name in front of it. A figure legend writes the theory alone -- "DMRT
+    # QCA-CP", "IBA" -- because the package is the whole paper's subject and goes without
+    # saying. Requiring the prefix meant every legend entry read back as an unregistered
+    # model, and then as something the model that declares it "is not an equivalent
+    # implementation of".
+    #
+    # Only when exactly one registered model declares a matching value. Two models
+    # offering the same formulation makes a bare name genuinely ambiguous, and a name no
+    # card declares -- DMRT-ML, DMRT-QMS -- still resolves to nothing, which is the whole
+    # point of the check.
+    bare = []
+    for registered, candidate in sorted(all_models(session).items()):
+        exact, contained, spanned = [], [], []
+        for parameter, spec in (candidate.card.get("parameters") or {}).items():
+            for value in (spec or {}).get("enum") or ():
+                value_key = _spelling_key(value)
+                if not value_key:
+                    continue
+                if value_key == key:
+                    exact.append((registered, candidate, parameter, value))
+                elif key in value_key:
+                    contained.append((registered, candidate, parameter, value))
+                elif value_key in key:
+                    # The name contains the declared value rather than the other way
+                    # round: a legend writes "Non-sticky hard spheres (DMRT QCA-CP)",
+                    # which is a microstructure and a theory in one string.
+                    spanned.append((registered, candidate, parameter, value))
+        bare.extend(exact or contained or spanned)
+    if len({item[0] for item in bare}) != 1:
+        return None, None, {}, []
+
+    exact_hits = [item for item in bare if _spelling_key(item[3]) == key]
+    hits = exact_hits or bare
+    registered, candidate = hits[0][0], hits[0][1]
+
+    # One value per parameter is a configuration, however many parameters it names. Two
+    # values for the same parameter is a choice the name did not make.
+    by_parameter = {}
+    for _r, _c, parameter, value in hits:
+        by_parameter.setdefault(parameter, []).append(value)
+    # The most specific declared value wins. `sticky_hard_spheres` is a substring of
+    # `non_sticky_hard_spheres`, so a legend naming the latter matched both; the longer
+    # one is the one the name actually spells.
+    for parameter, values in list(by_parameter.items()):
+        longest = max(len(_spelling_key(value)) for value in values)
+        by_parameter[parameter] = [
+            value for value in values if len(_spelling_key(value)) == longest
+        ]
+    if all(len(values) == 1 for values in by_parameter.values()):
+        return candidate, registered, {p: v[0] for p, v in by_parameter.items()}, []
+    if len(by_parameter) == 1:
+        parameter, values = next(iter(by_parameter.items()))
+        return candidate, registered, {}, [{parameter: value} for value in values]
+    return candidate, registered, {}, [
+        {parameter: value} for parameter, values in by_parameter.items() for value in values
+    ]
 
 
 def names(runnable_only=False, session=None):

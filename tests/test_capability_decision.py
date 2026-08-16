@@ -136,11 +136,17 @@ def test_smrt_formulations_are_supported_not_incomparable():
     assert unavailable == {"DMRT-QMS"}, unavailable
     incomparable = {item["reference_model"] for item in report["not_comparable"]}
     assert incomparable == {"DMRT-QMS"}, incomparable
+    # One row per model, carrying every configuration the paper's names asked for.
     configured = [
-        item["configuration"] for item in report["supported"] if item.get("configuration")
+        option
+        for item in report["supported"]
+        for option in (item.get("configurations") or [])
     ]
     assert {"electromagnetic_model": "iba"} in configured
     assert {"electromagnetic_model": "dmrt_qca_shortrange"} in configured
+    assert len([i for i in report["supported"] if i["model"] == "smrt"]) == 1, (
+        "one model listed once, however many of its formulations were asked for"
+    )
 
 
 def test_the_report_says_which_configuration_each_name_was_taken_to_mean():
@@ -235,3 +241,47 @@ def test_mapping_an_output_as_an_input_says_it_is_an_output():
     assert hits[0]["expected"] == "an input, not a declared output"
     assert "is an output of" in hits[0]["repair"]
     assert "outputs" in hits[0]["repair"]
+
+
+def test_a_figure_legend_resolves_entry_by_entry():
+    """A legend writes the theory without the package, and often two values at once.
+
+    Figure 3's legend is six SMRT series -- "Independent spheres (Rayleigh)",
+    "Non-sticky hard spheres (DMRT QCA-CP)" and so on. Requiring the model name in front
+    meant every one of them read back as an unregistered model, and then as something
+    smrt "is not an equivalent implementation of".
+    """
+    from physearth import registry
+
+    legend = [
+        ("Independent spheres (Rayleigh)",
+         {"microstructure_model": "independent_sphere", "electromagnetic_model": "rayleigh"}),
+        ("Independent spheres (IBA)",
+         {"microstructure_model": "independent_sphere", "electromagnetic_model": "iba"}),
+        ("Non-sticky hard spheres (IBA)",
+         {"microstructure_model": "non_sticky_hard_spheres", "electromagnetic_model": "iba"}),
+        ("Sticky hard spheres (IBA)",
+         {"microstructure_model": "sticky_hard_spheres", "electromagnetic_model": "iba"}),
+    ]
+    for name, expected in legend:
+        model, canonical, configuration, _options = registry.resolve_configuration(name)
+        assert canonical == "smrt", name
+        assert configuration == expected, (name, configuration)
+
+
+def test_the_more_specific_declared_value_wins():
+    """`sticky_hard_spheres` is a substring of `non_sticky_hard_spheres`."""
+    from physearth import registry
+
+    _m, _c, configuration, _o = registry.resolve_configuration("Non-sticky hard spheres")
+    assert configuration == {"microstructure_model": "non_sticky_hard_spheres"}
+
+
+def test_a_bare_name_no_card_declares_still_does_not_resolve():
+    """Dropping the prefix requirement must not turn every string into a model."""
+    from physearth import registry
+
+    for name in ("DMRT-ML", "DMRT-QMS", "MEMLS", "nonsense"):
+        model, canonical, configuration, options = registry.resolve_configuration(name)
+        assert model is None and canonical is None, name
+        assert configuration == {} and options == [], name

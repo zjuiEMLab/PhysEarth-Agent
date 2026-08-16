@@ -156,7 +156,32 @@ def capability_check(
             "configuration_options": options or [],
         }
         if entry.runnable and not model_resources_missing:
-            supported.append({**detail, "reference_model": True})
+            # One row per model, not one per paper name. Six legend entries naming six
+            # configurations of one model listed that model six times, with identical
+            # output lists, which reads as noise and hides the two names that actually
+            # did not resolve.
+            existing = next(
+                (
+                    item for item in supported
+                    if item.get("model") == entry.name and item.get("reference_model")
+                ),
+                None,
+            )
+            if existing is None:
+                supported.append({
+                    **detail,
+                    "reference_model": True,
+                    "configurations": [configuration] if configuration else [],
+                    "asked_as": [name],
+                })
+                continue
+            if configuration and configuration not in existing["configurations"]:
+                existing["configurations"].append(configuration)
+            if name not in existing["asked_as"]:
+                existing["asked_as"].append(name)
+            for option in options or ():
+                if option not in existing["configurations"]:
+                    existing["configurations"].append(option)
         elif not entry.runnable:
             unavailable.append({
                 **detail,
@@ -173,6 +198,10 @@ def capability_check(
             continue
         entry, canonical = registry.resolve(name, session)
         if entry is None:
+            continue
+        # Already reported as a reference model, under whatever the paper called it.
+        # Listing it a second time as a local candidate is the same model twice.
+        if any(item.get("model") == entry.name for item in supported):
             continue
         if canonical != name:
             resolved_names.append({"asked": name, "registered": canonical})
