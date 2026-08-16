@@ -307,20 +307,30 @@ def resolve_configuration(name, session=None):
     that smrt "is not an equivalent implementation of SMRT IBA", which is exactly backwards:
     it is that implementation, configured.
 
-    Returns (model, canonical_name, {parameter: value}) or (None, None, {}).
+    Returns (model, canonical_name, {parameter: value}, [{parameter: value}, ...]).
+    The fourth element is what the name could have meant when it did not pin one value;
+    it is empty when the configuration is decided. (None, None, {}, []) when nothing
+    matched.
 
-    As narrow as `resolve`. The prefix must resolve to a registered model, the remainder
-    must match a value the card actually declares, and an exact enum match wins over a
-    contained one -- otherwise "IBA" could not choose between `iba` and `iba_original`.
-    Ambiguity is refused rather than guessed, and DMRT-QMS still resolves to nothing,
-    because no registered card declares it.
+    As narrow as `resolve`. The prefix must resolve to a registered model and the
+    remainder must match a value the card actually declares; an exact match wins over a
+    contained one, so "IBA" chooses `iba` over `iba_original`.
+
+    An under-specified name still names its model. A paper writing "SMRT QCA" where the
+    card declares both dmrt_qca_shortrange and dmrt_qcacp_shortrange has not said which,
+    but it has certainly said SMRT -- reporting that as an unregistered model, and then
+    that smrt "is not an equivalent implementation" of it, was wrong twice over. The
+    options come back so the plan can pin one.
+
+    A remainder matching nothing declared still resolves to nothing: a name that merely
+    starts like a registered model is not that model.
     """
     model, canonical = resolve(name, session)
     if model is not None:
-        return model, canonical, {}
+        return model, canonical, {}, []
     key = _spelling_key(name)
     if not key:
-        return None, None, {}
+        return None, None, {}, []
     for registered, candidate in sorted(all_models(session).items()):
         prefix = _spelling_key(registered)
         if not prefix or not key.startswith(prefix) or key == prefix:
@@ -339,11 +349,13 @@ def resolve_configuration(name, session=None):
                 elif remainder in value_key:
                     contained.append((parameter, value))
         chosen = exact or contained
-        if len(chosen) != 1:
+        if not chosen:
             continue
-        parameter, value = chosen[0]
-        return candidate, registered, {parameter: value}
-    return None, None, {}
+        if len(chosen) == 1:
+            parameter, value = chosen[0]
+            return candidate, registered, {parameter: value}, []
+        return candidate, registered, {}, [{p: v} for p, v in chosen]
+    return None, None, {}, []
 
 
 def names(runnable_only=False, session=None):

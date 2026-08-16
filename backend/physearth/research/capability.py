@@ -109,7 +109,7 @@ def capability_check(
         # match ignores only case and separators, and the formulation must be a value the
         # card actually declares. MEMLS and DMRT-QMS still report as unregistered, which
         # is what this check exists to say.
-        entry, canonical, configuration = registry.resolve_configuration(name, session)
+        entry, canonical, configuration, options = registry.resolve_configuration(name, session)
         if entry is None:
             unavailable.append({
                 "model": name,
@@ -122,8 +122,10 @@ def capability_check(
                 "asked": name,
                 "registered": canonical,
                 # Named so a reader can object: this says which configuration of the
-                # registered model the paper's name was taken to mean.
+                # registered model the paper's name was taken to mean, or -- when the
+                # name did not pin one -- which configurations it could have meant.
                 "configuration": configuration or None,
+                "configuration_options": options or None,
             })
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
@@ -148,6 +150,10 @@ def capability_check(
             "outputs": sorted((card.get("outputs") or {}).keys()),
             "source": "list_models + read_model_instruction",
             "configuration": configuration or {},
+            # An under-specified name is still this model. The plan has to choose one of
+            # these before it runs; the check's job is to say so, not to call the model
+            # missing.
+            "configuration_options": options or [],
         }
         if entry.runnable and not model_resources_missing:
             supported.append({**detail, "reference_model": True})

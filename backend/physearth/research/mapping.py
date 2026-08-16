@@ -218,17 +218,45 @@ def _repair_parameter_mappings(
                     ]
                 if len(candidates) > 1:
                     candidate_values = ["%s.%s" % pair for pair in candidates]
+                # A name that is a declared *output* is the common mistake here, and it
+                # is a different mistake: the quantity is real and belongs to the plan,
+                # just under outputs rather than in the mapping. Saying only "not an
+                # input" sent the agent round the same loop five times, replacing one
+                # output name with another.
+                produced_by = sorted(
+                    model
+                    for model, entry in (
+                        (m, registry.resolve(m, session)[0]) for m in parameter_index
+                    )
+                    if entry is not None
+                    and _normalise_parameter_name(raw_name)
+                    in {
+                        _normalise_parameter_name(output)
+                        for output in (entry.card.get("outputs") or {})
+                    }
+                )
+                if produced_by:
+                    repair = (
+                        "%s is an output of %s, not an input. Record it under outputs, "
+                        "and map only the quantities the model is given."
+                        % (raw_name, ", ".join(produced_by))
+                    )
+                    expected = "an input, not a declared output"
+                elif len(candidates) > 1:
+                    repair = "Replace the alias with one exact input from list_models."
+                    expected = "an exact registered model input"
+                else:
+                    repair = (
+                        "Replace the unknown input with an exact parameter returned by list_models."
+                    )
+                    expected = "an exact registered model input"
                 problems.append({
                     "field": "parameter_mapping[%d].model_input" % index,
                     "source": "registered_model_declaration",
                     "actual": raw_name,
-                    "expected": "an exact registered model input",
+                    "expected": expected,
                     "allowed_values": candidate_values,
-                    "repair": (
-                        "Replace the alias with one exact input from list_models."
-                        if len(candidates) > 1
-                        else "Replace the unknown input with an exact parameter returned by list_models."
-                    ),
+                    "repair": repair,
                     "blocking": True,
                 })
 
