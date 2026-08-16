@@ -285,3 +285,50 @@ def test_a_bare_name_no_card_declares_still_does_not_resolve():
         model, canonical, configuration, options = registry.resolve_configuration(name)
         assert model is None and canonical is None, name
         assert configuration == {} and options == [], name
+
+
+def test_a_rejected_proposal_survives_a_mixed_problem_list():
+    """The problems are not all the same shape, and reading them as one shape crashed.
+
+    The evidence checks append dicts carrying a `field`; the coverage checks append plain
+    sentences. The recovery message names the fields to patch, and reading every entry as
+    a dict raised AttributeError: 'str' object has no attribute 'get' -- from inside the
+    handler for a rejected plan, so the whole turn died instead of returning the refusal
+    it was in the middle of explaining.
+    """
+    from physearth import registry, session as session_state
+    from physearth.research import capability
+    from physearth.tools import planning
+
+    box = session_state.new_session("m")
+    box["research_required"] = True
+    box["research_context"] = {"reproduction_case": "paper-reproduction"}
+    box["research_guidelines_read"] = {"research-planning"}
+    card = registry.get("smrt").card
+    box["models_inspected"] = {"smrt@%s" % card["version"]}
+    box["model_instructions_read"] = {"smrt@%s" % (card.get("instruction_version") or "1.0")}
+    capability.capability_check(
+        box, question="Reproduce figure 3", reference_models=["SMRT"], local_models=["smrt"]
+    )
+
+    result = planning.research_plan(
+        action="propose",
+        question="Reproduce figure 3 of the SMRT paper",
+        objective="Reproduce the sparse-medium comparison",
+        hypothesis="Scattering rises with density",
+        runs=[{"id": "r1", "model": "smrt", "parameters": {"frequency_ghz": 37.0}}],
+        charts=[{"id": "c1", "title": "ks", "x": "density_kg_m3",
+                 "y": ["ks_per_m"], "run_ids": ["r1"]}],
+        reproduction_targets=[{"id": "t1"}],   # thin on purpose: this must be refused
+        literature_evidence=["smrt-v1#03"],
+        _session=box,
+    )
+
+    assert result["status"] != "success"
+    recovery = (result.get("data") or {}).get("recovery") or ""
+    assert "revise_plan" in recovery, "a refusal must still say how to correct it"
+
+    problems = (result.get("data") or {}).get("problems") or []
+    if problems:
+        kinds = {type(problem).__name__ for problem in problems}
+        assert kinds, "the refusal recorded no problems at all"

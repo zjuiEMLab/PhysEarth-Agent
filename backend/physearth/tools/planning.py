@@ -257,10 +257,15 @@ def research_plan(
             # `changes` over the retained draft, so only the fields the problems name
             # need to be sent. Full validation still runs on the merged result, so a
             # stale field elsewhere is caught rather than carried through.
+            # The problem list is mixed: the evidence checks append dicts carrying a
+            # `field`, the coverage checks append plain sentences. Naming the fields is
+            # a convenience, so anything without one is simply skipped -- reading it as
+            # a dict regardless is what crashed the turn this message was meant to make
+            # cheaper.
             fields = sorted({
                 str(problem.get("field") or "").split("[")[0].split(".")[0]
                 for problem in (result.get("data") or {}).get("problems") or []
-                if problem.get("field")
+                if isinstance(problem, dict) and problem.get("field")
             })
             result.setdefault("data", {})["recovery"] = (
                 "The rejected proposal is retained. Correct it with "
