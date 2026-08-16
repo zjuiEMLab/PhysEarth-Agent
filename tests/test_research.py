@@ -49,6 +49,29 @@ def _proposal(box, question="How does snow density affect microwave scattering?"
     )
 
 
+def _with_capability_review(box, unavailable=("MEMLS",), reference=("SMRT",)):
+    """Record a reviewed capability finding, the way the agent's own check does.
+
+    Scope used to be inferred by scanning the question for names listed on a paper's
+    card. It is now whatever the registry could not account for, so a test that wants a
+    partial plan has to establish that finding first -- which is also what the agent
+    does, and what makes the finding auditable.
+    """
+    from physearth import registry
+    from physearth.research import capability
+
+    card = registry.get("smrt").card
+    box["models_inspected"] = {"smrt@%s" % card["version"]}
+    box["model_instructions_read"] = {"smrt@%s" % (card.get("instruction_version") or "1.0")}
+    capability.capability_check(
+        box,
+        question="reproduction",
+        reference_models=list(reference) + list(unavailable),
+        local_models=["smrt"],
+    )
+    return box
+
+
 def test_plan_is_supplied_by_the_agent_not_selected_from_benchmark_templates():
     box = session.new_session("m")
     result = _proposal(box, "A completely new soil-moisture research question")
@@ -129,12 +152,68 @@ def test_clean_list_accepts_provider_serialized_numbered_steps():
 
 
 
-def test_q2_named_external_models_are_recorded_as_capability_gaps():
-    gaps = research._capability_gaps(
+def test_an_unsupported_reference_model_is_decided_by_the_registry_not_a_word_list():
+    """Support is decided where it is declared, not by scanning the question for names.
+
+    Each bundled paper used to carry `model_names`, and a question containing one of them
+    raised it as a capability gap. That made a paper's card the authority on what is
+    supported, and it fired on a string match rather than on what the work needed -- so
+    reproducing figure 3 could raise figure 4's reference models. The field is gone.
+
+    The agent names the models a figure requires; the registry decides.
+    """
+    from physearth import registry
+    from physearth.research import capability
+
+    assert research._capability_gaps(
         "Can SMRT reproduce passive and active predictions from DMRT-ML and DMRT-QMS?"
+    ) == [], "nothing is inferred from the question text any more"
+
+    box = session.new_session("m")
+    card = registry.get("smrt").card
+    box["models_inspected"] = {"smrt@%s" % card["version"]}
+    box["model_instructions_read"] = {"smrt@%s" % (card.get("instruction_version") or "1.0")}
+    report = capability.capability_check(
+        box,
+        question="Reproduce the comparison",
+        reference_models=["DMRT-ML", "DMRT-QMS", "SMRT IBA"],
+        local_models=["smrt"],
     )
 
-    assert gaps == ["DMRT-ML", "DMRT-QMS"]
+    missing = {item["model"]: item for item in report["unavailable"]}
+    assert set(missing) == {"DMRT-ML", "DMRT-QMS"}, missing
+    assert all(item["model"] == "smrt" for item in report["supported"])
+
+
+def test_a_name_close_to_a_registered_one_is_reported_as_unsure():
+    """Close is not the same. Say so, and never resolve it.
+
+    DMRT-ML and DMRT-QMS are separate packages, but the card declares
+    dmrt_qca_shortrange, and a reader comparing the lists deserves to be told they
+    resemble each other rather than work it out and wonder which was meant.
+    """
+    from physearth import registry
+    from physearth.research import capability
+
+    box = session.new_session("m")
+    card = registry.get("smrt").card
+    box["models_inspected"] = {"smrt@%s" % card["version"]}
+    box["model_instructions_read"] = {"smrt@%s" % (card.get("instruction_version") or "1.0")}
+    report = capability.capability_check(
+        box,
+        question="Reproduce the comparison",
+        reference_models=["DMRT-QMS", "MEMLS"],
+        local_models=["smrt"],
+    )
+    by_name = {item["model"]: item for item in report["unavailable"]}
+
+    assert by_name["DMRT-QMS"]["certainty"] == "unsure"
+    assert any("dmrt" in value for value in by_name["DMRT-QMS"]["resembles"])
+    assert "not the same model" in by_name["DMRT-QMS"]["reason"]
+
+    # nothing in the registry looks like MEMLS, so there is nothing to be unsure about
+    assert by_name["MEMLS"]["certainty"] == "unregistered"
+    assert by_name["MEMLS"]["resembles"] == []
 
 
 def test_capability_checkpoint_pauses_before_an_unavailable_reference_plan():
@@ -1395,7 +1474,7 @@ def test_figure_qa_status_message_is_not_accepted_as_final_scientific_report():
 
 
 def test_named_literature_model_without_adapter_forces_partial_scope():
-    box = session.new_session("m")
+    box = _with_capability_review(session.new_session("m"))
     result = _proposal(
         box,
         "How closely do SMRT and MEMLS reproduce the same scattering coefficient?",
@@ -1441,7 +1520,7 @@ def test_coefficients_run_cannot_promise_a_brightness_temperature_chart():
 
 
 def test_safe_report_never_claims_unavailable_cross_model_result():
-    box = session.new_session("m")
+    box = _with_capability_review(session.new_session("m"))
     _proposal(box, "Compare SMRT and MEMLS scattering coefficients")
     planned = box["research"]["plan"]["runs"][0]
     box["successful_runs"].append(

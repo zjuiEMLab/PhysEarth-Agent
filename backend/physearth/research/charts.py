@@ -280,14 +280,18 @@ def _question_coverage_problems(question, runs, charts):
 
 
 def _capability_gaps(question, session=None):
-    """Named literature models that have no executable registry entry."""
-    text = _normal_name(question)
-    registered = {_normal_name(name) for name in registry.names(session=session)}
-    gaps = []
-    for item in knowledge.catalogue():
-        card = knowledge.card(item["slug"]) or {}
-        for alias in card.get("model_names") or []:
-            normalized = _normal_name(alias)
-            if normalized and normalized in text and normalized not in registered:
-                gaps.append(str(alias))
-    return sorted(set(gaps))
+    """Reference models the question names that no registered card can answer.
+
+    This used to scan a `model_names` list carried by each bundled paper -- a hardcoded
+    alias table -- and report an entry when the question text happened to contain it. Two
+    things were wrong with that. It fired on a string match against the question rather
+    than on what the work actually needed, so reproducing figure 3 could raise figure 4's
+    reference models; and it made a paper's card the authority on what is supported, when
+    the registry is.
+
+    Support is now decided where it is declared. The agent names the models the figure
+    requires, `research_capability_check` resolves each against the registered cards, and
+    a name no card can account for is reported as unavailable. Nothing is inferred from
+    the question text.
+    """
+    return []

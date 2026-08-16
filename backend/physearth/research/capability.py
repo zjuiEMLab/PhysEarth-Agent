@@ -1,5 +1,7 @@
 """Whether the registered models can answer the question that was asked."""
 
+import re
+
 from physearth import registry
 from physearth.research.charts import _capability_gaps
 
@@ -42,6 +44,31 @@ def _within_confirmed_scope(signature, confirmed):
         set(signature.get(key) or ()) <= set(confirmed.get(key) or ())
         for key in ("unavailable", "not_comparable", "outputs")
     )
+
+
+
+def _near_registered(name, session=None):
+    """Registered models and declared formulations a name resembles without being.
+
+    Token overlap only, and only whole tokens: `DMRT-QMS` shares `dmrt` with
+    `dmrt_qca_shortrange`, which is worth saying. It shares nothing with `iba`, which is
+    not. No edit distance -- a suggestion has to come from something the card declares.
+    """
+    tokens = {token for token in re.split(r"[^a-z0-9]+", str(name or "").lower()) if len(token) > 2}
+    if not tokens:
+        return []
+    close = []
+    for registered, model in sorted(registry.all_models(session).items()):
+        candidates = {registered}
+        for spec in (model.card.get("parameters") or {}).values():
+            candidates.update(str(value) for value in (spec or {}).get("enum") or ())
+        for candidate in candidates:
+            other = {
+                token for token in re.split(r"[^a-z0-9]+", candidate.lower()) if len(token) > 2
+            }
+            if tokens & other:
+                close.append(candidate)
+    return sorted(set(close))[:4]
 
 
 def capability_check(
@@ -111,9 +138,23 @@ def capability_check(
         # is what this check exists to say.
         entry, canonical, configuration, options = registry.resolve_configuration(name, session)
         if entry is None:
+            # Say when a name is merely close to something registered. `DMRT-QMS` and
+            # `DMRT-ML` are separate packages and belong in the unavailable list, but a
+            # reader deserves to know they resemble the declared dmrt_qca_shortrange
+            # rather than discover the resemblance themselves and wonder which was meant.
+            # Reported, not resolved: a name that is nearly a registered model is not
+            # that model, and this must never quietly upgrade one into the other.
+            near = _near_registered(name, session)
             unavailable.append({
                 "model": name,
-                "reason": "not registered in the current model registry",
+                "reason": (
+                    "not registered in the current model registry; resembles %s, which is "
+                    "not the same model -- confirm which was meant" % ", ".join(near)
+                    if near
+                    else "not registered in the current model registry"
+                ),
+                "resembles": near,
+                "certainty": "unsure" if near else "unregistered",
                 "source": "registered_model_registry",
             })
             continue

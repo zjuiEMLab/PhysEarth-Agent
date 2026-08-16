@@ -352,7 +352,14 @@ def propose(
             + nonblocking_evidence_warnings
             + evidence.legend_coverage_warnings(session, reproduction_targets, runs)
         ),
-        "capability_gaps": _capability_gaps(question, session),
+        # What the reviewed check could not account for, not what the question happened
+        # to mention. The registry decides support; this records its finding so the
+        # plan's scope follows the same authority.
+        "capability_gaps": [
+            str(item.get("model") or "")
+            for item in ((session.get("capability_review") or {}).get("unavailable") or ())
+            if item.get("model")
+        ],
         "capability_review": copy.deepcopy(session.get("capability_review") or {}),
         "reference_sections": sorted(session.get("sections_read") or ()),
         "reference_paper_sections": [paper_section] if paper_section else [],
