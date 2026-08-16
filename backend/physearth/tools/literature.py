@@ -81,6 +81,18 @@ def read_literature(slug, section_id=None, _session=None):
             "source": opened["source"],
             "text": opened["text"],
             "external_source_findings": opened["findings"],
+            # What this paper's figures are called. The reproduction workflow requires a
+            # figure target to carry a figure actually opened with read_paper_figure,
+            # and that tool takes a figure_id -- but nothing told the agent which ids
+            # exist, so it could only guess. It looped instead: read a section, propose,
+            # be refused for the missing figure evidence, read another section. Listing
+            # them here, at the moment the agent is deciding what to reproduce, is what
+            # makes the requirement satisfiable rather than merely stated.
+            "figures": [
+                {"figure_id": figure.get("id"), "caption": figure.get("caption", "")}
+                for figure in (item.get("figures") or ())
+                if figure.get("id")
+            ],
         },
         citations=[section["citation_key"]],
     )

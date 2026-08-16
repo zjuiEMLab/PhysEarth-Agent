@@ -700,3 +700,27 @@ def test_guideline_and_paper_figure_markers_are_checked_by_the_harness():
         "The source image is [figure:smrt-v1#fig03].",
         set(), paper_figures_read={"smrt-v1#fig03"},
     )["passed"]
+
+
+def test_reading_a_section_says_what_the_paper_figures_are_called():
+    """The reproduction gate demands a figure the agent opened; this makes that possible.
+
+    A figure target must carry a reference from read_paper_figure, and that tool takes a
+    figure_id. Nothing listed the ids, so the agent could only guess: it read a section,
+    proposed, was refused for missing figure evidence, read another section, and gave up
+    after five consecutive failures. The requirement was satisfiable only by luck.
+    """
+    from physearth import session as session_state
+    from physearth.tools import literature
+
+    box = session_state.new_session("m")
+    result = literature.read_literature("smrt-v1", "03", _session=box)
+    figures = result["data"]["figures"]
+    assert figures, "reading a section must say which figures the paper declares"
+    ids = {figure["figure_id"] for figure in figures}
+    assert "fig03" in ids
+    assert all(figure["caption"] for figure in figures), "an id with no caption cannot be chosen"
+
+    # and an id learned this way must actually open
+    opened = literature.read_paper_figure("smrt-v1", sorted(ids)[2], _session=box)
+    assert opened["status"] == "success", opened
