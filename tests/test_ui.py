@@ -1,10 +1,12 @@
 import re
+import urllib.request
 from pathlib import Path
 
 from physearth import agent, prompt
 from physearth.corpus import knowledge
 from physearth.harness import budget
 
+from frontend import studio
 from frontend import theme
 from frontend import views as render
 
@@ -886,3 +888,39 @@ def test_the_run_trace_is_rebuilt_per_checkpoint_not_per_token(monkeypatch):
         "the trace was rebuilt %d times for 3 tokens and %d times for 60: it still "
         "scales with content rather than with checkpoints" % (few, many)
     )
+
+
+def test_local_proxy_bypass_keeps_a_system_proxy_visible(monkeypatch):
+    """Writing NO_PROXY with no proxy variable set hides a proxy set in the OS.
+
+    ``urllib.request.getproxies`` is ``getproxies_environment() or
+    getproxies_macosx_sysconf()``.  Setting NO_PROXY alone makes the first call
+    truthy, so httpx -- and with it the OpenAI client -- stops seeing a proxy
+    configured in macOS System Settings and connects direct.  The failure is
+    invisible from the startup banner, whose llm-api probe runs before this.
+    """
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "no_proxy"):
+        monkeypatch.delenv(name, raising=False)
+
+    studio._bypass_proxy_for_local_server("0.0.0.0")
+
+    assert urllib.request.getproxies_environment() == {}, (
+        "the launcher wrote %r into the environment with no proxy variable set, "
+        "which short-circuits system proxy discovery"
+        % urllib.request.getproxies_environment()
+    )
+
+
+def test_local_proxy_bypass_still_exempts_loopback_when_a_proxy_is_configured(monkeypatch):
+    """The guard must keep working where it was actually needed: an env-set proxy."""
+    for name in ("NO_PROXY", "no_proxy"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:8888")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:8888")
+
+    studio._bypass_proxy_for_local_server("0.0.0.0")
+
+    resolved = urllib.request.getproxies_environment()
+    assert resolved.get("http") == "http://127.0.0.1:8888"
+    for host in ("127.0.0.1", "localhost", "::1"):
+        assert host in resolved.get("no", "")

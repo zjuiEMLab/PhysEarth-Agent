@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import urllib.request
 from pathlib import Path
 
 import gradio as gr
@@ -997,7 +998,19 @@ def _bypass_proxy_for_local_server(host):
     server. In development environments with a global HTTP proxy, that request
     can be sent to the proxy instead of this process and return a misleading 503.
     Preserve the proxy for external services while bypassing it for local hosts.
+
+    Only act when the proxy is configured in the environment, because that is the
+    only case this guards. ``getproxies`` is ``getproxies_environment() or
+    getproxies_macosx_sysconf()``: writing NO_PROXY when no proxy variable is set
+    makes the first call truthy and hides a proxy configured in macOS System
+    Settings from everything that resolves it that way -- httpx, and so the
+    OpenAI client, which then connects direct and raises APIConnectionError on
+    every model call.  A system proxy carries its own exception list for
+    loopback, so there is nothing for us to add there.
     """
+    env_proxies = urllib.request.getproxies_environment()
+    if not any(scheme != "no" for scheme in env_proxies):
+        return
     local_hosts = ["127.0.0.1", "localhost", "::1"]
     if host and host not in {"0.0.0.0", "::", "localhost"}:
         local_hosts.append(str(host))
