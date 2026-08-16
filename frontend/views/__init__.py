@@ -15,7 +15,6 @@ working unchanged.
 from frontend.views.context import (
     current_activity_status,
     research_context,
-    research_status,
 )
 
 # The remaining names the single-module version exposed, kept reachable at the same
