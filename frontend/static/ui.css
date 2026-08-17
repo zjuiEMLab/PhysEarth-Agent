@@ -4359,6 +4359,26 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   opacity: 0.85;
 }
 
+/* Routine-row summaries are metadata for the card, not its title. Keep the badge, tool
+   name and elapsed time together, then give the summary a full line so a narrow trace
+   never turns a badge and a long result into one cramped, truncated label. */
+.step-card--row .step-card__line--inline {
+  flex: 0 0 100%;
+  order: 4;
+  padding-left: 22px;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.step-card--row .step-card__head {
+  flex-wrap: wrap;
+}
+
+.step-card--row .step-card__time {
+  order: 3;
+}
+
 .step-card--row > .disclosure {
   margin: 6px 0 0;
 }
@@ -4410,41 +4430,3 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 .disclosure--markup > .disclosure__body {
   padding-top: 6px;
 }
-
-/* ---- Evidence panel: a tab appears when it has something in it -------------
-   The tabset used to be three fixed radios. It is now built from the panes that
-   exist, so the widths follow the count. */
-.tabset--1 .tabbar { grid-template-columns: 1fr; }
-.tabset--2 .tabbar { grid-template-columns: repeat(2, 1fr); }
-.tabset--3 .tabbar { grid-template-columns: repeat(3, 1fr); }
-.tabset--4 .tabbar { grid-template-columns: repeat(4, 1fr); }
-
-.tabset--1 #pe-tab-plan:checked ~ .tab-panes .tab-pane:nth-child(1),
-.tabset--2 #pe-tab-plan:checked ~ .tab-panes .tab-pane:nth-child(1),
-.tabset--3 #pe-tab-plan:checked ~ .tab-panes .tab-pane:nth-child(1),
-.tabset--4 #pe-tab-plan:checked ~ .tab-panes .tab-pane:nth-child(1) { display: block; }
-
-/* The research plan, rendered as a document rather than asked of the chat. */
-.plan-head {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--line);
-}
-.plan-head b { font-family: var(--serif, Georgia, serif); font-size: 1.02rem; }
-.pane-scroll h4 {
-  margin: 14px 0 6px; font-size: .72rem; letter-spacing: .1em;
-  text-transform: uppercase; opacity: .6;
-}
-.plan-table { overflow-x: auto; margin-bottom: 4px; }
-.plan-table table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-.plan-table th {
-  text-align: left; font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
-  opacity: .55; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-.plan-table td {
-  padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line);
-  vertical-align: top; word-break: break-word;
-}
-.plan-table tr:last-child td { border-bottom: none; }
-.plan-list { margin: 4px 0 0; padding-left: 18px; font-size: .85rem; }
-.plan-list li { margin-bottom: 4px; }
