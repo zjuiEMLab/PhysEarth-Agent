@@ -11,9 +11,13 @@ harness      physical domain validation before a model call, and the evidence an
 literature   the bundled corpus: both literature tools and the catalogue in the prompt
 capability   the declared parameter ranges, enums and legal combinations, in the prompt
              and in what list_models returns
+figures      the figure layer of the corpus: the tools that open and inspect a source
+             figure, and the figure list a section read returns. With it off the paper
+             is text only, which is what a reader has without the plates -- a caption
+             says what a figure is about, the figure says what is on it.
 """
 
-ALL_ON = {"harness": True, "literature": True, "capability": True}
+ALL_ON = {"harness": True, "literature": True, "capability": True, "figures": True}
 
 
 def resolve(switches=None):

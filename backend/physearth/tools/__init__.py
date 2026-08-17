@@ -67,7 +67,7 @@ DISPATCH = {
 # from whatever the model sent before dispatch, so none of these can be forged from a
 # tool call.
 OWNER_SCOPED = ("run_model", "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart")
-SWITCH_AWARE = ("run_model", "run_planned_model", "list_models")
+SWITCH_AWARE = ("run_model", "run_planned_model", "list_models", "read_literature")
 SESSION_SCOPED = (
     "list_literature", "read_literature", "list_models", "read_research_guideline", "read_model_instruction",
     "research_capability_check",
@@ -81,6 +81,7 @@ CORPUS_TOOLS = (
     "read_paper_figure", "inspect_paper_figure", "discover_literature", "ingest_paper",
 )
 ONLINE_TOOLS = ("discover_literature", "inspect_github_model_repo")
+FIGURE_TOOLS = ("read_paper_figure", "inspect_paper_figure")
 
 
 def specs(switches_in=None):
@@ -91,8 +92,11 @@ def specs(switches_in=None):
     cannot work; it is not left to discover that by being refused.
     """
     hidden = set()
-    if not switches.resolve(switches_in)["literature"]:
+    flags = switches.resolve(switches_in)
+    if not flags["literature"]:
         hidden |= set(CORPUS_TOOLS)
+    if not flags["figures"]:
+        hidden |= set(FIGURE_TOOLS)
     if not http.online():
         hidden |= set(ONLINE_TOOLS)
     return [s for s in SPECS if s["function"]["name"] not in hidden]

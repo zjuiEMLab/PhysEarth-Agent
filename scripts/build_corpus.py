@@ -177,27 +177,42 @@ def flatten(value):
     return value
 
 
+# The card template: the order fields appear in, and the only fields this script owns.
+# Edit this to change the shape of every card the builder writes.
+CARD_ORDER = (
+    "slug",
+    "title",
+    "authors",
+    "journal",
+    "volume",
+    "pages",
+    "year",
+    "doi",
+    "url",
+    "license",
+    "license_url",
+    "scenarios",
+    "outputs",
+    "modified",
+    "description",
+    "sections",
+)
+
+# Fields the builder does not produce and must never destroy. `figures` is written by
+# scripts/extract_figure_metadata.py from the publisher PDFs; rebuilding the corpus used
+# to drop it silently, because the writer emitted CARD_ORDER and nothing else. Anything
+# listed here is carried through from the card already on disk, after the owned fields.
+CARD_PRESERVED = ("figures",)
+
+
 def write_card(path, card):
-    order = (
-        "slug",
-        "title",
-        "authors",
-        "journal",
-        "volume",
-        "pages",
-        "year",
-        "doi",
-        "url",
-        "license",
-        "license_url",
-        "scenarios",
-        "outputs",
-        "modified",
-        "description",
-        "sections",
-    )
+    existing = {}
+    if path.is_file():
+        existing = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     document = {}
-    for key in order:
+    for key in CARD_ORDER:
+        if key not in card:
+            continue
         value = card[key]
         if key == "sections":
             document[key] = [
@@ -211,6 +226,11 @@ def write_card(path, card):
             ]
         else:
             document[key] = flatten(value)
+    for key in CARD_PRESERVED:
+        if key in card:
+            document[key] = card[key]
+        elif key in existing:
+            document[key] = existing[key]
     path.write_text(
         yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=100),
         encoding="utf-8",

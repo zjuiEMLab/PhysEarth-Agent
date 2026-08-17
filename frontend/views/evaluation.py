@@ -29,7 +29,15 @@ EVALUATION = paths.evaluation()
 TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 DEMOS = EVALUATION / "demos"
+# Configurations the dashboard reports, in display order. This is the set with committed
+# records, not the set that exists: `evaluation/configs/` also declares `no-figures`,
+# which removes the figure layer only, and it joins this tuple when it has runs to show.
+# A dashboard column with no evidence behind it is a claim, and this page makes none.
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
+
+# Declared but not yet run. Named here so the gap is visible in the code rather than
+# looking like an oversight.
+CONFIG_DECLARED_WITHOUT_RECORDS = ("no-figures",)
 Q1_TASK_ID = "q1-sparse-medium"
 Q1_COMPARISON_CONFIGS = ("no-harness", "full")
 Q1_COMPARISON_LABELS = {

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from physearth import config, registry, research
 from physearth.corpus import knowledge, live, model_guidelines
-from physearth.harness import untrusted
+from physearth.harness import switches, untrusted
 from physearth.ingest import discover, fulltext, http, pdf
 from physearth.tools.common import _fail, _ledger, _offline_note, _ok
 from physearth.tools.figures import (
@@ -36,7 +36,7 @@ def list_literature(query="", scenario="", kind="paper", _session=None):
     )
 
 
-def read_literature(slug, section_id=None, _session=None):
+def read_literature(slug, section_id=None, _session=None, _switches=None):
     item = live.card(_session, slug)
     if not item:
         known = sorted(set(knowledge.slugs(kind=None)) | set(live.corpus(_session)))
@@ -92,11 +92,13 @@ def read_literature(slug, section_id=None, _session=None):
             # models into figure 3's reference set, where they do not appear. A title
             # is enough to choose; read_paper_figure returns the caption of the one
             # actually chosen.
+            # Empty under the figures ablation: hiding read_paper_figure while still
+            # listing what it would have opened would leak the layer being removed.
             "figures": [
                 {"figure_id": figure.get("id"), "title": figure.get("title", "")}
                 for figure in (item.get("figures") or ())
                 if figure.get("id")
-            ],
+            ] if switches.resolve(_switches)["figures"] else [],
         },
         citations=[section["citation_key"]],
     )
