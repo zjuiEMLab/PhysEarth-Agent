@@ -16,133 +16,6 @@ from physearth.ingest import jats  # noqa: E402
 
 OUT = ROOT / "knowledge" / "literature"
 
-MANIFEST = [
-    {
-        "slug": "smrt-v1",
-        "journal": "gmd",
-        "volume": 11,
-        "fpage": 2763,
-        "year": 2018,
-        "scenarios": ["snow"],
-        "outputs": ["tb", "sigma"],
-        "description": (
-            "Reference description of the SMRT model itself: how snowpacks are declared, which "
-            "electromagnetic theories (IBA, DMRT, Rayleigh) and microstructure representations "
-            "(exponential, sticky hard spheres, Gaussian random field, Teubner-Strey) are "
-            "available, how they relate, and what each one assumes. Read this first when "
-            "choosing or justifying SMRT run parameters."
-        ),
-    },
-    {
-        "slug": "arctic-snow-emission",
-        "journal": "tc",
-        "volume": 18,
-        "fpage": 3971,
-        "year": 2024,
-        "scenarios": ["snow"],
-        "outputs": ["tb"],
-        "description": (
-            "SMRT applied to Arctic snow emission in surface-sensitive atmospheric sounding "
-            "channels at 89 to 243 GHz, evaluated against airborne radiometry with measured "
-            "snow microstructure. Read this for a high-frequency validation case, for how "
-            "measured microstructure is turned into model input, and for the limits of the "
-            "model at frequencies far above the usual 19 to 37 GHz range."
-        ),
-    },
-    {
-        "slug": "memls3a",
-        "journal": "gmd",
-        "volume": 8,
-        "fpage": 2611,
-        "year": 2015,
-        "scenarios": ["snow"],
-        "outputs": ["tb", "sigma"],
-        "description": (
-            "MEMLS3&a: the Microwave Emission Model of Layered Snowpacks extended to also "
-            "compute backscatter. Explains the improved Born approximation, correlation length "
-            "as the microstructure parameter, and how an emission model is turned into an "
-            "active one. Read this when comparing passive and active formulations of the same "
-            "snowpack."
-        ),
-    },
-    {
-        "slug": "tvc-ku-swe",
-        "journal": "tc",
-        "volume": 18,
-        "fpage": 3857,
-        "year": 2024,
-        "scenarios": ["snow", "soil"],
-        "outputs": ["sigma"],
-        "description": (
-            "Trail Valley Creek 2018/19 experiment: retrieval of snow and soil properties for "
-            "forward modelling of airborne Ku-band SAR to estimate snow water equivalent. Uses "
-            "SMRT end to end with real field measurements at C, X and Ku band, and reports the "
-            "retrieved soil roughness, soil permittivity and grain polydispersity values. Read "
-            "this for a complete worked application and for realistic parameter values."
-        ),
-    },
-    {
-        "slug": "soil-dielectric-freezethaw",
-        "journal": "hess",
-        "volume": 25,
-        "fpage": 1117,
-        "year": 2021,
-        "scenarios": ["soil"],
-        "outputs": ["tb"],
-        "description": (
-            "Laboratory characterisation of the soil dielectric constant at L-band through "
-            "freeze-thaw transitions, using coaxial and soil moisture probes. Read this for how "
-            "soil permittivity depends on moisture, temperature and frozen state, which is the "
-            "input every soil microwave forward model needs."
-        ),
-    },
-    {
-        "slug": "cmem-sampling-density",
-        "journal": "hess",
-        "volume": 24,
-        "fpage": 1957,
-        "year": 2020,
-        "scenarios": ["soil", "vegetation"],
-        "outputs": ["tb"],
-        "description": (
-            "Uses the Community Microwave Emission Modelling platform (CMEM) to simulate L-band "
-            "brightness temperature over land and to ask how densely ground soil moisture and "
-            "brightness temperature must be sampled to calibrate and validate satellite "
-            "observations. Read this for the tau-omega emission chain and for scale and "
-            "sampling arguments."
-        ),
-    },
-    {
-        "slug": "vod-sensitivity",
-        "journal": "bg",
-        "volume": 20,
-        "fpage": 1027,
-        "year": 2023,
-        "scenarios": ["vegetation"],
-        "outputs": ["tb"],
-        "description": (
-            "Sensitivity of multi-frequency passive microwave vegetation optical depth to "
-            "vegetation properties. Read this when a question involves how canopy water "
-            "content, biomass or structure changes the vegetation contribution, or when "
-            "designing a sensitivity study over vegetation parameters."
-        ),
-    },
-    {
-        "slug": "backscatter-forward-operator",
-        "journal": "hess",
-        "volume": 25,
-        "fpage": 6283,
-        "year": 2021,
-        "scenarios": ["soil", "vegetation"],
-        "outputs": ["sigma"],
-        "description": (
-            "Calibration of a Water Cloud Model backscatter forward operator against Sentinel-1 "
-            "over irrigated land. Read this for the active counterpart of tau-omega: how "
-            "vegetation and soil contributions combine into total backscatter and how the "
-            "model coefficients are fitted."
-        ),
-    },
-]
 
 JOURNAL_NAMES = {
     "gmd": "Geoscientific Model Development",
@@ -177,9 +50,46 @@ def flatten(value):
     return value
 
 
-# The card template: the order fields appear in, and the only fields this script owns.
-# Edit this to change the shape of every card the builder writes.
-CARD_ORDER = (
+TEMPLATE = ROOT / "knowledge" / "TEMPLATE" / "card.yaml"
+
+# Fields the builder does not produce and must never destroy. `figures` is written by
+# scripts/extract_figure_metadata.py from the publisher PDFs; rebuilding the corpus used
+# to drop it silently, because the writer emitted the field order and nothing else.
+CARD_PRESERVED = ("figures",)
+
+
+def card_order():
+    """The key order, read from knowledge/TEMPLATE/card.yaml.
+
+    The shape of a card is data, not code: edit the template and every card the builder
+    writes follows it. Falling back to the built-in order keeps the builder usable if the
+    template is missing, but the template is the thing to change.
+    """
+    if TEMPLATE.is_file():
+        document = yaml.safe_load(TEMPLATE.read_text(encoding="utf-8")) or {}
+        keys = [key for key in document if key not in CARD_PRESERVED]
+        if keys:
+            return tuple(keys)
+    return CARD_ORDER_FALLBACK
+
+
+def papers():
+    """Every paper that declares where it came from, discovered rather than listed.
+
+    This was a MANIFEST of eight dictionaries in this file: journal, volume, first page,
+    year, and a paragraph of description, per paper. None of that is code, and keeping it
+    here meant a new paper required editing a script. Each paper now carries its own
+    source.yaml beside its sections, and the corpus is whatever declares itself.
+    """
+    found = []
+    for source in sorted(OUT.glob("*/source.yaml")):
+        entry = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
+        entry["slug"] = source.parent.name
+        found.append(entry)
+    return found
+
+
+CARD_ORDER_FALLBACK = (
     "slug",
     "title",
     "authors",
@@ -210,7 +120,7 @@ def write_card(path, card):
     if path.is_file():
         existing = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     document = {}
-    for key in CARD_ORDER:
+    for key in card_order():
         if key not in card:
             continue
         value = card[key]
@@ -291,7 +201,7 @@ def build(entry):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     total = 0
-    for entry in MANIFEST:
+    for entry in papers():
         card = build(entry)
         chars = sum(s["chars"] for s in card["sections"])
         total += chars

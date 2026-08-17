@@ -1,0 +1,85 @@
+# The shape of a literature card. Copy this to start a paper by hand, or edit it to
+# change the shape of every card scripts/build_corpus.py writes -- the builder reads the
+# key order from this file rather than carrying it in Python.
+#
+# Three kinds of field, and the difference matters:
+#
+#   generated  written by scripts/build_corpus.py from the publisher JATS XML
+#   extracted  written by scripts/extract_figure_metadata.py from the figure PDFs
+#   authored   written by a person, in <slug>/source.yaml, never guessed by a script
+#
+# The builder owns the generated fields and rewrites them every run. It preserves the
+# extracted ones instead of dropping them. Anything a person wrote lives in source.yaml
+# and is copied in, so re-running the builder never destroys a human judgement.
+
+slug: example-paper                       # generated · directory name and citation prefix
+title: Title as the publisher prints it   # generated
+authors: A. Author and B. Author          # generated
+journal: gmd                              # authored · source.yaml
+volume: 11                                # authored · source.yaml
+pages: 2763-2788                          # generated
+year: 2018                                # authored · source.yaml
+doi: 10.5194/gmd-11-2763-2018             # generated · also how a model card claims this paper
+url: https://doi.org/10.5194/…            # generated
+license: CC-BY-4.0                        # generated
+license_url: https://creativecommons.org/licenses/by/4.0/   # generated
+scenarios: [snow]                         # authored · which physical settings this covers
+outputs: [tb, sigma]                      # authored · which quantities it reports
+modified: Full text extracted from …      # generated · what was done to the source text
+description: >-                           # authored · when to read this, in one paragraph
+  What this paper is for, written for someone deciding whether to open it.
+
+sections:                                 # generated · one entry per split section file
+  - id: "03"
+    title: Model architecture
+    file: sections/03_model-architecture.md
+    chars: 6060
+
+# ---------------------------------------------------------------------------------
+# Figures. Identity is generated with the assets; everything describing what the figure
+# SHOWS is extracted from the publisher PDF's own text layer, never typed by hand.
+#
+# Extraction is heuristic and says only what the vector text says. A schematic with no
+# axis label reports none; a legend may pick up a tick number. That is the right failure
+# mode for evidence: it under- and over-reports what is printed, rather than asserting
+# what somebody believed the figure contained.
+figures:
+  - id: fig04                             # generated
+    title: Comparison with other reference models   # generated
+    caption: >-                           # generated · the publisher's own caption
+      Comparison of brightness temperatures and backscattering coefficients …
+    paper_section: "3.1.2"                # generated
+    asset_path: figures/fig04.png         # generated
+    original_asset_path: figures/fig04.pdf
+    asset_format: png
+    source_format: pdf
+    source_uri: https://…/gmd-11-2763-2018-f04.pdf
+    license: CC-BY-4.0
+
+    # extracted · which quantity is on each axis, and over what range
+    x_axis:
+      label: [Stickiness]
+      ticks: ["0", "100", "200", "300", "400"]
+    y_axis:
+      label: [Brightness temperature (K)]
+      ticks: ["240", "245", "250", "255", "260"]
+
+    # extracted · what the curves are called. The count is what says how many runs a
+    # faithful reproduction needs.
+    legend:
+      - SMRT QCACP V
+      - DMRT-ML Fortran V
+
+    # extracted · subplots. Absent when the figure has one panel.
+    panels: 2
+    panel_detail:
+      - panel: a
+        subtitle: ""                      # extracted when the panel carries its own title
+        x_axis: ""
+        y_axis: Brightness temperature (K)
+        legend: [SMRT QCACP V, SMRT QCACP H]
+      - panel: b
+        subtitle: ""
+        x_axis: ""
+        y_axis: ""
+        legend: [SMRT QCA VV, DMRT-QMS VV]
