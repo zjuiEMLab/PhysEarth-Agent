@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from physearth.corpus import live
+
 from frontend.views import evaluation as evals
 from physearth import harness, prompt, research, session, tools
-from physearth.corpus import live
 from physearth.ingest import jats
 
 FIXTURE = Path(__file__).parent / "fixtures" / "jats_sample.xml"
@@ -89,6 +90,36 @@ def test_paper_figure_inspection_records_visual_provenance_without_digitization(
     assert result["data"]["visual_observations"]["caption_context"].startswith("Figure 1")
     assert "uploaded-paper#fig-1" in box["paper_figures_inspected"]
     assert any(item["kind"] == "figure_inspection" for item in box["evidence_ledger"])
+
+
+def test_compact_multi_figure_plans_bind_each_target_to_its_source_figure():
+    from physearth.research.evidence import _is_figure_target
+    from physearth.research.metadata import _figure_ref_for_target
+
+    refs = ["smrt-v1#fig04", "smrt-v1#fig05"]
+    assert _figure_ref_for_target({"source_id": "fig04.png"}, refs) == refs[0]
+    assert _figure_ref_for_target({"source_id": "Figure 5"}, refs) == refs[1]
+    assert _is_figure_target({"source_id": "fig04"}, {refs[0]}, refs) is True
+
+
+def test_figure_target_cannot_pass_without_source_figure_inspection():
+    from physearth.research.evidence import _evidence_plan_problems
+
+    box = session.new_session("m")
+    box["sections_read"].add("smrt-v1#08")
+    box["paper_figures_read"].add("smrt-v1#fig03")
+    problems = _evidence_plan_problems(
+        box,
+        "Can the paper's Figure 3 coefficient result be reproduced?",
+        [{"evidence_ref": "smrt-v1#08", "purpose": "method"}],
+        [{
+            "source_type": "figure", "source_id": "fig03", "evidence_refs": ["smrt-v1#fig03"],
+            "status": "planned",
+        }],
+        [], [], [], [], [], [],
+    )
+
+    assert any(item["field"] == "reproduction_targets[0].figure_inspection" for item in problems)
 
 
 def test_missing_paper_figure_inspection_is_explicitly_unavailable():
@@ -197,6 +228,11 @@ def test_reproduction_plan_links_target_to_runs_and_charts_and_revalidates_revis
     box = session.new_session("m")
     _reproduction_resources(box)
     fields = _reproduction_plan_fields()
+    tools.call(
+        "inspect_paper_figure",
+        {"paper": "smrt-v1", "figure_id": "fig03", "focus": "title, axes, and legend"},
+        session=box,
+    )
     result = tools.call(
         "research_plan",
         {
@@ -575,6 +611,8 @@ def test_bundled_smrt_figures_are_readable_and_not_digitized_automatically():
         session=box,
     )
     assert inspected["status"] == "success", inspected
+    assert inspected["data"]["title"] == "Sparse-medium scattering coefficient comparison"
+    assert inspected["data"]["visual_observations"]["title"] == inspected["data"]["title"]
     assert inspected["data"]["asset_available"] is True
     assert inspected["data"]["numeric_digitization"] == "not performed"
     assert inspected["data"]["analysis_status"] in {"vision_payload_ready", "text_extracted"}
@@ -710,8 +748,9 @@ def test_reading_a_section_says_what_the_paper_figures_are_called():
     proposed, was refused for missing figure evidence, read another section, and gave up
     after five consecutive failures. The requirement was satisfiable only by luck.
     """
-    from physearth import session as session_state
     from physearth.tools import literature
+
+    from physearth import session as session_state
 
     box = session_state.new_session("m")
     result = literature.read_literature("smrt-v1", "03", _session=box)
@@ -743,9 +782,10 @@ def test_a_plan_thinner_than_the_figure_legend_is_flagged_at_review():
     extracts it. A plan with one run against a legend of six is reproducing one line of
     that figure. Advisory, not blocking: a legend entry is not always a run.
     """
-    from physearth import session as session_state
     from physearth.research import evidence
     from physearth.tools import literature
+
+    from physearth import session as session_state
 
     box = session_state.new_session("m")
     literature.read_literature("smrt-v1", "03", _session=box)

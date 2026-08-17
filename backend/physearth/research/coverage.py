@@ -23,6 +23,23 @@ def _same_model(left, right, session=None):
     left_entry, left_name, _cfg, _opts = registry.resolve_configuration(left, session)
     right_entry, right_name, _rcfg, _ropts = registry.resolve_configuration(right, session)
     if left_entry is None or right_entry is None:
+        # A paper slug is not a global model alias. During an evidence-backed
+        # reproduction, however, the capability checkpoint may have established that
+        # the opened paper identity and the registered card refer to the same model.
+        from physearth.research.capability import _resolve_from_paper_evidence
+
+        targets = (
+            ((session or {}).get("research") or {}).get("plan") or {}
+        ).get("reproduction_targets") or []
+        if left_entry is None:
+            resolved = _resolve_from_paper_evidence(left, session, targets)
+            if resolved:
+                left_entry, left_name = resolved[:2]
+        if right_entry is None:
+            resolved = _resolve_from_paper_evidence(right, session, targets)
+            if resolved:
+                right_entry, right_name = resolved[:2]
+    if left_entry is None or right_entry is None:
         return False
     return left_name == right_name
 

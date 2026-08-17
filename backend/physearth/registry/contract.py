@@ -52,6 +52,14 @@ def validate_card(card):
     if card.get("requires_import") and tier != "local":
         _fail(problems, "requires_import only applies to a local model")
 
+    paper_slugs = card.get("paper_slugs")
+    if paper_slugs is not None and (
+        not isinstance(paper_slugs, list)
+        or not paper_slugs
+        or any(not isinstance(slug, str) or not slug.strip() for slug in paper_slugs)
+    ):
+        _fail(problems, "paper_slugs must be a non-empty list of non-empty strings")
+
     parameters = card.get("parameters")
     if not isinstance(parameters, dict) or not parameters:
         _fail(problems, "parameters must be a non-empty mapping")

@@ -10,11 +10,10 @@ spellings that must resolve, and the names that must still fail.
 """
 
 import pytest
-
-from physearth import registry
-from physearth import session as session_state
-from physearth import tools
 from physearth.research import capability
+
+from physearth import registry, tools
+from physearth import session as session_state
 
 # How a paper, a person or a filename writes it -> the registered card name.
 SPELLINGS = [
@@ -133,6 +132,22 @@ def test_a_target_covered_by_its_own_run_reports_no_coverage_problem():
     }]
     runs = [{"id": "r1", "model": "smrt", "parameters": {}}]
     problems, _, _ = _target_coverage(targets, runs, [{"id": "c1"}])
+    assert problems == [], problems
+
+
+def test_target_coverage_uses_opened_paper_identity_for_a_registered_model():
+    from physearth.research.coverage import _target_coverage
+
+    box = session_state.new_session("m")
+    box["sections_read"].add("smrt-v1#08")
+    targets = [{
+        "id": "t1", "status": "planned", "run_ids": ["r1"], "chart_ids": [],
+        "reference_models": ["smrt-v1"], "requested_outputs": [],
+    }]
+    runs = [{"id": "r1", "model": "smrt", "parameters": {}}]
+
+    problems, _, _ = _target_coverage(targets, runs, [], box)
+
     assert problems == [], problems
 
 

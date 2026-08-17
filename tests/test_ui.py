@@ -23,6 +23,33 @@ def test_trace_cards_do_not_replay_an_entry_animation_on_every_gradio_frame():
     assert ".step-card:last-child {\n  animation:" not in source
 
 
+def test_model_call_trace_metadata_has_its_own_line():
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text()
+    out = render.trace(
+        [{"kind": "model_call", "prompt_tokens": 19515, "completion_tokens": 32}],
+        agent.new_state(),
+    )
+    assert "step-card--row-model" in out
+    assert ".step-card--row .step-card__line--inline" in source
+    assert ".step-card--row .step-card__head" in source
+    assert "flex: 0 0 100%" in source
+
+
+def test_other_routine_trace_rows_use_the_same_separate_summary_layout():
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text()
+    out = render.trace(
+        [{
+            "kind": "tool_call",
+            "name": "research_capability_check",
+            "summary": "Capability check by reproduction target",
+        }],
+        agent.new_state(),
+    )
+    assert "step-card--row" in out
+    assert ".step-card--row .step-card__line--inline" in source
+    assert "Capability check by reproduction target" in out
+
+
 def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypatch):
     """A tool lifecycle event must not remount the unchanged streamed transcript."""
     from physearth import session as session_state

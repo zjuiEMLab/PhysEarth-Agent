@@ -1,5 +1,7 @@
 """Repairing the reproduction metadata a paper-grounded plan has to carry."""
 
+import re
+
 from physearth import registry
 from physearth.research.common import _provenance_confidence
 from physearth.research.mapping import (
@@ -16,6 +18,25 @@ from physearth.research.normalise import (
     _read_evidence_refs,
     is_reproduction_question,
 )
+
+
+def _figure_ref_for_target(target, refs):
+    """Choose the opened source figure matching a target, if one can be identified.
+
+    A compact multi-figure plan may omit redundant ``evidence_refs``. Falling back to the
+    first opened reference used to attach Figure 5 to Figure 4 in that case. Match the
+    target's figure number before using the ordinary first-reference fallback.
+    """
+    source_id = str((target or {}).get("source_id") or "").lower()
+    source_match = re.search(r"(?:fig(?:ure)?)[^0-9]*(\d+)", source_id)
+    if not source_match:
+        return (list(refs or ()) or [None])[0]
+    number = str(int(source_match.group(1)))
+    for ref in refs or ():
+        ref_match = re.search(r"(?:fig(?:ure)?)[^0-9]*(\d+)", str(ref).lower())
+        if ref_match and str(int(ref_match.group(1))) == number:
+            return ref
+    return (list(refs or ()) or [None])[0]
 
 
 def _repair_reproduction_metadata(
@@ -102,11 +123,29 @@ def _repair_reproduction_metadata(
             relevant_refs = paper_refs
     reproduction_targets = list(reproduction_targets or ())
 
+    resolved_models = {
+        str(item.get("asked") or "").strip(): str(item.get("registered") or "").strip()
+        for item in ((session.get("capability_review") or {}).get("resolved_names") or ())
+        if item.get("asked") and item.get("registered")
+    }
+    for index, target in enumerate(reproduction_targets):
+        before = list(target.get("reference_models") or ())
+        after = [resolved_models.get(str(model).strip(), model) for model in before]
+        if after != before:
+            target["reference_models"] = list(dict.fromkeys(after))
+            repairs.append(_repair_item(
+                "reproduction_targets[%d].reference_models" % index,
+                before,
+                target["reference_models"],
+                "carry the evidence-backed capability resolution into the executable plan",
+                "capability_review",
+            ))
+
     for index, target in enumerate(reproduction_targets):
         refs = [_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()]
         if not refs and relevant_refs:
             before = list(refs)
-            target["evidence_refs"] = [relevant_refs[0]]
+            target["evidence_refs"] = [_figure_ref_for_target(target, relevant_refs)]
             repairs.append(_repair_item(
                 "reproduction_targets[%d].evidence_refs" % index,
                 before, target["evidence_refs"],

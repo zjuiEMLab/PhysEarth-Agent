@@ -3,10 +3,10 @@ import re
 from pathlib import Path
 
 import yaml
-from frontend.views import evaluation as evals
 
 from evaluation.metrics import score
-from evaluation.runners import llm_robustness, model_registration
+from evaluation.runners import llm_robustness, model_registration, reproduction_eval
+from frontend.views import evaluation as evals
 
 
 def test_evaluation_snapshot_covers_every_committed_case_and_run():
@@ -71,6 +71,44 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
     assert all("Reproduce Figure" in case["question"] or "Reproduce Figures" in case["question"] for case in cases)
     assert "DMRT-ML" in cases[1]["question"]
     assert "MEMLS" in cases[2]["question"]
+
+
+def test_q2_keeps_figure_four_and_five_checks_separate():
+    task = evals.canonical_task("q2-dmrt-comparison")
+    targets = {item["id"]: item for item in task["figure_targets"]}
+    assert "iba" in task["demo"]["pilot"]["local_configurations"]
+
+    figure4 = targets["fig04.png"]["check"]
+    assert figure4["local_formulations"] == [
+        "dmrt_qcacp_shortrange", "dmrt_qca_shortrange"
+    ]
+    assert figure4["reference_models"] == ["DMRT-ML", "DMRT-QMS"]
+    assert "iba" not in figure4["local_formulations"]
+
+    figure5 = targets["fig05.png"]["check"]
+    assert "iba" in figure5["local_formulations"]
+    assert figure5["axes"] == ["radius_m", "stickiness"]
+    assert "DMRT-QMS" in figure5["reference_models"]
+
+
+def test_reproduction_visual_checks_follow_each_planned_figure_target():
+    session = {
+        "research": {
+            "plan": {
+                "charts": [{"id": "fig05-radius", "target_ids": ["fig05.png"]}],
+                "reproduction_targets": [
+                    {"id": "fig04.png", "source_id": "smrt-v1#fig04"},
+                    {"id": "fig05.png", "source_id": "smrt-v1#fig05"},
+                ],
+            }
+        }
+    }
+    candidates, linked = reproduction_eval._paper_figures_for_generated(
+        {"planned_chart_id": "fig05-radius"}, session, ["fig04.png", "fig05.png"]
+    )
+
+    assert candidates == ["fig05.png"]
+    assert linked is True
 
 
 def test_guided_demos_are_data_driven_q1_and_q2_cards():

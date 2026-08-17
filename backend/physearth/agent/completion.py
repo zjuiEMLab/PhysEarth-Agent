@@ -22,6 +22,7 @@ class _Completion:
         self.content = ""
         self.reasoning = 0
         self.calls = {}
+        self.finish_reason = None
         self.prompt_tokens = None
         self.completion_tokens = None
         self.cost_usd = None
@@ -44,7 +45,11 @@ class _Completion:
                 )
         if not chunk.choices:
             return False
-        delta = chunk.choices[0].delta
+        choice = chunk.choices[0]
+        finish_reason = getattr(choice, "finish_reason", None)
+        if finish_reason:
+            self.finish_reason = finish_reason
+        delta = choice.delta
         if delta is None:
             return False
         grew = False

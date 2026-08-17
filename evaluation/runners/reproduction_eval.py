@@ -9,6 +9,7 @@ so an interrupted 3 x 4 experiment resumes without spending the completed calls 
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import time
@@ -19,8 +20,9 @@ import yaml
 from PIL import Image, ImageFilter, ImageOps
 
 REPO = Path(__file__).resolve().parents[2]
-from physearth import agent, config, research  # noqa: E402
 from physearth.harness import approval  # noqa: E402
+
+from physearth import agent, config, research  # noqa: E402
 
 TASK_DIR = REPO / "evaluation" / "tasks" / "tier2"
 RESULT_DIR = REPO / "evaluation" / "results" / "reproduction"
@@ -73,6 +75,41 @@ def _visual_similarity(actual, reference):
     bh = b > b.mean()
     hash_agreement = float(np.mean(ah == bh))
     return round(max(0.0, min(1.0, 0.5 * max(0.0, corr) + 0.5 * hash_agreement)), 4)
+
+
+def _paper_figures_for_generated(figure, session, paper_figures):
+    """Return source figures allowed for a generated chart's visual check.
+
+    Q2 has two source figures. A global best-match over both lets two generated charts
+    accidentally score against the same source. Planned charts carry their reproduction
+    target IDs, so use the target's figure number to keep Figure 4 and Figure 5 checks
+    independent. Old records without that linkage retain the broad fallback.
+    """
+    plan = (session.get("research") or {}).get("plan") or {}
+    target_ids = set(figure.get("reproduction_target_ids") or ())
+    chart_id = figure.get("planned_chart_id")
+    if chart_id and not target_ids:
+        chart = next(
+            (item for item in plan.get("charts") or () if item.get("id") == chart_id),
+            None,
+        )
+        target_ids.update((chart or {}).get("target_ids") or ())
+    source_ids = [
+        target.get("source_id")
+        for target in plan.get("reproduction_targets") or ()
+        if target.get("id") in target_ids and target.get("source_id")
+    ]
+    numbers = set()
+    for value in source_ids:
+        match = re.search(r"(?:fig(?:ure)?)[^0-9]*(\d+)", str(value).lower())
+        if match:
+            numbers.add(int(match.group(1)))
+    matched = []
+    for name in paper_figures:
+        match = re.search(r"(?:fig(?:ure)?)[^0-9]*(\d+)", str(name).lower())
+        if match and int(match.group(1)) in numbers:
+            matched.append(name)
+    return matched or list(paper_figures), bool(matched)
 
 
 def _tokens(events):
@@ -254,15 +291,27 @@ def _persist(record, output_dir):
         copied.append(target)
         record["figures"][index - 1]["archived_path"] = str(target.relative_to(REPO))
     similarities = []
-    for actual in copied:
+    for figure, actual in zip(_formal_figures(session), copied):
+        candidate_names, target_linked = _paper_figures_for_generated(
+            figure, session, record["paper_figures"]
+        )
         candidates = []
-        for name in record["paper_figures"]:
+        for name in candidate_names:
             reference = PAPER_FIGURE_DIR / name
             if reference.is_file():
-                candidates.append({"paper_figure": name, "score": _visual_similarity(actual, reference)})
+                candidates.append(
+                    {"paper_figure": name, "score": _visual_similarity(actual, reference)}
+                )
         if candidates:
             best = max(candidates, key=lambda item: item["score"])
-            similarities.append({"actual_figure": actual.name, "best_match": best, "all_matches": candidates})
+            similarities.append(
+                {
+                    "actual_figure": actual.name,
+                    "best_match": best,
+                    "all_matches": candidates,
+                    "matching": "target-linked" if target_linked else "global-fallback",
+                }
+            )
     record["visual_similarity"] = {
         "method": "edge correlation + average-hash agreement; layout-only, not numeric curve error",
         "per_figure": similarities,

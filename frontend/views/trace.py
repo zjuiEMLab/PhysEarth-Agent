@@ -311,19 +311,21 @@ def _step_row(event, index):
     badge_class, badge_text, _card = BADGES.get(
         event["kind"], ("badge--mute", event["kind"].upper(), "")
     )
+    row_class = "step-card--row-model" if event["kind"] == "model_call" else ""
     name = _mono(event.get("name") or event.get("rule") or "")
     right = ""
     if event.get("elapsed_s") is not None:
         right = "%.2fs" % event["elapsed_s"]
     body = _routine_detail(event, index)
     return (
-        "<div class='step-card step-card--row'><div class='step-card__head'>"
+        "<div class='step-card step-card--row %s'><div class='step-card__head'>"
         "<span class='step-card__n'>%02d</span>"
         "<span class='badge %s'>%s</span>%s"
         "<span class='step-card__line step-card__line--inline'>%s</span>"
         "<span class='step-card__time'>%s</span></div>"
         "%s</div>"
         % (
+            row_class,
             index,
             badge_class,
             _e(badge_text),

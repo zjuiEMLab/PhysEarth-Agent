@@ -1,5 +1,7 @@
 """What is missing before a plan can claim to be evidence-backed."""
 
+import re
+
 from physearth.research.common import PARAMETER_PROVENANCE
 from physearth.research.coverage import _target_coverage
 from physearth.research.mapping import (
@@ -46,6 +48,16 @@ def _evidence_problem_summary(question, problems):
     return summary
 
 
+def _is_figure_target(target, evidence_refs, opened_figures):
+    """Recognize a paper-figure target even when the model omits source_type."""
+    if str(target.get("source_type") or "").strip().lower() == "figure":
+        return True
+    source_id = str(target.get("source_id") or "")
+    if re.search(r"(?:fig(?:ure)?)[^0-9]*(\d+)", source_id, re.I):
+        return True
+    return bool(set(evidence_refs or ()) & set(opened_figures or ()))
+
+
 def _evidence_plan_problems(session, question, literature_evidence, reproduction_targets,
                             selected_models, parameter_mapping, outputs, runs, charts,
                             parameter_resolution=None):
@@ -53,11 +65,6 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
         return []
     problems = []
     sections, figures = _read_evidence_refs(session)
-    inspectable_figures = {
-        _normalise_evidence_ref(item.get("reference"))
-        for item in _ledger_entries(session, "figure")
-        if item.get("asset_available", True) is not False and item.get("reference")
-    }
     inspected_figures = {
         _normalise_evidence_ref(item.get("reference"))
         for item in _ledger_entries(session, "figure_inspection")
@@ -121,27 +128,28 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
                 "blocking": True,
             })
         refs = {_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()}
+        figure_target = _is_figure_target(target, refs, figures)
         if not refs:
             problems.append({"field": prefix + ".evidence_refs", "source": "research_plan", "expected": "opened paper evidence", "repair": "Read and cite the relevant section, figure, or table."})
         elif not refs.intersection(sections | figures):
             problems.append({"field": prefix + ".evidence_refs", "source": ", ".join(sorted(refs)), "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."})
         if (
-            target.get("source_type") == "figure"
+            figure_target
             and not refs.intersection(figures)
             and target.get("status") not in ("partial", "unavailable")
         ):
             problems.append({"field": prefix + ".evidence_refs", "source": "paper_figures_read", "expected": "source figure opened with read_paper_figure", "repair": "Call read_paper_figure before proposing the reproduction."})
         if (
-            target.get("source_type") == "figure"
-            and refs.intersection(inspectable_figures)
+            figure_target
+            and refs.intersection(figures)
             and not refs.intersection(inspected_figures)
             and target.get("status") not in ("partial", "unavailable")
         ):
             problems.append({
                 "field": prefix + ".figure_inspection",
-                "source": ", ".join(sorted(refs.intersection(inspectable_figures))),
-                "expected": "visual inspection of the opened source figure",
-                "repair": "Call inspect_paper_figure after read_paper_figure and record axes, legends, panels, and qualitative trends; do not digitize curves automatically.",
+                "source": ", ".join(sorted(refs.intersection(figures))),
+                "expected": "title, axes, legend, panels, and qualitative trends from an inspected source figure",
+                "repair": "Call inspect_paper_figure after read_paper_figure for every figure target and record its title, axes, legend, panels, and qualitative trends; do not digitize curves automatically.",
             })
     if not selected_models:
         problems.append({"field": "selected_models", "source": "research_plan", "expected": "each model used for reproduction", "repair": "List the selected model and its purpose after list_models/read_model_instruction."})
