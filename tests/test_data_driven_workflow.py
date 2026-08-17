@@ -806,3 +806,42 @@ def test_a_plan_thinner_than_the_figure_legend_is_flagged_at_review():
 
     unavailable = [dict(thin[0], status="unavailable")]
     assert evidence.legend_coverage_warnings(box, unavailable, []) == []
+
+
+def test_the_paper_index_says_which_figures_exist():
+    """The index is where a reader looks for what a paper contains.
+
+    Listing figures only on a section read left the natural first move -- ask for the
+    index -- with no figure id, so the agent guessed one from the section numbering and
+    read_paper_figure answered "Paper smrt-v1 has no extracted figure 03". True of the
+    string, false of the figure.
+    """
+    from physearth import session as session_state
+    from physearth import tools
+
+    box = session_state.new_session("m")
+    index = tools.call("read_literature", {"slug": "smrt-v1"}, session=box)
+    figures = index["data"].get("figures") or []
+    assert figures, "the index must say which figures the paper has"
+    assert all(item["figure_id"] and item["title"] for item in figures)
+
+    # and the ablation still removes the layer, index included
+    hidden = tools.call(
+        "read_literature", {"slug": "smrt-v1"}, session=box, switches_in={"figures": False}
+    )
+    assert (hidden["data"].get("figures") or []) == []
+
+
+def test_a_figure_is_found_by_the_number_alone():
+    """"03" in a figure_id argument can only mean figure 3."""
+    from physearth import session as session_state
+    from physearth.tools import figures, literature
+
+    assert figures._figure_id_key("03") == figures._figure_id_key("fig03")
+    assert figures._figure_id_key("3") == figures._figure_id_key("fig-03")
+
+    box = session_state.new_session("m")
+    opened = literature.read_paper_figure("smrt-v1", "03", _session=box)
+    assert opened["status"] == "success", opened
+    # "03" resolved to the figure the card declares, not to a new one
+    assert opened["data"]["figure"]["id"] == "fig03"

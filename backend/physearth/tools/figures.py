@@ -27,7 +27,11 @@ def _figure_id_key(value):
         text = "fig" + text[len("fig-fig") :]
     while text.startswith("fig-"):
         text = "fig" + text[len("fig-") :]
-    match = re.fullmatch(r"fig(\d+)", text)
+    # A bare number is a figure number. The agent reached read_paper_figure with "03"
+    # -- the paper's own section numbering -- and was told the figure did not exist,
+    # which is true of the string and false of the figure. This argument only ever
+    # names a figure, so a number in it can only mean one thing.
+    match = re.fullmatch(r"fig(\d+)", text) or re.fullmatch(r"(\d+)", text)
     if match:
         return "fig%d" % int(match.group(1))
     return text

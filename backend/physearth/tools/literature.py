@@ -53,6 +53,15 @@ def read_literature(slug, section_id=None, _session=None, _switches=None):
                 "license": item.get("license", ""),
                 "source": source,
                 "sections": live.section_index(_session, slug),
+                # The index is where a reader looks for what a paper contains, and a
+                # paper contains figures. Listing them only on a section read meant an
+                # agent that asked for the index first had no figure id and guessed one
+                # from the section numbering -- "03" for what the card calls "fig03".
+                "figures": [
+                    {"figure_id": figure.get("id"), "title": figure.get("title", "")}
+                    for figure in (item.get("figures") or ())
+                    if figure.get("id")
+                ] if switches.resolve(_switches)["figures"] else [],
             },
         )
     opened = live.wrapped_section(_session, slug, section_id, OUTPUT_BUDGET_CHARS)
@@ -375,7 +384,17 @@ def read_paper_figure(paper, figure_id, _session=None):
                 "asset_available": False,
             },
         )
-        return _fail("Paper %s has no extracted figure %s." % (paper, resolved_figure_id))
+        # A refusal that only says "no" leaves the caller guessing again. The paper knows
+        # which figures it has, so say them: a wrong id is answered once instead of twice.
+        available = [str(f.get("id")) for f in (item.get("figures") or ()) if f.get("id")]
+        return _fail(
+            "Paper %s has no extracted figure %s.%s"
+            % (
+                paper,
+                resolved_figure_id,
+                (" It has: %s." % ", ".join(available)) if available else "",
+            )
+        )
     citation_key = "%s#fig-%s" % (paper, resolved_figure_id)
     payload = dict(figure)
     payload.pop("asset_bytes", None)
