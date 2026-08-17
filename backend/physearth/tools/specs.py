@@ -133,7 +133,13 @@ CAPABILITY_CHECK_SPEC = {
                 "targets": {
                     "type": "array",
                     "items": {"type": "object"},
-                    "description": "Paper target metadata already identified from opened evidence.",
+                    "description": (
+                        "Every paper figure/result target checked separately. Each object should "
+                        "include id or source_id, reference_models, requested_outputs, and the "
+                        "opened evidence_refs. For a multi-figure reproduction, include all "
+                        "targets in one call or repeat the call until the unified summary says "
+                        "target_check_complete=true."
+                    ),
                 },
             },
             "required": ["action"],

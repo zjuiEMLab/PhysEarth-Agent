@@ -3,8 +3,9 @@
 import threading
 import time
 
-from physearth import agent, session, tools
 from physearth.harness import approval
+
+from physearth import agent, session, tools
 
 
 def _asking():
@@ -129,6 +130,30 @@ def test_unrepairable_tool_arguments_are_not_replayed_to_provider(monkeypatch):
     assert any("strict JSON" in message.get("content", "") for message in second_request)
 
 
+def test_a_truncated_research_plan_gets_one_larger_retry_budget(monkeypatch):
+    box = _asking()
+    first = _call_chunk(
+        "research_plan",
+        '{"action":"propose","charts":[',
+        finish_reason="length",
+        completion_tokens=4096,
+    )
+    script = [
+        [first],
+        [_Chunk(_Delta(content="I could not form the plan."))],
+    ]
+    client, _sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+
+    answer, events, _ = agent.run("Draft a research plan", session=box)
+
+    assert answer == "I could not form the plan."
+    assert client.max_tokens[:2] == [agent.MAX_OUTPUT_TOKENS, 8192]
+    invalid = next(event for event in events if event["kind"] == "tool_arguments_invalid")
+    assert invalid["output_truncated"] is True
+    assert invalid["retry_output_tokens"] == 8192
+
+
 def test_normal_question_does_not_force_research_plan(monkeypatch):
     box = _asking()
     script = [[_Chunk(_Delta(content="A direct explanation."))]]
@@ -231,6 +256,24 @@ def test_research_plan_gate_allows_five_no_progress_answers(monkeypatch):
     assert "stopped after 5 no-progress attempts" in answer
     assert any(
         event["kind"] == "harness_stop" and event["rule"] == "plan_no_progress"
+        for event in events
+    )
+
+
+def test_an_unauthorized_reproduction_run_stops_the_agent_loop_immediately(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    script = [[_call_chunk("run_model", '{"model":"smrt"}')]]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+
+    answer, events, _state = agent.run("Reproduce the paper figure", session=box)
+
+    assert len(sent) == 1
+    assert "blocked" in answer.lower()
+    assert box["model_runs"] == 0
+    assert any(
+        event["kind"] == "harness_stop" and event["rule"] == "research_approval_required"
         for event in events
     )
 
@@ -434,12 +477,14 @@ class _Delta:
 
 
 class _Chunk:
-    def __init__(self, delta):
-        self.choices = [type("Choice", (), {"delta": delta})()]
-        self.usage = None
+    def __init__(self, delta, finish_reason=None, usage=None):
+        self.choices = [
+            type("Choice", (), {"delta": delta, "finish_reason": finish_reason})()
+        ]
+        self.usage = usage
 
 
-def _call_chunk(name, arguments):
+def _call_chunk(name, arguments, finish_reason=None, completion_tokens=None):
     part = type(
         "Part",
         (),
@@ -449,7 +494,16 @@ def _call_chunk(name, arguments):
             "function": type("Fn", (), {"name": name, "arguments": arguments})(),
         },
     )()
-    return _Chunk(_Delta(tool_calls=[part]))
+    usage = None
+    if completion_tokens is not None:
+        usage = type(
+            "Usage",
+            (),
+            {"prompt_tokens": 1, "completion_tokens": completion_tokens},
+        )()
+    return _Chunk(
+        _Delta(tool_calls=[part]), finish_reason=finish_reason, usage=usage
+    )
 
 
 def _fake_client(scripted):
@@ -457,10 +511,12 @@ def _fake_client(scripted):
     turns = iter(scripted)
     sent = []
     tool_choices = []
+    max_tokens = []
 
     def create(**kwargs):
         sent.append(list(kwargs["messages"]))
         tool_choices.append(kwargs.get("tool_choice"))
+        max_tokens.append(kwargs.get("max_tokens"))
         return next(turns)
 
     client = type(
@@ -475,6 +531,7 @@ def _fake_client(scripted):
         },
     )()
     client.tool_choices = tool_choices
+    client.max_tokens = max_tokens
     return client, sent
 
 

@@ -3,6 +3,7 @@
 import re
 
 from physearth import registry
+from physearth.corpus import live
 from physearth.research.charts import _capability_gaps
 
 
@@ -71,7 +72,106 @@ def _near_registered(name, session=None):
     return sorted(set(close))[:4]
 
 
-def capability_check(
+_DOI_RE = re.compile(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", re.I)
+
+
+def _identity_key(value):
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+
+def _doi(value):
+    match = _DOI_RE.search(str(value or ""))
+    return match.group(0).rstrip(".,;)").lower() if match else ""
+
+
+def _opened_paper_cards(session, targets=None):
+    """Return paper cards named by evidence already opened in this session."""
+    slugs = []
+
+    def add_reference(reference):
+        slug = str(reference or "").split("#", 1)[0].strip()
+        if slug and slug not in slugs and live.card(session, slug):
+            slugs.append(slug)
+
+    context = (session or {}).get("research_context") or {}
+    paper_session = context.get("paper_session") or {}
+    add_reference(paper_session.get("paper") or paper_session.get("paper_slug"))
+    for reference in (session or {}).get("sections_read") or ():
+        add_reference(reference)
+    for reference in (session or {}).get("paper_figures_read") or ():
+        add_reference(reference)
+    for item in (session or {}).get("evidence_ledger") or ():
+        if isinstance(item, dict) and item.get("kind") in ("section", "figure", "figure_inspection"):
+            add_reference(item.get("reference"))
+    for target in targets or ():
+        if not isinstance(target, dict):
+            continue
+        for reference in target.get("evidence_refs") or ():
+            add_reference(reference)
+
+    return [(slug, live.card(session, slug)) for slug in slugs]
+
+
+def _paper_evidence_refs(session, paper_slug, targets=None):
+    refs = []
+    values = list((session or {}).get("sections_read") or ())
+    values.extend((session or {}).get("paper_figures_read") or ())
+    values.extend(
+        item.get("reference")
+        for item in (session or {}).get("evidence_ledger") or ()
+        if isinstance(item, dict)
+    )
+    values.extend(
+        reference
+        for target in targets or ()
+        if isinstance(target, dict)
+        for reference in target.get("evidence_refs") or ()
+    )
+    for value in values:
+        reference = str(value or "").strip()
+        if reference.split("#", 1)[0] == paper_slug and reference not in refs:
+            refs.append(reference)
+    return refs
+
+
+def _resolve_from_paper_evidence(name, session, targets=None):
+    """Resolve a paper slug only through an opened paper and an explicit card relation."""
+    requested_key = _identity_key(name)
+    if not requested_key:
+        return None
+    for paper_slug, paper in _opened_paper_cards(session, targets):
+        if _identity_key(paper_slug) != requested_key:
+            continue
+        paper_doi = _doi(paper.get("doi"))
+        if not paper_doi:
+            continue
+        for registered, entry in sorted(registry.all_models(session).items()):
+            card = entry.card
+            paper_slugs = card.get("paper_slugs") or card.get("paper_slug") or ()
+            if isinstance(paper_slugs, str):
+                paper_slugs = [paper_slugs]
+            if not any(_identity_key(slug) == _identity_key(paper_slug) for slug in paper_slugs):
+                continue
+            card_doi = _doi(card.get("citation"))
+            if not card_doi or card_doi != paper_doi:
+                continue
+            return (
+                entry,
+                registered,
+                {},
+                [],
+                {
+                    "match_basis": "opened paper slug + model-card paper_slugs + matching DOI",
+                    "paper_slug": paper_slug,
+                    "doi": paper_doi,
+                    "evidence": _paper_evidence_refs(session, paper_slug, targets)
+                    + ["doi:%s" % paper_doi],
+                },
+            )
+    return None
+
+
+def _capability_check_one(
     session,
     question="",
     reference_models=None,
@@ -83,8 +183,9 @@ def capability_check(
     """Create a session-scoped capability checkpoint before reproduction planning.
 
     The report is derived from resources already opened in this session.  It deliberately
-    does not inspect Evaluation YAML or a stored protocol and it never treats a runnable
-    local model as an alias for a different paper reference model.
+    does not inspect Evaluation YAML or a stored protocol. A runnable local model is only
+    matched to a paper slug when the opened paper and the model card provide the same
+    declared identity and DOI; a merely similar name remains unavailable.
     """
     decision = str(decision or "check").strip().lower()
     current = session.get("capability_review") if session else None
@@ -135,8 +236,14 @@ def capability_check(
         # says electromagnetic_model: iba. Resolving either is not guessing: the spelling
         # match ignores only case and separators, and the formulation must be a value the
         # card actually declares. MEMLS and DMRT-QMS still report as unregistered, which
-        # is what this check exists to say.
+        # is what this check exists to say. A paper slug can only take another route when
+        # _resolve_from_paper_evidence has established the identity from opened evidence.
         entry, canonical, configuration, options = registry.resolve_configuration(name, session)
+        evidence_resolution = None
+        if entry is None:
+            evidence_resolution = _resolve_from_paper_evidence(name, session, targets)
+            if evidence_resolution:
+                entry, canonical, configuration, options = evidence_resolution[:4]
         if entry is None:
             # Say when a name is merely close to something registered. `DMRT-QMS` and
             # `DMRT-ML` are separate packages and belong in the unavailable list, but a
@@ -159,7 +266,7 @@ def capability_check(
             })
             continue
         if canonical != name:
-            resolved_names.append({
+            resolution = {
                 "asked": name,
                 "registered": canonical,
                 # Named so a reader can object: this says which configuration of the
@@ -167,7 +274,10 @@ def capability_check(
                 # name did not pin one -- which configurations it could have meant.
                 "configuration": configuration or None,
                 "configuration_options": options or None,
-            })
+            }
+            if evidence_resolution:
+                resolution.update(evidence_resolution[-1])
+            resolved_names.append(resolution)
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
         instruction = (context.get("instructions") or {}).get(entry.name) or {}
@@ -238,6 +348,11 @@ def capability_check(
         if name in refs:
             continue
         entry, canonical = registry.resolve(name, session)
+        evidence_resolution = None
+        if entry is None:
+            evidence_resolution = _resolve_from_paper_evidence(name, session, targets)
+            if evidence_resolution:
+                entry, canonical = evidence_resolution[:2]
         if entry is None:
             continue
         # Already reported as a reference model, under whatever the paper called it.
@@ -245,7 +360,10 @@ def capability_check(
         if any(item.get("model") == entry.name for item in supported):
             continue
         if canonical != name:
-            resolved_names.append({"asked": name, "registered": canonical})
+            resolution = {"asked": name, "registered": canonical}
+            if evidence_resolution:
+                resolution.update(evidence_resolution[-1])
+            resolved_names.append(resolution)
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
         instruction = (context.get("instructions") or {}).get(entry.name) or {}
@@ -350,3 +468,253 @@ def capability_check(
     if session is not None:
         session["capability_review"] = report
     return report
+
+
+def _target_key(value):
+    """Use a stable identity for a figure target without trusting its filename spelling."""
+    text = str(value or "").strip().lower()
+    match = re.search(r"(?:figure|fig)[^0-9]*(\d+)", text)
+    if match:
+        return "figure:%d" % int(match.group(1))
+    return "target:%s" % _identity_key(text)
+
+
+def _target_specs(targets, reference_models, requested_outputs, local_models):
+    specs = []
+    for index, item in enumerate(targets or ()):
+        item = dict(item) if isinstance(item, dict) else {"id": item}
+        raw_id = (
+            item.get("id") or item.get("source_id") or item.get("figure_id")
+            or (item.get("evidence_refs") or [None])[0] or "target-%d" % (index + 1)
+        )
+        specs.append({
+            **item,
+            "id": str(raw_id),
+            "_key": _target_key(raw_id),
+            "reference_models": _capability_strings(
+                item.get("reference_models") or item.get("models") or reference_models
+            ),
+            "requested_outputs": _capability_strings(
+                item.get("requested_outputs") or item.get("outputs") or requested_outputs
+            ),
+            "local_models": _capability_strings(item.get("local_models") or local_models),
+        })
+    return specs
+
+
+def _expected_figure_targets(session):
+    values = []
+    for reference in (session or {}).get("paper_figures_read") or ():
+        reference = str(reference or "").strip()
+        if reference and reference not in values:
+            values.append(reference)
+    return values
+
+
+def _merge_target_items(reports, field, identity_fields):
+    merged = []
+    index = {}
+    list_fields = ("target_ids", "configurations", "configuration_options", "asked_as", "outputs")
+    for report in reports:
+        target_id = report.get("id")
+        for item in report.get(field) or ():
+            item = dict(item)
+            key = tuple(str(item.get(name) or "") for name in identity_fields)
+            existing_index = index.get(key)
+            if existing_index is None:
+                item["target_ids"] = [target_id] if target_id else []
+                for name in list_fields:
+                    if name in item and not isinstance(item[name], list):
+                        item[name] = [item[name]] if item[name] else []
+                index[key] = len(merged)
+                merged.append(item)
+                continue
+            existing = merged[existing_index]
+            for name in list_fields:
+                values = item.get(name) or ()
+                if name not in existing:
+                    existing[name] = []
+                for value in values:
+                    if value not in existing[name]:
+                        existing[name].append(value)
+    return merged
+
+
+def _aggregate_target_reports(reports, expected_targets, previous=None):
+    """Combine per-target findings while retaining the evidence boundary for each figure."""
+    by_key = {_target_key(item.get("id")): item for item in reports}
+    missing = [
+        reference for reference in expected_targets
+        if _target_key(reference) not in by_key
+    ]
+    all_reports = list(reports)
+    status = "incomplete" if missing else "ready"
+    if not missing:
+        statuses = {item.get("status") for item in all_reports}
+        if "waiting_user" in statuses:
+            status = "waiting_user"
+        elif "waiting_resources" in statuses:
+            status = "waiting_resources"
+    supported = _merge_target_items(all_reports, "supported", ("model", "reference_model"))
+    unavailable = _merge_target_items(all_reports, "unavailable", ("model", "reference_model"))
+    not_comparable = _merge_target_items(
+        all_reports, "not_comparable", ("reference_model", "local_model")
+    )
+    unavailable_outputs = sorted({
+        str(output)
+        for report in all_reports
+        for output in report.get("unavailable_outputs") or ()
+    })
+    resource_gaps = []
+    resolved_names = []
+    evidence = []
+    requested_models = []
+    requested_outputs = []
+    for report in all_reports:
+        for field, destination in (
+            ("resource_gaps", resource_gaps),
+            ("resolved_names", resolved_names),
+        ):
+            for item in report.get(field) or ():
+                if item not in destination:
+                    destination.append(item)
+        for value, destination in (
+            (report.get("evidence") or (), evidence),
+            (report.get("requested_models") or (), requested_models),
+            (report.get("requested_outputs") or (), requested_outputs),
+        ):
+            for item in value:
+                if item not in destination:
+                    destination.append(item)
+    result = {
+        "status": status,
+        "supported": supported,
+        "unavailable": unavailable,
+        "not_comparable": not_comparable,
+        "requested_models": requested_models,
+        "requested_outputs": requested_outputs,
+        "supported_outputs": sorted({
+            output for item in supported for output in item.get("outputs") or ()
+        }),
+        "unavailable_outputs": unavailable_outputs,
+        "resource_gaps": resource_gaps,
+        "resolved_names": resolved_names,
+        "evidence": evidence,
+        "targets": [item.get("id") for item in all_reports],
+        "target_reports": all_reports,
+        "target_check_complete": not missing,
+        "missing_targets": missing,
+        "user_decision": None,
+        "confirmed_scope": None,
+    }
+    previous = previous or {}
+    if (
+        status == "waiting_user"
+        and previous.get("user_decision") == "partial"
+        and _within_confirmed_scope(
+            _scope_signature(unavailable, not_comparable, unavailable_outputs),
+            previous.get("confirmed_scope"),
+        )
+    ):
+        result.update({
+            "status": "confirmed",
+            "user_decision": "partial",
+            "confirmed_scope": previous.get("confirmed_scope"),
+        })
+    return result
+
+
+def capability_check(
+    session,
+    question="",
+    reference_models=None,
+    requested_outputs=None,
+    local_models=None,
+    targets=None,
+    decision="check",
+):
+    """Check every reproduction target, then publish one session-wide checkpoint.
+
+    A multi-figure reproduction cannot become ``ready`` from a check for only one
+    figure. Calls may provide all targets at once or accumulate one target at a time;
+    the session retains the per-target reports until the complete aggregate exists.
+    """
+    current = session.get("capability_review") if session else None
+    target_list = _target_specs(targets, reference_models, requested_outputs, local_models)
+    expected = _expected_figure_targets(session)
+
+    if not target_list and len(expected) <= 1:
+        return _capability_check_one(
+            session,
+            question=question,
+            reference_models=reference_models,
+            requested_outputs=requested_outputs,
+            local_models=local_models,
+            targets=targets,
+            decision=decision,
+        )
+
+    if decision == "reject":
+        report = dict(current or {})
+        report.update({"status": "rejected", "user_decision": "reject"})
+        session["capability_review"] = report
+        return report
+
+    if decision in ("confirm_partial", "confirm"):
+        if (
+            not current
+            or current.get("status") not in ("waiting_user", "ready")
+            or not current.get("target_check_complete", True)
+        ):
+            return {
+                "status": "error",
+                "error_code": "capability_review_missing",
+                "message": "Check every reproduction target before confirming a partial scope.",
+            }
+        report = dict(current)
+        report.update({
+            "status": "confirmed",
+            "user_decision": "partial",
+            "confirmed_scope": _scope_signature(
+                current.get("unavailable"),
+                current.get("not_comparable"),
+                current.get("unavailable_outputs"),
+            ),
+        })
+        session["capability_review"] = report
+        return report
+
+    if not target_list:
+        # Multiple source figures were opened, but the caller did not identify the
+        # reproduction targets. Keep the checkpoint incomplete instead of guessing.
+        report = _aggregate_target_reports([], expected, current)
+        report["requested_models"] = _capability_strings(reference_models)
+        report["requested_outputs"] = _capability_strings(requested_outputs)
+        session["capability_review"] = report
+        return report
+
+    previous_reports = {
+        _target_key(item.get("id")): item
+        for item in (current or {}).get("target_reports") or ()
+    }
+    reports = dict(previous_reports)
+    session["capability_review"] = None
+    for target in target_list:
+        report = _capability_check_one(
+            session,
+            question=target.get("question") or question,
+            reference_models=target.get("reference_models"),
+            requested_outputs=target.get("requested_outputs"),
+            local_models=target.get("local_models"),
+            targets=[target],
+            decision="check",
+        )
+        reports[target["_key"]] = {
+            **report,
+            "id": target["id"],
+            "label": target.get("label") or target["id"],
+            "target_key": target["_key"],
+        }
+    aggregate = _aggregate_target_reports(list(reports.values()), expected, current)
+    session["capability_review"] = aggregate
+    return aggregate

@@ -68,6 +68,55 @@ def research_plan(
                     "capability_review": capability_review,
                 },
             )
+        planned_targets = [
+            item for item in reproduction_targets or () if isinstance(item, dict)
+        ]
+        checked_targets = {
+            research._target_key(item.get("id"))
+            for item in capability_review.get("target_reports") or ()
+        }
+        missing_targets = [
+            str(item.get("id") or item.get("source_id") or "target")
+            for item in planned_targets
+            if research._target_key(item.get("id") or item.get("source_id")) not in checked_targets
+        ]
+        target_reports = capability_review.get("target_reports") or []
+        planned_target_keys = {
+            research._target_key(item.get("id") or item.get("source_id"))
+            for item in planned_targets
+        }
+        unplanned_checked_targets = [
+            str(item.get("id") or "target")
+            for item in target_reports
+            if research._target_key(item.get("id")) not in planned_target_keys
+        ]
+        target_checks_missing = (
+            len(planned_targets) > 1 and not target_reports
+        ) or (
+            bool(target_reports)
+            and (
+                not capability_review.get("target_check_complete", True)
+                or bool(missing_targets)
+                or (len(target_reports) > 1 and bool(unplanned_checked_targets))
+            )
+        )
+        if planned_targets and target_checks_missing:
+            missing_targets = list(dict.fromkeys(missing_targets + unplanned_checked_targets))
+            return research._fail(
+                "Every reproduction target needs its own capability check before planning.",
+                {
+                    "error_code": "capability_targets_required",
+                    "source": "session.capability_review",
+                    "missing_targets": missing_targets or capability_review.get("missing_targets") or [],
+                    "repair": (
+                        "Call research_capability_check once for every figure target, then wait for "
+                        "the unified summary. If any target is unavailable, obtain explicit user "
+                        "confirmation before proposing the partial plan."
+                    ),
+                    "blocking": True,
+                    "capability_review": capability_review,
+                },
+            )
 
     def resource_gate():
         """Require data resources to be opened before a proposal can be accepted."""

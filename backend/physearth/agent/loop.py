@@ -12,6 +12,7 @@ from physearth.agent.constants import (
     _TOOL_BYPASS_PATTERNS,
     EMPTY_RESPONSE_RETRIES,
     MAX_OUTPUT_TOKENS,
+    MAX_RESEARCH_PLAN_RETRY_TOKENS,
     RATE_LIMIT_BACKOFF_S,
     RATE_LIMIT_RETRIES,
     RETRY_BACKOFF_S,
@@ -114,6 +115,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
     plan_tool_called = False
     revision_forced = False
     segments = []
+    # Most calls should stay on the normal provider budget. A malformed research_plan is
+    # the one case where the loop has evidence that its structured output did not fit; give
+    # the next planning attempt more room without increasing the cost of ordinary turns.
+    output_tokens = MAX_OUTPUT_TOKENS
 
     allowed, message = budget.acquire()
     if not allowed:
@@ -167,7 +172,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         if requested_tool else "auto"
                     ),
                     parallel_tool_calls=False,
-                    max_tokens=MAX_OUTPUT_TOKENS,
+                    max_tokens=output_tokens,
                     stream=True,
                     stream_options={"include_usage": True},
                 )
@@ -277,6 +282,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 cost_usd=completion.cost_usd,
                 cost_details=completion.cost_details,
                 reasoning_chars=completion.reasoning,
+                finish_reason=completion.finish_reason,
+                requested_output_tokens=output_tokens,
             )
         )
         yield answer, events, state
@@ -300,9 +307,22 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 argument_text = str(call.get("arguments") or "")
                 output_truncated = bool(
                     call.get("name") == "research_plan"
-                    and completion.completion_tokens is not None
-                    and completion.completion_tokens >= MAX_OUTPUT_TOKENS
+                    and (
+                        completion.finish_reason in ("length", "max_tokens")
+                        or (
+                            completion.completion_tokens is not None
+                            and completion.completion_tokens >= output_tokens
+                        )
+                    )
                 )
+                retry_output_tokens = None
+                if (
+                    call.get("name") == "research_plan"
+                    and output_truncated
+                    and output_tokens < MAX_RESEARCH_PLAN_RETRY_TOKENS
+                ):
+                    retry_output_tokens = MAX_RESEARCH_PLAN_RETRY_TOKENS
+                    output_tokens = retry_output_tokens
                 events.append(
                     _event(
                         "tool_arguments_invalid",
@@ -312,6 +332,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         argument_chars=len(argument_text),
                         completion_tokens=completion.completion_tokens,
                         output_truncated=output_truncated,
+                        retry_output_tokens=retry_output_tokens,
                     )
                 )
                 if attempts >= harness.max_interventions(tool=call.get("name")):
@@ -345,6 +366,12 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         retry_content = (
                             "The previous research_plan arguments were incomplete. Keep the next "
                             "tool call compact. "
+                        )
+                    if retry_output_tokens:
+                        retry_content += (
+                            "The next planning attempt has a larger output allowance. Keep one "
+                            "target and one chart per source figure, use short labels and omit "
+                            "optional explanatory prose inside the JSON. "
                         )
                     if has_recovery_state:
                         retry_content += (
@@ -563,11 +590,15 @@ def stream(question, history=None, model=None, session=None, switches=None):
                                 "model_instruction_read_required": "read_model_instruction",
                                 "capability_review_required": "research_capability_check",
                                 "capability_resources_required": "research_capability_check",
+                                "capability_targets_required": "research_capability_check",
                             }.get(failure_code, "research_plan")
 
+                unauthorized_run = (
+                    name in ("run_model", "run_planned_model")
+                    and result.get("error") == "research workflow approval required"
+                )
                 if result["status"] == "needs_input" and (
-                    name == "research_plan"
-                    or (name == "run_model" and result.get("error") == "research workflow approval required")
+                    name == "research_plan" or unauthorized_run
                 ):
                     events.append(
                         _event(
@@ -576,6 +607,19 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             detail=result["summary"],
                         )
                     )
+                    if unauthorized_run:
+                        answer = result["summary"]
+                        events.append(
+                            _event(
+                                "harness_stop",
+                                rule="research_approval_required",
+                                tool=name,
+                                reason=answer,
+                            )
+                        )
+                        state["phase"] = "done"
+                        yield answer, events, state
+                        return
                 elif result["status"] == "needs_input":
                     session_state.bump(state, "interventions")
                     events.append(

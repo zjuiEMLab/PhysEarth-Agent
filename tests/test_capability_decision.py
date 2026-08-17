@@ -6,8 +6,40 @@ again before proposing, the confirmation was gone, and research_plan was refused
 request for the same decision that had just been given.
 """
 
-from physearth import session as session_state
 from physearth.research import capability
+
+from physearth import session as session_state
+from physearth import tools
+
+
+def _multi_figure_capability_session():
+    from physearth import registry
+
+    box = session_state.new_session("m")
+    card = registry.get("smrt").card
+    box["paper_figures_read"] = {"smrt-v1#fig04", "smrt-v1#fig05"}
+    box["models_inspected"] = {"smrt@%s" % card["version"]}
+    box["model_instructions_read"] = {
+        "smrt@%s" % (card.get("instruction_version") or "1.0")
+    }
+    return box
+
+
+def _multi_figure_targets():
+    return [
+        {
+            "id": "fig04.png",
+            "label": "Figure 4",
+            "reference_models": ["DMRT-ML", "DMRT-QMS"],
+            "requested_outputs": ["tb_v", "sigma_vv_db"],
+        },
+        {
+            "id": "fig05.png",
+            "label": "Figure 5",
+            "reference_models": ["DMRT-QMS"],
+            "requested_outputs": ["tb_v", "sigma_vv_db"],
+        },
+    ]
 
 
 def _confirmed_session():
@@ -56,6 +88,88 @@ def test_a_wider_scope_asks_again():
     )
     assert wider["status"] == "waiting_user"
     assert wider["user_decision"] is None
+
+
+def test_multi_figure_capability_check_aggregates_only_after_every_target_is_checked():
+    box = _multi_figure_capability_session()
+    targets = _multi_figure_targets()
+
+    incomplete = capability.capability_check(
+        box,
+        reference_models=targets[1]["reference_models"],
+        requested_outputs=targets[1]["requested_outputs"],
+        local_models=["smrt"],
+        targets=[targets[1]],
+    )
+    assert incomplete["status"] == "incomplete"
+    assert "smrt-v1#fig04" in incomplete["missing_targets"]
+    assert incomplete["target_check_complete"] is False
+
+    complete = tools.call(
+        "research_capability_check",
+        {
+            "action": "check",
+            "local_models": ["smrt"],
+            "targets": targets,
+        },
+        session=box,
+    )
+    assert complete["status"] == "needs_input"
+    report = box["capability_review"]
+    assert report["status"] == "waiting_user"
+    assert report["target_check_complete"] is True
+    assert {item["id"] for item in report["target_reports"]} == {"fig04.png", "fig05.png"}
+    assert "Capability check by reproduction target" in complete["summary"]
+    assert "Unified summary" in complete["summary"]
+
+
+def test_a_partial_capability_check_cannot_propose_a_multi_figure_plan():
+    box = _multi_figure_capability_session()
+    target = _multi_figure_targets()[1]
+    capability.capability_check(
+        box,
+        reference_models=target["reference_models"],
+        requested_outputs=target["requested_outputs"],
+        local_models=["smrt"],
+        targets=[target],
+    )
+    from physearth.tools import planning
+
+    blocked = planning.research_plan(
+        action="propose",
+        question="Reproduce Figures 4 and 5 from the paper.",
+        reproduction_targets=_multi_figure_targets(),
+        _session=box,
+    )
+    assert blocked["status"] == "terminal_error"
+    assert blocked["data"]["error_code"] == "capability_review_required"
+
+
+def test_a_plan_cannot_drop_a_figure_after_the_unified_capability_check():
+    box = _multi_figure_capability_session()
+    capability.capability_check(
+        box,
+        reference_models=["DMRT-ML", "DMRT-QMS"],
+        requested_outputs=["tb_v", "sigma_vv_db"],
+        local_models=["smrt"],
+        targets=_multi_figure_targets(),
+    )
+    capability.capability_check(box, decision="confirm_partial")
+
+    from physearth.tools import planning
+
+    only_figure_five = [
+        dict(_multi_figure_targets()[1], source_id="fig05", status="partial")
+    ]
+    blocked = planning.research_plan(
+        action="propose",
+        question="Reproduce Figures 4 and 5 from the paper.",
+        reproduction_targets=only_figure_five,
+        _session=box,
+    )
+    assert blocked["status"] == "terminal_error"
+    assert blocked["data"]["error_code"] == "capability_targets_required"
+    assert "fig04.png" in blocked["data"]["missing_targets"]
 
 
 def test_a_narrower_scope_still_stands():
@@ -163,6 +277,34 @@ def test_the_report_says_which_configuration_each_name_was_taken_to_mean():
     assert resolved["SMRT IBA"]["configuration"] == {"electromagnetic_model": "iba"}
 
 
+def test_an_opened_paper_slug_resolves_to_its_registered_model_by_card_evidence():
+    box = _session_with_smrt_resources()
+    box["sections_read"].add("smrt-v1#08")
+    report = capability.capability_check(
+        box,
+        question="Reproduce the smrt-v1 paper figures",
+        reference_models=["smrt-v1"],
+        local_models=["smrt"],
+    )
+
+    assert report["unavailable"] == []
+    assert report["not_comparable"] == []
+    assert report["supported"][0]["model"] == "smrt"
+    resolved = report["resolved_names"][0]
+    assert resolved["asked"] == "smrt-v1"
+    assert resolved["registered"] == "smrt"
+    assert "matching DOI" in resolved["match_basis"]
+    assert resolved["paper_slug"] == "smrt-v1"
+
+
+def test_a_paper_slug_without_opened_evidence_remains_unavailable():
+    box = _session_with_smrt_resources()
+    report = capability.capability_check(box, reference_models=["smrt-v1"])
+
+    assert [item["model"] for item in report["unavailable"]] == ["smrt-v1"]
+    assert report["resolved_names"] == []
+
+
 def test_an_underspecified_formulation_is_still_its_model():
     """A paper's shorthand that does not pin one declared value still names the model.
 
@@ -217,8 +359,9 @@ def test_mapping_an_output_as_an_input_says_it_is_an_output():
     output name for another and failed five times in a row. The quantity was real and
     belonged in the plan; it belonged under outputs.
     """
-    from physearth import session as session_state
     from physearth.research import mapping
+
+    from physearth import session as session_state
 
     box = session_state.new_session("m")
     result = mapping._repair_parameter_mappings(
@@ -296,9 +439,11 @@ def test_a_rejected_proposal_survives_a_mixed_problem_list():
     handler for a rejected plan, so the whole turn died instead of returning the refusal
     it was in the middle of explaining.
     """
-    from physearth import registry, session as session_state
     from physearth.research import capability
     from physearth.tools import planning
+
+    from physearth import registry
+    from physearth import session as session_state
 
     box = session_state.new_session("m")
     box["research_required"] = True

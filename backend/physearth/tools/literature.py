@@ -199,6 +199,11 @@ def research_capability_check(
 ):
     if _session is None:
         return _fail("research_capability_check requires a session.")
+    # Once this checkpoint is called, the turn is in the reproduction workflow. A
+    # later direct run_model call must therefore meet the research approval gate even
+    # if the model never submits a plan.
+    _session["research_required"] = True
+    _session.setdefault("research_context", {})["reproduction_case"] = "paper-reproduction"
     report = research.capability_check(
         _session,
         question=question,
@@ -216,6 +221,7 @@ def research_capability_check(
     supported = report.get("supported") or []
     unavailable = report.get("unavailable") or []
     not_comparable = report.get("not_comparable") or []
+    resolved_names = report.get("resolved_names") or []
     resource_gaps = report.get("resource_gaps") or []
     supported_text = "; ".join(
         "%s@%s (%s)" % (
@@ -234,6 +240,51 @@ def research_capability_check(
         )
         for item in not_comparable
     ) or "none"
+    resolved_text = "; ".join(
+        "%s -> %s (%s)" % (
+            item.get("asked"), item.get("registered"), item.get("match_basis", "registered spelling"),
+        )
+        for item in resolved_names
+    ) or "none"
+    target_reports = report.get("target_reports") or []
+    if target_reports:
+        target_sections = []
+        for target in target_reports:
+            target_supported = "; ".join(
+                "%s@%s" % (item.get("model"), item.get("version"))
+                for item in target.get("supported") or ()
+            ) or "none"
+            target_unavailable = "; ".join(
+                "%s: %s" % (item.get("model"), item.get("reason"))
+                for item in target.get("unavailable") or ()
+            ) or "none"
+            target_incomparable = "; ".join(
+                "%s is not equivalent to %s" % (
+                    item.get("local_model"), item.get("reference_model")
+                )
+                for item in target.get("not_comparable") or ()
+            ) or "none"
+            target_sections.append(
+                "%s [%s]\nSupported: %s\nUnavailable: %s\nNot comparable: %s"
+                % (
+                    target.get("label") or target.get("id"),
+                    target.get("id"),
+                    target_supported,
+                    target_unavailable,
+                    target_incomparable,
+                )
+            )
+        summary = (
+            "Capability check by reproduction target\n\n%s\n\n"
+            "Unified summary\nSupported: %s\nUnavailable: %s\nNot comparable: %s"
+            % ("\n\n".join(target_sections), supported_text, unavailable_text, incomparable_text)
+        )
+    else:
+        summary = (
+            "Capability check\n\nResolved names: %s\n\nSupported: %s\n\n"
+            "Unavailable: %s\n\nNot comparable: %s"
+            % (resolved_text, supported_text, unavailable_text, incomparable_text)
+        )
     if resource_gaps:
         return {
             "status": "needs_input",
@@ -251,11 +302,26 @@ def research_capability_check(
             "citations": [], "qc": None, "ui": None,
             "error": "capability resources required",
         }
-    summary = (
-        "Capability check\n\nSupported: %s\n\nUnavailable: %s\n\n"
-        "Not comparable: %s"
-        % (supported_text, unavailable_text, incomparable_text)
-    )
+    if not report.get("target_check_complete", True):
+        missing = ", ".join(str(item) for item in report.get("missing_targets") or ()) or "the remaining targets"
+        return {
+            "status": "needs_input",
+            "summary": (
+                "%s\n\nTarget checks are incomplete: %s. Check every reproduction figure "
+                "before proposing any plan or asking for partial-scope consent."
+                % (summary, missing)
+            ),
+            "data": {
+                "error_code": "capability_targets_required",
+                "capability_review": report,
+                "missing_targets": report.get("missing_targets") or [],
+                "expected": "one capability result per reproduction target",
+                "repair": "Call research_capability_check for each remaining figure target.",
+                "blocking": True,
+            },
+            "citations": [], "qc": None, "ui": None,
+            "error": "capability checks are incomplete",
+        }
     if report.get("status") == "waiting_user":
         summary += (
             "\n\nExact reproduction is not possible with the currently registered models. "
@@ -398,7 +464,9 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
         "vision_payload_ready"
         if asset_available and _vision_enabled()
         else "text_extracted"
-        if asset_available and vector_observations.get("axes") or vector_observations.get("legend")
+        if asset_available and (
+            vector_observations.get("axes") or vector_observations.get("legend")
+        )
         else "metadata_only"
         if asset_available
         else "unavailable"
@@ -422,6 +490,7 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
             "the source image is retained but no vector labels were available"
         )
     visual = {
+        "title": str(payload.get("title") or "").strip(),
         "axes": vector_observations.get("axes") or [],
         "legend": vector_observations.get("legend") or [],
         "panels": vector_observations.get("panels"),
@@ -445,6 +514,7 @@ def inspect_paper_figure(paper, figure_id, focus="", _session=None):
     data = {
         "paper": paper,
         "figure_id": resolved_figure_id,
+        "title": visual["title"],
         "citation_key": reference,
         "caption": caption,
         "source_page": payload.get("page"),

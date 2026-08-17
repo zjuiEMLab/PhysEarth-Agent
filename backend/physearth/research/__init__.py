@@ -25,6 +25,7 @@ from physearth.research.approval import (
 )
 from physearth.research.capability import (
     _capability_strings,
+    _target_key,
     capability_check,
 )
 from physearth.research.charts import (
