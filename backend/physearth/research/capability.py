@@ -147,11 +147,10 @@ def _resolve_from_paper_evidence(name, session, targets=None):
             continue
         for registered, entry in sorted(registry.all_models(session).items()):
             card = entry.card
-            paper_slugs = card.get("paper_slugs") or card.get("paper_slug") or ()
-            if isinstance(paper_slugs, str):
-                paper_slugs = [paper_slugs]
-            if not any(_identity_key(slug) == _identity_key(paper_slug) for slug in paper_slugs):
-                continue
+            # The DOI is the relation, and it is already declared: a model card cites the
+            # paper it implements, and a literature card carries that paper's DOI. An
+            # extra `paper_slugs` field would be a second place to state the same fact,
+            # and no card declares one -- which is why this path never matched.
             card_doi = _doi(card.get("citation"))
             if not card_doi or card_doi != paper_doi:
                 continue
@@ -161,7 +160,7 @@ def _resolve_from_paper_evidence(name, session, targets=None):
                 {},
                 [],
                 {
-                    "match_basis": "opened paper slug + model-card paper_slugs + matching DOI",
+                    "match_basis": "opened paper slug + model card citing the matching DOI",
                     "paper_slug": paper_slug,
                     "doi": paper_doi,
                     "evidence": _paper_evidence_refs(session, paper_slug, targets)

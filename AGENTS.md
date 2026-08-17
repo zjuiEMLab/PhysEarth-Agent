@@ -82,6 +82,40 @@ These are the product, not conventions. Breaking one silently is worse than a cr
 - **Text from outside the system arrives inside a labelled boundary** and is evidence,
   never instruction.
 
+## Fixing a demo means fixing the mechanism
+
+A demo is a test of the system, not a thing to be satisfied. So when a demo fails, do not
+write what it needs into a script, a model card, a literature card or a task file. Ask
+what general fact the system was missing, record that fact where it belongs, and let the
+demo pass as a consequence.
+
+The difference is concrete. Figure 4 of the SMRT paper compares against DMRT-ML and
+DMRT-QMS; figure 5 uses SMRT IBA. The wrong fix is to list those names on the paper's card
+as models to look out for, or to add the outputs one SMRT figure happens to plot: that
+makes the corpus assert a conclusion, and the next figure or the next paper is wrong
+again. The right fix is to record what each figure *is* -- its title, axes, legend, labels,
+extracted from the figure itself -- and let the registry decide which of those names it can
+answer. One is a note about a demo; the other is a fact about a figure, and everything
+downstream can use it.
+
+Practical tests before adding data or a branch:
+
+- Would this still be true for a paper nobody has run yet, or a model nobody has
+  registered? If not, it is demo knowledge in disguise.
+- Is it a *description* of something (what a figure shows, what a card declares) or a
+  *verdict* about it (which models are unsupported, which values are expected)? Prefer the
+  description; let the verdict be computed.
+- Could it be extracted rather than typed? `scripts/extract_figure_metadata.py` reads
+  axes and legends out of the figures; that is preferable to a human writing them in,
+  because it stays true when the corpus changes.
+- Does a name resolve through a declaration, or through a list of special cases? Model
+  identity comes from the registry and the cards, never from a hardcoded alias table --
+  the last one of those, `model_names`, was removed for exactly this reason.
+
+Failing to find a general fix is worth saying out loud. A demo that needs a special case
+is telling you the model of the problem is wrong, and that is more useful than a green
+demo.
+
 ## Evidence and evaluation
 
 `evaluation/results/` is committed evidence behind `REPORT.md`, not build output. Do not
