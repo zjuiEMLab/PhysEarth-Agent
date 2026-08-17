@@ -1,6 +1,6 @@
-# The shape of a literature card. Copy this to start a paper by hand, or edit it to
-# change the shape of every card scripts/build_corpus.py writes -- the builder reads the
-# key order from this file rather than carrying it in Python.
+# The shape of a literature card. Edit this to change the shape of every card
+# scripts/build_corpus.py writes -- the builder reads the key order from this file
+# rather than carrying one in Python.
 #
 # Three kinds of field, and the difference matters:
 #
@@ -39,6 +39,10 @@ sections:                                 # generated · one entry per split sec
 # Figures. Identity is generated with the assets; everything describing what the figure
 # SHOWS is extracted from the publisher PDF's own text layer, never typed by hand.
 #
+# Axes and legends belong to a panel, never to the figure as a whole. A figure with one
+# plot is one panel and says so, so a reader and a check never have to handle two shapes:
+# `panels: 1` with a single entry, rather than a special case with the axes hoisted up.
+#
 # Extraction is heuristic and says only what the vector text says. A schematic with no
 # axis label reports none; a legend may pick up a tick number. That is the right failure
 # mode for evidence: it under- and over-reports what is printed, rather than asserting
@@ -56,30 +60,23 @@ figures:
     source_uri: https://…/gmd-11-2763-2018-f04.pdf
     license: CC-BY-4.0
 
-    # extracted · which quantity is on each axis, and over what range
-    x_axis:
-      label: [Stickiness]
-      ticks: ["0", "100", "200", "300", "400"]
-    y_axis:
-      label: [Brightness temperature (K)]
-      ticks: ["240", "245", "250", "255", "260"]
-
-    # extracted · what the curves are called. The count is what says how many runs a
-    # faithful reproduction needs.
-    legend:
-      - SMRT QCACP V
-      - DMRT-ML Fortran V
-
-    # extracted · subplots. Absent when the figure has one panel.
-    panels: 2
-    panel_detail:
-      - panel: a
+    panels: 2                             # extracted · how many plots the figure holds
+    panel_detail:                         # extracted · one entry per panel, always
+      - panel: a                          # the marker printed on the figure, or "1"
         subtitle: ""                      # extracted when the panel carries its own title
-        x_axis: ""
-        y_axis: Brightness temperature (K)
+        x_axis:
+          label: [Stickiness]
+          ticks: ["0", "100", "200", "300", "400"]
+        y_axis:
+          label: [Brightness temperature (K)]
+          ticks: ["240", "245", "250", "255", "260"]
         legend: [SMRT QCACP V, SMRT QCACP H]
       - panel: b
         subtitle: ""
-        x_axis: ""
-        y_axis: ""
+        x_axis:
+          label: []
+          ticks: []
+        y_axis:
+          label: []
+          ticks: []
         legend: [SMRT QCA VV, DMRT-QMS VV]

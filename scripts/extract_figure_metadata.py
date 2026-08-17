@@ -28,7 +28,7 @@ from physearth.tools.figures import _extract_vector_figure_observations  # noqa:
 # What a reader needs to reproduce a figure: which quantity is on each axis and over
 # what range, what the curves are called, and -- when the figure has subplots -- all of
 # that per panel rather than merged into one list.
-FIELDS = ("x_axis", "y_axis", "legend", "panels", "panel_detail")
+FIELDS = ("legend", "panels", "panel_detail")
 
 
 def _observations(paper_dir, figure):
@@ -56,10 +56,8 @@ def update(card_path, dry_run=False):
             value = observed.get(field)
             # A single-panel figure carries no panel detail, and an empty axis label is
             # an honest answer for a schematic. Write only what was found.
-            if field == "panels" and value in (None, 1):
-                continue
-            if field in ("x_axis", "y_axis") and not (value or {}).get("label"):
-                continue
+            # `panels` is written even when it is 1: a figure with one plot is one
+            # panel, and saying so keeps every reader on one shape.
             if not value or figure.get(field) == value:
                 continue
             print("    %s.%s <- %s" % (figure.get("id"), field, str(value)[:66]))

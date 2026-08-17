@@ -7,14 +7,18 @@ library code. The machinery that loads and validates these lives in
 ```
 bundled/           the six models that ship with the repository
 examples/          toy_model, the smallest thing that registers
-TEMPLATE/          copy this to start your own
 CONTRACT.md        what the card must declare, and why each rule exists
+
+The starting point lives with the other templates, at the top of the repository:
+TEMPLATES/model_card.yaml and TEMPLATES/model_adapter.py.
 ```
 
 ## Register a model in five minutes
 
 ```bash
-cp -r models/TEMPLATE models/bundled/my_model
+mkdir models/bundled/my_model
+cp TEMPLATES/model_card.yaml models/bundled/my_model/model_card.yaml
+cp TEMPLATES/model_adapter.py models/bundled/my_model/adapter.py
 ```
 
 Then edit two files.

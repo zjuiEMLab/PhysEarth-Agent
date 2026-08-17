@@ -49,8 +49,12 @@ figure-inspection tests fail in a way that looks like a code defect but is not.
   `backend/physearth/plotting.py`, which registers the same faces with matplotlib so a rendered
   figure carries the interface's type. `evaluation/` holds the architecture diagram
   `backend/physearth/evals.py` reads.
+- `TEMPLATES/` — the shape of every card, in one place: `literature_card.yaml` is the
+  key order `scripts/build_corpus.py` writes and documents which fields are generated,
+  extracted or authored; `model_card.yaml` and `model_adapter.py` are what you copy to
+  register a model.
 - `models/` — the registered models, as content rather than code: `bundled/` (the six
-  that ship), `examples/`, a copyable `TEMPLATE/`, and `CONTRACT.md`. Outside the package
+  that ship), `examples/`, and `CONTRACT.md`. Outside the package
   on purpose, so an operator's own model registers by the same mechanism the bundled six
   use. The loader stays in `backend/physearth/models/`.
 - `knowledge/` — bundled CC-BY literature, method notes, reference data. Not part of the

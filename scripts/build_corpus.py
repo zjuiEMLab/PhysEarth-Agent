@@ -50,7 +50,7 @@ def flatten(value):
     return value
 
 
-TEMPLATE = ROOT / "knowledge" / "TEMPLATE" / "card.yaml"
+TEMPLATE = ROOT / "TEMPLATES" / "literature_card.yaml"
 
 # Fields the builder does not produce and must never destroy. `figures` is written by
 # scripts/extract_figure_metadata.py from the publisher PDFs; rebuilding the corpus used
@@ -59,7 +59,7 @@ CARD_PRESERVED = ("figures",)
 
 
 def card_order():
-    """The key order, read from knowledge/TEMPLATE/card.yaml.
+    """The key order, read from TEMPLATES/literature_card.yaml.
 
     The shape of a card is data, not code: edit the template and every card the builder
     writes follows it. Falling back to the built-in order keeps the builder usable if the

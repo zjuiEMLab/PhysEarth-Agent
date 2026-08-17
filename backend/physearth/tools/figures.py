@@ -77,12 +77,21 @@ def _group_panels(marks, placed):
     return len(labels) if len(labels) > 1 else 1
 
 
-def _panel_detail(marks, placed):
-    """Assign each legend and axis label to the panel marker nearest to it.
+def _blank_axis():
+    return {"label": [], "ticks": []}
 
-    Nearest by centre distance, which is what a reader does. It is a reading of the
-    layout, not a claim about the figure: a panel with no text near it comes back empty
-    rather than borrowing its neighbour's.
+
+def _panel_detail(marks, placed, x_ticks=(), y_ticks=()):
+    """One entry per panel, always -- a figure with one plot is one panel and says so.
+
+    Axes and legends belong to a panel, not to the figure. Hoisting them up when there
+    was only one plot meant every reader and every check had to handle two shapes, and
+    the single-panel case is the common one.
+
+    Panels are assigned by nearest marker, which is what a reader does. It is a reading
+    of the layout, not a claim about the figure: a panel with no text near it comes back
+    empty rather than borrowing its neighbour's. Tick values are only attributed to a
+    single panel, because ticks carry no marker to sit beside.
     """
     seen, ordered = set(), []
     for x, y, label in marks:
@@ -90,19 +99,35 @@ def _panel_detail(marks, placed):
         if key not in seen:
             seen.add(key)
             ordered.append((x, y, key))
+
     if len(ordered) < 2:
-        return []
-    detail = {key: {"panel": key, "subtitle": "", "legend": [], "x_axis": "", "y_axis": ""}
-              for _x, _y, key in ordered}
+        entry = {"panel": "1", "subtitle": "", "x_axis": _blank_axis(), "y_axis": _blank_axis(),
+                 "legend": []}
+        for _x, _y, kind, value in placed:
+            if kind == "legend":
+                entry["legend"].extend(v for v in value if v not in entry["legend"])
+            elif kind == "x_axis" and not entry["x_axis"]["label"]:
+                entry["x_axis"]["label"] = [value]
+            elif kind == "y_axis" and not entry["y_axis"]["label"]:
+                entry["y_axis"]["label"] = [value]
+        entry["x_axis"]["ticks"] = list(x_ticks)
+        entry["y_axis"]["ticks"] = list(y_ticks)
+        return [entry]
+
+    detail = {
+        key: {"panel": key, "subtitle": "", "x_axis": _blank_axis(), "y_axis": _blank_axis(),
+              "legend": []}
+        for _x, _y, key in ordered
+    }
     for x, y, kind, value in placed:
         nearest = min(ordered, key=lambda m: (m[0] - x) ** 2 + (m[1] - y) ** 2)
         entry = detail[nearest[2]]
         if kind == "legend":
             entry["legend"].extend(v for v in value if v not in entry["legend"])
-        elif kind == "x_axis" and not entry["x_axis"]:
-            entry["x_axis"] = value
-        elif kind == "y_axis" and not entry["y_axis"]:
-            entry["y_axis"] = value
+        elif kind == "x_axis" and not entry["x_axis"]["label"]:
+            entry["x_axis"]["label"] = [value]
+        elif kind == "y_axis" and not entry["y_axis"]["label"]:
+            entry["y_axis"]["label"] = [value]
     return [detail[key] for _x, _y, key in ordered]
 
 
@@ -203,16 +228,16 @@ def _extract_vector_figure_observations(raw_pdf):
         panels = _group_panels(panel_marks, placed)
         return {
             "source": "publisher figure PDF text layer",
-            # Kept: callers and committed records read it, and it is still what the
-            # figure says along its edges.
+            # Kept: callers and committed records read these, and they are still what the
+            # figure says along its edges. The per-panel detail is the structured form.
             "axes": unique(axes),
-            "x_axis": {"label": unique(x_axis)[:1], "ticks": unique(x_ticks)},
-            "y_axis": {"label": unique(y_axis)[:1], "ticks": unique(y_ticks)},
             "legend": unique(legend),
             "x_ticks": unique(x_ticks),
             "y_ticks": unique(y_ticks),
             "panels": panels or 1,
-            "panel_detail": _panel_detail(panel_marks, placed) if panels > 1 else [],
+            "panel_detail": _panel_detail(
+                panel_marks, placed, unique(x_ticks), unique(y_ticks)
+            ),
             "panel_detection": (
                 "panel markers in the page text" if panels > 1 else "single source-page asset"
             ),
