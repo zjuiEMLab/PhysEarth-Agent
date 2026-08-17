@@ -70,6 +70,42 @@ def _trusted_asset_bytes(item, asset_path):
     return None, str(asset_path)
 
 
+
+def _group_panels(marks, placed):
+    """How many subplots the page text evidences. Markers only, never a guess."""
+    labels = {label.strip("()").lower() for _x, _y, label in marks}
+    return len(labels) if len(labels) > 1 else 1
+
+
+def _panel_detail(marks, placed):
+    """Assign each legend and axis label to the panel marker nearest to it.
+
+    Nearest by centre distance, which is what a reader does. It is a reading of the
+    layout, not a claim about the figure: a panel with no text near it comes back empty
+    rather than borrowing its neighbour's.
+    """
+    seen, ordered = set(), []
+    for x, y, label in marks:
+        key = label.strip("()").lower()
+        if key not in seen:
+            seen.add(key)
+            ordered.append((x, y, key))
+    if len(ordered) < 2:
+        return []
+    detail = {key: {"panel": key, "subtitle": "", "legend": [], "x_axis": "", "y_axis": ""}
+              for _x, _y, key in ordered}
+    for x, y, kind, value in placed:
+        nearest = min(ordered, key=lambda m: (m[0] - x) ** 2 + (m[1] - y) ** 2)
+        entry = detail[nearest[2]]
+        if kind == "legend":
+            entry["legend"].extend(v for v in value if v not in entry["legend"])
+        elif kind == "x_axis" and not entry["x_axis"]:
+            entry["x_axis"] = value
+        elif kind == "y_axis" and not entry["y_axis"]:
+            entry["y_axis"] = value
+    return [detail[key] for _x, _y, key in ordered]
+
+
 def _extract_vector_figure_observations(raw_pdf):
     """Extract labels and ticks from a vector source figure without digitizing curves.
 
@@ -90,9 +126,13 @@ def _extract_vector_figure_observations(raw_pdf):
         blocks = page.get_text("blocks")
         text_lines = []
         axes = []
+        x_axis = []
+        y_axis = []
         x_ticks = []
         y_ticks = []
         legend = []
+        panel_marks = []
+        placed = []
 
         def clean(text):
             value = re.sub(r"\s+", " ", str(text or "")).strip()
@@ -115,10 +155,39 @@ def _extract_vector_figure_observations(raw_pdf):
                 x_ticks.extend(numeric_lines)
             if x0 <= width * 0.10 and numeric_lines:
                 y_ticks.extend(numeric_lines)
+            # A horizontal caption along the bottom is the x label; a block taller than
+            # it is wide on the left edge is the y label, set on its side. They were
+            # being merged into one `axes` list, which loses which is which -- and a
+            # figure is reproduced from knowing that.
+            # One line, not several: an axis label is a single caption, while a legend
+            # sitting low on the page is a stack of series names. Without that test a
+            # legend block was read as the x label -- "SMRT QCA VV SMRT QCA HH ..." is a
+            # legend, not an axis.
+            # A caption broken by a superscript is still one caption: "Density (kg m"
+            # then "3)". Treat trailing fragments of a few characters as continuation,
+            # and never take a panel marker for a label.
+            marker = bool(re.fullmatch(r"\(?[a-h]\)", value.strip(), re.I))
+            single = not marker and (
+                len(lines) == 1 or all(len(line) <= 3 for line in lines[1:])
+            )
             if y0 >= height * 0.78 and block_width > block_height and not numeric_lines:
                 axes.append(value)
+                if single:
+                    x_axis.append(value)
+                    placed.append((x0, y0, "x_axis", value))
+                else:
+                    legend.extend(lines)
+                    placed.append((x0, y0, "legend", lines))
             if x0 <= width * 0.18 and block_height > block_width and not numeric_lines:
                 axes.append(value)
+                if single:
+                    y_axis.append(value)
+                    placed.append((x0, y0, "y_axis", value))
+            # Panel markers: "(a)", "b)", "(c)". Two or more mean subplots, and then the
+            # legends and axes belong to a panel rather than to the figure.
+            for line in lines:
+                if re.fullmatch(r"\(?([a-h])\)", line.strip(), re.I):
+                    panel_marks.append((x0, y0, line.strip()))
             if (
                 len(lines) >= 2
                 and block_width > block_height
@@ -126,18 +195,27 @@ def _extract_vector_figure_observations(raw_pdf):
                 and x0 >= width * 0.12
             ):
                 legend.extend(lines)
+                placed.append((x0, y0, "legend", lines))
 
         def unique(values):
             return list(dict.fromkeys(value for value in values if value))
 
+        panels = _group_panels(panel_marks, placed)
         return {
             "source": "publisher figure PDF text layer",
+            # Kept: callers and committed records read it, and it is still what the
+            # figure says along its edges.
             "axes": unique(axes),
+            "x_axis": {"label": unique(x_axis)[:1], "ticks": unique(x_ticks)},
+            "y_axis": {"label": unique(y_axis)[:1], "ticks": unique(y_ticks)},
             "legend": unique(legend),
             "x_ticks": unique(x_ticks),
             "y_ticks": unique(y_ticks),
-            "panels": 1,
-            "panel_detection": "single source-page asset",
+            "panels": panels or 1,
+            "panel_detail": _panel_detail(panel_marks, placed) if panels > 1 else [],
+            "panel_detection": (
+                "panel markers in the page text" if panels > 1 else "single source-page asset"
+            ),
             "text": unique(text_lines),
         }
     except (ImportError, OSError, RuntimeError, ValueError):

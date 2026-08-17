@@ -91,9 +91,16 @@ figures:
   - Substrate TL+1
   - …
   legend:
+  - Substrate
+  - TL+1
   - θ
   - Air
   - o
+  y_axis:
+    label:
+    - z
+    ticks:
+    - '0'
 - id: fig02
   title: SMRT architecture and main components
   caption: SMRT architecture and main components. The core components are fixed, while switchable and
@@ -112,6 +119,10 @@ figures:
   legend:
   - Microstructure
   - representation
+  x_axis:
+    label:
+    - scattering, absorption,
+    ticks: []
 - id: fig03
   title: Sparse-medium scattering coefficient comparison
   caption: Scattering coefficient by several electromagnetic theories (independent spheres, IND; non-sticky
@@ -134,6 +145,26 @@ figures:
   - Non-sticky hard spheres (IBA)
   - Sticky hard spheres (DMRT QCA-CP)
   - Sticky hard spheres (IBA)
+  x_axis:
+    label:
+    - Density (kg m^3)
+    ticks:
+    - '0'
+    - '20'
+    - '40'
+    - '60'
+    - '80'
+    - '100'
+  y_axis:
+    label:
+    - Scattering coefficient (m^1)
+    ticks:
+    - '0.000'
+    - '0.005'
+    - '0.010'
+    - '0.015'
+    - '0.020'
+    - '0.025'
 - id: fig04
   title: Comparison with other reference models
   caption: Comparison of brightness temperatures and backscattering coefficients simulated by SMRT QCA,
@@ -161,6 +192,56 @@ figures:
   - DMRT-ML Fortran H
   - DMRT-QMS V
   - DMRT-QMS H
+  - SMRT QCA VV
+  - SMRT QCA HH
+  - SMRT QCA HV
+  - DMRT-QMS VV
+  - DMRT-QMS HH
+  - DMRT-QMS HV
+  - (b)
+  y_axis:
+    label:
+    - Brightness temperature (K)
+    ticks:
+    - '240'
+    - '245'
+    - '250'
+    - '255'
+    - '260'
+    - '265'
+    - '60'
+    - '50'
+    - '40'
+    - '30'
+    - '20'
+    - '10'
+  panels: 2
+  panel_detail:
+  - panel: a
+    subtitle: ''
+    legend:
+    - SMRT QCACP V
+    - SMRT QCACP H
+    - SMRT QCA V
+    - SMRT QCA H
+    - DMRT-ML Fortran V
+    - DMRT-ML Fortran H
+    - DMRT-QMS V
+    - DMRT-QMS H
+    x_axis: ''
+    y_axis: Brightness temperature (K)
+  - panel: b
+    subtitle: ''
+    legend:
+    - SMRT QCA VV
+    - SMRT QCA HH
+    - SMRT QCA HV
+    - DMRT-QMS VV
+    - DMRT-QMS HH
+    - DMRT-QMS HV
+    - (b)
+    x_axis: ''
+    y_axis: ''
 - id: fig05
   title: Radius and stickiness sensitivity
   caption: Brightness temperature and backscattering coefficient as a function of sphere radius and stickiness
@@ -185,6 +266,48 @@ figures:
   - '1'
   - '100'
   - '101'
+  - SMRT QCA short range VV
+  - SMRT IBA VV
+  - DMRT-QMS VV
+  x_axis:
+    label:
+    - Stickiness
+    ticks:
+    - '0'
+    - '100'
+    - '200'
+    - '300'
+    - '400'
+    - '500'
+    - '600'
+    - '30'
+    - '10'
+    - '1'
+    - '101'
+  y_axis:
+    label:
+    - Brightness temperature (K)
+    ticks:
+    - '0'
+    - '100'
+    - '200'
+    - '300'
+    - '400'
+    - '500'
+    - '600'
+    - '120'
+    - '140'
+    - '160'
+    - '180'
+    - '220'
+    - '240'
+    - '260'
+    - '30'
+    - '25'
+    - '20'
+    - '15'
+    - '10'
+    - '5'
 - id: fig06
   title: Comparison with MEMLS-IBA
   caption: Comparison of brightness temperatures simulated by SMRT IBA with an exponential autocorrelation
@@ -198,6 +321,15 @@ figures:
   license: CC-BY-4.0
   axes:
   - Brightness temperature (K)
+  y_axis:
+    label:
+    - Brightness temperature (K)
+    ticks:
+    - '230'
+    - '235'
+    - '240'
+    - '245'
+    - '250'
 - id: fig07
   title: Grain-size scaling equivalence
   caption: Grain-size scaling factor for non-sticky hard spheres needed to yield the same brightness temperature
@@ -218,6 +350,17 @@ figures:
   - 300 kg m
   - 350 kg m
   - 400 kg m
+  y_axis:
+    label:
+    - Grain size scaling factor
+    ticks:
+    - '1.0'
+    - '1.5'
+    - '2.0'
+    - '2.5'
+    - '3.0'
+    - '3.5'
+    - '4.0'
 - id: fig08
   title: Exponential-correlation scaling equivalence
   caption: Scaling factor for the exponential autocorrelation function needed to yield equivalent brightness
@@ -231,3 +374,12 @@ figures:
   license: CC-BY-4.0
   axes:
   - φexp
+  y_axis:
+    label:
+    - φexp
+    ticks:
+    - '0.4'
+    - '0.6'
+    - '0.8'
+    - '1.0'
+    - '1.2'

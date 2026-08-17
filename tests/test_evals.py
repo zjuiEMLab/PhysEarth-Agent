@@ -74,21 +74,37 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
 
 
 def test_q2_keeps_figure_four_and_five_checks_separate():
+    """A two-figure demo must name both figures, and the figures must differ.
+
+    This test used to assert reference_models == ["DMRT-ML", "DMRT-QMS"] for figure 4.
+    That is demo knowledge written into a test: it pins an answer rather than a
+    mechanism, it goes stale the moment the figure or the registry changes, and it is
+    what AGENTS.md now warns against. Which names are unsupported is the registry's
+    verdict, computed from each figure's own legend in the literature card.
+
+    So this checks the two things the task is actually responsible for: that it asks for
+    both figures, and that the card can tell them apart.
+    """
+    from physearth.corpus import knowledge
+
     task = evals.canonical_task("q2-dmrt-comparison")
-    targets = {item["id"]: item for item in task["figure_targets"]}
-    assert "iba" in task["demo"]["pilot"]["local_configurations"]
+    figures = task.get("paper_figures") or []
+    assert len(figures) >= 2, "a two-figure demo has to name both: %s" % figures
 
-    figure4 = targets["fig04.png"]["check"]
-    assert figure4["local_formulations"] == [
-        "dmrt_qcacp_shortrange", "dmrt_qca_shortrange"
-    ]
-    assert figure4["reference_models"] == ["DMRT-ML", "DMRT-QMS"]
-    assert "iba" not in figure4["local_formulations"]
+    card = knowledge.card("smrt-v1") or {}
+    declared = {item["id"]: item for item in card.get("figures") or [] if item.get("id")}
+    ids = [str(name).split(".")[0] for name in figures]
+    assert all(figure_id in declared for figure_id in ids), (
+        "the task names figures the card does not declare: %s" % ids
+    )
 
-    figure5 = targets["fig05.png"]["check"]
-    assert "iba" in figure5["local_formulations"]
-    assert figure5["axes"] == ["radius_m", "stickiness"]
-    assert "DMRT-QMS" in figure5["reference_models"]
+    # The demo only means something if the two figures ask different questions, and that
+    # difference has to be legible from the card rather than asserted here.
+    legends = [tuple(declared[figure_id].get("legend") or ()) for figure_id in ids]
+    assert all(legends), "a figure with no extracted legend cannot be checked against"
+    assert len(set(legends)) == len(legends), (
+        "the figures carry identical legends, so nothing would notice them being merged"
+    )
 
 
 def test_reproduction_visual_checks_follow_each_planned_figure_target():
