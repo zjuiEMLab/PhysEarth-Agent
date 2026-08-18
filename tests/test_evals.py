@@ -68,7 +68,10 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
         for case in cases
         for figure in case["paper_figures"]
     )
-    assert all("Reproduce Figure" in case["question"] or "Reproduce Figures" in case["question"] for case in cases)
+    assert all(
+        "Reproduce Figure" in case["question"] or "Reproduce Figures" in case["question"]
+        for case in cases
+    )
     assert "DMRT-ML" in cases[1]["question"]
     assert "MEMLS" in cases[2]["question"]
 
@@ -89,13 +92,13 @@ def test_q2_keeps_figure_four_and_five_checks_separate():
 
     task = evals.canonical_task("q2-dmrt-comparison")
     figures = task.get("paper_figures") or []
-    assert len(figures) >= 2, "a two-figure demo has to name both: %s" % figures
+    assert len(figures) >= 2, f"a two-figure demo has to name both: {figures}"
 
     card = knowledge.card("smrt-v1") or {}
     declared = {item["id"]: item for item in card.get("figures") or [] if item.get("id")}
     ids = [str(name).split(".")[0] for name in figures]
     assert all(figure_id in declared for figure_id in ids), (
-        "the task names figures the card does not declare: %s" % ids
+        f"the task names figures the card does not declare: {ids}"
     )
 
     # The demo only means something if the two figures ask different questions, and that
@@ -127,16 +130,13 @@ def test_reproduction_visual_checks_follow_each_planned_figure_target():
     assert linked is True
 
 
-def test_guided_demos_are_data_driven_q1_and_q2_cards():
+def test_guided_dashboard_is_bounded_to_q1_for_offline_testing():
     cases = evals.guided_demo_cases()
     q1_card = evals.demo_card(cases[0])
-    q2_card = evals.demo_card(cases[1])
 
-    assert len(cases) == 2
+    assert len(cases) == 1
     assert cases[0]["id"] == "smrt-q1-guided"
-    assert cases[1]["id"] == "smrt-q2-guided"
     assert cases[0]["button_label"] == "Start guided Q1 reproduction"
-    assert cases[1]["button_label"] == "Start guided Q2 reproduction"
     assert "doi.org/10.5194/gmd-11-2763-2018" in q1_card
     assert "Paper context" in q1_card
     assert "Reproduce:" in q1_card
@@ -145,28 +145,21 @@ def test_guided_demos_are_data_driven_q1_and_q2_cards():
     assert "smrt-v1#08" not in q1_card
     assert len(cases[0]["required_runs"]) == 6
     assert cases[0]["fixed"]["radius_m"] == 0.0001
-    assert "Paper section:</b> 3.1.2" in q2_card
-    assert "Figures 4 and 5" in q2_card
-    assert "DMRT-ML" in q2_card and "DMRT-QMS" in q2_card
-    assert "smrt-v1#08" not in q2_card
 
     # The question copied into Live Agent must identify the paper and the source
     # figures explicitly, rather than relying on the card that the user just left.
-    assert cases[0]["question"].startswith("Reproduce Figure 3: Sparse-medium scattering coefficient comparison")
+    assert cases[0]["question"].startswith(
+        "Reproduce Figure 3: Sparse-medium scattering coefficient comparison"
+    )
     assert "SMRT:" in cases[0]["question"]
     assert "DOI: 10.5194/gmd-11-2763-2018" in cases[0]["question"]
     assert "Section 3.1.1" in cases[0]["question"]
     assert "Answer the following question:" in cases[0]["question"]
     assert "Use the six legal" not in cases[0]["question"]
     assert "registered model" not in cases[0]["question"]
-    assert cases[1]["question"].startswith("Reproduce Figure 4:")
-    assert "Figure 5: Radius and stickiness sensitivity" in cases[1]["question"]
-    assert "Section 3.1.2" in cases[1]["question"]
-    assert "Answer the following question:" in cases[1]["question"]
-    assert "under identical snow and observation conditions" not in cases[1]["question"]
 
 
-def test_q1_comparison_rejects_stale_question_and_accepts_shared_pair(monkeypatch):
+def test_q1_comparison_rejects_stale_question_and_accepts_shared_three_way_group():
     task = yaml.safe_load(
         Path("evaluation/tasks/tier2/smrt-q1-sparse-medium.yaml").read_text(encoding="utf-8")
     )
@@ -186,30 +179,57 @@ def test_q1_comparison_rejects_stale_question_and_accepts_shared_pair(monkeypatc
         "stop_rule": None,
     }
     stale = dict(base, config="full", question="old Q1 question")
-    assert evals._q1_comparison_sets({"tasks": {"t1-smrt-fig4-passive": task}, "runs": [stale]}) == []
+    assert evals._q1_comparison_sets(
+        {"tasks": {"t1-smrt-fig4-passive": task}, "runs": [stale]}
+    ) == []
 
-    records = [dict(base, config="full"), dict(base, config="no-harness")]
+    metrics = {
+        "successful": True,
+        "figure_result_correct": True,
+        "report_correct": True,
+        "overall_correct": True,
+        "judge_usage": {"total_tokens": 30},
+    }
+    records = [
+        dict(
+            base,
+            task="q1-sparse-medium",
+            config=config_name,
+            prompt_profile="p1",
+            dashboard_metrics=metrics,
+            llm_usage={"total_tokens": 100},
+        )
+        for config_name in ("full", "no-harness", "no-figures")
+    ]
     scored = []
-    for config_name in ("full", "no-harness"):
+    for config_name in ("full", "no-harness", "no-figures"):
         scored.append(
             {
-                "task": "t1-smrt-fig4-passive",
+                "task": "q1-sparse-medium",
                 "config": config_name,
                 "llm": "test-model",
                 "build": "current-build",
                 "repeat": 1,
+                "prompt_profile": "p1",
                 "completed": True,
-                "citations": {"resolved_fraction": 1.0},
-                "config_match": {"fraction": 1.0},
-                "illegal_call_rate": 0.0,
+                "workflow": {"passed": True, "checks": {"plan": True}},
+                "calls": {"illegal_executed": 0},
             }
         )
-    data = {"tasks": {"t1-smrt-fig4-passive": task}, "runs": records, "scored": scored}
-    monkeypatch.setattr(evals, "snapshot", lambda: data)
-    page = evals.q1_comparison()
-    assert "LLM + RAG + registered model tool" in page
-    assert "Current PhysEarth-Agent" in page
-    assert "Q1 comparison not recorded yet" not in page
+    data = {"tasks": {"q1-sparse-medium": task}, "runs": records, "scored": scored}
+    page = evals.q1_comparison(data)
+    assert "Full harness" in page
+    assert "Raw PDF + raw SMRT" in page
+    assert "Text-only harness" not in page
+    assert "Correct figure / result" in page
+    assert "Published paper Figure 3 and reference result" in page
+    assert "Comparison method:" in page
+    assert "Per-run figures and reports" in page
+    assert "eval-run-artifact" in page
+    assert "Per-run audit details" not in page
+    assert "Human-editable evaluation standards" not in page
+    assert "workflow stages" not in page.lower()
+    assert "awaiting approval" not in page.lower()
 
 
 def test_basic_cases_keep_the_three_supported_live_prompts():
@@ -273,19 +293,19 @@ def test_gradio_exposes_evaluation_upload_and_agent_tabs_and_demo_prefill_handle
         if component.__class__.__name__ == "HTML"
     )
     assert "Register a model" in page_html  # remains implemented in the hidden workbench
-    assert "How to read the counts:" in page_html
+    assert "Figure 3 reproduction: what users care about" in page_html
     assert "LLM robustness" not in page_html
     assert "What the evaluation shows" not in page_html
     assert "Inspect the recorded score tables" not in page_html
     assert "RUNNABLE MODELS" not in page_html
-    assert "LLM + RAG + registered model tool" in page_html
-    assert "Current PhysEarth-Agent" in page_html
+    assert "Raw PDF + raw SMRT" in page_html
+    assert "Text-only harness" not in page_html
     css = Path("frontend/static/ui.css").read_text(encoding="utf-8")
     workflow_css = re.search(r"\.eval-workflow\s*\{(?P<body>.*?)\}", css, re.DOTALL)
     assert workflow_css and "font-size: 14px" in workflow_css.group("body")
     assert len(app.basic_evaluation_cases) == 3
     assert len(app.evaluation_cases) == 4
-    assert len(app.guided_evaluation_cases) == 2
+    assert len(app.guided_evaluation_cases) == 1
     demo_handlers = [
         dependency
         for dependency in app.demo.fns.values()

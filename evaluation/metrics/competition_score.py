@@ -291,4 +291,5 @@ def score_record(record, task):
         "eligible_for_full_reproduction": eligible,
         "outcome_calibrated": label_match and (declared != "reproduced" or eligible),
         "elapsed_s": record.get("elapsed_s"),
+        "dashboard_metrics": record.get("dashboard_metrics"),
     }

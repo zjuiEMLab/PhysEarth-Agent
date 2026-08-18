@@ -6,6 +6,9 @@ _DEFAULTS = {
     "PHYSEARTH_LLM_API_BASE": "",
     "PHYSEARTH_LLM_MODEL": "",
     "PHYSEARTH_LLM_MODELS": "",
+    "EVAL_LLM_API_KEY": "",
+    "EVAL_LLM_API_BASE": "",
+    "EVAL_LLM_MODEL": "",
     "MODELSCOPE_TOKEN": "",
     "MODELSCOPE_NAMESPACE": "",
     "MODELSCOPE_API_BASE": "https://api-inference.modelscope.cn/v1",
@@ -68,6 +71,19 @@ def llm_models():
         "deepseek-ai/DeepSeek-V4-Flash-0731",
         "ZhipuAI/GLM-4.7-Flash",
     ]
+
+
+def eval_llm_api_key():
+    """Evaluation-judge credential with no candidate-provider fallback."""
+    return get("EVAL_LLM_API_KEY")
+
+
+def eval_llm_api_base():
+    return get("EVAL_LLM_API_BASE")
+
+
+def eval_llm_model():
+    return get("EVAL_LLM_MODEL")
 
 
 def state_dir():

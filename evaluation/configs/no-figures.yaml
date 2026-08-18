@@ -1,13 +1,12 @@
 name: no-figures
 description: >-
-  The figure layer of the corpus is removed. read_paper_figure and inspect_paper_figure
-  are not offered, and reading a section no longer says which figures the paper has, so
-  the paper is text only. The agent can still read every word of the article, including
-  the captions that describe each figure in prose -- what it cannot do is open the figure
-  and see its axes, its ranges and how many curves are on it. Everything else, including
-  the harness, the full capability declaration and the model tools, is unchanged.
+  The full research harness, structured article body and model cards remain, but source
+  figure assets, captions, legends, axes metadata and figure tools are removed. Ordinary
+  prose references to figures remain part of the paper text.
 switches:
   harness: true
   literature: true
   capability: true
   figures: false
+  paper_access: structured_text
+  execution_access: harnessed_smrt

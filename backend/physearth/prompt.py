@@ -54,6 +54,7 @@ WORKFLOW = _text("20-workflow.md")
 RESEARCH_WORKFLOW = _text("21-research.md")
 TRIGGERS = _text("22-triggers.md")
 NO_CORPUS_WORKFLOW = _text("23-workflow-no-corpus.md")
+RAW_EVALUATION_WORKFLOW = _text("24-raw-evaluation.md")
 
 
 def models_section(declared=True, session=None):
@@ -138,6 +139,16 @@ def status_block(state):
 
 def build(state=None):
     flags = switches.resolve((state or {}).get("switches"))
+    if flags["paper_access"] == "raw_pdf":
+        blocks = [
+            ROLE,
+            RAW_EVALUATION_WORKFLOW,
+            untrusted.RULE,
+            STYLE,
+        ]
+        if state:
+            blocks.append(status_block(state))
+        return "\n\n".join(blocks)
     research_workflow = RESEARCH_WORKFLOW
     if not flags["literature"]:
         research_workflow = research_workflow.replace(

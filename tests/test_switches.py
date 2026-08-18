@@ -1,6 +1,8 @@
 import pytest
-from physearth import harness, prompt, registry, session, tools
+from physearth.agent.results import _record_tool_result
 from physearth.harness import switches, validation
+
+from physearth import harness, prompt, registry, session, tools
 
 
 def _state(flags=None):
@@ -104,3 +106,103 @@ def test_the_full_configuration_is_what_the_application_runs():
     assert "Q1 sparse-medium requires exactly six main coefficient runs" not in plain
     assert "read_research_guideline" in plain
     assert "read_model_instruction" in plain
+
+
+def test_raw_pdf_mode_exposes_no_structured_knowledge_or_model_card():
+    flags = {"paper_access": "raw_pdf", "execution_access": "raw_smrt", "harness": False}
+    state = _state(flags)
+    assert {item["function"]["name"] for item in tools.specs(flags)} == {
+        "read_raw_paper",
+        "run_raw_smrt",
+        "plot",
+    }
+    text = prompt.build(state)
+    assert "Registered physical models" not in text
+    assert "Literature corpus" not in text
+    assert "model card" in text.lower()
+
+    page = tools.call(
+        "read_raw_paper",
+        {"doi": "10.5194/gmd-11-2763-2018", "page": 7, "include_image": False},
+        switches_in=flags,
+        session=state["session"],
+    )
+    assert page["status"] == "success"
+    assert page["data"]["page_count"] == 26
+    assert "sections" not in page["data"]
+    assert "figures" not in page["data"]
+
+    blocked = tools.call(
+        "run_raw_smrt",
+        {"recipe": {}},
+        owner=state["session"]["id"],
+        switches_in=flags,
+        session=state["session"],
+    )
+    assert blocked["status"] == "needs_input"
+    assert blocked["data"]["error_code"] == "evaluation_batch_approval_required"
+
+
+def test_approved_raw_smrt_keeps_full_arrays_out_of_the_tool_response(monkeypatch):
+    flags = {"paper_access": "raw_pdf", "execution_access": "raw_smrt", "harness": False}
+    state = _state(flags)
+    state["session"]["evaluation_batch_approved"] = True
+
+    monkeypatch.setattr(
+        "physearth.tools.raw._raw_smrt_curve",
+        lambda recipe: {
+            "axis": {"name": "density_kg_m3", "values": [1.0, 6.0, 11.0]},
+            "points": [
+                {"index": 0, "density_kg_m3": 1.0, "ks_per_m": 0.1},
+                {"index": 1, "density_kg_m3": 6.0, "ks_per_m": 0.2},
+                {"index": 2, "density_kg_m3": 11.0, "ks_per_m": 0.3},
+            ],
+            "series": {"ks_per_m": [0.1, 0.2, 0.3]},
+        },
+    )
+    response = tools.call(
+        "run_raw_smrt",
+        {
+            "recipe": {
+                "electromagnetic_model": "free_name",
+                "microstructure_model": "free_microstructure",
+                "frequency_ghz": 37,
+                "densities_kg_m3": [1, 6, 11],
+                "radius_m": 0.0001,
+                "microstructure_parameters": {"free_parameter": 0.15},
+            }
+        },
+        owner=state["session"]["id"],
+        switches_in=flags,
+        session=state["session"],
+    )
+    assert response["status"] == "success"
+    assert "series" not in response["data"]
+    assert "values" not in response["data"]["axis"]
+    assert response["data"]["n_points"] == 3
+
+    _record_tool_result("run_raw_smrt", response, state, [])
+    assert len(state["session"]["successful_runs"]) == 1
+    assert state["session"]["successful_runs"][0]["handle"] == response["data"]["handle"]
+
+
+def test_text_only_mode_keeps_harness_and_cards_but_hides_figure_information():
+    flags = {"paper_access": "structured_text", "execution_access": "harnessed_smrt"}
+    state = _state(flags)
+    names = {item["function"]["name"] for item in tools.specs(flags)}
+    assert "read_literature" in names
+    assert "list_models" in names
+    assert "research_plan" in names
+    assert "read_paper_figure" not in names
+    assert "inspect_paper_figure" not in names
+    index = tools.call(
+        "read_literature",
+        {"slug": "smrt-v1"},
+        switches_in=flags,
+        session=state["session"],
+    )
+    assert index["status"] == "success"
+    assert index["data"]["figures"] == []
+    text = prompt.build(state)
+    assert "Registered physical models" in text
+    assert "Literature corpus" in text

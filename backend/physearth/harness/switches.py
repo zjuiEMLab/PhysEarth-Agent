@@ -17,20 +17,61 @@ figures      the figure layer of the corpus: the tools that open and inspect a s
              says what a figure is about, the figure says what is on it.
 """
 
-ALL_ON = {"harness": True, "literature": True, "capability": True, "figures": True}
+PAPER_ACCESS = ("structured_figures", "structured_text", "raw_pdf")
+EXECUTION_ACCESS = ("harnessed_smrt", "raw_smrt")
+BOOLEAN_SWITCHES = ("harness", "literature", "capability", "figures")
+
+ALL_ON = {
+    "harness": True,
+    "literature": True,
+    "capability": True,
+    "figures": True,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt",
+}
 
 
 def resolve(switches=None):
     if switches is None:
         return dict(ALL_ON)
     merged = dict(ALL_ON)
+    explicit = set(switches)
     for name, value in switches.items():
         if name not in merged:
-            raise ValueError("unknown switch %r; known switches: %s" % (name, ", ".join(ALL_ON)))
-        merged[name] = bool(value)
+            raise ValueError(f"unknown switch {name!r}; known switches: {', '.join(ALL_ON)}")
+        if name in BOOLEAN_SWITCHES:
+            merged[name] = bool(value)
+        elif name == "paper_access":
+            if value not in PAPER_ACCESS:
+                raise ValueError(
+                    f"paper_access {value!r} must be one of {', '.join(PAPER_ACCESS)}"
+                )
+            merged[name] = value
+        elif name == "execution_access":
+            if value not in EXECUTION_ACCESS:
+                raise ValueError(
+                    f"execution_access {value!r} must be one of {', '.join(EXECUTION_ACCESS)}"
+                )
+            merged[name] = value
+
+    # Preserve the old figures ablation as an alias for structured text. Explicit access
+    # modes win, so evaluation records describe the information boundary directly.
+    if "paper_access" not in explicit and not merged["figures"]:
+        merged["paper_access"] = "structured_text"
+    if merged["paper_access"] == "structured_text":
+        merged["figures"] = False
+    elif merged["paper_access"] == "raw_pdf":
+        merged.update(literature=False, capability=False, figures=False)
+    if merged["execution_access"] == "raw_smrt":
+        merged["capability"] = False
     return merged
 
 
 def label(switches):
-    off = sorted(name for name, on in resolve(switches).items() if not on)
+    flags = resolve(switches)
+    if flags["paper_access"] == "raw_pdf" and flags["execution_access"] == "raw_smrt":
+        return "raw-baseline"
+    if flags["paper_access"] == "structured_text":
+        return "text-only"
+    off = sorted(name for name in BOOLEAN_SWITCHES if not flags[name])
     return "full" if not off else "no-" + "+".join(off)

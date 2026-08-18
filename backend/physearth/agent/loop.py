@@ -86,8 +86,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
         yield answer, events, state
         return
     context = session.get("research_context") or {}
-    guided_reproduction = bool(session.get("research_required")) or context.get("reproduction_case") == "paper-reproduction"
-    reproduction_preflight = research.is_reproduction_question(question) or guided_reproduction
+    guided_reproduction = bool(session.get("research_required")) or (
+        context.get("reproduction_case") == "paper-reproduction"
+    )
+    raw_execution = state["switches"].get("execution_access") == "raw_smrt"
+    reproduction_preflight = (
+        not raw_execution
+        and (research.is_reproduction_question(question) or guided_reproduction)
+    )
     if reproduction_preflight:
         session["research_required"] = True
         context = session.setdefault("research_context", {})
@@ -162,11 +168,22 @@ def stream(question, history=None, model=None, session=None, switches=None):
             attempt += 1
             started = time.perf_counter()
             candidate = _Completion()
+            offered_specs = tools.specs(state["switches"])
+            offered_names = {item["function"]["name"] for item in offered_specs}
+            if requested_tool and requested_tool not in offered_names:
+                events.append(
+                    _event(
+                        "tool_choice_fallback",
+                        requested_tool=requested_tool,
+                        detail="Forced tool is not available in the active switch configuration.",
+                    )
+                )
+                requested_tool = None
             try:
                 chunks = client.chat.completions.create(
                     model=model_id,
                     messages=messages,
-                    tools=tools.specs(state["switches"]),
+                    tools=offered_specs,
                     tool_choice=(
                         {"type": "function", "function": {"name": requested_tool}}
                         if requested_tool else "auto"

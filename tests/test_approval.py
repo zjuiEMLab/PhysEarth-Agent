@@ -130,6 +130,33 @@ def test_unrepairable_tool_arguments_are_not_replayed_to_provider(monkeypatch):
     assert any("strict JSON" in message.get("content", "") for message in second_request)
 
 
+def test_raw_reproduction_never_forces_a_hidden_research_tool(monkeypatch):
+    box = session.new_session("m")
+    script = [
+        [_call_chunk("read_raw_paper", '{"doi":"10.5194/gmd-11-2763-2018","page":1}')],
+        [_Chunk(_Delta(content="The raw paper page was read."))],
+    ]
+    client, _sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+    monkeypatch.setattr(
+        agent.tools,
+        "call",
+        lambda *args, **kwargs: {
+            "status": "success",
+            "summary": "raw page read",
+            "data": {"page": 1, "text": "raw paper"},
+        },
+    )
+
+    agent.run(
+        "Reproduce Figure 3 of the SMRT paper",
+        session=box,
+        switches={"paper_access": "raw_pdf", "execution_access": "raw_smrt", "harness": False},
+    )
+
+    assert client.tool_choices == ["auto", "auto"]
+
+
 def test_a_truncated_research_plan_gets_one_larger_retry_budget(monkeypatch):
     box = _asking()
     first = _call_chunk(

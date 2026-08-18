@@ -11,7 +11,7 @@ single-module `tools` is re-exported here, so this split changes no import elsew
 from physearth import registry
 from physearth.harness import switches
 from physearth.ingest import http
-from physearth.tools import charts, common, figures, literature, planning, registration, runs, specs
+from physearth.tools import charts, common, figures, literature, planning, raw, registration, runs, specs
 from physearth.tools.charts import plot, plot_planned_chart
 from physearth.tools.common import _fail, _ledger, _ok
 from physearth.tools.literature import (
@@ -27,6 +27,7 @@ from physearth.tools.literature import (
     research_capability_check,
 )
 from physearth.tools.planning import research_plan
+from physearth.tools.raw import read_raw_paper, run_raw_smrt
 from physearth.tools.registration import (
     inspect_github_model_repo,
     list_models,
@@ -61,12 +62,17 @@ DISPATCH = {
     "discover_literature": discover_literature,
     "ingest_paper": ingest_paper,
     "research_plan": research_plan,
+    "read_raw_paper": read_raw_paper,
+    "run_raw_smrt": run_raw_smrt,
 }
 
 # Values supplied by the caller, never by the model. A leading underscore is stripped
 # from whatever the model sent before dispatch, so none of these can be forged from a
 # tool call.
-OWNER_SCOPED = ("run_model", "run_planned_model", "read_reference_dataset", "plot", "plot_planned_chart")
+OWNER_SCOPED = (
+    "run_model", "run_planned_model", "run_raw_smrt", "read_reference_dataset", "plot",
+    "plot_planned_chart",
+)
 SWITCH_AWARE = ("run_model", "run_planned_model", "list_models", "read_literature")
 SESSION_SCOPED = (
     "list_literature", "read_literature", "list_models", "read_research_guideline", "read_model_instruction",
@@ -76,12 +82,15 @@ SESSION_SCOPED = (
 )
 SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model", "run_planned_model", "plot_planned_chart")
 SESSION_SCOPED = SESSION_SCOPED + ("plot",)
+SESSION_SCOPED = SESSION_SCOPED + ("read_raw_paper", "run_raw_smrt")
 CORPUS_TOOLS = (
     "list_literature", "read_literature", "read_research_guideline",
     "read_paper_figure", "inspect_paper_figure", "discover_literature", "ingest_paper",
 )
 ONLINE_TOOLS = ("discover_literature", "inspect_github_model_repo")
 FIGURE_TOOLS = ("read_paper_figure", "inspect_paper_figure")
+RAW_TOOLS = ("read_raw_paper", "run_raw_smrt")
+RAW_BASELINE_TOOLS = {"read_raw_paper", "run_raw_smrt", "plot"}
 
 
 def specs(switches_in=None):
@@ -93,6 +102,9 @@ def specs(switches_in=None):
     """
     hidden = set()
     flags = switches.resolve(switches_in)
+    if flags["paper_access"] == "raw_pdf" or flags["execution_access"] == "raw_smrt":
+        return [s for s in SPECS if s["function"]["name"] in RAW_BASELINE_TOOLS]
+    hidden |= set(RAW_TOOLS)
     if not flags["literature"]:
         hidden |= set(CORPUS_TOOLS)
     if not flags["figures"]:
@@ -157,4 +169,6 @@ from physearth.tools.specs import (
     RESEARCH_PLAN_SPEC,
     RUN_MODEL_SPEC,
     RUN_PLANNED_MODEL_SPEC,
+    RAW_PAPER_SPEC,
+    RAW_SMRT_SPEC,
 )

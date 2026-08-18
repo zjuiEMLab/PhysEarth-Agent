@@ -7,7 +7,7 @@ from physearth.agent.trace import _event
 
 def _handle_line(name, data):
     """One line describing a stored result, for the session's `already held` block."""
-    if name in ("run_model", "run_planned_model"):
+    if name in ("run_model", "run_planned_model", "run_raw_smrt"):
         axis = data.get("axis") or {}
         span = (
             "%d points over %s" % (data.get("n_points", 0), axis["name"])
@@ -196,7 +196,7 @@ def _record_tool_result(name, result, state, events):
             state["datasets_read"].add(data["dataset"])
         for row in data.get("datasets") or []:
             state["datasets_read"].add(row["slug"])
-    if name in ("run_model", "run_planned_model"):
+    if name in ("run_model", "run_planned_model", "run_raw_smrt"):
         if result["status"] == "success":
             if not data.get("reused"):
                 session_state.bump(state, "model_runs")

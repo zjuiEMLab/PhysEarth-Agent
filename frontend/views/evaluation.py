@@ -16,12 +16,15 @@ import base64
 import html
 import json
 import re
+import statistics
 from collections import defaultdict
 from functools import lru_cache
+from pathlib import Path
 
 import yaml
 from physearth.api import knowledge, paths
 
+from evaluation.metrics import competition_score
 from evaluation.metrics import score as scoring
 
 REPO = paths.root()
@@ -29,20 +32,30 @@ EVALUATION = paths.evaluation()
 TASKS = EVALUATION / "tasks"
 RESULTS = EVALUATION / "results"
 DEMOS = EVALUATION / "demos"
-# Configurations the dashboard reports, in display order. This is the set with committed
-# records, not the set that exists: `evaluation/configs/` also declares `no-figures`,
-# which removes the figure layer only, and it joins this tuple when it has runs to show.
-# A dashboard column with no evidence behind it is a claim, and this page makes none.
+FIGURE_REFERENCE = EVALUATION / "fixtures" / "q1_figure3_reference.yaml"
+# Configurations the general dashboard reports, in display order. This is separate from
+# the Q1 comparison below, whose current batch intentionally excludes the deferred
+# text-only condition.
 CONFIG_ORDER = ("full", "no-harness", "no-capability", "no-literature")
 
 # Declared but not yet run. Named here so the gap is visible in the code rather than
 # looking like an oversight.
 CONFIG_DECLARED_WITHOUT_RECORDS = ("no-figures",)
 Q1_TASK_ID = "q1-sparse-medium"
-Q1_COMPARISON_CONFIGS = ("no-harness", "full")
+Q1_COMPARISON_CONFIGS = ("full", "no-harness")
 Q1_COMPARISON_LABELS = {
-    "no-harness": "LLM + RAG + registered model tool",
-    "full": "Current PhysEarth-Agent",
+    "full": "Full harness",
+    "no-harness": "Raw PDF + raw SMRT",
+}
+Q1_COMPARISON_DESCRIPTIONS = {
+    "full": (
+        "Structured paper and figure evidence, model cards, capability review, planning, "
+        "validation, approval and figure QA."
+    ),
+    "no-harness": (
+        "Raw publisher PDF pages and a generic upstream-SMRT recipe tool; no structured "
+        "knowledge, model card, research planner or evidence gates."
+    ),
 }
 ARCHITECTURE_IMAGE = paths.assets() / "evaluation" / "agent-architecture.svg"
 
@@ -114,6 +127,28 @@ BASIC_CASES = (
 
 def _e(value):
     return html.escape(str(value), quote=True)
+
+
+def _artifact_path(value):
+    path = Path(str(value or ""))
+    return path if path.is_absolute() else REPO / path
+
+
+def _artifact_text(value, fallback=""):
+    path = _artifact_path(value)
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return fallback
+
+
+def _artifact_image(value):
+    path = _artifact_path(value)
+    try:
+        payload = base64.b64encode(path.read_bytes()).decode("ascii")
+    except OSError:
+        return ""
+    return f"data:image/png;base64,{payload}"
 
 
 def _load_yaml(path):
@@ -463,7 +498,7 @@ def reproduction_evaluation():
 
 
 def _q1_comparison_sets(data):
-    """Return only current-question full/no-harness pairs with shared provenance."""
+    """Return complete three-condition repeats with shared provenance."""
     task = next(
         (item for item in _load_tasks("tier2") if item.get("id") == Q1_TASK_ID),
         (data.get("tasks") or {}).get(Q1_TASK_ID) or {},
@@ -479,7 +514,12 @@ def _q1_comparison_sets(data):
             and record.get("config") in Q1_COMPARISON_CONFIGS
             and record.get("question") == question
         ):
-            key = (str(record.get("llm") or ""), str(record.get("build") or ""), record.get("repeat"))
+            key = (
+                str(record.get("llm") or ""),
+                str(record.get("build") or ""),
+                record.get("repeat"),
+                str(record.get("prompt_profile") or "direct"),
+            )
             grouped[key][record.get("config")] = record
     return [
         {"key": key, "records": pair}
@@ -488,85 +528,346 @@ def _q1_comparison_sets(data):
     ]
 
 
-def q1_comparison():
-    """Render the controlled Q1 comparison between the baseline and full agent."""
-    data = snapshot()
-    scored = {
-        (str(item.get("llm") or ""), str(item.get("build") or ""), item.get("repeat"), item.get("config")): item
-        for item in data.get("scored") or []
-        if item.get("task") == Q1_TASK_ID
-    }
-    comparison_sets = _q1_comparison_sets(data)
+@lru_cache(maxsize=1)
+def q1_scenario_snapshot():
+    """Load only records produced by the five-metric Q1 evaluator."""
+    task = canonical_task(Q1_TASK_ID)
+    if not task:
+        return {"tasks": {}, "runs": [], "scored": []}
+    runs = []
+    scored = []
+    scored_path = RESULTS / "competition" / "scored_runs.json"
+    try:
+        entries = (
+            json.loads(scored_path.read_text(encoding="utf-8"))
+            if scored_path.is_file()
+            else []
+        )
+    except (OSError, ValueError):
+        entries = []
+    for entry in entries:
+        record = entry.get("raw") or {}
+        if (
+            record.get("task") != Q1_TASK_ID
+            or record.get("config") not in Q1_COMPARISON_CONFIGS
+            or record.get("question") != task.get("question")
+        ):
+            continue
+        item = entry.get("score")
+        if not item or not record.get("dashboard_metrics"):
+            continue
+        runs.append(record)
+        scored.append(item)
+    # The generated score artifact is the dashboard's durable source. The raw-record
+    # fallback keeps a just-finished local run visible before dashboard.py is rebuilt.
+    if not runs:
+        directory = RESULTS / "competition" / "runs"
+        for path in sorted(directory.glob("*.json")):
+            try:
+                record = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if (
+                record.get("task") != Q1_TASK_ID
+                or record.get("config") not in Q1_COMPARISON_CONFIGS
+                or record.get("question") != task.get("question")
+            ):
+                continue
+            if not record.get("dashboard_metrics"):
+                continue
+            try:
+                item = competition_score.score_record(record, task)
+            except Exception:
+                continue
+            runs.append(record)
+            scored.append(item)
+    return {"tasks": {Q1_TASK_ID: task}, "runs": runs, "scored": scored}
+
+
+def _q1_latest_group(records):
+    groups = defaultdict(list)
+    for record in records:
+        if record.get("config") not in Q1_COMPARISON_CONFIGS:
+            continue
+        key = (
+            str(record.get("llm") or ""),
+            str(record.get("build") or ""),
+            str(record.get("prompt_profile") or ""),
+        )
+        groups[key].append(record)
+    if not groups:
+        return None, []
+    key, selected = max(
+        groups.items(),
+        key=lambda item: (
+            len(item[1]),
+            max((record.get("repeat") or 0) for record in item[1]),
+            item[0],
+        ),
+    )
+    return key, selected
+
+
+def _metric_status(value):
+    if value is True or value == "pass":
+        return "pass"
+    if value is False or value == "fail":
+        return "fail"
+    return "not_scoreable"
+
+
+def _status_label(value):
+    return {"pass": "PASS", "fail": "FAIL", "not_scoreable": "N/A"}[_metric_status(value)]
+
+
+def _pass_count(records, field):
+    statuses = [
+        _metric_status((record.get("dashboard_metrics") or {}).get(field))
+        for record in records
+    ]
+    passed = statuses.count("pass")
+    not_scoreable = statuses.count("not_scoreable")
+    failed = statuses.count("fail")
+    parts = [f"{passed} / 3 pass"]
+    if failed:
+        parts.append(f"{failed} fail")
+    if not_scoreable:
+        parts.append(f"{not_scoreable} N/A")
+    suffix = "" if len(records) == 3 else f" ({len(records)} recorded)"
+    return "; ".join(parts) + suffix
+
+
+def _median_range(values, suffix="", integer=False):
+    values = [value for value in values if isinstance(value, (int, float))]
+    if not values:
+        return "—"
+    middle = statistics.median(values)
+
+    def render(value):
+        return format(int(round(value)), ",") if integer else _num(value, 1)
+
+    return f"{render(middle)}{suffix} ({render(min(values))}–{render(max(values))})"
+
+
+def _judge_preflight_tokens(group_key):
+    path = RESULTS / "competition" / "judge_preflight.json"
+    if group_key is None or not path.is_file():
+        return 0
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0
+    llm, build, _profile = group_key
+    batch = payload.get("batch") or {}
+    if batch.get("build") != build or llm not in (batch.get("candidate_models") or []):
+        return 0
+    value = (payload.get("usage") or {}).get("total_tokens")
+    return value if isinstance(value, int) else 0
+
+
+def _q1_reference_panel():
+    try:
+        reference = _load_yaml(FIGURE_REFERENCE)
+    except (OSError, ValueError, yaml.YAMLError):
+        return "<div class='eval-empty'>Paper reference figure is unavailable.</div>"
+    source = reference.get("source") or {}
+    visual_reference = reference.get("visual_reference") or {}
+    image_data = _artifact_image(visual_reference.get("image_path"))
+    facts = "".join(
+        f"<li>{_e(fact)}</li>" for fact in reference.get("report_facts") or []
+    )
+    curves = "".join(
+        f"<li><span class='eval-reference-curve__swatch'></span>{_e(item.get('label'))}</li>"
+        for item in reference.get("curves") or []
+    )
+    image_html = (
+        "<img class='eval-reference__image' src='{}' alt='Published paper Figure 3'>".format(
+            image_data
+        )
+        if image_data
+        else "<p class='eval-run-artifact__missing'>Paper reference image is unavailable.</p>"
+    )
+    source_line = " · ".join(
+        str(value)
+        for value in (
+            source.get("paper_doi"),
+            source.get("notebook"),
+            source.get("commit"),
+        )
+        if value
+    )
+    return (
+        "<section class='eval-reference-panel'><div class='eval-reference__head'>"
+        "<div><span class='eval-subindex'>REFERENCE</span>"
+        "<h3>Published paper Figure 3 and reference result</h3>"
+        "<p>{}</p></div></div>"
+        "<div class='eval-reference__grid'><figure><div class='eval-reference__image-wrap'>"
+        "{}</div><figcaption>Paper figure: {}. The visual judge compares qualitative curves, "
+        "not pixels or RMSE.</figcaption></figure>"
+        "<div class='eval-reference__results'><h4>Reference result</h4><ul>{}</ul>"
+        "<h4>Reference curves</h4><ul class='eval-reference__curve-list'>{}</ul></div></div>"
+        "<p class='eval-reference__compare'><b>Comparison method:</b> first compare each run's "
+        "figure with the paper image for curve count, patterns, grouping and visual correspondence; "
+        "then compare the run report with the reference facts and measured outcome. Open one run "
+        "below to inspect its candidate figure and report together.</p></section>"
+    ).format(
+        _e(source_line),
+        image_html,
+        _e(source.get("paper_figure") or "fig03"),
+        facts,
+        curves,
+    )
+
+
+def _q1_run_artifact(record, label):
+    metrics = record.get("dashboard_metrics") or {}
+    figures = [item for item in record.get("figures") or [] if item.get("archived_image_path")]
+    figure = figures[0] if figures else {}
+    image_data = _artifact_image(figure.get("archived_image_path"))
+    report_path = record.get("archived_report_path") or (record.get("report_artifact") or {}).get(
+        "path"
+    )
+    report_file = _artifact_path(report_path)
+    report_saved = bool(report_file and report_file.is_file())
+    report_text = _artifact_text(report_path, record.get("answer") or "")
+    judge = metrics.get("report_judgement") or {}
+    scores = judge.get("scores") or {}
+    report_score_text = ", ".join(f"{name}={scores[name]}" for name in sorted(scores))
+    figure_judge = metrics.get("figure_judgement") or {}
+    figure_scores = figure_judge.get("scores") or {}
+    figure_score_text = ", ".join(
+        f"{name}={figure_scores[name]}" for name in sorted(figure_scores)
+    )
+    image_html = (
+        "<img class='eval-run-artifact__image' src='{}' alt='{} reproduction figure'>".format(
+            image_data, _e(label)
+        )
+        if image_data
+        else "<p class='eval-run-artifact__missing'>No figure artifact was generated.</p>"
+    )
+    return (
+        "<details class='eval-run-artifact'><summary>{} · r{} · figure {} · report {}</summary>"
+        "<div class='eval-run-artifact__grid'><section><h4>Figure</h4>{}<code>{}</code></section>"
+        "<section><h4>Report</h4><p><code>{}</code></p><pre>{}</pre></section></div>"
+        "<p class='eval-run-artifact__meta'>Figure status: <b>{}</b> · Report status: <b>{}</b>"
+        " · Figure judge: {} · Report judge: {}</p></details>".format(
+            _e(label),
+            _e(record.get("repeat") or "?"),
+            "saved" if image_data else "missing",
+            "saved" if report_saved else "inline only" if report_text else "missing",
+            image_html,
+            _e(figure.get("archived_image_path") or ""),
+            _e(report_path or "inline answer only"),
+            _e(report_text),
+            _e(metrics.get("figure_result_correct") or "not_scoreable"),
+            _e(metrics.get("report_correct") or "not_scoreable"),
+            _e(figure_score_text or "not available"),
+            _e(report_score_text or "not available"),
+        )
+    )
+
+
+def q1_comparison(data=None):
+    """Render the user-facing five-metric Q1 comparison."""
+    data = data or q1_scenario_snapshot()
+    group_key, selected = _q1_latest_group(data.get("runs") or [])
     rows = []
-    for comparison in comparison_sets:
-        llm, build, repeat = comparison["key"]
-        run_set = "%s / r%s" % (build, repeat)
-        for config_name in Q1_COMPARISON_CONFIGS:
-            record = comparison["records"][config_name]
-            item = scored.get((llm, build, repeat, config_name)) or {}
-            citations = item.get("citations") or {}
-            config_match = item.get("config_match") or {}
-            rows.append(
-                [
-                    Q1_COMPARISON_LABELS[config_name],
-                    "PASS" if item.get("completed") else "STOPPED",
-                    record.get("llm") or "-",
-                    run_set,
-                    len((record.get("evidence") or {}).get("sections") or []),
-                    record.get("model_calls") or 0,
-                    record.get("tool_calls") or 0,
-                    len(record.get("figures") or []),
-                    _pct(citations.get("resolved_fraction")),
-                    _pct(config_match.get("fraction")),
-                    _pct(item.get("illegal_call_rate")),
-                    record.get("qc_failures") or 0,
-                    "%ss" % _num(record.get("elapsed_s"), 1),
-                    record.get("stop_rule") or "-",
-                ]
+    artifact_rows = []
+    for config_name in Q1_COMPARISON_CONFIGS:
+        if group_key is None:
+            break
+        records = sorted(
+            (record for record in selected if record.get("config") == config_name),
+            key=lambda record: record.get("repeat") or 0,
+        )
+        rows.append(
+            [
+                Q1_COMPARISON_LABELS[config_name],
+                _pass_count(records, "successful"),
+                _pass_count(records, "figure_result_correct"),
+                _pass_count(records, "report_correct"),
+                _pass_count(records, "overall_correct"),
+                _median_range([record.get("elapsed_s") for record in records], " s"),
+                _median_range(
+                    [(record.get("llm_usage") or {}).get("total_tokens") for record in records],
+                    integer=True,
+                ),
+            ]
+        )
+        for record in records:
+            artifact_rows.append(
+                _q1_run_artifact(record, Q1_COMPARISON_LABELS[config_name])
             )
     if rows:
         body = _table(
             [
                 "System",
-                "Result",
-                "LLM",
-                "Shared build / repeat",
-                "Evidence sections",
-                "Model calls",
-                "Tool calls",
-                "Figures",
-                "Citations resolve",
-                "Config match",
-                "Illegal calls",
-                "QC failures",
-                "Elapsed",
-                "Stop reason",
+                "Successful runs",
+                "Correct figure / result",
+                "Correct reports",
+                "Overall correct runs",
+                "Speed, median (range)",
+                "Candidate tokens, median (range)",
             ],
             rows,
             "eval-table--q1-comparison",
         )
-        status = "<p class='eval-na-note'>Only paired records with the same question, LLM, build, and repeat are shown.</p>"
+        llm, build, profile = group_key
+        report_judge_tokens = sum(
+            int(
+                ((record.get("dashboard_metrics") or {}).get("judge_usage") or {}).get(
+                    "total_tokens"
+                )
+                or 0
+            )
+            for record in selected
+        )
+        judge_overhead = report_judge_tokens + _judge_preflight_tokens(group_key)
+        incomplete = sum(
+            not bool((record.get("dashboard_metrics") or {}).get("evaluation_complete"))
+            for record in selected
+        )
+        incomplete_note = (
+            f" Evaluation incomplete for {incomplete} recorded run(s)." if incomplete else ""
+        )
+        artifacts = "".join(artifact_rows)
+        status = (
+            f"<p class='eval-na-note'>Shared candidate <b>{html.escape(llm)}</b> · "
+            f"prompt <b>{html.escape(profile)}</b> · build <code>{html.escape(build)}</code>. "
+            "Time excludes approval waiting and judge review. Judge tokens are evaluation "
+            f"overhead, not candidate usage: <b>{judge_overhead:,} total</b>."
+            "</p>"
+            f"<details class='eval-details'><summary>Per-run figures and reports</summary>"
+            f"<div class='eval-run-artifacts'>{artifacts}</div></details>"
+        )
     else:
         body = (
-            "<div class='eval-empty'><strong>Q1 comparison not recorded yet</strong>"
-            "<p>Run the full and no-harness Q1 pair with the current task question and shared build.</p></div>"
+            "<div class='eval-empty'><strong>Nine-run Q1 evaluation awaiting approval</strong>"
+            "<p>No legacy workflow score is shown as scientific correctness. Run the three "
+            "conditions × three repeats only after approving the unified capacity "
+            "summary.</p></div>"
         )
         status = ""
+    legend = "".join(
+        f"<article><strong>{Q1_COMPARISON_LABELS[name]}</strong>"
+        f"<span><code>{name}</code>: {Q1_COMPARISON_DESCRIPTIONS[name]}</span></article>"
+        for name in Q1_COMPARISON_CONFIGS
+    )
     return (
         "<div class='eval-dashboard'><section class='eval-section eval-section--q1-comparison'>"
         "<div class='eval-section__head'><div><span class='eval-index'>05</span>"
-        "<h2>Q1: LLM + RAG + tool vs Current PhysEarth-Agent</h2></div>"
-        "<p>Controlled comparison using the same Q1 question, LLM, build, repeat, paper evidence, "
-        "and registered SMRT model.</p></div>"
-        "<div class='eval-comparison-legend'><article><strong>LLM + RAG + registered model tool</strong>"
-        "<span><code>no-harness</code>: the same literature and tool access, without research-harness "
-        "validation and evidence gates.</span></article><article><strong>Current PhysEarth-Agent</strong>"
-        "<span><code>full</code>: evidence-first planning, registered-model validation, approval, QC, and citation checks.</span></article></div>"
-        "<p class='eval-na-note'><b>How to read the counts:</b> each row is one complete evaluation session. "
-        "The shared build is the Git commit that produced the record; <code>r1</code> means the first repeat. "
-        "Model calls and tool calls count requests inside that session. They are not the number of physical "
-        "SMRT runs in a research plan; those planned model runs are recorded separately in the plan and trace.</p>"
-        "%s%s</section></div>" % (body, status)
+        "<h2>Figure 3 reproduction: what users care about</h2></div>"
+        "<p>Two information conditions, three fresh runs each, compared with the paper image "
+        "and a label-blinded visual/report judge.</p></div>"
+        f"<div class='eval-comparison-legend'>{legend}</div>"
+        "<p class='eval-na-note'><b>Correct figure/result</b> uses the visual judge for six curves, "
+        "qualitative patterns, grouping and correspondence; it ignores RMSE, pixels and exact "
+        "caption/format matching. The official notebook recipe remains diagnostic-only because "
+        "the paper does not fully define its parameters; those numeric checks are shown as N/A. "
+        "<b>Correct report</b> requires deterministic evidence checks and a label-blinded "
+        "judge score of at least 8/10 with factuality 2. Published-pixel similarity is "
+        "diagnostic only.</p>"
+        f"{_q1_reference_panel()}{body}{status}</section></div>"
     )
 
 
@@ -623,7 +924,9 @@ def guided_demo():
 def guided_demos():
     """Load the beginner-facing paper cards from evaluation-only data files."""
     cards = []
-    for filename in ("smrt-q1.yaml", "smrt-q2.yaml"):
+    # Keep Q2's task and evidence in the repository, but hide its dashboard card while
+    # offline evaluation is intentionally bounded to one question.
+    for filename in ("smrt-q1.yaml",):
         path = DEMOS / filename
         if not path.is_file():
             continue

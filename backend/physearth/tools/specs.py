@@ -674,3 +674,79 @@ PLOT_PLANNED_CHART_SPEC = {
 }
 SPECS.append(PLOT_PLANNED_CHART_SPEC)
 SPECS.append(RESEARCH_PLAN_SPEC)
+
+RAW_PAPER_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "read_raw_paper",
+        "description": (
+            "Read one page of the publisher PDF as raw extracted text and optionally attach "
+            "a rendering of that complete page. No section index, caption, figure metadata, "
+            "axis labels, legend, or curated interpretation is supplied."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "doi": {"type": "string", "description": "DOI named by the user."},
+                "page": {"type": "integer", "minimum": 1, "description": "One-based PDF page."},
+                "include_image": {
+                    "type": "boolean",
+                    "description": "Attach a rendering of the complete page for visual reading.",
+                },
+            },
+            "required": ["doi", "page"],
+        },
+    },
+}
+
+RAW_SMRT_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "run_raw_smrt",
+        "description": (
+            "Run one free-form scattering-coefficient recipe with the installed upstream "
+            "SMRT package. This interface deliberately publishes no valid model names, "
+            "microstructures, ranges, combinations, defaults, or model-card guidance."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "recipe": {
+                    "type": "object",
+                    "properties": {
+                        "electromagnetic_model": {"type": "string"},
+                        "microstructure_model": {"type": "string"},
+                        "frequency_ghz": {"type": "number"},
+                        "densities_kg_m3": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "minItems": 1,
+                            "maxItems": 60,
+                        },
+                        "radius_m": {"type": "number"},
+                        "microstructure_parameters": {
+                            "type": "object",
+                            "description": (
+                                "Free-form numeric keyword arguments passed to the selected "
+                                "microstructure. No supported keys or ranges are supplied."
+                            ),
+                            "additionalProperties": {"type": "number"},
+                        },
+                        "temperature_k": {"type": "number"},
+                        "thickness_m": {"type": "number"},
+                    },
+                    "required": [
+                        "electromagnetic_model",
+                        "microstructure_model",
+                        "frequency_ghz",
+                        "densities_kg_m3",
+                        "radius_m",
+                    ],
+                }
+            },
+            "required": ["recipe"],
+        },
+    },
+}
+
+SPECS.extend((RAW_PAPER_SPEC, RAW_SMRT_SPEC))

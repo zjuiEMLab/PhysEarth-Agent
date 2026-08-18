@@ -13,18 +13,24 @@ from frontend import views as render
 
 def test_optimistic_ui_never_replaces_gradio_managed_html():
     """Direct innerHTML writes detach streamed answer slots from Gradio updates."""
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.js").read_text()
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.js").read_text(
+        encoding="utf-8"
+    )
     assert ".innerHTML =" not in source
 
 
 def test_trace_cards_do_not_replay_an_entry_animation_on_every_gradio_frame():
     """The entire trace subtree is replaced; :last-child animation would keep restarting."""
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text()
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text(
+        encoding="utf-8"
+    )
     assert ".step-card:last-child {\n  animation:" not in source
 
 
 def test_model_call_trace_metadata_has_its_own_line():
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text()
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text(
+        encoding="utf-8"
+    )
     out = render.trace(
         [{"kind": "model_call", "prompt_tokens": 19515, "completion_tokens": 32}],
         agent.new_state(),
@@ -36,7 +42,9 @@ def test_model_call_trace_metadata_has_its_own_line():
 
 
 def test_other_routine_trace_rows_use_the_same_separate_summary_layout():
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text()
+    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text(
+        encoding="utf-8"
+    )
     out = render.trace(
         [{
             "kind": "tool_call",

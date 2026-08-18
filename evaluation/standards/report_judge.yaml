@@ -1,0 +1,29 @@
+schema_version: report-judge-standard-v1
+description: >-
+  Label-blinded review standard for the final reproduction report. The judge must use the
+  supplied source facts, measured results and deterministic checks; it must not infer a
+  successful reproduction from fluent prose.
+dimensions:
+  factuality: >-
+    Are the report's scientific claims consistent with the supplied paper facts and measured
+    results, without invented values or unsupported success claims?
+  completeness: >-
+    Does the report cover the requested question, executed conditions, curves/results and
+    important limitations?
+  evidence: >-
+    Are claims tied to opened source evidence, executed models or measured outputs?
+  calibration: >-
+    Does the report distinguish reproduced, partial, unavailable and not-identifiable results?
+  clarity: >-
+    Is the report understandable, precise and explicit about versions and conditions?
+score_scale:
+  0: missing, unsupported or materially wrong
+  1: partial, weak or incompletely supported
+  2: correct, complete and well supported
+pass:
+  minimum_total: 8
+  factuality: 2
+output:
+  max_factual_errors: 3
+  max_error_characters: 240
+  max_summary_characters: 400

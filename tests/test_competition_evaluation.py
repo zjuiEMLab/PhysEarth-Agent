@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -11,12 +12,12 @@ EVAL = ROOT / "evaluation"
 sys.path.insert(0, str(EVAL / "runners"))
 sys.path.insert(0, str(EVAL))
 
-from metrics import competition_score  # noqa: E402
+from metrics import competition_score, figure3, judge  # noqa: E402
 
 
 def _load_runner(name):
     path = EVAL / "runners" / (name + ".py")
-    spec = importlib.util.spec_from_file_location("evaluation_%s" % name, path)
+    spec = importlib.util.spec_from_file_location(f"evaluation_{name}", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -25,7 +26,11 @@ def _load_runner(name):
 def test_frozen_competition_matrix_is_four_llms_three_prompts_two_repeats():
     competition = _load_runner("competition")
     cells = competition.matrix(
-        type("Args", (), {"tasks": None, "profiles": None, "llm": None, "repeats": None})()
+        type(
+            "Args",
+            (),
+            {"tasks": None, "profiles": None, "configs": None, "llm": None, "repeats": None},
+        )()
     )
     assert len(cells) == 5 * 3 * 1 * 4 * 2
     assert {cell[0]["id"] for cell in cells} == {
@@ -46,6 +51,89 @@ def test_frozen_competition_matrix_is_four_llms_three_prompts_two_repeats():
         "openai/gpt-5.6-luna",
         "z-ai/glm-4.7-flash",
     }
+
+
+def test_competition_matrix_can_run_a_bounded_ablation_pair():
+    competition = _load_runner("competition")
+    cells = competition.matrix(
+        type(
+            "Args",
+            (),
+            {
+                "tasks": ["q1-sparse-medium"],
+                "profiles": ["p1-reproduction-first"],
+                "configs": ["no-harness", "no-figures"],
+                "llm": ["qwen-plus"],
+                "repeats": 1,
+            },
+        )()
+    )
+
+    assert len(cells) == 2
+    assert {cell[2]["name"] for cell in cells} == {"no-harness", "no-figures"}
+
+
+def test_three_condition_runs_use_balanced_repeat_order():
+    competition = _load_runner("competition")
+    cells = competition.matrix(
+        type(
+            "Args",
+            (),
+            {
+                "tasks": ["q1-sparse-medium"],
+                "profiles": ["p1-reproduction-first"],
+                "configs": ["full", "no-harness", "no-figures"],
+                "llm": ["qwen-plus"],
+                "repeats": 3,
+            },
+        )()
+    )
+    pending = [
+        ("record", task, profile, config, llm, repeat)
+        for task, profile, config, llm, repeat in cells
+    ]
+    ordered = competition._balanced_pending_order(pending)
+    assert [(item[5], item[3]["name"]) for item in ordered] == [
+        (1, "full"),
+        (1, "no-harness"),
+        (1, "no-figures"),
+        (2, "no-harness"),
+        (2, "no-figures"),
+        (2, "full"),
+        (3, "no-figures"),
+        (3, "full"),
+        (3, "no-harness"),
+    ]
+
+
+def test_execute_without_batch_approval_stops_before_any_paid_call(capsys):
+    competition = _load_runner("competition")
+    result = competition.main(
+        [
+            "--execute",
+            "--force",
+            "--tasks",
+            "q1-sparse-medium",
+            "--profiles",
+            "p1-reproduction-first",
+            "--configs",
+            "full",
+            "no-harness",
+            "no-figures",
+            "--llm",
+            "qwen-plus",
+            "--repeats",
+            "3",
+        ]
+    )
+    output = capsys.readouterr().out
+    assert result == 3
+    assert "candidate sessions: 9" in output
+    assert "full | qwen-plus | r1" in output
+    assert "no-harness | qwen-plus | r1" in output
+    assert "no-figures | qwen-plus | r1" in output
+    assert "30 maximum" in output
+    assert "No LLM or physical-model call was made" in output
 
 
 def test_llm_usage_sums_billable_tokens_and_provider_cost():
@@ -76,6 +164,358 @@ def test_llm_usage_sums_billable_tokens_and_provider_cost():
     assert usage["total_tokens"] == 280
     assert usage["cost_usd"] == 0.003
     assert usage["cost_complete"] is True
+
+
+def test_event_summary_keeps_bounded_upstream_error_without_secrets(monkeypatch):
+    competition = _load_runner("competition")
+    monkeypatch.setattr(competition.config, "llm_api_key", lambda: "candidate-secret")
+    monkeypatch.setattr(competition.config, "eval_llm_api_key", lambda: "judge-secret")
+    summary = competition._event_summary(
+        [
+            {
+                "kind": "empty_response",
+                "upstream": (
+                    "HTTP 400 authorization: Bearer candidate-secret; "
+                    "judge-secret invalid_parameter_error"
+                ),
+            }
+        ]
+    )
+    assert summary[0]["upstream"].startswith("HTTP 400")
+    assert "candidate-secret" not in summary[0]["upstream"]
+    assert "judge-secret" not in summary[0]["upstream"]
+    assert len(summary[0]["upstream"]) <= 800
+
+
+def _perfect_figure3_record(tmp_path):
+    gold = figure3.reference()
+    axis = [float(value) for value in gold["recipe"]["densities_kg_m3"]]
+    oracle = {
+        "smrt_version": "test",
+        "axis": {"name": "density_kg_m3", "values": axis},
+        "series": {},
+    }
+    numeric = []
+    figure_series = []
+    for index, curve in enumerate(gold["curves"], 1):
+        values = [index * value / 100000.0 for value in axis]
+        oracle["series"][curve["id"]] = values
+        spec = {
+            "electromagnetic_model": curve["electromagnetic_model"],
+            "microstructure_model": curve["microstructure_model"],
+            "frequency_ghz": gold["recipe"]["frequency_ghz"],
+            "radius_m": gold["recipe"]["radius_m"],
+        }
+        if curve.get("stickiness") is not None:
+            spec["stickiness"] = curve["stickiness"]
+        handle = f"res_{index}"
+        numeric.append(
+            {
+                "handle": handle,
+                "model": "smrt",
+                "version": "test",
+                "spec": spec,
+                "axis": {"name": "density_kg_m3", "values": axis},
+                "series": {"ks_per_m": list(values)},
+                "units": {"ks_per_m": "m-1"},
+            }
+        )
+        figure_series.append(
+            {
+                "handle": handle,
+                "label": curve["label"],
+                "x": "density_kg_m3",
+                "y": "ks_per_m",
+            }
+        )
+    image = tmp_path / "figure.png"
+    image.write_bytes(b"x" * 3000)
+    record = {
+        "numeric_results": numeric,
+        "figures": [
+            {
+                "title": "Sparse-medium scattering comparison",
+                "subtitle": "Sphere radius: 100 micrometres",
+                "x_label": "Density (kg m-3)",
+                "y_label": "Scattering coefficient (m-1)",
+                "series": figure_series,
+                "archived_image_path": str(image),
+                "quality_review": {"reviewed": True, "passed": True},
+            }
+        ],
+    }
+    return record, oracle
+
+
+def test_figure3_fixture_pins_the_official_notebook_recipe():
+    gold = figure3.reference()
+    assert gold["source"]["commit"] == "fb60a037a290c0add016d45f354cea37816b1515"
+    assert gold["source"]["notebook"] == "fig03_sparse_medium.ipynb"
+    assert gold["recipe"]["source_sensor"] == "AMSR-E 37V"
+    assert gold["recipe"]["frequency_ghz"] == 36.5
+    assert gold["recipe"]["densities_kg_m3"] == list(range(1, 100, 5))
+    assert gold["scoring_policy"] == {
+        "notebook_recipe": "diagnostic_only",
+        "numeric_reference": "not_scoreable",
+        "caption": "advisory",
+    }
+    assert [item["label"] for item in gold["curves"]] == [
+        "Independent spheres (Rayleigh)",
+        "Independent spheres (IBA)",
+        "Non-sticky hard spheres (DMRT QCA-CP)",
+        "Non-sticky hard spheres (IBA)",
+        "Sticky hard spheres (DMRT QCA-CP)",
+        "Sticky hard spheres (IBA)",
+    ]
+
+
+def test_human_editable_standards_are_loaded_by_figure_and_report_evaluators():
+    assert figure3.evaluation_standard()["figure"]["notebook_recipe"] == "diagnostic_only"
+    assert figure3.evaluation_standard()["figure"]["numeric_reference"] == "not_scoreable"
+    assert (
+        judge.standard_figure()["figure"]["visual_judge"]["pass"]["required_scores"][
+            "patterns"
+        ]
+        == 2
+    )
+    assert judge.standard()["pass"] == {"minimum_total": 8, "factuality": 2}
+
+
+def test_competition_archives_named_figures_and_editable_reports(monkeypatch, tmp_path):
+    competition = _load_runner("competition")
+    monkeypatch.setattr(competition.common, "REPO", tmp_path)
+    monkeypatch.setattr(competition, "FIGURES", tmp_path / "figures")
+    monkeypatch.setattr(competition, "REPORTS", tmp_path / "reports")
+    source = tmp_path / "generated.png"
+    source.write_bytes(b"png-bytes")
+
+    full = {
+        "task": "q1-sparse-medium",
+        "prompt_profile": "p1-reproduction-first",
+        "llm": "qwen-plus",
+        "repeat": 1,
+        "config": "full",
+        "answer": "Full report",
+        "figures": [{"image_path": str(source)}],
+    }
+    competition.archive_record_artifacts(full)
+    assert full["figures"][0]["archived_image_path"].endswith("_full.png")
+    assert full["archived_report_path"].endswith("_full.md")
+    assert (tmp_path / full["figures"][0]["archived_image_path"]).is_file()
+    report = tmp_path / full["archived_report_path"]
+    assert report.read_text(encoding="utf-8").endswith("Full report\n")
+    assert full["report_artifact"]["editable"] is True
+    original_image_path = full["figures"][0]["archived_image_path"]
+    full["figures"][0].pop("image_path")
+    competition.archive_record_artifacts(full)
+    assert full["figures"][0]["archived_image_path"] == original_image_path
+
+    baseline = dict(full, config="no-harness", figures=[{"image_path": str(source)}])
+    competition.archive_record_artifacts(baseline)
+    assert baseline["figures"][0]["archived_image_path"].endswith("_baseline.png")
+    assert baseline["archived_report_path"].endswith("_baseline.md")
+
+
+def test_figure3_score_separates_structural_checks_from_diagnostic_recipe(tmp_path):
+    record, oracle = _perfect_figure3_record(tmp_path)
+    scored = figure3.score(record, oracle)
+    assert scored["passed"] is None
+    assert scored["status"] == "not_scoreable"
+    assert scored["structural_passed"] is True
+    assert scored["recipe"]["status"] == "diagnostic_only"
+    assert scored["numeric"]["status"] == "not_scoreable"
+    assert scored["plot"]["passed"] is True
+
+    record["numeric_results"][0]["series"]["ks_per_m"][-1] *= 2
+    wrong = figure3.score(record, oracle)
+    assert wrong["status"] == "not_scoreable"
+    assert wrong["numeric"]["curves"][0]["within"] is False
+
+    record["numeric_results"] = record["numeric_results"][:-1]
+    missing = figure3.score(record, oracle)
+    assert missing["passed"] is False
+    assert missing["status"] == "fail"
+    assert missing["structural_passed"] is False
+    assert missing["numeric"]["curves"][-1]["within"] is None
+
+    record, oracle = _perfect_figure3_record(tmp_path)
+    record["numeric_results"][0]["spec"]["frequency_ghz"] = 19.0
+    wrong_configuration = figure3.score(record, oracle)
+    assert wrong_configuration["status"] == "not_scoreable"
+    assert wrong_configuration["recipe"]["curves"][0]["experiment_exact"] is False
+
+    record, oracle = _perfect_figure3_record(tmp_path)
+    record["figures"][0]["subtitle"] = ""
+    missing_caption = figure3.score(record, oracle)
+    assert missing_caption["plot"]["checks"]["caption"] is False
+    assert missing_caption["plot"]["passed"] is True
+
+
+def test_figure3_numeric_thresholds_apply_to_every_curve(tmp_path):
+    record, oracle = _perfect_figure3_record(tmp_path)
+    wanted = oracle["series"]["independent_rayleigh"]
+    span = max(wanted) - min(wanted)
+    record["numeric_results"][0]["series"]["ks_per_m"] = [
+        value + 0.019 * span for value in wanted
+    ]
+    inside = figure3.score(record, oracle)
+    assert inside["numeric"]["curves"][0]["within"] is True
+
+    record["numeric_results"][0]["series"]["ks_per_m"] = [
+        value + 0.051 * span for value in wanted
+    ]
+    outside = figure3.score(record, oracle)
+    assert outside["numeric"]["curves"][0]["within"] is False
+
+
+def test_report_checks_reject_unresolved_evidence_and_unsupported_success_claim():
+    base = {
+        "answer": (
+            "Picard Figure 3 was exactly reproduced with SMRT version 1.5.1 "
+            "[smrt-v1#08] [model:smrt@1.5.1]."
+        ),
+        "switches": {"paper_access": "structured_figures"},
+        "markers": {
+            "literature": ["smrt-v1#08"],
+            "model": ["smrt@1.5.1"],
+            "data": [],
+        },
+        "citation_check": {"passed": True, "unresolved": []},
+        "numeric_results": [{"handle": "result"}],
+        "reproduction_outcome": "reproduced",
+    }
+    unsupported = figure3.deterministic_report_checks(base, {"passed": False})
+    assert unsupported["passed"] is False
+    assert unsupported["checks"]["calibrated_outcome"] is False
+
+    unresolved_record = {
+        **base,
+        "answer": "The partial result uses SMRT version 1.5.1.",
+        "citation_check": {"passed": False, "unresolved": ["smrt-v1#99"]},
+        "reproduction_outcome": "partial",
+    }
+    unresolved = figure3.deterministic_report_checks(unresolved_record, {"passed": False})
+    assert unresolved["passed"] is False
+    assert unresolved["checks"]["evidence_resolved"] is False
+
+
+def test_judge_uses_only_eval_settings_and_counts_retry_usage(monkeypatch):
+    monkeypatch.setattr(judge.config, "eval_llm_api_key", lambda: "judge-secret")
+    monkeypatch.setattr(judge.config, "eval_llm_api_base", lambda: "https://judge.invalid/v1")
+    monkeypatch.setattr(judge.config, "eval_llm_model", lambda: "judge-model")
+    assert judge.settings(("candidate-model",))["model"] == "judge-model"
+    with pytest.raises(RuntimeError, match="must differ"):
+        judge.settings(("judge-model",))
+    with pytest.raises(RuntimeError, match="must differ"):
+        judge.settings(("provider/judge-model",))
+    assert judge.REPORT_RESPONSE_FORMAT["type"] == "json_schema"
+    assert judge.REPORT_RESPONSE_FORMAT["json_schema"]["strict"] is True
+
+    valid = {
+        "scores": {
+            "factuality": 2,
+            "completeness": 2,
+            "evidence": 2,
+            "calibration": 1,
+            "clarity": 1,
+        },
+        "factual_errors": [],
+        "summary": "accurate",
+    }
+    calls = []
+
+    def fake_request(messages, candidate_models=(), max_tokens=1200, response_format=None):
+        calls.append(messages)
+        if len(calls) == 1:
+            raise judge.JudgeResponseError(
+                "truncated JSON",
+                {
+                    "model": "judge-model",
+                    "usage": {
+                        "prompt_tokens": 10,
+                        "completion_tokens": 2,
+                        "total_tokens": 12,
+                    },
+                },
+            )
+        return valid, {
+            "model": "judge-model",
+            "usage": {"prompt_tokens": 20, "completion_tokens": 4, "total_tokens": 24},
+        }
+
+    monkeypatch.setattr(judge, "_request", fake_request)
+    judged = judge.judge_report(
+        {"answer": "A calibrated report.", "config": "secret-scenario-label"},
+        {"question": "question"},
+        {"passed": True, "recipe": {}, "numeric": {}, "plot": {}},
+        {"passed": True},
+        candidate_models=("candidate-model",),
+    )
+    assert judged["passed"] is True
+    assert judged["usage"]["total_tokens"] == 36
+    assert "secret-scenario-label" not in json.dumps(calls)
+    assert "Previous output was invalid" in calls[1][0]["content"]
+    assert "judge-secret" not in json.dumps(judged)
+    assert "judge-secret" not in judge._safe_error(
+        RuntimeError("request included judge-secret"), "judge-secret"
+    )
+
+
+def test_figure_judge_compares_images_without_text_or_numeric_matching(monkeypatch, tmp_path):
+    monkeypatch.setattr(judge.config, "eval_llm_api_key", lambda: "judge-secret")
+    monkeypatch.setattr(judge.config, "eval_llm_api_base", lambda: "https://judge.invalid/v1")
+    monkeypatch.setattr(judge.config, "eval_llm_model", lambda: "judge-model")
+    reference_image = tmp_path / "reference.png"
+    candidate_image = tmp_path / "candidate.png"
+    reference_image.write_bytes(b"reference")
+    candidate_image.write_bytes(b"candidate")
+    monkeypatch.setattr(
+        figure3,
+        "reference",
+        lambda: {
+            "visual_reference": {
+                "image_path": "reference.png",
+                "expected_line_count": 6,
+            }
+        },
+    )
+    monkeypatch.setattr(judge, "REPO", tmp_path)
+    calls = []
+
+    def fake_request(messages, candidate_models=(), max_tokens=1200, response_format=None):
+        calls.append((messages, response_format))
+        return (
+            {
+                "scores": {
+                    "line_count": 2,
+                    "patterns": 2,
+                    "grouping": 2,
+                    "visual_correspondence": 2,
+                },
+                "observations": ["Six qualitative curve families are visible."],
+                "summary": "The candidate conveys the same qualitative figure.",
+            },
+            {
+                "model": "judge-model",
+                "usage": {"prompt_tokens": 10, "completion_tokens": 4, "total_tokens": 14},
+            },
+        )
+
+    monkeypatch.setattr(judge, "_request", fake_request)
+    result = judge.judge_figure(
+        {"figures": [{"archived_image_path": str(candidate_image)}]},
+        candidate_models=("candidate-model",),
+    )
+    assert result["complete"] is True
+    assert result["passed"] is True
+    assert result["total"] == 8
+    assert result["usage"]["total_tokens"] == 14
+    assert calls[0][1] == judge.FIGURE_RESPONSE_FORMAT
+    content = calls[0][0][1]["content"]
+    assert content[1]["type"] == "image_url"
+    assert content[2]["type"] == "image_url"
+    assert "Do not score exact title/caption wording" in calls[0][0][0]["content"]
+    assert "RMSE" in calls[0][0][0]["content"]
 
 
 def test_provenance_schema_and_gold_use_only_declared_source_kinds():

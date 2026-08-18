@@ -1,11 +1,13 @@
 name: no-harness
 description: >-
-  Physical domain validation and the two final-answer gates are removed. A model call
-  with an out-of-range or illegally combined parameter is passed straight to the model
-  instead of being refused with its reason, and an answer whose citation markers resolve
-  to nothing is delivered as written. Everything else, including the tool set and the
-  full capability declaration, is unchanged.
+  Raw publisher PDF pages and an unassisted upstream SMRT recipe tool. Structured
+  literature, figure metadata, model cards, capability declarations, research planning,
+  physical validation and final evidence gates are absent. The external evaluation-batch
+  approval remains mandatory before any physical execution.
 switches:
   harness: false
-  literature: true
-  capability: true
+  literature: false
+  capability: false
+  figures: false
+  paper_access: raw_pdf
+  execution_access: raw_smrt

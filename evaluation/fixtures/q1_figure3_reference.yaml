@@ -1,0 +1,74 @@
+schema_version: q1-figure3-reference-v2
+task: q1-sparse-medium
+source:
+  repository: https://github.com/smrt-model/smrt_v1_paper
+  commit: fb60a037a290c0add016d45f354cea37816b1515
+  notebook: fig03_sparse_medium.ipynb
+  notebook_raw_url: https://raw.githubusercontent.com/smrt-model/smrt_v1_paper/fb60a037a290c0add016d45f354cea37816b1515/fig03_sparse_medium.ipynb
+  paper_doi: 10.5194/gmd-11-2763-2018
+  paper_figure: fig03
+recipe:
+  source_sensor: AMSR-E 37V
+  frequency_ghz: 36.5
+  radius_m: 0.0001
+  densities_kg_m3: [1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56, 61, 66, 71, 76, 81, 86, 91, 96]
+  sticky_stickiness: 0.15
+  non_sticky_stickiness: 1000.0
+curves:
+  - id: independent_rayleigh
+    label: Independent spheres (Rayleigh)
+    electromagnetic_model: rayleigh
+    microstructure_model: independent_sphere
+    # The pinned notebook passes `shsl` here despite the independent-sphere legend.
+    # Rayleigh uses only volume fraction and radius, so the numeric curve is unchanged.
+    oracle_microstructure_model: sticky_hard_spheres
+    oracle_stickiness: 0.15
+  - id: independent_iba
+    label: Independent spheres (IBA)
+    electromagnetic_model: iba
+    microstructure_model: independent_sphere
+  - id: non_sticky_dmrt
+    label: Non-sticky hard spheres (DMRT QCA-CP)
+    electromagnetic_model: dmrt_qcacp_shortrange
+    microstructure_model: sticky_hard_spheres
+    stickiness: 1000.0
+    accepted_microstructure_aliases: [non_sticky_hard_spheres]
+  - id: non_sticky_iba
+    label: Non-sticky hard spheres (IBA)
+    electromagnetic_model: iba
+    microstructure_model: sticky_hard_spheres
+    stickiness: 1000.0
+    accepted_microstructure_aliases: [non_sticky_hard_spheres]
+  - id: sticky_dmrt
+    label: Sticky hard spheres (DMRT QCA-CP)
+    electromagnetic_model: dmrt_qcacp_shortrange
+    microstructure_model: sticky_hard_spheres
+    stickiness: 0.15
+  - id: sticky_iba
+    label: Sticky hard spheres (IBA)
+    electromagnetic_model: iba
+    microstructure_model: sticky_hard_spheres
+    stickiness: 0.15
+plot:
+  title_terms: [sparse, scattering]
+  caption_terms: [radius]
+  caption_value_terms: ["100", "0.0001", "1e-4"]
+  x_terms: [density, kg]
+  y_terms: [scattering, coefficient, m]
+visual_reference:
+  image_path: knowledge/literature/smrt-v1/figures/fig03.png
+  expected_line_count: 6
+thresholds:
+  normalization: reference_curve_range
+  normalized_rmse: 0.02
+  normalized_max_absolute_error: 0.05
+scoring_policy:
+  notebook_recipe: diagnostic_only
+  numeric_reference: not_scoreable
+  caption: advisory
+report_facts:
+  - The notebook's AMSR-E 37V channel has an actual centre frequency of 36.5 GHz.
+  - The six curves approach the same first-order behavior as density tends to zero.
+  - The paper places the useful sparse-medium range at approximately 10–20 kg m-3.
+  - Microstructure affects the low-density departure more strongly than electromagnetic-theory choice.
+  - The reproduced values may differ from the 2018 figure because the installed SMRT version differs from the paper code.

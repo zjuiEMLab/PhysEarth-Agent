@@ -1,0 +1,59 @@
+schema_version: q1-figure3-evaluation-standard-v1
+task: q1-sparse-medium
+description: >-
+  Human-editable standard for the Figure 3 reproduction score. Values from the pinned
+  notebook remain diagnostic unless the paper itself defines the recipe well enough to
+  support a formal numeric comparison.
+figure:
+  formal_checks:
+    - rendered
+    - title
+    - axes
+    - legend
+    - quality
+  advisory_checks:
+    - caption
+  notebook_recipe: diagnostic_only
+  numeric_reference: not_scoreable
+  numeric_thresholds:
+    normalized_rmse: 0.02
+    normalized_max_absolute_error: 0.05
+  status_rules:
+    structural_failure: fail
+    structurally_valid_but_recipe_underdetermined: not_scoreable
+  visual_judge:
+    dimensions:
+      line_count: >-
+        Does the candidate contain the expected number of distinct data curves, excluding
+        legend swatches and grid lines?
+      patterns: >-
+        Do the curves have the same qualitative shapes, trends, and separation patterns as
+        the reference figure, without requiring pointwise numerical agreement?
+      grouping: >-
+        Do the curve families have the same relative grouping and ordering across the x-axis?
+      visual_correspondence: >-
+        Does the candidate communicate the same scientific figure as the reference at a glance?
+    ignored:
+      - exact title or caption wording
+      - font, color palette, line width, dash syntax, legend placement, and canvas dimensions
+      - pixel similarity, OCR exact matching, RMSE, and any numeric curve error metric
+    score_scale:
+      0: absent, materially different, or impossible to determine
+      1: partially matching but with a material omission or ambiguity
+      2: clearly matching the reference under the qualitative criterion
+    pass:
+      minimum_total: 6
+      required_scores:
+        line_count: 2
+        patterns: 2
+        grouping: 1
+        visual_correspondence: 1
+report:
+  deterministic_requirements:
+    - report_exists
+    - outcome_declared
+    - evidence_resolved
+    - computed_result_identified
+    - model_version_qualified
+    - calibrated_outcome
+  judge_standard: report_judge.yaml
