@@ -16,6 +16,13 @@ sys.path.insert(0, str(common.ROOT))
 from metrics import figure3, judge  # noqa: E402
 
 RUNS = common.RESULTS / "competition" / "runs"
+SCORED_RUNS = common.RESULTS / "competition" / "scored_runs.json"
+
+
+def _read_json(path):
+    # Some archived model responses contain literal control characters.  They are
+    # still bounded evidence and should not prevent an offline dashboard rebuild.
+    return json.loads(path.read_text(encoding="utf-8"), strict=False)
 
 
 def _usage(*judgements):
@@ -56,8 +63,30 @@ def _apply_figure_pass_rule(judgement):
     return judgement
 
 
-def rejudge(path, oracle, rerun_reports=False, rerun_figure=True):
-    record = json.loads(path.read_text(encoding="utf-8"))
+def _diagnostic_path(record):
+    figure = next(
+        (item for item in record.get("figures") or [] if item.get("archived_image_path")),
+        {},
+    )
+    image_path = Path(str(figure.get("archived_image_path") or ""))
+    if image_path.name:
+        return image_path.with_name(f"{image_path.stem}_shape-diagnostic.png")
+    suffix = "full" if record.get("config") == "full" else "baseline"
+    name = (
+        f"{record.get('task', 'q1')}_{record.get('prompt_profile', 'p1')}_"
+        f"{record.get('llm', 'candidate')}_r{record.get('repeat', '?')}_{suffix}"
+    )
+    return common.RESULTS / "competition" / "figures" / f"{name}_shape-diagnostic.png"
+
+
+def rejudge(
+    path,
+    oracle,
+    rerun_reports=False,
+    rerun_figure=True,
+    write_aspect_diagnostic=False,
+):
+    record = _read_json(path)
     if record.get("task") != "q1-sparse-medium":
         return False
     metrics = record.get("dashboard_metrics") or {}
@@ -117,6 +146,11 @@ def rejudge(path, oracle, rerun_reports=False, rerun_figure=True):
             "figure_judge_usage": figure_judgement.get("usage") or {},
         }
     )
+    if write_aspect_diagnostic:
+        metrics["aspect_diagnostic"] = figure3.write_aspect_diagnostic(
+            record,
+            _diagnostic_path(record),
+        )
     record["dashboard_metrics"] = metrics
     path.write_text(
         json.dumps(record, indent=2, ensure_ascii=False) + "\n",
@@ -130,6 +164,49 @@ def rejudge(path, oracle, rerun_reports=False, rerun_figure=True):
     return True
 
 
+def _update_scored_runs():
+    """Refresh raw Q1 records in the durable dashboard source without new judges."""
+    if not SCORED_RUNS.is_file():
+        return 0
+    entries = _read_json(SCORED_RUNS)
+    raw_by_key = {}
+    for path in sorted(RUNS.glob("*.json")):
+        try:
+            record = _read_json(path)
+        except (OSError, ValueError):
+            continue
+        if record.get("task") != "q1-sparse-medium":
+            continue
+        key = (
+            record.get("config"),
+            record.get("repeat"),
+            record.get("llm"),
+            record.get("build"),
+            record.get("prompt_profile"),
+        )
+        raw_by_key[key] = record
+    changed = 0
+    for entry in entries:
+        raw = entry.get("raw") or {}
+        key = (
+            raw.get("config"),
+            raw.get("repeat"),
+            raw.get("llm"),
+            raw.get("build"),
+            raw.get("prompt_profile"),
+        )
+        replacement = raw_by_key.get(key)
+        if replacement is not None:
+            entry["raw"] = replacement
+            changed += 1
+    SCORED_RUNS.write_text(
+        json.dumps(entries, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return changed
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--rerun-reports", action="store_true")
@@ -138,13 +215,32 @@ def main(argv=None):
         action="store_true",
         help="Reapply the rubric to stored figure scores without another image call.",
     )
+    parser.add_argument(
+        "--write-aspect-diagnostics",
+        action="store_true",
+        help="Re-render stored numeric curves with fixture plot geometry.",
+    )
+    parser.add_argument(
+        "--update-scored-runs",
+        action="store_true",
+        help="Copy updated raw Q1 records into scored_runs.json without new judges.",
+    )
     args = parser.parse_args(argv)
     oracle = json.loads(figure3.ORACLE_PATH.read_text(encoding="utf-8"))
     changed = 0
     for path in sorted(RUNS.glob("*.json")):
-        if rejudge(path, oracle, args.rerun_reports, not args.recompute_figure_status):
+        if rejudge(
+            path,
+            oracle,
+            args.rerun_reports,
+            not args.recompute_figure_status,
+            args.write_aspect_diagnostics,
+        ):
             changed += 1
+    refreshed = _update_scored_runs() if args.update_scored_runs else 0
     print(f"rejudged {changed} Q1 record(s)")
+    if args.update_scored_runs:
+        print(f"updated {refreshed} durable Q1 score record(s)")
     return 0
 
 

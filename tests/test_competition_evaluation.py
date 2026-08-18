@@ -399,6 +399,33 @@ def test_report_checks_reject_unresolved_evidence_and_unsupported_success_claim(
     assert unresolved["checks"]["evidence_resolved"] is False
 
 
+def test_visual_figure_review_can_validate_success_when_metadata_check_differs():
+    base = {
+        "answer": (
+            "The figure is qualitatively reproduced after visual review; the unspecified "
+            "execution parameters are listed as assumptions. SMRT version 1.5.1."
+        ),
+        "switches": {"paper_access": "structured_figures"},
+        "markers": {
+            "literature": ["smrt-v1#08"],
+            "model": ["smrt@1.5.1"],
+            "data": [],
+        },
+        "citation_check": {"passed": True, "unresolved": []},
+        "numeric_results": [{"handle": "result"}],
+        "reproduction_outcome": "reproduced",
+        "evidence": {"sections": ["smrt-v1#08"]},
+    }
+    checked = figure3.deterministic_report_checks(
+        base,
+        {"passed": False, "status": "not_scoreable", "plot": {"passed": False}},
+        {"status": "pass", "passed": True},
+    )
+    assert checked["checks"]["calibrated_outcome"] is True
+    assert checked["visual_validation"] == "pass"
+    assert checked["plot_checks_are_diagnostic"] is True
+
+
 def test_judge_uses_only_eval_settings_and_counts_retry_usage(monkeypatch):
     monkeypatch.setattr(judge.config, "eval_llm_api_key", lambda: "judge-secret")
     monkeypatch.setattr(judge.config, "eval_llm_api_base", lambda: "https://judge.invalid/v1")

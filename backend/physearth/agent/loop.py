@@ -36,6 +36,39 @@ def _requests_tool_bypass(question):
     return any(pattern.search(text) for pattern in _TOOL_BYPASS_PATTERNS)
 
 
+def _raw_reproduction_step(session):
+    """Return the next minimum raw-baseline step when the model tries to stop early.
+
+    Raw mode intentionally has no reviewed research plan. It still needs one bounded
+    source -> computation -> chart progression for a reproduction question; otherwise a
+    model can read one page and publish an answer without ever touching the raw tools.
+    The model remains responsible for the recipe and may execute additional raw runs
+    between the required stages.
+    """
+    if not session.get("raw_pdf_pages_read"):
+        return (
+            "read_raw_paper",
+            "Continue the raw reproduction. Read a valid PDF page now; do not finalize after "
+            "an invalid or unrelated page. Use the returned page_count and page text to locate "
+            "the requested method and source figure.",
+        )
+    if not session.get("successful_runs"):
+        return (
+            "run_raw_smrt",
+            "Continue the raw reproduction. Use the raw paper evidence to construct and execute "
+            "the first requested run with run_raw_smrt. Do not answer with a plan or status. "
+            "After this result, execute any remaining requested comparison cases before plotting.",
+        )
+    if not any(not figure.get("preview") for figure in session.get("figures") or ()):
+        return (
+            "plot",
+            "Continue the raw reproduction. At least one raw result handle is available; call "
+            "plot with the returned handle(s), a common comparison axis, title, units, and "
+            "legend before writing the scientific conclusion.",
+        )
+    return None
+
+
 def stream(question, history=None, model=None, session=None, switches=None):
     """Run one turn, yielding (answer, events, state) every time something happens.
 
@@ -90,6 +123,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
         context.get("reproduction_case") == "paper-reproduction"
     )
     raw_execution = state["switches"].get("execution_access") == "raw_smrt"
+    raw_reproduction = raw_execution and research.is_reproduction_question(question)
     reproduction_preflight = (
         not raw_execution
         and (research.is_reproduction_question(question) or guided_reproduction)
@@ -116,6 +150,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
     last_plan_error = ""
     last_plan_problems = []
     forced_tool_name = None
+    raw_prompted_stage = None
     # A turn that reaches the review gate without having called research_plan has not
     # acted on what the user asked; see the gate below.
     plan_tool_called = False
@@ -152,6 +187,18 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 else "Stopped: %s. Ask a narrower follow-up question." % spend["reason"]
             )
             break
+
+        raw_stage = _raw_reproduction_step(session) if raw_reproduction else None
+        if raw_stage and raw_stage[0] == "plot" and not session.get("raw_force_plot"):
+            raw_stage = None
+        if raw_stage:
+            forced_tool_name = raw_stage[0]
+            if raw_stage[0] != raw_prompted_stage:
+                messages.append({"role": "user", "content": raw_stage[1]})
+                raw_prompted_stage = raw_stage[0]
+        else:
+            raw_prompted_stage = None
+            session.pop("raw_force_plot", None)
 
         state["phase"] = "calling_model"
         yield answer, events, state
@@ -285,7 +332,6 @@ def stream(question, history=None, model=None, session=None, switches=None):
             and "research-planning" not in set(session.get("research_guidelines_read") or ())
         ):
             forced_tool_name = "read_research_guideline"
-
         session_state.bump(state, "model_calls")
         session_state.bump(state, "prompt_tokens", completion.prompt_tokens or 0)
         session_state.bump(state, "completion_tokens", completion.completion_tokens or 0)
@@ -884,6 +930,29 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 messages[0] = {"role": "system", "content": prompt.build(state)}
             continue
 
+        if raw_reproduction:
+            raw_stage = _raw_reproduction_step(session)
+            if raw_stage:
+                if raw_stage[0] == "plot":
+                    session["raw_force_plot"] = True
+                forced_tool_name = raw_stage[0]
+                if raw_stage[0] != raw_prompted_stage:
+                    if completion.content and completion.content.strip():
+                        messages.append({"role": "assistant", "content": completion.content})
+                    messages.append({"role": "user", "content": raw_stage[1]})
+                    raw_prompted_stage = raw_stage[0]
+                events.append(
+                    _event(
+                        "raw_workflow_block",
+                        rule="raw_reproduction_step_required",
+                        tool=raw_stage[0],
+                        detail=raw_stage[1],
+                    )
+                )
+                state["phase"] = "calling_model"
+                yield "", events, state
+                continue
+
         answer = transcript(segments, completion.content or "")
 
         # If this turn has explicitly entered research mode but the model tries to answer
@@ -1202,6 +1271,63 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 yield transcript(segments), events, state
                 continue
+
+        formal_figures = [
+            figure for figure in session.get("figures") or () if not figure.get("preview")
+        ]
+        report_ready = bool(formal_figures) and all(
+            (figure.get("quality_review") or {}).get("reviewed") for figure in formal_figures
+        )
+        reporting_missing = (
+            session.get("research_required")
+            and (session.get("research_context") or {}).get("reproduction_case")
+            == "paper-reproduction"
+            and report_ready
+            and "research-reporting" not in set(session.get("research_guidelines_read") or ())
+        )
+        if reporting_missing:
+            reporting_request = (
+                "Before writing the final reproduction report, call "
+                "read_research_guideline(topic='research-reporting'). Then use its auditable "
+                "layout: list guessed parameters, separate figure-based and result-backed "
+                "conclusions, and compare them explicitly."
+            )
+            events.append(
+                _event(
+                    "research_block",
+                    rule="research_reporting_required",
+                    detail="The final reproduction report requires the reporting guideline.",
+                )
+            )
+            forced_tool_name = "read_research_guideline"
+            messages.append({"role": "assistant", "content": completion.content or ""})
+            messages.append({"role": "user", "content": reporting_request})
+            yield transcript(segments), events, state
+            continue
+
+        reporting_prompt_ready = (
+            session.get("research_required")
+            and (session.get("research_context") or {}).get("reproduction_case")
+            == "paper-reproduction"
+            and report_ready
+            and "research-reporting" in set(session.get("research_guidelines_read") or ())
+            and not session.get("research_report_prompt_sent")
+        )
+        if reporting_prompt_ready:
+            session["research_report_prompt_sent"] = True
+            events.append(
+                _event(
+                    "research_block",
+                    rule="research_reporting_contract",
+                    detail="The final report is being checked against the recorded provenance ledger and result state.",
+                )
+            )
+            messages.append({"role": "assistant", "content": completion.content or ""})
+            messages.append({"role": "user", "content": research.report_generation_prompt(session)})
+            segments = []
+            answer = ""
+            yield answer, events, state
+            continue
 
         report_warning = research.report_warnings(session, answer) if session.get("research_required") else ""
         if report_warning:

@@ -317,6 +317,90 @@ def score(record, oracle=None):
     }
 
 
+def write_aspect_diagnostic(record, output_path):
+    """Render candidate curves with the reference plot geometry.
+
+    This is an evaluation-only visual aid. It does not compare values, calculate an
+    error metric, or change any figure-judge result. The limits and axes box ratio
+    live in the versioned Q1 fixture rather than in production planning code.
+    """
+    gold = reference()
+    diagnostic = (gold.get("visual_reference") or {}).get("diagnostic") or {}
+    available = record.get("numeric_results") or []
+    if not available:
+        return {"status": "skipped", "reason": "missing_numeric_results"}
+    x_limits = diagnostic.get("x_limits")
+    y_limits = diagnostic.get("y_limits")
+    axes_box_ratio = diagnostic.get("axes_box_ratio")
+    if (
+        not isinstance(x_limits, (list, tuple))
+        or len(x_limits) != 2
+        or not isinstance(y_limits, (list, tuple))
+        or len(y_limits) != 2
+        or not isinstance(axes_box_ratio, (int, float))
+        or axes_box_ratio <= 0
+    ):
+        return {"status": "skipped", "reason": "missing_fixture_geometry"}
+
+    curves = []
+    used = set()
+    for curve in gold.get("curves") or []:
+        match_index = next(
+            (
+                index
+                for index, item in enumerate(available)
+                if index not in used and _curve_matches(item, curve)
+            ),
+            None,
+        )
+        if match_index is None:
+            continue
+        item = available[match_index]
+        axis = [float(value) for value in ((item.get("axis") or {}).get("values") or [])]
+        values = [
+            float(value) for value in ((item.get("series") or {}).get("ks_per_m") or [])
+        ]
+        if not axis or len(axis) != len(values):
+            continue
+        used.add(match_index)
+        curves.append((curve.get("label") or curve.get("id") or "candidate", axis, values))
+    if not curves:
+        return {"status": "skipped", "reason": "no_usable_numeric_curves"}
+
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    figure_width = 8.0
+    axes_width = 0.72
+    axes_height = axes_width / float(axes_box_ratio)
+    figure_height = max(4.5, axes_height + 1.0)
+    figure = plt.figure(figsize=(figure_width, figure_height))
+    axes = figure.add_axes([0.14, 0.16, axes_width, axes_height])
+    for label, axis, values in curves:
+        axes.plot(axis, values, linewidth=1.8, label=label)
+    axes.set_xlim(float(x_limits[0]), float(x_limits[1]))
+    axes.set_ylim(float(y_limits[0]), float(y_limits[1]))
+    axes.set_xlabel("Density (kg m$^{-3}$)")
+    axes.set_ylabel("Scattering coefficient (m$^{-1}$)")
+    axes.set_title("Evaluation-only shape diagnostic")
+    axes.grid(alpha=0.2)
+    axes.legend(fontsize=7, loc="best")
+    figure.savefig(destination, dpi=150)
+    plt.close(figure)
+    return {
+        "status": "written",
+        "path": str(destination),
+        "curves": [label for label, _axis, _values in curves],
+        "x_limits": [float(value) for value in x_limits],
+        "y_limits": [float(value) for value in y_limits],
+        "axes_box_ratio": float(axes_box_ratio),
+    }
+
+
 def deterministic_report_checks(record, figure_score, figure_judgement=None):
     answer = str(record.get("answer") or "")
     raw_mode = (record.get("switches") or {}).get("paper_access") == "raw_pdf"
@@ -327,11 +411,11 @@ def deterministic_report_checks(record, figure_score, figure_judgement=None):
     unresolved = list(citation_check.get("unresolved") or [])
     declared = str(record.get("reproduction_outcome") or "")
     judged_figure_status = (figure_judgement or {}).get("status")
-    figure_status = judged_figure_status or figure_score.get("status")
+    visual_validation_passed = judged_figure_status == "pass"
     overclaim = any(
         phrase in answer.lower()
         for phrase in ("exact reproduction", "exactly reproduced", "quantitatively reproduced")
-    ) and figure_status != "pass"
+    )
     source_evidence = (
         bool((record.get("evidence") or {}).get("raw_pdf_pages"))
         and citation_check.get("passed") is True
@@ -353,7 +437,15 @@ def deterministic_report_checks(record, figure_score, figure_judgement=None):
         "model_version_qualified": any(
             phrase in answer.lower() for phrase in ("version", "1.5.1", "2018")
         ),
+        # Metadata/recipe checks remain audit diagnostics. A passed visual review is the
+        # primary figure gate when the paper leaves execution parameters unspecified.
         "calibrated_outcome": not overclaim
-        and (figure_status == "pass" or declared != "reproduced"),
+        and (visual_validation_passed or declared != "reproduced"),
     }
-    return {"passed": all(checks.values()), "checks": checks, "unresolved_markers": unresolved}
+    return {
+        "passed": all(checks.values()),
+        "checks": checks,
+        "unresolved_markers": unresolved,
+        "visual_validation": "pass" if visual_validation_passed else "not_passed",
+        "plot_checks_are_diagnostic": True,
+    }

@@ -130,7 +130,12 @@ def read_literature(slug, section_id=None, _session=None, _switches=None):
 
 def read_research_guideline(topic="planning", _session=None):
     topic = str(topic or "planning").strip().lower()
-    slug = "research-planning" if topic in ("planning", "research", "") else topic
+    if topic in ("planning", "research", ""):
+        slug = "research-planning"
+    elif topic in ("report", "reporting", "research-reporting"):
+        slug = "research-reporting"
+    else:
+        slug = topic
     result = read_literature(slug, "00", _session=_session)
     if result["status"] == "success":
         if _session is not None:

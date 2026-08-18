@@ -3790,28 +3790,333 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   line-height: 1.5;
 }
 
-.eval-reference__curve-list {
-  list-style: none;
-  padding-left: 0 !important;
-}
-
-.eval-reference__curve-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.eval-reference-curve__swatch {
-  flex: 0 0 22px;
-  height: 3px;
-  margin-top: 8px;
-  background: var(--clay-press);
-}
-
 .eval-reference__compare {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px dashed var(--line-strong);
+}
+
+.eval-q1-radar-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: start;
+  margin: 18px 0;
+}
+
+.eval-q1-radar-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(250, 249, 245, 0.82);
+}
+
+.eval-q1-radar-card h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 21px;
+}
+
+.eval-q1-radar__svg {
+  display: block;
+  width: 100%;
+  min-height: 290px;
+  overflow: visible;
+}
+
+.eval-q1-radar__ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.eval-q1-radar__axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.eval-q1-radar__series {
+  stroke-width: 2.5;
+}
+
+.eval-q1-radar__area {
+  fill-opacity: 0.08;
+  stroke-width: 2.5;
+}
+
+.eval-q1-radar__point {
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+
+.eval-q1-radar__na {
+  fill: var(--paper);
+  stroke: var(--ink-mute);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 2;
+}
+
+.eval-q1-radar__label {
+  fill: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.eval-q1-radar__scale {
+  fill: var(--ink-mute);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.eval-q1-radar__legend {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: -3px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.eval-q1-radar__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.eval-q1-swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.eval-q1-swatch--full {
+  background: #9b4d32;
+}
+
+.eval-q1-swatch--raw {
+  background: #2a6874;
+}
+
+.eval-q1-overall-explanation {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--clay-wash);
+}
+
+.eval-q1-overall-explanation > h3 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 23px;
+}
+
+.eval-q1-overall-explanation > h4 {
+  margin: 17px 0 6px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 18px;
+}
+
+.eval-q1-explanation-details {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(250, 249, 245, 0.78);
+}
+
+.eval-q1-explanation-details summary {
+  padding: 12px 14px;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.eval-q1-explanation-details[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.eval-q1-explanation-details .eval-q1-explanation {
+  margin: 0;
+  padding: 14px;
+  border-top: 0;
+}
+
+.eval-q1-overall-explanation__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.eval-q1-overall-explanation .eval-q1-explanation {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(250, 249, 245, 0.78);
+}
+
+.eval-q1-explanation {
+  margin-top: 19px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line-strong);
+}
+
+.eval-q1-explanation h3 {
+  margin-bottom: 6px;
+  font-size: 18px;
+}
+
+.eval-q1-explanation__intro {
+  margin: 0 0 11px;
+  color: var(--ink-mute);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.eval-q1-axis-head,
+.eval-q1-axis-row {
+  display: grid;
+  grid-template-columns: minmax(94px, 0.7fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px;
+}
+
+.eval-q1-axis-head {
+  padding: 6px 0;
+  color: var(--ink-mute);
+  border-bottom: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.eval-q1-axis-head span:nth-child(2) {
+  grid-column: 2 / 4;
+}
+
+.eval-q1-axis-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.eval-q1-axis-row:last-child {
+  border-bottom: 0;
+}
+
+.eval-q1-axis-row > b {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.eval-q1-axis-row strong {
+  display: block;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.eval-q1-axis-row span {
+  display: block;
+  margin-top: 2px;
+  color: var(--clay-press);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.eval-q1-axis-row p {
+  margin: 4px 0 0;
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+.eval-q1-run-explanation {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line-strong);
+}
+
+.eval-q1-run-explanation > h4 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 19px;
+}
+
+.eval-q1-run-explanation__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.eval-q1-run-explanation__section {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 244, 237, 0.72);
+}
+
+.eval-q1-run-explanation__section h5 {
+  margin: 0 0 9px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 17px;
+}
+
+.eval-q1-run-axis-head,
+.eval-q1-run-axis-row {
+  display: grid;
+  grid-template-columns: minmax(112px, 0.8fr) minmax(74px, 0.4fr) minmax(0, 1.8fr);
+  gap: 9px;
+}
+
+.eval-q1-run-axis-head {
+  padding: 6px 0;
+  color: var(--ink-mute);
+  border-bottom: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.eval-q1-run-axis-row {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.eval-q1-run-axis-row:last-child {
+  border-bottom: 0;
+}
+
+.eval-q1-run-axis-row > b {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.eval-q1-run-axis-row > span {
+  color: var(--clay-press);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eval-q1-run-axis-row > p {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: 12px;
 }
 
 .eval-table--matrix td:last-child {
@@ -3939,6 +4244,122 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   font-size: 12px;
 }
 
+.eval-run-artifact__report-path {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+  color: var(--ink-mute);
+  line-height: 1.45;
+}
+
+.eval-run-artifact__report-body {
+  max-height: 460px;
+  padding: 16px 18px;
+  overflow: auto;
+  color: var(--ink-soft);
+  background: rgba(245, 244, 237, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.eval-run-artifact__report-body h1,
+.eval-run-artifact__report-body h2,
+.eval-run-artifact__report-body h3,
+.eval-run-artifact__report-body h4 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  line-height: 1.25;
+}
+
+.eval-run-artifact__report-body h1 {
+  font-size: 22px;
+}
+
+.eval-run-artifact__report-body h2 {
+  font-size: 19px;
+}
+
+.eval-run-artifact__report-body h3 {
+  font-size: 17px;
+}
+
+.eval-run-artifact__report-body h4 {
+  font-size: 16px;
+}
+
+.eval-run-artifact__report-body p {
+  margin: 0 0 12px;
+}
+
+.eval-run-artifact__report-body ul,
+.eval-run-artifact__report-body ol {
+  margin: 0 0 13px;
+  padding-left: 22px;
+}
+
+.eval-run-artifact__report-body li + li {
+  margin-top: 5px;
+}
+
+.eval-run-artifact__report-body blockquote {
+  margin: 0 0 13px;
+  padding-left: 13px;
+  color: var(--ink-mute);
+  border-left: 3px solid var(--clay);
+}
+
+.eval-run-artifact__report-body code {
+  display: inline;
+  margin: 0;
+  padding: 1px 4px;
+  color: var(--clay-press);
+  background: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.eval-run-artifact__report-body pre {
+  margin: 0 0 13px;
+  padding: 10px 12px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.eval-run-artifact__table-wrap {
+  margin: 0 0 13px;
+  overflow-x: auto;
+}
+
+.eval-run-artifact__report-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.eval-run-artifact__report-body th,
+.eval-run-artifact__report-body td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.eval-run-artifact__report-body th {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.55);
+  font-weight: 700;
+}
+
 .eval-run-artifact__grid pre,
 .eval-standard-details pre {
   max-height: 460px;
@@ -3990,6 +4411,9 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 
 @media (max-width: 900px) {
   .eval-reference__grid,
+  .eval-q1-radar-layout,
+  .eval-q1-overall-explanation__grid,
+  .eval-q1-run-explanation__grid,
   .eval-run-artifact__grid,
   .eval-standard-details > div {
     grid-template-columns: 1fr;
@@ -4080,6 +4504,85 @@ body.is-reasoning .segment--model > button:not(.is-active) {
   color: var(--paper) !important;
   background: var(--clay-press) !important;
   border-color: var(--clay-press) !important;
+}
+
+/* Keep the public Evaluation page readable at normal zoom. Evaluation text should not
+   drop below 13px; larger headings and numeric KPI values keep their own hierarchy. */
+#pe-evaluation-page .eval-dashboard {
+  font-size: 14px;
+}
+
+#pe-evaluation-page .eval-kicker,
+#pe-evaluation-page .eval-subindex,
+#pe-evaluation-page .eval-judge-note > span,
+#pe-evaluation-page .eval-kpis small,
+#pe-evaluation-page .eval-capability-grid__number,
+#pe-evaluation-page .eval-capability-grid small,
+#pe-evaluation-page .eval-model-strip > span,
+#pe-evaluation-page .eval-model-strip b,
+#pe-evaluation-page .eval-status,
+#pe-evaluation-page .eval-ad-cards article > span,
+#pe-evaluation-page .eval-ad-cards b,
+#pe-evaluation-page .eval-ad-cards small,
+#pe-evaluation-page .eval-a-proof span,
+#pe-evaluation-page .eval-a-proof small,
+#pe-evaluation-page .eval-d-models span,
+#pe-evaluation-page .eval-d-models small,
+#pe-evaluation-page .eval-limitations,
+#pe-evaluation-page .eval-robustness-head span,
+#pe-evaluation-page .eval-robustness-head p,
+#pe-evaluation-page .eval-q1-run-axis-head,
+#pe-evaluation-page .eval-q1-run-axis-row,
+#pe-evaluation-page .eval-q1-run-axis-row > span,
+#pe-evaluation-page .eval-q1-run-axis-row > p,
+#pe-evaluation-page .eval-standard-details h4,
+#pe-evaluation-page .eval-suite-details summary,
+#pe-evaluation-page .eval-suite-details summary span,
+#pe-evaluation-page .eval-suite-details summary b {
+  font-size: 13px;
+}
+
+#pe-evaluation-page .eval-demo-card p {
+  font-size: 14px;
+}
+
+#pe-evaluation-page .eval-demo-card__expect,
+#pe-evaluation-page .eval-demo-card__workflow {
+  font-size: 13px;
+}
+
+#pe-evaluation-page .eval-demo-button {
+  font-size: 14px !important;
+}
+
+#pe-evaluation-page .eval-provenance,
+#pe-evaluation-page .eval-na-note,
+#pe-evaluation-page .eval-table,
+#pe-evaluation-page .eval-details,
+#pe-evaluation-page .eval-reference__head p,
+#pe-evaluation-page .eval-reference__compare,
+#pe-evaluation-page .eval-reference__grid figcaption,
+#pe-evaluation-page .eval-run-artifact__meta {
+  font-size: 14px;
+}
+
+#pe-evaluation-page .eval-table th {
+  font-size: 13px;
+}
+
+#pe-evaluation-page .eval-table td {
+  font-size: 14px;
+}
+
+#pe-evaluation-page .eval-run-artifact summary,
+#pe-evaluation-page .eval-run-artifact__grid h4,
+#pe-evaluation-page .eval-run-artifact__grid code,
+#pe-evaluation-page .eval-run-artifact__grid pre {
+  font-size: 14px;
+}
+
+#pe-evaluation-page .eval-run-artifact__report-body code {
+  font-size: 13px;
 }
 
 .eval-dashboard--details {

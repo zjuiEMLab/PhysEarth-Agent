@@ -15,6 +15,7 @@ uploading and testing a model. Two names one letter apart, for two different job
 import base64
 import html
 import json
+import math
 import re
 import statistics
 from collections import defaultdict
@@ -26,6 +27,7 @@ from physearth.api import knowledge, paths
 
 from evaluation.metrics import competition_score
 from evaluation.metrics import score as scoring
+from frontend.views.text import _inline
 
 REPO = paths.root()
 EVALUATION = paths.evaluation()
@@ -56,6 +58,68 @@ Q1_COMPARISON_DESCRIPTIONS = {
         "Raw publisher PDF pages and a generic upstream-SMRT recipe tool; no structured "
         "knowledge, model card, research planner or evidence gates."
     ),
+}
+Q1_FIGURE_AXES = (
+    (
+        "line_count",
+        "Curve count",
+        "Expected curves are present as distinct data series.",
+    ),
+    (
+        "patterns",
+        "Pattern fidelity",
+        "Qualitative shapes, trends and separation resemble the reference.",
+    ),
+    (
+        "grouping",
+        "Grouping/order",
+        "Curve families keep the reference grouping and relative order.",
+    ),
+    (
+        "visual_correspondence",
+        "Visual correspondence",
+        "The candidate communicates the same scientific figure at a glance.",
+    ),
+)
+Q1_REPORT_AXES = (
+    ("factuality", "Factuality", "Claims agree with paper facts and measured results."),
+    (
+        "completeness",
+        "Completeness",
+        "The question, results and important limitations are covered.",
+    ),
+    ("evidence", "Evidence", "Claims are tied to opened sources or executed outputs."),
+    (
+        "calibration",
+        "Calibration",
+        "Outcome language distinguishes reproduced, partial and unavailable.",
+    ),
+    ("clarity", "Clarity", "Versions, conditions and conclusions are precise and understandable."),
+)
+Q1_FIGURE_REASON_TERMS = {
+    "line_count": (
+        "curve", "curves", "line count", "missing", "omitted", "six", "four", "one line"
+    ),
+    "patterns": ("convex", "linear", "saturat", "monotonic", "shape", "curvature", "trend"),
+    "grouping": ("group", "pair", "ordering", "order", "style", "brace", "family"),
+    "visual_correspondence": (
+        "reference", "candidate", "overall", "correspond", "axis range", "figure"
+    ),
+}
+Q1_REPORT_REASON_TERMS = {
+    "factuality": (
+        "incorrect", "misstat", "invent", "unsupported", "overclaim", "frequency", "parameter"
+    ),
+    "completeness": (
+        "question", "missing", "curve", "limitation", "range", "convergence", "divergence"
+    ),
+    "evidence": (
+        "evidence", "citation", "marker", "measured", "source", "unsupported", "unverifiable"
+    ),
+    "calibration": (
+        "overclaim", "success", "partial", "reproduction", "not scoreable", "not_scoreable", "n/a"
+    ),
+    "clarity": ("verbose", "clarity", "version", "condition", "contradict", "internal"),
 }
 ARCHITECTURE_IMAGE = paths.assets() / "evaluation" / "agent-architecture.svg"
 
@@ -149,6 +213,100 @@ def _artifact_image(value):
     except OSError:
         return ""
     return f"data:image/png;base64,{payload}"
+
+
+def _report_table_cells(line):
+    value = line.strip()
+    if value.startswith("|"):
+        value = value[1:]
+    if value.endswith("|"):
+        value = value[:-1]
+    return [cell.strip() for cell in value.split("|")]
+
+
+def _report_is_table_separator(line):
+    cells = _report_table_cells(line)
+    return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
+
+
+def _report_markdown_html(text):
+    """Render the human-editable report with the safe, small Markdown subset used by UI."""
+    cleaned = re.sub(r"<!--.*?-->", "", str(text or ""), flags=re.DOTALL)
+    cleaned = "".join(
+        character for character in cleaned if character in "\n\r\t" or ord(character) >= 32
+    )
+    lines = cleaned.splitlines()
+    blocks = []
+    index = 0
+    while index < len(lines):
+        line = lines[index].strip()
+        if not line:
+            index += 1
+            continue
+        fence = re.match(r"^(`{3,}|~{3,})\s*.*$", line)
+        if fence:
+            marker = fence.group(1)[0]
+            index += 1
+            code_lines = []
+            while index < len(lines) and not re.match(
+                rf"^\s*{re.escape(marker)}{{3,}}\s*$", lines[index]
+            ):
+                code_lines.append(lines[index])
+                index += 1
+            if index < len(lines):
+                index += 1
+            blocks.append(f"<pre><code>{_e(chr(10).join(code_lines))}</code></pre>")
+            continue
+        heading = re.match(r"^(#{1,4})\s+(.+)$", line)
+        if heading:
+            level = len(heading.group(1))
+            blocks.append(f"<h{level}>{_inline(heading.group(2))}</h{level}>")
+            index += 1
+            continue
+        if index + 1 < len(lines) and "|" in line and _report_is_table_separator(lines[index + 1]):
+            headers = _report_table_cells(line)
+            index += 2
+            rows = []
+            while index < len(lines) and lines[index].strip() and "|" in lines[index]:
+                cells = _report_table_cells(lines[index])
+                rows.append(
+                    "<tr>" + "".join(f"<td>{_inline(cell)}</td>" for cell in cells) + "</tr>"
+                )
+                index += 1
+            header_html = "".join(f"<th>{_inline(cell)}</th>" for cell in headers)
+            blocks.append(
+                "<div class='eval-run-artifact__table-wrap'><table><thead><tr>"
+                f"{header_html}</tr></thead><tbody>{''.join(rows)}</tbody></table></div>"
+            )
+            continue
+        if re.match(r"^\s*(?:[-*])\s+", line):
+            items = []
+            while index < len(lines) and re.match(r"^\s*(?:[-*])\s+", lines[index]):
+                items.append(re.sub(r"^\s*(?:[-*])\s+", "", lines[index].strip()))
+                index += 1
+            blocks.append("<ul>" + "".join(f"<li>{_inline(item)}</li>" for item in items) + "</ul>")
+            continue
+        if re.match(r"^\s*\d+[.)]\s+", line):
+            items = []
+            while index < len(lines) and re.match(r"^\s*\d+[.)]\s+", lines[index]):
+                items.append(re.sub(r"^\s*\d+[.)]\s+", "", lines[index].strip()))
+                index += 1
+            blocks.append("<ol>" + "".join(f"<li>{_inline(item)}</li>" for item in items) + "</ol>")
+            continue
+        if line.startswith(">"):
+            quote_lines = []
+            while index < len(lines) and lines[index].strip().startswith(">"):
+                quote_lines.append(re.sub(r"^\s*>\s?", "", lines[index].strip()))
+                index += 1
+            blocks.append(f"<blockquote>{_inline(' '.join(quote_lines))}</blockquote>")
+            continue
+        paragraph = [line]
+        index += 1
+        while index < len(lines) and lines[index].strip():
+            paragraph.append(lines[index].strip())
+            index += 1
+        blocks.append(f"<p>{_inline(' '.join(paragraph))}</p>")
+    return "".join(blocks) or "<p class='eval-run-artifact__missing'>Report is empty.</p>"
 
 
 def _load_yaml(path):
@@ -539,7 +697,7 @@ def q1_scenario_snapshot():
     scored_path = RESULTS / "competition" / "scored_runs.json"
     try:
         entries = (
-            json.loads(scored_path.read_text(encoding="utf-8"))
+            json.loads(scored_path.read_text(encoding="utf-8"), strict=False)
             if scored_path.is_file()
             else []
         )
@@ -564,7 +722,7 @@ def q1_scenario_snapshot():
         directory = RESULTS / "competition" / "runs"
         for path in sorted(directory.glob("*.json")):
             try:
-                record = json.loads(path.read_text(encoding="utf-8"))
+                record = json.loads(path.read_text(encoding="utf-8"), strict=False)
             except (OSError, ValueError):
                 continue
             if (
@@ -637,6 +795,355 @@ def _pass_count(records, field):
     return "; ".join(parts) + suffix
 
 
+def _axis_score(value):
+    return (
+        value
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= value <= 2
+        else None
+    )
+
+
+def _axis_values(records, source, axis):
+    values = []
+    for record in records:
+        metrics = record.get("dashboard_metrics") or {}
+        judgement = metrics.get(source) or {}
+        value = _axis_score((judgement.get("scores") or {}).get(axis))
+        if value is not None:
+            values.append(float(value))
+    return values
+
+
+def _axis_aggregate(records, source, axis):
+    values = _axis_values(records, source, axis)
+    return {
+        "median": statistics.median(values) if values else None,
+        "minimum": min(values) if values else None,
+        "maximum": max(values) if values else None,
+        "count": len(values),
+        "total": len(records),
+    }
+
+
+def _clean_reason(value):
+    return re.sub(r"\s+", " ", str(value or "").replace("\x00", " ")).strip()
+
+
+def _reason_candidates(record, source):
+    metrics = record.get("dashboard_metrics") or {}
+    judgement = metrics.get(source) or {}
+    if source == "figure_judgement":
+        return [
+            _clean_reason(item) for item in judgement.get("observations") or []
+        ] + [_clean_reason(judgement.get("summary"))]
+    return [
+        _clean_reason(item) for item in judgement.get("factual_errors") or []
+    ] + [_clean_reason(judgement.get("summary"))]
+
+
+def _q1_reason(records, source, axis, fallback):
+    terms = (
+        Q1_FIGURE_REASON_TERMS if source == "figure_judgement" else Q1_REPORT_REASON_TERMS
+    ).get(axis, ())
+    for record in records:
+        for candidate in _reason_candidates(record, source):
+            lowered = candidate.lower()
+            if candidate and any(term in lowered for term in terms):
+                return candidate[:240] + ("..." if len(candidate) > 240 else "")
+    return fallback
+
+
+def _q1_axis_display(aggregate):
+    if aggregate["median"] is None:
+        missing = aggregate["total"] - aggregate["count"]
+        return f"N/A ({missing}/{aggregate['total']})"
+
+    def number(value):
+        return f"{value:.1f}".rstrip("0").rstrip(".")
+
+    return (
+        f"{number(aggregate['median'])} / 2 "
+        f"({number(aggregate['minimum'])}-{number(aggregate['maximum'])}; "
+        f"{aggregate['count']}/{aggregate['total']})"
+    )
+
+
+def _q1_rubric_definitions(path, section, axes):
+    try:
+        standard = _load_yaml(path)
+    except (OSError, ValueError, yaml.YAMLError):
+        standard = {}
+    if section and isinstance(standard.get("figure"), dict):
+        standard = standard["figure"]
+    dimensions = standard.get(section, {}).get("dimensions") or standard.get("dimensions") or {}
+    return {
+        key: str(dimensions.get(key) or description)
+        for key, _label, description in axes
+    }
+
+
+def _q1_axis_records(records, source, axes, standard_path, section):
+    definitions = _q1_rubric_definitions(standard_path, section, axes)
+    return [
+        {
+            "key": key,
+            "label": label,
+            "aggregate": _axis_aggregate(records, source, key),
+            "reason": _q1_reason(records, source, key, definitions[key]),
+        }
+        for key, label, _description in axes
+    ]
+
+
+def _q1_radar_point(cx, cy, radius, index, total, value):
+    angle = -math.pi / 2 + 2 * math.pi * index / total
+    distance = radius * float(value) / 2
+    return cx + distance * math.cos(angle), cy + distance * math.sin(angle)
+
+
+def _q1_radar_label_lines(label, max_chars=15):
+    words = str(label).replace("/", "/ ").split()
+    lines = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if current and len(candidate) > max_chars:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return lines or [str(label)]
+
+
+def _q1_radar_svg(title, axes, aggregates):
+    """Return a small, fixed-scale SVG; it never computes an area or composite score."""
+    # Keep a deliberate gutter between the axis endpoint and its label.  The old
+    # five-pixel offset made wrapped labels touch the polygon and clipped the long
+    # left-hand label at the card boundary.
+    width, height = 600, 440
+    cx, cy, radius = 300, 208, 125
+    label_radius = radius + 34
+    label_line_height = 20
+    total = len(axes)
+    colors = {"full": "#9b4d32", "no-harness": "#2a6874"}
+    parts = [
+        f"<svg class='eval-q1-radar__svg' viewBox='0 0 {width} {height}' role='img' "
+        f"aria-label='{_e(title)}'>",
+        f"<title>{_e(title)}</title>",
+    ]
+    for level in (0.5, 1, 1.5, 2):
+        points = []
+        for index in range(total):
+            x, y = _q1_radar_point(cx, cy, radius, index, total, level)
+            points.append(f"{x:.1f},{y:.1f}")
+        parts.append(
+            f"<polygon class='eval-q1-radar__ring' points='{' '.join(points)}'/>"
+        )
+    for index, (_key, label, _description) in enumerate(axes):
+        x, y = _q1_radar_point(cx, cy, radius, index, total, 2)
+        lx, ly = _q1_radar_point(cx, cy, label_radius, index, total, 2)
+        anchor = "middle" if abs(lx - cx) < 30 else "start" if lx > cx else "end"
+        label_lines = _q1_radar_label_lines(label)
+        first_y = ly - label_line_height * (len(label_lines) - 1) / 2
+        tspans = "".join(
+            f"<tspan x='{lx:.1f}' dy='{0 if line_index == 0 else label_line_height}'>"
+            f"{_e(line)}</tspan>"
+            for line_index, line in enumerate(label_lines)
+        )
+        parts.append(
+            f"<line class='eval-q1-radar__axis' x1='{cx}' y1='{cy}' x2='{x:.1f}' y2='{y:.1f}'/>"
+            f"<text class='eval-q1-radar__label' x='{lx:.1f}' y='{first_y:.1f}' "
+            f"text-anchor='{anchor}'>{tspans}</text>"
+        )
+    for level in (0, 1, 2):
+        y = cy - radius * level / 2
+        parts.append(
+            f"<text class='eval-q1-radar__scale' x='{cx + 5}' y='{y - 3:.1f}'>"
+            f"{level}</text>"
+        )
+    for condition, series in aggregates.items():
+        points = []
+        for index, item in enumerate(series):
+            value = item["aggregate"]["median"]
+            points.append(
+                _q1_radar_point(cx, cy, radius, index, total, value)
+                if value is not None
+                else None
+            )
+        color = colors.get(condition, "#555")
+        for index, point in enumerate(points):
+            if point is not None:
+                parts.append(
+                    f"<circle class='eval-q1-radar__point' cx='{point[0]:.1f}' cy='{point[1]:.1f}' "
+                    f"r='4' fill='{color}'/>"
+                )
+            if point is None:
+                x, y = _q1_radar_point(cx, cy, radius, index, total, 2)
+                parts.append(
+                    f"<circle class='eval-q1-radar__na' cx='{x:.1f}' cy='{y:.1f}' r='5'/>"
+                )
+        for index in range(total):
+            current = points[index]
+            following = points[(index + 1) % total]
+            if current is None or following is None:
+                continue
+            parts.append(
+                f"<line class='eval-q1-radar__series' stroke='{color}' "
+                f"x1='{current[0]:.1f}' y1='{current[1]:.1f}' "
+                f"x2='{following[0]:.1f}' y2='{following[1]:.1f}'/>"
+            )
+        if all(point is not None for point in points):
+            polygon = " ".join(f"{point[0]:.1f},{point[1]:.1f}" for point in points)
+            parts.append(
+                f"<polygon class='eval-q1-radar__area' stroke='{color}' fill='{color}' "
+                f"points='{polygon}'/>"
+            )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _q1_condition_radar_data(records_by_condition, axes, source, standard_path, section):
+    return {
+        condition: _q1_axis_records(records, source, axes, standard_path, section)
+        for condition, records in records_by_condition.items()
+    }
+
+
+def _q1_explanation(axes, data):
+    rows = []
+    for item in axes:
+        key = item[0]
+        full = next(axis for axis in data["full"] if axis["key"] == key)
+        raw = next(axis for axis in data["no-harness"] if axis["key"] == key)
+        rows.append(
+            "<div class='eval-q1-axis-row'><b>{}</b>"
+            "<div><strong>Full</strong> <span>{}</span><p>{}</p></div>"
+            "<div><strong>Raw</strong> <span>{}</span><p>{}</p></div></div>".format(
+                _e(item[1]),
+                _e(_q1_axis_display(full["aggregate"])),
+                _e(full["reason"]),
+                _e(_q1_axis_display(raw["aggregate"])),
+                _e(raw["reason"]),
+            )
+        )
+    return (
+        "<div class='eval-q1-explanation'>"
+        "<p class='eval-q1-explanation__intro'>Median / min-max; scores are 0-2 and N/A "
+        "is excluded from aggregation. Reasons are excerpts from the saved judge record or "
+        "the rubric definition when no saved reason matches.</p>"
+        "<div class='eval-q1-axis-head'><span>Axis</span><span>Full / Raw</span></div>"
+        f"{''.join(rows)}</div>"
+    )
+
+
+def _q1_run_explanation(title, data):
+    rows = []
+    for item in data:
+        rows.append(
+            "<div class='eval-q1-run-axis-row'><b>{}</b><span>{}</span><p>{}</p></div>".format(
+                _e(item["label"]),
+                _e(_q1_axis_display(item["aggregate"])),
+                _e(item["reason"]),
+            )
+        )
+    return (
+        f"<section class='eval-q1-run-explanation__section'><h5>{_e(title)}</h5>"
+        "<div class='eval-q1-run-axis-head'><span>Axis</span><span>Score</span>"
+        f"<span>Reason</span></div>{''.join(rows)}</section>"
+    )
+
+
+def _q1_run_explanations(record):
+    figure_data = _q1_axis_records(
+        [record],
+        "figure_judgement",
+        Q1_FIGURE_AXES,
+        EVALUATION / "standards" / "q1_figure3.yaml",
+        "visual_judge",
+    )
+    report_data = _q1_axis_records(
+        [record],
+        "report_judgement",
+        Q1_REPORT_AXES,
+        EVALUATION / "standards" / "report_judge.yaml",
+        "",
+    )
+    return (
+        "<section class='eval-q1-run-explanation'><h4>Run explanation</h4>"
+        "<div class='eval-q1-run-explanation__grid'>"
+        f"{_q1_run_explanation('Figure gate explanation', figure_data)}"
+        f"{_q1_run_explanation('Report gate explanation', report_data)}"
+        "</div></section>"
+    )
+
+
+def _q1_overall_explanation(records_by_condition, shared_note):
+    figure_data = _q1_condition_radar_data(
+        records_by_condition,
+        Q1_FIGURE_AXES,
+        "figure_judgement",
+        EVALUATION / "standards" / "q1_figure3.yaml",
+        "visual_judge",
+    )
+    report_data = _q1_condition_radar_data(
+        records_by_condition,
+        Q1_REPORT_AXES,
+        "report_judgement",
+        EVALUATION / "standards" / "report_judge.yaml",
+        "",
+    )
+    success = "".join(
+        f"<li><b>{_e(Q1_COMPARISON_LABELS[condition])}</b>: "
+        f"{_e(_pass_count(records_by_condition[condition], 'successful'))}</li>"
+        for condition in Q1_COMPARISON_CONFIGS
+    )
+    return (
+        "<section class='eval-q1-overall-explanation'><h3>Overall explanation</h3>"
+        "<h4>Successful runs</h4><ul class='eval-q1-success'>"
+        f"{success}</ul>{shared_note}"
+        "<details class='eval-q1-explanation-details'>"
+        "<summary>Figure explanation</summary>"
+        f"{_q1_explanation(Q1_FIGURE_AXES, figure_data)}</details>"
+        "<details class='eval-q1-explanation-details'>"
+        "<summary>Report explanation</summary>"
+        f"{_q1_explanation(Q1_REPORT_AXES, report_data)}</details>"
+        "</section>"
+    )
+
+
+def _q1_radar_section(records_by_condition):
+    figure_data = _q1_condition_radar_data(
+        records_by_condition,
+        Q1_FIGURE_AXES,
+        "figure_judgement",
+        EVALUATION / "standards" / "q1_figure3.yaml",
+        "visual_judge",
+    )
+    report_data = _q1_condition_radar_data(
+        records_by_condition,
+        Q1_REPORT_AXES,
+        "report_judgement",
+        EVALUATION / "standards" / "report_judge.yaml",
+        "",
+    )
+    figure_svg = _q1_radar_svg("Figure judge radar", Q1_FIGURE_AXES, figure_data)
+    report_svg = _q1_radar_svg("Report judge radar", Q1_REPORT_AXES, report_data)
+    return (
+        "<section class='eval-q1-radar-layout'>"
+        f"<article class='eval-q1-radar-card'><h3>Figure radar</h3>{figure_svg}"
+        "<div class='eval-q1-radar__legend'><span><i class='eval-q1-swatch "
+        "eval-q1-swatch--full'></i>Full</span>"
+        "<span><i class='eval-q1-swatch eval-q1-swatch--raw'></i>Raw</span></div></article>"
+        f"<article class='eval-q1-radar-card'><h3>Report radar</h3>{report_svg}"
+        "<div class='eval-q1-radar__legend'><span><i class='eval-q1-swatch "
+        "eval-q1-swatch--full'></i>Full</span>"
+        "<span><i class='eval-q1-swatch eval-q1-swatch--raw'></i>Raw</span></div></article>"
+        "</section>"
+    )
+
+
 def _median_range(values, suffix="", integer=False):
     values = [value for value in values if isinstance(value, (int, float))]
     if not values:
@@ -676,10 +1183,6 @@ def _q1_reference_panel():
     facts = "".join(
         f"<li>{_e(fact)}</li>" for fact in reference.get("report_facts") or []
     )
-    curves = "".join(
-        f"<li><span class='eval-reference-curve__swatch'></span>{_e(item.get('label'))}</li>"
-        for item in reference.get("curves") or []
-    )
     image_html = (
         "<img class='eval-reference__image' src='{}' alt='Published paper Figure 3'>".format(
             image_data
@@ -704,8 +1207,7 @@ def _q1_reference_panel():
         "<div class='eval-reference__grid'><figure><div class='eval-reference__image-wrap'>"
         "{}</div><figcaption>Paper figure: {}. The visual judge compares qualitative curves, "
         "not pixels or RMSE.</figcaption></figure>"
-        "<div class='eval-reference__results'><h4>Reference result</h4><ul>{}</ul>"
-        "<h4>Reference curves</h4><ul class='eval-reference__curve-list'>{}</ul></div></div>"
+        "<div class='eval-reference__results'><h4>Reference result</h4><ul>{}</ul></div></div>"
         "<p class='eval-reference__compare'><b>Comparison method:</b> first compare each run's "
         "figure with the paper image for curve count, patterns, grouping and visual correspondence; "
         "then compare the run report with the reference facts and measured outcome. Open one run "
@@ -715,11 +1217,10 @@ def _q1_reference_panel():
         image_html,
         _e(source.get("paper_figure") or "fig03"),
         facts,
-        curves,
     )
 
 
-def _q1_run_artifact(record, label):
+def _q1_run_artifact_legacy(record, label):
     metrics = record.get("dashboard_metrics") or {}
     figures = [item for item in record.get("figures") or [] if item.get("archived_image_path")]
     figure = figures[0] if figures else {}
@@ -767,7 +1268,41 @@ def _q1_run_artifact(record, label):
     )
 
 
-def q1_comparison(data=None):
+def _q1_run_artifact(record, label, open_detail=False):
+    """Render only the saved figure and report; judge statuses stay in the radar panel."""
+    figures = [item for item in record.get("figures") or [] if item.get("archived_image_path")]
+    figure = figures[0] if figures else {}
+    image_data = _artifact_image(figure.get("archived_image_path"))
+    report_path = record.get("archived_report_path") or (record.get("report_artifact") or {}).get(
+        "path"
+    )
+    report_file = _artifact_path(report_path)
+    report_saved = bool(report_file and report_file.is_file())
+    report_text = _artifact_text(report_path, record.get("answer") or "")
+    report_html = _report_markdown_html(report_text)
+    image_html = (
+        f"<img class='eval-run-artifact__image' src='{image_data}' "
+        f"alt='{_e(label)} reproduction figure'>"
+        if image_data
+        else "<p class='eval-run-artifact__missing'>No figure artifact was generated.</p>"
+    )
+    return (
+        f"<details class='eval-run-artifact'{' open' if open_detail else ''}>"
+        f"<summary>{_e(label)} - r{_e(record.get('repeat') or '?')} "
+        f"- figure {'saved' if image_data else 'missing'} - report "
+        f"{'saved' if report_saved else 'inline only' if report_text else 'missing'}</summary>"
+        f"<div class='eval-run-artifact__grid'><section><h4>Figure</h4>{image_html}"
+        f"<code>{_e(figure.get('archived_image_path') or '')}</code></section>"
+        f"<section><h4>Report</h4><p class='eval-run-artifact__report-path'><code>"
+        f"{_e(report_path or 'inline answer only')}</code></p>"
+        f"<div class='eval-run-artifact__report-body'>{report_html}</div></section></div>"
+        f"<p class='eval-run-artifact__meta'>Figure artifact: <b>"
+        f"{'saved' if image_data else 'not generated'}</b> - Report artifact: <b>"
+        f"{'saved' if report_saved or report_text else 'not generated'}</b></p></details>"
+    )
+
+
+def _q1_comparison_legacy(data=None):
     """Render the user-facing five-metric Q1 comparison."""
     data = data or q1_scenario_snapshot()
     group_key, selected = _q1_latest_group(data.get("runs") or [])
@@ -823,13 +1358,6 @@ def q1_comparison(data=None):
             for record in selected
         )
         judge_overhead = report_judge_tokens + _judge_preflight_tokens(group_key)
-        incomplete = sum(
-            not bool((record.get("dashboard_metrics") or {}).get("evaluation_complete"))
-            for record in selected
-        )
-        incomplete_note = (
-            f" Evaluation incomplete for {incomplete} recorded run(s)." if incomplete else ""
-        )
         artifacts = "".join(artifact_rows)
         status = (
             f"<p class='eval-na-note'>Shared candidate <b>{html.escape(llm)}</b> · "
@@ -868,6 +1396,108 @@ def q1_comparison(data=None):
         "judge score of at least 8/10 with factuality 2. Published-pixel similarity is "
         "diagnostic only.</p>"
         f"{_q1_reference_panel()}{body}{status}</section></div>"
+    )
+
+
+def q1_comparison(data=None):
+    """Render the Q1 comparison as condition-level radar evidence."""
+    data = data or q1_scenario_snapshot()
+    group_key, selected = _q1_latest_group(data.get("runs") or [])
+    records_by_condition = {
+        condition: sorted(
+            (record for record in selected if record.get("config") == condition),
+            key=lambda record: record.get("repeat") or 0,
+        )
+        for condition in Q1_COMPARISON_CONFIGS
+    }
+    if group_key is None:
+        body = (
+            "<div class='eval-empty'><strong>Q1 evaluation awaiting approval</strong>"
+            "<p>No comparison batch is available yet. The fixed batch must be approved "
+            "before physical execution.</p></div>"
+        )
+        overall_explanation = ""
+        per_run = ""
+    else:
+        rows = []
+        artifact_rows = []
+        first_artifact = True
+        for config_name in Q1_COMPARISON_CONFIGS:
+            records = records_by_condition[config_name]
+            rows.append(
+                [
+                    Q1_COMPARISON_LABELS[config_name],
+                    _pass_count(records, "successful"),
+                    _median_range([record.get("elapsed_s") for record in records], " s"),
+                    _median_range(
+                        [(record.get("llm_usage") or {}).get("total_tokens") for record in records],
+                        integer=True,
+                    ),
+                ]
+            )
+            for record in records:
+                artifact_rows.append(
+                    _q1_run_artifact(
+                        record,
+                        Q1_COMPARISON_LABELS[config_name],
+                        open_detail=first_artifact,
+                    )
+                )
+                first_artifact = False
+        body = _table(
+            [
+                "System",
+                "Successful runs",
+                "Speed, median (range)",
+                "Candidate tokens, median (range)",
+            ],
+            rows,
+            "eval-table--q1-comparison",
+        )
+        llm, build, profile = group_key
+        judge_tokens = sum(
+            int(
+                ((record.get("dashboard_metrics") or {}).get("judge_usage") or {}).get(
+                    "total_tokens"
+                )
+                or 0
+            )
+            for record in selected
+        ) + _judge_preflight_tokens(group_key)
+        incomplete = sum(
+            not bool((record.get("dashboard_metrics") or {}).get("evaluation_complete"))
+            for record in selected
+        )
+        incomplete_note = (
+            f" Evaluation incomplete for {incomplete} recorded run(s)." if incomplete else ""
+        )
+        shared_note = (
+            f"<p class='eval-na-note'>Shared candidate <b>{_e(llm)}</b> - prompt "
+            f"<b>{_e(profile)}</b> - build <code>{_e(build)}</code>. Time excludes approval "
+            "waiting and judge review. Judge tokens are evaluation overhead, not candidate "
+            f"usage: <b>{judge_tokens:,} total</b>.{incomplete_note}"
+            " Radar areas are descriptive only; no composite score or success decision is "
+            "derived from polygon area.</p>"
+        )
+        overall_explanation = _q1_overall_explanation(records_by_condition, shared_note)
+        per_run = (
+            "<details class='eval-details' open><summary>Per-run figures and reports</summary>"
+            f"<div class='eval-run-artifacts'>{''.join(artifact_rows)}</div></details>"
+        )
+    legend = "".join(
+        f"<article><strong>{_e(Q1_COMPARISON_LABELS[name])}</strong>"
+        f"<span><code>{_e(name)}</code>: {_e(Q1_COMPARISON_DESCRIPTIONS[name])}</span></article>"
+        for name in Q1_COMPARISON_CONFIGS
+    )
+    radar = _q1_radar_section(records_by_condition) if group_key is not None else ""
+    return (
+        "<div class='eval-dashboard'><section class='eval-section eval-section--q1-comparison'>"
+        "<div class='eval-section__head'><div><span class='eval-index'>05</span>"
+        "<h2>Figure 3 reproduction: what users care about</h2></div>"
+        "<p>Full and Raw are overlaid in the same Figure radar and the same Report radar; "
+        "each polygon is the median of three runs.</p></div>"
+        f"<div class='eval-comparison-legend'>{legend}</div>"
+        f"{_q1_reference_panel()}{body}{radar}{overall_explanation}{per_run}</section></div>"
     )
 
 

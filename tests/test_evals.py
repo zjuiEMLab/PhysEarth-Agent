@@ -189,6 +189,16 @@ def test_q1_comparison_rejects_stale_question_and_accepts_shared_three_way_group
         "report_correct": True,
         "overall_correct": True,
         "judge_usage": {"total_tokens": 30},
+        "figure_judgement": {
+            "complete": True,
+            "scores": {key: 2 for key, _label, _description in evals.Q1_FIGURE_AXES},
+            "observations": [],
+        },
+        "report_judgement": {
+            "complete": True,
+            "scores": {key: 2 for key, _label, _description in evals.Q1_REPORT_AXES},
+            "factual_errors": [],
+        },
     }
     records = [
         dict(
@@ -221,15 +231,146 @@ def test_q1_comparison_rejects_stale_question_and_accepts_shared_three_way_group
     assert "Full harness" in page
     assert "Raw PDF + raw SMRT" in page
     assert "Text-only harness" not in page
-    assert "Correct figure / result" in page
+    assert "Figure radar" in page
+    assert "Report radar" in page
+    assert page.count("eval-q1-radar__area") == 4
+    assert "eval-q1-explanation-panel" not in page
+    assert "eval-q1-overall-explanation" in page
+    assert "eval-q1-run-explanation" not in page
+    assert "<details class='eval-q1-explanation-details'>" in page
+    assert "<summary>Figure explanation</summary>" in page
+    assert "<summary>Report explanation</summary>" in page
+    assert "<tspan" in page
+    assert "<details class='eval-details' open>" in page
+    assert "<details class='eval-run-artifact' open>" in page
+    assert "eval-q1-run-explanation" not in page
+    order = [
+        page.find("Published paper Figure 3 and reference result"),
+        page.find("eval-table--q1-comparison"),
+        page.find("eval-q1-radar-layout"),
+        page.find("eval-q1-overall-explanation"),
+        page.find("Per-run figures and reports"),
+    ]
+    assert order == sorted(order)
+    assert len(evals.Q1_FIGURE_AXES) == 4
+    assert len(evals.Q1_REPORT_AXES) == 5
+    assert "composite score" in page
+    assert "Curve count" in page
+    assert "Pattern fidelity" in page
+    assert "Grouping/order" in page
+    assert "Visual correspondence" in page
+    assert "Factuality" in page
+    assert "Completeness" in page
+    assert "Evidence" in page
+    assert "Calibration" in page
+    assert "Clarity" in page
+    assert "Correct figure / result" not in page
+    assert "Correct reports" not in page
+    assert "Overall correct runs" not in page
     assert "Published paper Figure 3 and reference result" in page
+    assert "Reference curves" not in page
     assert "Comparison method:" in page
     assert "Per-run figures and reports" in page
     assert "eval-run-artifact" in page
+    assert "eval-run-artifact__report-body" in page
+    assert "<h1>Reproduction report</h1>" in page
+    assert "eval-run-artifact__table-wrap" in page
     assert "Per-run audit details" not in page
     assert "Human-editable evaluation standards" not in page
     assert "workflow stages" not in page.lower()
     assert "awaiting approval" not in page.lower()
+
+
+def test_q1_radar_aggregation_uses_median_range_and_keeps_na_out_of_scores():
+    def record(figure_score, report_score=None):
+        return {
+            "dashboard_metrics": {
+                "successful": True,
+                "figure_judgement": {"scores": {"patterns": figure_score}}
+                if figure_score is not None else {"status": "not_scoreable"},
+                "report_judgement": {"scores": {"factuality": report_score}}
+                if report_score is not None else {"status": "not_scoreable"},
+            }
+        }
+
+    records = [record(0), record(2), record(None)]
+    figure = evals._axis_aggregate(records, "figure_judgement", "patterns")
+    report = evals._axis_aggregate(records, "report_judgement", "factuality")
+
+    assert figure == {"median": 1.0, "minimum": 0.0, "maximum": 2.0, "count": 2, "total": 3}
+    assert report["median"] is None
+    assert report["count"] == 0
+    assert evals._q1_axis_display(figure) == "1 / 2 (0-2; 2/3)"
+    assert evals._q1_axis_display(report) == "N/A (3/3)"
+
+
+def test_q1_radar_labels_have_gutter_and_readable_wrapped_spacing():
+    axes = (
+        ("line_count", "Curve count", ""),
+        ("patterns", "Pattern fidelity", ""),
+        ("grouping", "Grouping/order", ""),
+        ("visual_correspondence", "Visual correspondence", ""),
+    )
+    svg = evals._q1_radar_svg(
+        "Figure judge radar",
+        axes,
+        {
+            "full": [{"aggregate": {"median": 2}} for _ in axes],
+            "no-harness": [{"aggregate": {"median": 2}} for _ in axes],
+        },
+    )
+
+    assert "viewBox='0 0 600 440'" in svg
+    assert "x='141.0'" in svg  # 34px label gutter on the left axis
+    assert "dy='20'" in svg  # wrapped labels are not vertically compressed
+
+
+def test_q1_axis_reasons_use_saved_judgement_or_rubric_fallback():
+    records = [{
+        "dashboard_metrics": {
+            "figure_judgement": {
+                "scores": {"patterns": 1},
+                "observations": ["The candidate is linear where the reference is convex."],
+            },
+            "report_judgement": {"scores": {"clarity": 1}, "factual_errors": []},
+        }
+    }]
+    figure = evals._q1_axis_records(
+        records,
+        "figure_judgement",
+        evals.Q1_FIGURE_AXES,
+        evals.EVALUATION / "standards" / "q1_figure3.yaml",
+        "visual_judge",
+    )
+    report = evals._q1_axis_records(
+        records,
+        "report_judgement",
+        evals.Q1_REPORT_AXES,
+        evals.EVALUATION / "standards" / "report_judge.yaml",
+        "",
+    )
+
+    assert "linear" in next(item for item in figure if item["key"] == "patterns")["reason"]
+    assert "versions" in next(item for item in report if item["key"] == "clarity")["reason"]
+
+
+def test_q1_aspect_diagnostic_is_evaluation_only_and_skips_missing_numeric_results(tmp_path):
+    from evaluation.metrics import figure3
+
+    record_path = next(Path("evaluation/results/competition/runs").glob("*full*qwen-plus*r1.json"))
+    record = json.loads(record_path.read_text(encoding="utf-8"), strict=False)
+    destination = tmp_path / "shape-diagnostic.png"
+    result = figure3.write_aspect_diagnostic(record, destination)
+
+    assert result["status"] == "written"
+    assert result["x_limits"] == [0.0, 100.0]
+    assert result["y_limits"] == [0.0, 0.026]
+    assert destination.is_file()
+    assert "figure_judgement" not in result
+    assert figure3.write_aspect_diagnostic({"numeric_results": []}, tmp_path / "missing.png") == {
+        "status": "skipped",
+        "reason": "missing_numeric_results",
+    }
 
 
 def test_basic_cases_keep_the_three_supported_live_prompts():

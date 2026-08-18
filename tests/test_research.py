@@ -1447,8 +1447,23 @@ def test_multiple_formal_figures_require_numbered_report_explanations():
     assert research.report_problem(
         box,
         "Figure 1 shows the baseline trend. Figure 2 shows the sensitivity result. "
-        "Therefore, the results show that the response is sensitive to the tested control.",
+        "Figure-based conclusion: the visible curves diverge. Result-backed conclusion: "
+        "the recorded arrays show the response is sensitive to the tested control. "
+        "The agreement between the figure and results supports the calibrated conclusion.",
     ) == ""
+
+
+def test_final_report_prompt_repeats_ledger_and_forbids_unsupported_agreement_metrics():
+    box = session.new_session("m")
+    _proposal(box)
+    prompt = research.report_generation_prompt(box)
+    assert "READER-FACING REPRODUCTION REPORT" in prompt
+    assert "answer the original question from the generated figure first" in prompt
+    assert "Do not expose internal evaluation instructions" in prompt
+    assert "AUTHORITATIVE PARAMETER LEDGER" in prompt
+    assert "Copy each provenance class exactly" in prompt
+    assert "Do not invent or estimate correlation, RMSE, bias" in prompt
+    assert "RECORDED FORMAL FIGURES" in prompt
 
 
 def test_figure_qa_status_message_is_not_accepted_as_final_scientific_report():
@@ -1467,9 +1482,11 @@ def test_figure_qa_status_message_is_not_accepted_as_final_scientific_report():
     assert not research.report_problem(
         box,
         "Figure 1 shows a rising baseline while Figure 2 shows the transfer test diverging. "
-        "The results show that the calibrated relationship is condition dependent. Therefore, "
-        "we conclude that the hypothesis is supported within the tested range; the limited "
-        "frequency range remains a limitation.",
+        "Figure-based conclusion: the visible curves separate. Result-backed conclusion: "
+        "the actual model results show that the calibrated relationship is condition dependent. "
+        "The figure-versus-results comparison shows agreement. Therefore, we conclude that the "
+        "hypothesis is supported within the tested range; the limited frequency range remains a "
+        "limitation.",
     )
 
 

@@ -70,7 +70,7 @@ RESEARCH_GUIDELINE_SPEC = {
     "type": "function",
     "function": {
         "name": "read_research_guideline",
-        "description": "Read the generic research-planning guideline before proposing executable research.",
+        "description": "Read the research-planning or research-reporting guideline before proposing or reporting executable research.",
         "parameters": {
             "type": "object",
             "properties": {

@@ -76,5 +76,10 @@ once with run_planned_model, then render and review every selected chart with
 plot_planned_chart. For a reproduction report, separate the paper's reported result from the
 new model output, state the paper-to-model parameter mapping and provenance classes, identify
 which targets were covered or remained partial/unavailable, explain meaningful differences,
-and state assumptions and limitations. Report only actual model outputs, measured values, or
-explicitly derived quantities, with citations and provenance.
+and state assumptions and limitations. Before writing the final report, read the
+research-reporting guideline. Write concise reader-facing research-results and conclusion
+prose: begin with the answer supported by the generated figure, then add result-backed
+evidence, guessed or assumed parameters, comparison, and limitations. Apply evidence checks
+silently; do not expose internal headings such as Language Compliance, rubric, gate, workflow,
+prompt, QA, or evaluator. Report only actual model outputs, measured values, or explicitly
+derived quantities, with citations and provenance.

@@ -1,4 +1,5 @@
 import pytest
+from physearth.agent import loop
 from physearth.agent.results import _record_tool_result
 from physearth.harness import switches, validation
 
@@ -120,6 +121,9 @@ def test_raw_pdf_mode_exposes_no_structured_knowledge_or_model_card():
     assert "Registered physical models" not in text
     assert "Literature corpus" not in text
     assert "model card" in text.lower()
+    assert "complete the smallest end-to-end workflow" in text
+    assert "call run_raw_smrt for every comparison requested" in text
+    assert "call plot with the returned handles" in text
 
     page = tools.call(
         "read_raw_paper",
@@ -141,6 +145,20 @@ def test_raw_pdf_mode_exposes_no_structured_knowledge_or_model_card():
     )
     assert blocked["status"] == "needs_input"
     assert blocked["data"]["error_code"] == "evaluation_batch_approval_required"
+
+
+def test_raw_reproduction_step_advances_from_source_to_run_to_chart():
+    raw = {"raw_pdf_pages_read": set(), "successful_runs": [], "figures": []}
+    assert loop._raw_reproduction_step(raw)[0] == "read_raw_paper"
+
+    raw["raw_pdf_pages_read"].add("paper#page-1")
+    assert loop._raw_reproduction_step(raw)[0] == "run_raw_smrt"
+
+    raw["successful_runs"].append({"handle": "raw-1"})
+    assert loop._raw_reproduction_step(raw)[0] == "plot"
+
+    raw["figures"].append({"preview": False})
+    assert loop._raw_reproduction_step(raw) is None
 
 
 def test_approved_raw_smrt_keeps_full_arrays_out_of_the_tool_response(monkeypatch):
