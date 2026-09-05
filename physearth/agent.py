@@ -30,11 +30,12 @@ RETRY_BACKOFF_S = 1.5
 # would have worked. These three attempts span just over a minute instead.
 RATE_LIMIT_BACKOFF_S = 12.0
 RATE_LIMIT_RETRIES = 4
-# A three-configuration research_plan is itself a sizeable JSON tool call.  At 2048 the
-# provider stopped exactly at the limit and left function.arguments without its closing
-# braces, which then poisoned the next OpenAI-compatible request.  This still leaves ample
-# room under the conservative request/context ceilings below.
-MAX_OUTPUT_TOKENS = 4096
+# Paper-reproduction plans can legitimately contain several active/passive runs, chart
+# declarations and evidence mappings.  At 4096 tokens Qwen Plus repeatedly stopped in the
+# middle of ``research_plan`` arguments, leaving an unclosed JSON array.  Eight thousand
+# tokens covers the largest Q1-Q4 protocol while remaining well below the conservative
+# request/context ceilings below.
+MAX_OUTPUT_TOKENS = 8192
 # ModelScope providers differ slightly in their advertised context windows. Keep a
 # conservative request budget and compact old tool output before the provider rejects the
 # request. This is a character budget because the tokenizer is model-specific; it leaves
@@ -905,8 +906,18 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         "content": (
                             "Your %s function arguments were not a valid JSON object (%s). "
                             "Generate the tool call again with strict JSON: double-quoted keys "
-                            "and strings, no Markdown fence, comments, trailing comma, or prose."
-                            % (call.get("name") or "tool", detail)
+                            "and strings, no Markdown fence, comments, trailing comma, or prose.%s"
+                            % (
+                                call.get("name") or "tool",
+                                detail,
+                                (
+                                    " Keep the proposal concise: reuse the paper protocol, "
+                                    "remove redundant runs and optional charts, and put only "
+                                    "executable values in the research_plan call."
+                                    if call.get("name") == "research_plan"
+                                    else ""
+                                ),
+                            )
                         ),
                     }
                 )
@@ -1611,8 +1622,58 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     detail=report_warning,
                 )
             )
-        # Report completeness is advisory. Evidence, citation, abstract-depth and budget
-        # checks remain blocking and are handled by the strict final harness below.
+            gate_key = "report_completeness"
+            attempts = review_attempts.get(gate_key, 0)
+            if attempts < harness.max_interventions(rule=gate_key):
+                review_attempts[gate_key] = attempts + 1
+                session_state.bump(state, "interventions")
+                events.append(
+                    _event(
+                        "harness_block",
+                        rule=gate_key,
+                        detail=report_warning,
+                        intervention=review_attempts[gate_key],
+                    )
+                )
+                messages.append({"role": "assistant", "content": completion.content or ""})
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "The figures and model runs are already complete. Do not announce that "
+                            "you are ready to write the report and do not call another tool. Write "
+                            "the final scientific report now. Explain every formal output by its "
+                            "Figure number, interpret the actual trends and comparisons, relate them "
+                            "to the hypothesis and success criteria, state capability and validity "
+                            "limitations, and finish with an explicit conclusion. Use only evidence "
+                            "markers that resolve in this conversation. Required correction: %s"
+                            % report_warning
+                        ),
+                    }
+                )
+                # The report is one replaceable document.  Do not preserve the status-only
+                # draft in the visible answer while the corrected report is generated.
+                segments = []
+                answer = ""
+                yield answer, events, state
+                continue
+
+            # A status-only response must never mark research complete.  After bounded
+            # retries, publish a deterministic evidence-only report instead of looping or
+            # leaving Conversation stuck at "ready to provide the conclusion".
+            answer = research.safe_report(session)
+            segments = [answer]
+            events.append(
+                _event(
+                    "harness_fallback",
+                    rule=gate_key,
+                    detail=(
+                        "Repeated drafts were not complete scientific reports; an "
+                        "evidence-only safe report replaced them."
+                    ),
+                )
+            )
+
         check, correction = harness.review_final(answer, state)
         if correction and check.get("rule") == "citation_integrity":
             correction = _allowed_marker_correction(state, check.get("unresolved") or [])

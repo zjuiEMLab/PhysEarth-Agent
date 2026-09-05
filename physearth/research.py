@@ -95,6 +95,13 @@ def _clean_reproduction_targets(values):
     cleaned = []
     for index, item in enumerate(_clean_records(values)):
         record = dict(item)
+        coverage = [
+            entry for entry in (item.get("coverage") or []) if isinstance(entry, dict)
+        ]
+        coverage_outputs = [
+            str(entry.get("output") or "").strip()
+            for entry in coverage if str(entry.get("output") or "").strip()
+        ]
         source_type = str(
             item.get("source_type") or item.get("kind") or item.get("type") or "result"
         ).strip().lower()
@@ -103,6 +110,7 @@ def _clean_reproduction_targets(values):
             or item.get("figure_id")
             or item.get("table_id")
             or item.get("result_id")
+            or item.get("target_id")
             or item.get("identifier")
             or ""
         ).strip()
@@ -119,17 +127,24 @@ def _clean_reproduction_targets(values):
         if isinstance(covered_by, dict):
             run_ids = list(run_ids) + list(covered_by.get("run_ids") or covered_by.get("runs") or [])
             chart_ids = list(chart_ids) + list(covered_by.get("chart_ids") or covered_by.get("charts") or [])
+        # Several OpenAI-compatible providers naturally serialize target coverage as
+        # [{"run_id": ..., "output": ...}].  Treat this as an equivalent structured
+        # form instead of forcing the model to rewrite an otherwise valid paper target.
+        run_ids = list(run_ids) + [entry.get("run_id") for entry in coverage if entry.get("run_id")]
+        chart_ids = list(chart_ids) + [entry.get("chart_id") for entry in coverage if entry.get("chart_id")]
+        description = str(item.get("description") or "").strip()
         record.update(
             {
-                "id": str(item.get("id") or "target_%d" % (index + 1)).strip(),
+                "id": str(item.get("id") or item.get("target_id") or "target_%d" % (index + 1)).strip(),
                 "source_type": source_type,
                 "source_id": source_id,
                 "target_quantity": str(
-                    item.get("target_quantity") or item.get("quantity") or item.get("output") or ""
+                    item.get("target_quantity") or item.get("quantity") or item.get("output")
+                    or ", ".join(dict.fromkeys(coverage_outputs)) or ""
                 ).strip(),
                 "evidence_refs": [str(ref).strip() for ref in evidence if str(ref).strip()],
                 "expected_comparison": str(
-                    item.get("expected_comparison") or item.get("comparison") or ""
+                    item.get("expected_comparison") or item.get("comparison") or description
                 ).strip(),
                 "status": str(item.get("status") or "planned").strip().lower(),
                 "availability_reason": str(
@@ -789,6 +804,42 @@ def _repair_reproduction_metadata(
             "paper_section_result",
         ))
 
+    if case_id and case_id != "q1" and not reproduction_targets and relevant_refs:
+        # A provider may submit a complete executable plan but omit the redundant target
+        # metadata object.  Derive only the evidence-to-chart relationship; the physical
+        # runs, parameters and chart definitions remain LLM-authored or paper-repaired and
+        # are still exposed for human approval.
+        target_charts = [
+            chart for chart in charts or ()
+            if chart.get("required", True) and chart.get("purpose") != "diagnostic"
+        ] or [chart for chart in charts or () if chart.get("required", True)]
+        for chart in target_charts:
+            y_names = [
+                str(item) for item in (chart.get("ys") or [chart.get("y")]) if item
+            ]
+            target_id = "%s-%s" % (case_id, chart.get("id") or "result")
+            reproduction_targets.append({
+                "id": target_id,
+                "source_type": "result",
+                "source_id": target_id,
+                "target_quantity": ", ".join(y_names) or chart.get("label") or "model result",
+                "evidence_refs": [relevant_refs[0]],
+                "expected_comparison": (
+                    "Compare the generated %s with the result described in the opened paper section."
+                    % (chart.get("label") or "model output")
+                ),
+                "status": "planned",
+                "availability_reason": "",
+                "run_ids": [],
+                "chart_ids": [chart.get("id")] if chart.get("id") else [],
+            })
+        if reproduction_targets:
+            repairs.append(_repair_item(
+                "reproduction_targets", [], reproduction_targets,
+                "link required result charts to the opened paper section when provider target metadata is omitted",
+                "deterministic_plan_coverage",
+            ))
+
     for index, target in enumerate(reproduction_targets):
         refs = [_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()]
         if not refs and relevant_refs:
@@ -861,7 +912,21 @@ def _repair_reproduction_metadata(
 
     # Add only deterministic target coverage.  Physical runs and chart definitions are
     # never modified; only their relationship to a target is recorded.
+    known_run_ids = {run.get("id") for run in runs or () if run.get("id")}
+    known_chart_ids = {chart.get("id") for chart in charts or () if chart.get("id")}
     for index, target in enumerate(reproduction_targets):
+        before_run_ids = list(target.get("run_ids") or ())
+        before_chart_ids = list(target.get("chart_ids") or ())
+        target["run_ids"] = [item for item in before_run_ids if item in known_run_ids]
+        target["chart_ids"] = [item for item in before_chart_ids if item in known_chart_ids]
+        if target["run_ids"] != before_run_ids or target["chart_ids"] != before_chart_ids:
+            repairs.append(_repair_item(
+                "reproduction_targets[%d].coverage" % index,
+                {"run_ids": before_run_ids, "chart_ids": before_chart_ids},
+                {"run_ids": target["run_ids"], "chart_ids": target["chart_ids"]},
+                "remove coverage references to runs or charts eliminated by deterministic protocol repair",
+                "deterministic_plan_coverage",
+            ))
         if target.get("run_ids") or target.get("chart_ids"):
             continue
         quantity = str(target.get("target_quantity") or "").lower()
@@ -1499,7 +1564,20 @@ def propose(
     hypothesis = str(hypothesis or "").strip()
     steps = _clean_list(steps)
     charts = _clean_charts(charts)
-    runs, run_problems, run_repairs, parameter_resolution, run_problem_details = _clean_runs(runs)
+    # The paper-reproduction repair layer contains only unambiguous conditions that were
+    # read from the selected reference section (for example Q2's Figure 4 angle sweep).
+    # Apply it before registry resolution so repaired and newly restored runs receive the
+    # same schema/default validation as LLM-authored runs.  Without this call the repair
+    # functions were dead code: a scalar Q2 proposal repeatedly failed chart validation
+    # because its categorical ``electromagnetic_model`` axis had no executable sweep.
+    raw_runs = copy.deepcopy(list(runs or ()))
+    # Keep scalar conditions the plan author explicitly chose.  The proposal validator
+    # turns any divergence from the paper reference into a non-blocking
+    # paper_context_difference warning that the human reviews; canonicalising the value
+    # here would erase that choice, suppress the warning, and overwrite a user's
+    # deliberate revision on every retry.
+    reference_repairs = reproduction.repair(question, raw_runs, charts, preserve_authored=True)
+    runs, run_problems, run_repairs, parameter_resolution, run_problem_details = _clean_runs(raw_runs)
     quantities = _clean_list(quantities, 12)
     controls = _clean_list(controls, 12)
     metrics = _clean_list(metrics, 12)
@@ -1554,7 +1632,6 @@ def propose(
     # Paper reproduction is evidence-led.  The agent derives conditions and runs from the
     # literature sections it actually read; this validator never loads a pre-authored
     # protocols.yaml or silently repairs the proposal into a benchmark matrix.
-    reference_repairs = []
     reproduction_case = reproduction.identify(question)
     paper_session = (session.get("research_context") or {}).get("paper_session") or {}
     paper_section = paper_session.get("paper_section")
@@ -3309,6 +3386,8 @@ def report_warnings(session, answer):
     status_only_phrases = (
         "can now be delivered", "will now be delivered", "ready to deliver",
         "final report can", "final report will", "正式报告现在可以", "可以交付最终",
+        "can proceed to provide", "can proceed with the final", "ready to provide",
+        "可以继续给出", "可以继续提供", "接下来可以给出",
     )
     conclusion_signals = (
         "therefore", "we conclude", "the results show", "indicates that",

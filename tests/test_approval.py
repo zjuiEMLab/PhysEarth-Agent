@@ -128,6 +128,24 @@ def test_unrepairable_tool_arguments_are_not_replayed_to_provider(monkeypatch):
     assert any("strict JSON" in message.get("content", "") for message in second_request)
 
 
+def test_truncated_research_plan_retry_requests_a_concise_plan(monkeypatch):
+    box = _asking()
+    script = [
+        [_call_chunk("research_plan", '{"action":"propose","runs":[')],
+        [_Chunk(_Delta(content="I could not form the plan."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    for _answer, _events, _state in agent.stream("plan a comparison", session=box):
+        pass
+
+    retry = "\n".join(message.get("content", "") for message in sent[1])
+    assert "strict JSON" in retry
+    assert "Keep the proposal concise" in retry
+    assert agent.MAX_OUTPUT_TOKENS >= 8192
+
+
 def test_normal_question_does_not_force_research_plan(monkeypatch):
     box = _asking()
     script = [[_Chunk(_Delta(content="A direct explanation."))]]
@@ -383,6 +401,55 @@ def test_citation_rewrite_discards_invalid_marker_from_pre_tool_narration(monkey
     assert "smrt-v1#03" not in answer
     assert "model:smrt@1.5.1" in answer
     assert any(event["kind"] == "harness_pass" for event in events)
+
+
+def test_status_only_research_answer_is_replaced_by_final_report(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    box["research"] = {"phase": "approved", "plan": {}, "report_warnings": []}
+    script = [
+        [_Chunk(_Delta(content="The figures passed QA. I can proceed to provide the final conclusion."))],
+        [_Chunk(_Delta(content="Figure 1 shows the tested trend. Therefore, the results show that the hypothesis is supported within the tested range; the limited sampling remains a limitation."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(
+        agent.research,
+        "execution_gaps",
+        lambda _session: {
+            "missing_runs": [],
+            "missing_run_ids": [],
+            "figure_problem": "",
+            "target_gaps": [],
+        },
+    )
+    monkeypatch.setattr(agent.research, "allow_model", lambda _session: True)
+    monkeypatch.setattr(
+        agent.research,
+        "complete",
+        lambda _session: {"status": "success", "summary": "complete"},
+    )
+    monkeypatch.setattr(
+        agent.research,
+        "report_warnings",
+        lambda _session, answer: (
+            "The response is only a workflow/QA status update, not the final scientific report."
+            if "can proceed" in answer
+            else ""
+        ),
+    )
+
+    answer, events, _ = agent.run("complete the research", session=box)
+
+    assert answer.startswith("Figure 1 shows")
+    assert "can proceed" not in answer
+    assert any(
+        event["kind"] == "harness_block" and event.get("rule") == "report_completeness"
+        for event in events
+    )
+    assert any(event["kind"] == "research_complete" for event in events)
+    retry_prompt = "\n".join(message.get("content", "") for message in sent[1])
+    assert "Write the final scientific report now" in retry_prompt
 
 
 class _Delta:

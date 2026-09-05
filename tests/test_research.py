@@ -117,12 +117,52 @@ def test_plan_recovers_missing_prose_steps_when_runs_and_charts_are_executable()
     )
 
 
+def test_propose_invokes_reference_repair_before_registered_run_validation(monkeypatch):
+    calls = []
+    original = reproduction.repair
+
+    def spy(question, runs, charts=None, **kwargs):
+        calls.append((question, runs, charts, kwargs))
+        return original(question, runs, charts, **kwargs)
+
+    monkeypatch.setattr(reproduction, "repair", spy)
+    box = session.new_session("m")
+
+    assert _proposal(box)["status"] == "needs_input"
+    assert len(calls) == 1
+    assert calls[0][0] == "How does snow density affect microwave scattering?"
+    assert calls[0][1][0]["id"] == "smrt_density"
+    # propose() repairs in preserve-authored mode: authored scalar conditions must never
+    # be silently canonicalised to paper values before the human review card sees them.
+    assert calls[0][3] == {"preserve_authored": True}
+
+
 def test_clean_list_accepts_provider_serialized_numbered_steps():
     assert research._clean_list("1. Inspect declarations\n2) Run model; 3. Review figures") == [
         "Inspect declarations",
         "Run model",
         "Review figures",
     ]
+
+
+def test_reproduction_target_cleaner_accepts_provider_coverage_records():
+    targets = research._clean_reproduction_targets([
+        {
+            "target_id": "fig4a",
+            "description": "Compare brightness temperature curves with Figure 4a.",
+            "evidence_refs": ["smrt-v1#08"],
+            "coverage": [
+                {"run_id": "qca_tb", "output": "tb_v"},
+                {"run_id": "qcacp_tb", "output": "tb_h"},
+            ],
+        }
+    ])
+
+    assert targets[0]["id"] == "fig4a"
+    assert targets[0]["source_id"] == "fig4a"
+    assert targets[0]["target_quantity"] == "tb_v, tb_h"
+    assert targets[0]["expected_comparison"].startswith("Compare brightness")
+    assert targets[0]["run_ids"] == ["qca_tb", "qcacp_tb"]
 
 
 def test_paper_reproduction_requires_reading_the_exact_section_before_planning():
@@ -301,6 +341,77 @@ def test_q1_repair_restores_the_six_theory_microstructure_runs():
     assert problems == []
 
 
+def test_q1_preserving_repair_keeps_authored_conditions_and_completes_matrix():
+    question = (
+        "Under what snow-density range do different microstructure (independent spheres, "
+        "non-sticky hard spheres and sticky hard sphere) and different theories (Rayleigh, "
+        "DMRT QCA-CP, IBA) converge to the same first-order scattering behavior, and at "
+        "what density do particle correlation and dense-medium effects cause their predictions "
+        "to diverge?"
+    )
+
+    def run(run_id, theory, microstructure, **extra):
+        return {
+            "id": run_id,
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "electromagnetic_model": theory,
+                "microstructure_model": microstructure,
+                "output": "coefficients",
+                "radius_m": 0.0002,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 50.0,
+                "sweep_stop": 500.0,
+                "sweep_points": 20,
+                **extra,
+            },
+        }
+
+    runs = [
+        run("run_rayleigh_independent", "rayleigh", "independent_sphere"),
+        run("run_iba_independent", "iba", "independent_sphere"),
+        run("run_iba_exponential", "iba", "exponential", corr_length_m=1.5e-4),
+    ]
+    charts = [
+        {
+            "id": "chart_ks_density",
+            "required": True,
+            "x": "density_kg_m3",
+            "ys": ["ks_per_m"],
+        }
+    ]
+
+    repairs = reproduction.repair(question, runs, charts, preserve_authored=True)
+
+    pairs = {
+        (
+            run["parameters"]["electromagnetic_model"],
+            run["parameters"]["microstructure_model"],
+        )
+        for run in runs
+    }
+    assert pairs == {
+        ("rayleigh", "independent_sphere"),
+        ("iba", "independent_sphere"),
+        ("dmrt_qcacp_shortrange", "non_sticky_hard_spheres"),
+        ("iba", "non_sticky_hard_spheres"),
+        ("dmrt_qcacp_shortrange", "sticky_hard_spheres"),
+        ("iba", "sticky_hard_spheres"),
+    }
+    assert len(runs) == 6
+    # Authored scalar conditions survive into the review card; divergences from the paper
+    # stay visible as warnings instead of being silently canonicalised to the paper values.
+    assert all(run["parameters"]["radius_m"] == 0.0002 for run in runs)
+    assert all(run["parameters"]["sweep_start"] == 50.0 for run in runs)
+    assert all(run["parameters"]["sweep_stop"] == 500.0 for run in runs)
+    # The exponential run was re-homed into a sphere matrix member, so every member is
+    # parameterised by particle radius, never by an autocorrelation length.
+    assert all("corr_length_m" not in run["parameters"] for run in runs)
+    assert any(repair.get("field") == "theory_or_microstructure" for repair in repairs)
+    assert any(repair.get("field") == "run" for repair in repairs)
+
+
 def test_q2_paper_protocol_accepts_angular_passive_and_active_smrt_partial_reproduction():
     common = {
         "microstructure_model": "sticky_hard_spheres",
@@ -401,6 +512,78 @@ def test_q3_repairs_provider_plan_to_executable_paper_protocol():
     assert runs[-1]["parameters"]["sweep_parameter"] == "dort_streams"
     assert charts[2]["id"] == "q3_dort_convergence"
     assert charts[2]["required"] is True and charts[2]["ys"] == ["tb_v", "tb_h"]
+    assert len(charts) == 3
+    assert len([chart for chart in charts if chart.get("x") == "angle_deg"]) == 1
+
+
+def test_q3_repair_adds_angular_chart_when_provider_only_proposes_coefficients_and_dort():
+    question = (
+        "When SMRT and MEMLS use the same exponential microstructure and snowpack properties, "
+        "how closely do they reproduce the same electromagnetic coefficients and brightness "
+        "temperatures, and how much is caused by IBA absorption versus DORT and six-flux solvers?"
+    )
+    common = {
+        "microstructure_model": "exponential",
+        "electromagnetic_model": "iba",
+        "frequency_ghz": 37.0,
+        "density_kg_m3": 300.0,
+        "corr_length_m": 1.0e-4,
+        "temperature_k": 256.0,
+        "thickness_m": 1.0,
+    }
+    runs = [
+        {"id": "provider_tb", "label": "provider TB", "model": "smrt", "stage": "main", "parameters": {**common, "output": "tb"}},
+        {"id": "provider_coeff", "label": "provider coefficients", "model": "smrt", "stage": "main", "parameters": {**common, "output": "coefficients"}},
+        {"id": "provider_dort", "label": "DORT convergence", "model": "smrt", "stage": "diagnostic", "parameters": {**common, "output": "tb", "sweep_parameter": "dort_streams", "sweep_start": 16, "sweep_stop": 128, "sweep_points": 4}},
+    ]
+    charts = [
+        {"id": "coeff_comparison", "label": "electromagnetic coefficients", "x": "model", "ys": ["ka_per_m", "ks_per_m"], "required": True},
+        {"id": "tbv_vs_dort", "label": "DORT convergence", "x": "dort_streams", "ys": ["tb_v"], "required": True, "purpose": "diagnostic"},
+    ]
+
+    repairs = reproduction.repair(question, runs, charts)
+    _, problems = reproduction.validate(question, runs, charts, ["MEMLS is not executable locally"])
+
+    assert repairs
+    assert problems == []
+    angular = [chart for chart in charts if chart.get("x") == "angle_deg"]
+    assert len(angular) == 1
+    assert angular[0]["id"] == "q3_brightness_angle"
+    assert angular[0]["ys"] == ["tb_v", "tb_h"]
+
+
+def test_q3_repair_removes_meaningless_coefficient_sweep_over_dort_streams():
+    question = (
+        "When SMRT and MEMLS use the same exponential microstructure and snowpack properties, "
+        "how closely do they reproduce the same electromagnetic coefficients and brightness "
+        "temperatures, and how much is caused by IBA absorption versus DORT and six-flux solvers?"
+    )
+    common = {
+        "microstructure_model": "exponential",
+        "electromagnetic_model": "iba",
+        "frequency_ghz": 37.0,
+        "density_kg_m3": 300.0,
+        "corr_length_m": 1.0e-4,
+        "temperature_k": 265.0,
+        "thickness_m": 200.0,
+    }
+    runs = [
+        {"id": "tb_main", "model": "smrt", "stage": "main", "parameters": {**common, "output": "tb"}},
+        {"id": "coeff_fixed", "model": "smrt", "stage": "main", "parameters": {**common, "output": "coefficients"}},
+        {"id": "tb_dort", "model": "smrt", "stage": "diagnostic", "parameters": {**common, "output": "tb", "sweep_parameter": "dort_streams", "sweep_start": 8, "sweep_stop": 64, "sweep_points": 8}},
+        {"id": "coeff_dort", "model": "smrt", "stage": "diagnostic", "parameters": {**common, "output": "coefficients", "sweep_parameter": "dort_streams", "sweep_start": 8, "sweep_stop": 128, "sweep_points": 8}},
+    ]
+    charts = [
+        {"id": "coeff", "label": "coefficient comparison", "x": "index", "ys": ["ka_per_m", "ks_per_m"], "required": True},
+        {"id": "dort", "label": "DORT convergence", "x": "dort_streams", "ys": ["tb_v", "tb_h"], "required": True, "purpose": "diagnostic"},
+    ]
+
+    repairs = reproduction.repair(question, runs, charts)
+    _, problems = reproduction.validate(question, runs, charts, ["MEMLS is not executable locally"])
+
+    assert repairs
+    assert not any(run["id"] == "coeff_dort" for run in runs)
+    assert problems == []
 
 
 def test_q2_named_external_models_are_recorded_as_capability_gaps():
@@ -506,6 +689,37 @@ def test_q2_reference_repair_removes_nonfigure4_angular_series_but_keeps_diagnos
     assert not any(run["id"] == "iba_tb" for run in runs)
     assert any(run["id"] == "dort_check" for run in runs)
     assert any(item["run_id"] == "iba_tb" and item["to"] is None for item in repairs)
+
+
+def test_q2_reference_repair_restores_required_figure4_charts():
+    base = {
+        "microstructure_model": "sticky_hard_spheres", "frequency_ghz": 37.0,
+        "density_kg_m3": 300.0, "temperature_k": 256.0, "thickness_m": 10.0,
+        "radius_m": 0.0001, "stickiness": 0.5, "angle_deg": 55.0,
+    }
+    runs = [
+        {"id": "qca_tb", "model": "smrt", "parameters": {**base, "electromagnetic_model": "dmrt_qca_shortrange", "output": "tb"}},
+        {"id": "stale_coeff", "model": "smrt", "parameters": {**base, "electromagnetic_model": "dmrt_qca_shortrange", "output": "coefficients"}},
+    ]
+    charts = [
+        {"id": "bad_sigma_dort", "purpose": "diagnostic", "required": True,
+         "x": "dort_streams", "ys": ["sigma_vv_db"]},
+        {"id": "bad_provider_layout", "purpose": "result", "required": True,
+         "x": "none", "y": "['tb_v', 'tb_h']"},
+    ]
+
+    repairs = reproduction.repair(
+        "Can SMRT reproduce DMRT-ML and DMRT-QMS brightness and backscatter?", runs, charts
+    )
+
+    assert repairs
+    assert "stale_coeff" not in {run["id"] for run in runs}
+    assert "bad_sigma_dort" not in {chart["id"] for chart in charts}
+    assert "bad_provider_layout" not in {chart["id"] for chart in charts}
+    assert {chart["id"] for chart in charts} >= {"q2_passive_angle", "q2_active_angle"}
+    assert all(chart["x"] == "angle_deg" for chart in charts)
+    assert any(set(chart["ys"]) == {"tb_v", "tb_h"} for chart in charts)
+    assert any(set(chart["ys"]) == {"sigma_vv_db", "sigma_hh_db", "sigma_hv_db"} for chart in charts)
 
 
 def test_plan_revision_preview_chart_and_execution_gate():
@@ -1691,6 +1905,11 @@ def test_figure_qa_status_message_is_not_accepted_as_final_scientific_report():
         "complete. The final scientific report can now be delivered.",
     )
     assert "not the final scientific report" in problem
+    assert "not the final scientific report" in research.report_warnings(
+        box,
+        "Figure 1 and Figure 2 passed review. I can proceed to provide the final "
+        "interpretation and conclusion.",
+    )
     assert not research.report_problem(
         box,
         "Figure 1 shows a rising baseline while Figure 2 shows the transfer test diverging. "

@@ -76,16 +76,21 @@ def validate(question, runs, charts, limitations):
     return case_id, checker(runs, charts, limitations)
 
 
-def repair(question, runs, charts=None):
+def repair(question, runs, charts=None, *, preserve_authored=False):
     """Repair only unambiguous, paper-declared reproduction fields.
 
     These repairs are deliberately narrower than plan authorship: no hypothesis, metric,
     chart, interpretation, or optional diagnostic is invented.  The repaired runs remain in
     the review card so the human approves the exact computation before it can execute.
+
+    ``preserve_authored=True`` keeps scalar conditions the plan author explicitly chose
+    and repairs only unambiguous structure (see ``_repair_q1``); it is the policy used
+    when a live proposal enters human review, where paper divergences must remain visible
+    instead of being silently canonicalised.
     """
     case_id = identify(question)
     if case_id == "q1":
-        return _repair_q1(runs)
+        return _repair_q1(runs, preserve_authored=preserve_authored)
     if case_id == "q4":
         return _repair_q4(runs, charts or [])
     if case_id == "q3":
@@ -120,6 +125,22 @@ def repair(question, runs, charts=None):
         and (run.get("parameters") or {}).get("sweep_parameter") in (None, "none", "angle_deg")
     ]
     core_keys = {(item[0], item[1]) for item in core}
+    coefficient_extras = [
+        run for run in list(runs)
+        if run.get("model") == "smrt"
+        and (run.get("parameters") or {}).get("output") == "coefficients"
+    ]
+    for run in coefficient_extras:
+        runs.remove(run)
+        repairs.append({
+            "run_id": run.get("id"), "field": "run",
+            "from": "%s/coefficients" % (run.get("parameters") or {}).get("electromagnetic_model"),
+            "to": None,
+            "reason": (
+                "remove a non-Figure-4 coefficient diagnostic; the external DMRT-QMS "
+                "coefficient-substitution test is literature evidence, not a locally executable reference"
+            ),
+        })
     extras = [
         run for run in observable
         if (
@@ -215,6 +236,83 @@ def repair(question, runs, charts=None):
                 "reason": "restore a missing core Figure 4 comparison run from smrt-v1#08",
             }
         )
+    repairs.extend(_repair_q2_charts(runs, charts or []))
+    return repairs
+
+
+def _repair_q2_charts(runs, charts):
+    """Restore Figure 4's two observable panels without changing model physics."""
+    repairs = []
+    output_names = {
+        "tb": ("tb_v", "tb_h"),
+        "sigma": ("sigma_vv_db", "sigma_hh_db", "sigma_hv_db"),
+    }
+
+    def supports(chart):
+        wanted = set(chart.get("ys") or ([chart.get("y")] if chart.get("y") else []))
+        axis = chart.get("x")
+        for run in runs:
+            spec = run.get("parameters") or {}
+            if spec.get("sweep_parameter") != axis:
+                continue
+            if wanted.intersection(output_names.get(spec.get("output"), ())):
+                return True
+        return False
+
+    # Remove only layouts that cannot be supplied by any repaired run.  This keeps valid
+    # DORT convergence diagnostics while preventing a stale provider-authored panel from
+    # blocking the paper's executable angle comparison.
+    for chart in list(charts):
+        if not supports(chart):
+            charts.remove(chart)
+            repairs.append({
+                "chart_id": chart.get("id"), "field": "chart", "from": chart, "to": None,
+                "reason": "remove a submitted layout with no compatible repaired run",
+            })
+
+    desired = (
+        ("tb", "q2_passive_angle", "Figure 4a passive brightness temperature vs incidence angle"),
+        ("sigma", "q2_active_angle", "Figure 4b active backscatter vs incidence angle"),
+    )
+    for output, chart_id, label in desired:
+        names = output_names[output]
+        chart = next(
+            (
+                item for item in charts
+                if item.get("purpose") != "diagnostic"
+                and set(item.get("ys") or ([item.get("y")] if item.get("y") else [])).intersection(names)
+            ),
+            None,
+        )
+        if chart is None:
+            chart = {
+                "id": chart_id,
+                "label": label,
+                "purpose": "result",
+                "required": True,
+                "kind": "line+markers",
+                "x": "angle_deg",
+                "x_label": "Incidence angle (degrees)",
+                "ys": list(names),
+                "y": names[0],
+                "y_label": "Brightness temperature (K)" if output == "tb" else "Backscatter coefficient (dB)",
+            }
+            charts.append(chart)
+            repairs.append({
+                "chart_id": chart_id, "field": "chart", "from": None, "to": dict(chart),
+                "reason": "restore the required Figure 4 observable panel from smrt-v1#08",
+            })
+            continue
+        before = dict(chart)
+        chart.update({
+            "purpose": "result", "required": True, "kind": "line+markers",
+            "x": "angle_deg", "ys": list(names), "y": names[0],
+        })
+        if chart != before:
+            repairs.append({
+                "chart_id": chart.get("id"), "field": "chart", "from": before, "to": dict(chart),
+                "reason": "align the submitted layout with the paper Figure 4 angle protocol",
+            })
     return repairs
 
 
@@ -259,13 +357,22 @@ def q1_matrix():
     )
 
 
-def _repair_q1(runs):
+def _repair_q1(runs, *, preserve_authored=False):
     """Restore Q1's explicit 3-by-theory/microstructure comparison matrix.
 
     Providers commonly submit the old three-run formulation, or substitute an exponential
     IBA run for the requested non-sticky hard-sphere comparison. Q1 is a registered paper
     protocol, so these unambiguous presentation/configuration repairs are made auditable in
     the review card rather than sending the same incomplete proposal back to the model.
+
+    ``preserve_authored=True`` is the propose()-time policy: it completes the matrix
+    without overwriting scalar conditions the plan author explicitly chose (radius,
+    density-sweep bounds, stickiness, ...).  Those divergences must survive into the
+    review card as non-blocking ``paper_context_difference`` warnings, where a human
+    decides whether they are an intentional extension of the paper protocol.  The
+    canonicalising path below stamps the paper values onto every matrix member, which
+    would erase that choice before the reviewer ever sees it and would also overwrite a
+    user's deliberate revision on every retry.
     """
     protocol = q1_protocol()
     fixed = protocol.get("fixed") or {}
@@ -278,6 +385,8 @@ def _repair_q1(runs):
     ]
     if not coefficient_runs:
         return []
+    if preserve_authored:
+        return _repair_q1_preserving(runs, coefficient_runs, matrix, fixed)
 
     repairs = []
     by_pair = {}
@@ -413,6 +522,195 @@ def _repair_q1(runs):
             and str(run.get("stage") or "main").lower() not in ("baseline", "diagnostic")
         )
     ] + canonical_runs
+    return repairs
+
+
+def _repair_q1_preserving(runs, coefficient_runs, matrix, fixed):
+    """Complete Q1's six-run matrix while keeping authored scalar conditions.
+
+    Only unambiguous structure is changed here: which theory/microstructure pair each
+    coefficient run stands for, the coefficients-over-density sweep axis, removal of extra
+    coefficient diagnostics that would otherwise fail chart coverage forever, and
+    synthesis of missing matrix members from an authored template so they inherit the
+    author's scalar choices rather than paper defaults.  Explicit radius, density-sweep
+    bounds, stickiness, frequency, temperature and point counts are never rewritten: if
+    they differ from the paper reference they surface as reviewable
+    ``paper_context_difference`` warnings in the proposal validator.
+    """
+    repairs = []
+    matrix_pairs = [(item[0], item[1]) for item in matrix]
+    by_pair = {}
+    for run in coefficient_runs:
+        spec = run.get("parameters") or {}
+        pair = (spec.get("electromagnetic_model"), spec.get("microstructure_model"))
+        if pair in matrix_pairs and pair not in by_pair:
+            by_pair[pair] = run
+
+    def _force_density_axis(run):
+        spec = run.get("parameters") or {}
+        if spec.get("sweep_parameter") == fixed.get("sweep_parameter", "density_kg_m3"):
+            return
+        previous = spec.get("sweep_parameter") or "none"
+        spec["sweep_parameter"] = fixed.get("sweep_parameter", "density_kg_m3")
+        repairs.append(
+            {
+                "run_id": run.get("id"),
+                "field": "sweep_parameter",
+                "from": previous,
+                "to": spec["sweep_parameter"],
+                "reason": (
+                    "Q1's sparse-medium comparison is a snow-density question; the "
+                    "coefficient run must sweep density, not %s" % previous
+                ),
+            }
+        )
+
+    # 1. Re-home authored coefficient runs that stand for a configuration outside the six
+    #    matrix pairs (for example IBA with an exponential autocorrelation).  Only the
+    #    theory/microstructure identity changes; authored scalar conditions ride along.
+    vacant = [pair for pair in matrix_pairs if pair not in by_pair]
+    for run in list(coefficient_runs):
+        spec = run.get("parameters") or {}
+        pair = (spec.get("electromagnetic_model"), spec.get("microstructure_model"))
+        if pair in matrix_pairs or not vacant:
+            continue
+        chosen = next(
+            (
+                candidate for candidate in vacant
+                if candidate[0] == pair[0] or candidate[1] == pair[1]
+            ),
+            None,
+        ) or vacant[0]
+        vacant.remove(chosen)
+        by_pair[chosen] = run
+        if (
+            chosen[1] in ("independent_sphere", "non_sticky_hard_spheres", "sticky_hard_spheres")
+            and spec.get("corr_length_m") is not None
+            and not spec.get("radius_m")
+        ):
+            # Sphere microstructures are parameterised by particle radius; the re-homed run
+            # carried an autocorrelation length but no radius, so the paper radius is the
+            # only auditable value that can complete the converted configuration.
+            spec["radius_m"] = fixed.get("radius_m", 1.0e-4)
+            repairs.append(
+                {
+                    "run_id": run.get("id"),
+                    "field": "radius_m",
+                    "from": None,
+                    "to": spec["radius_m"],
+                    "reason": (
+                        "Q1 sphere microstructures are parameterised by particle radius; "
+                        "the converted run carried an autocorrelation length but no radius"
+                    ),
+                }
+            )
+        if chosen[0] != pair[0]:
+            spec["electromagnetic_model"] = chosen[0]
+        if chosen[1] != pair[1]:
+            spec["microstructure_model"] = chosen[1]
+            if chosen[1] != "exponential":
+                spec.pop("corr_length_m", None)
+        repairs.append(
+            {
+                "run_id": run.get("id"),
+                "field": "theory_or_microstructure",
+                "from": "%s/%s" % pair,
+                "to": "%s/%s" % chosen,
+                "reason": "restore Q1's six explicit theory/microstructure configurations",
+            }
+        )
+        _force_density_axis(run)
+
+    # 2. Synthesise genuinely missing matrix members from an authored template so they
+    #    inherit the author's scalar choices instead of paper defaults.
+    occupied_ids = {run.get("id") for run in runs}
+    sticky_any = next(
+        (run for pair, run in by_pair.items() if pair[1] == "sticky_hard_spheres"),
+        None,
+    )
+    for em, micro, canonical_id, label in matrix:
+        if (em, micro) in by_pair:
+            continue
+        template = next(
+            (
+                run for pair, run in by_pair.items()
+                if pair == (em, micro)
+            ),
+            None,
+        )
+        if template is None and micro == "sticky_hard_spheres":
+            template = sticky_any
+        if template is None:
+            template = next(iter(by_pair.values()), None)
+        if template is None:
+            break
+        run_id = canonical_id
+        suffix = 2
+        while run_id in occupied_ids:
+            run_id = "%s_%d" % (canonical_id, suffix)
+            suffix += 1
+        spec = dict(template.get("parameters") or {})
+        spec.update(
+            {
+                "electromagnetic_model": em,
+                "microstructure_model": micro,
+                "output": "coefficients",
+                "sweep_parameter": fixed.get("sweep_parameter", "density_kg_m3"),
+            }
+        )
+        if micro != "exponential":
+            spec.pop("corr_length_m", None)
+        if micro != "sticky_hard_spheres":
+            spec.pop("stickiness", None)
+        member = {
+            "id": run_id,
+            "label": label,
+            "model": "smrt",
+            "stage": "main",
+            "parameters": spec,
+        }
+        runs.append(member)
+        coefficient_runs.append(member)
+        by_pair[(em, micro)] = member
+        occupied_ids.add(run_id)
+        repairs.append(
+            {
+                "run_id": run_id,
+                "field": "run",
+                "from": None,
+                "to": "%s/%s" % (em, micro),
+                "reason": (
+                    "add the missing Q1 matrix member so every theory/microstructure "
+                    "configuration is compared under the same authored conditions"
+                ),
+            }
+        )
+
+    # 3. Drop extra main-stage coefficient runs that are not matrix members; leaving them
+    #    makes the plan fail chart coverage ("run contributes to no chart") on every retry.
+    matrix_ids = {run.get("id") for run in by_pair.values()}
+    for run in list(coefficient_runs):
+        if run.get("id") in matrix_ids:
+            continue
+        runs.remove(run)
+        coefficient_runs.remove(run)
+        spec = run.get("parameters") or {}
+        repairs.append(
+            {
+                "run_id": run.get("id"),
+                "field": "run",
+                "from": "%s/%s"
+                % (spec.get("electromagnetic_model"), spec.get("microstructure_model")),
+                "to": None,
+                "reason": (
+                    "remove an extra coefficient diagnostic that is not one of Q1's six "
+                    "comparison configurations and would otherwise fail figure coverage"
+                ),
+            }
+        )
+
+    for run in by_pair.values():
+        _force_density_axis(run)
     return repairs
 
 
@@ -579,6 +877,34 @@ def _repair_q3(runs, charts):
                 }
             )
 
+    # Electromagnetic coefficients are computed before the radiative-transfer solver and
+    # therefore cannot diagnose DORT stream convergence.  Providers sometimes add a
+    # coefficients-over-dort_streams run alongside the legitimate TB convergence run.
+    # Keeping it makes the fixed-condition coefficient panel mix an eight-point sweep with
+    # one-point ``index`` series, which cannot be plotted and causes a figure_required loop.
+    # Remove only this scientifically meaningless combination; the paired fixed coefficient
+    # runs below still isolate IBA versus IBA-original absorption/scattering physics.
+    for run in list(runs):
+        spec = run.get("parameters") or {}
+        if (
+            run.get("model") == "smrt"
+            and spec.get("output") == "coefficients"
+            and spec.get("sweep_parameter") == "dort_streams"
+        ):
+            runs.remove(run)
+            repairs.append(
+                {
+                    "run_id": run.get("id"),
+                    "field": "run",
+                    "from": "coefficients over dort_streams",
+                    "to": None,
+                    "reason": (
+                        "DORT stream count belongs to the radiative-transfer solver and "
+                        "does not form a meaningful electromagnetic-coefficient sweep"
+                    ),
+                }
+            )
+
     # A common provider failure is to alternate between IBA and IBA-original on
     # successive retries instead of submitting both sides of the comparison in one
     # proposal.  Complete only the explicitly required 2 x 2 SMRT matrix; this does
@@ -708,6 +1034,45 @@ def _repair_q3(runs, charts):
                 "from": None,
                 "to": "dort_streams -> tb_v, tb_h",
                 "reason": "keep the automatically added DORT diagnostic run drawable and reviewable",
+            }
+        )
+
+    # The provider may propose only a coefficient panel plus the DORT diagnostic.  The
+    # deterministic Q3 repair below converts the two main TB runs into the paper's
+    # incidence-angle sweeps, so those runs also need an angular result panel.  Adding the
+    # paired Figure-6 layout here keeps run and chart repair atomic and prevents the generic
+    # coverage validator from rejecting the backend's own restored runs as "contributes to
+    # none of the proposed charts" on every retry.
+    if not any(
+        chart.get("x") == "angle_deg"
+        and set(chart.get("ys") or ([chart.get("y")] if chart.get("y") else [])).intersection(
+            {"tb_v", "tb_h"}
+        )
+        for chart in charts
+    ):
+        angular_chart = {
+            "id": "q3_brightness_angle",
+            "label": "SMRT IBA formulations: brightness temperature vs incidence angle",
+            "kind": "line+markers",
+            "x": "angle_deg",
+            "y": "tb_v",
+            "ys": ["tb_v", "tb_h"],
+            "required": True,
+            "purpose": "result",
+            "x_label": "Incidence angle (degrees)",
+            "y_label": "Brightness temperature (K)",
+        }
+        charts.append(angular_chart)
+        repairs.append(
+            {
+                "chart_id": angular_chart["id"],
+                "field": "chart",
+                "from": None,
+                "to": dict(angular_chart),
+                "reason": (
+                    "keep the automatically restored Q3 angular brightness-temperature "
+                    "runs drawable and reviewable"
+                ),
             }
         )
 
@@ -848,6 +1213,37 @@ def _repair_q3(runs, charts):
                     "reason": "align the chart with its executable Q3 sweep",
                 }
             )
+
+    # Normalisation above can turn a provider-authored generic TB panel into the same
+    # angle/polarisation layout that was provisionally restored earlier in this function.
+    # Keep the first result panel and remove exact scientific duplicates so the user does
+    # not approve or receive two indistinguishable Figure-6 plots.
+    angular_result = None
+    for chart in list(charts):
+        chart_ys = set(chart.get("ys") or ([chart.get("y")] if chart.get("y") else []))
+        if (
+            chart.get("x") != "angle_deg"
+            or chart_ys != {"tb_v", "tb_h"}
+            or chart.get("purpose") == "diagnostic"
+        ):
+            continue
+        if angular_result is None:
+            angular_result = chart
+            continue
+        charts.remove(chart)
+        repairs.append(
+            {
+                "chart_id": chart.get("id"),
+                "field": "chart",
+                "from": dict(chart),
+                "to": None,
+                "reason": (
+                    "remove a duplicate Q3 incidence-angle brightness-temperature panel "
+                    "created when a generic provider layout and deterministic recovery "
+                    "normalise to the same scientific figure"
+                ),
+            }
+        )
     return repairs
 
 
