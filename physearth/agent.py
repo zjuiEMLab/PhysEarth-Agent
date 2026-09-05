@@ -121,6 +121,67 @@ def _event(kind, **fields):
     return event
 
 
+def _research_gate_progress(session):
+    """Progress markers that reset a research-gate no-progress watch.
+
+    The markers are what a corrective round is allowed to move: a new plan version, a new
+    successful model run, or a new figure.  If none of them moved between two fires of the
+    same gate with the same missing state, the round changed nothing and the loop is
+    structural rather than scientific.
+    """
+    project = session.get("research") or {}
+    return (
+        int((project or {}).get("plan_version") or 0),
+        len(session.get("successful_runs") or ()),
+        len(session.get("figures") or ()),
+    )
+
+
+def _research_gate_fingerprint(session, gate_key, gaps=None):
+    """Stable fingerprint of the exact state one research gate is guarding.
+
+    A fingerprint that repeats while the progress markers stand still means the previous
+    corrective round left the same missing runs, missing figures or quality problem in
+    place.  Counting the *attempts* alone would stop genuine multi-round recovery as soon
+    as the model fixes one figure of several, so the fingerprint and the progress markers
+    are compared together.
+    """
+    project = session.get("research") or {}
+    plan = project.get("plan") or {}
+    gaps = gaps or {}
+    if gate_key == "research_gate:formal_model_required":
+        return "missing=%s|planned=%s" % (
+            ",".join(sorted(gaps.get("missing_run_ids") or [])),
+            ",".join(sorted(str(run.get("id") or "") for run in (plan.get("runs") or []))),
+        )
+    if gate_key == "research_gate:figure_required":
+        selected = gaps.get("selected_chart") or {}
+        return "problem=%s|selected=%s|figures=%s|unreviewed=%s" % (
+            str(gaps.get("figure_problem") or ""),
+            str(selected.get("id") or ""),
+            ",".join(
+                sorted(str(item.get("chart_id") or item.get("id") or "")
+                       for item in session.get("figures") or ())
+            ),
+            ",".join(sorted(gaps.get("unreviewed_chart_ids") or [])),
+        )
+    return "%s|%s" % (
+        int((project or {}).get("plan_version") or 0),
+        ",".join(sorted(gaps.get("missing_run_ids") or [])),
+    )
+
+
+def _gate_repeat_count(gate_watch, gate_key, fingerprint, progress):
+    """Consecutive fires of one gate with the identical fingerprint and no progress."""
+    entry = gate_watch.get(gate_key)
+    if entry is not None and entry[0] == fingerprint and entry[1] == progress:
+        count = entry[2] + 1
+    else:
+        count = 1
+    gate_watch[gate_key] = (fingerprint, progress, count)
+    return count
+
+
 def _requests_tool_bypass(question):
     """Recognize an explicit request to disable evidence/model tools.
 
@@ -705,6 +766,12 @@ def stream(question, history=None, model=None, session=None, switches=None):
     last_plan_problems = []
     forced_tool_name = None
     segments = []
+    # P0 no-progress watch: each research gate records the fingerprint of the state it is
+    # guarding plus the progress markers (plan version, successful runs, figures).  When
+    # the same gate fires twice with the identical fingerprint and no marker moved, the
+    # previous corrective round changed nothing, so another full rewrite is not worth a
+    # model call: the agent stops with a structured record instead.
+    gate_watch = {}
 
     allowed, message = budget.acquire()
     if not allowed:
@@ -1419,16 +1486,46 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     )
                     break
                 gate_key = "research_gate:formal_model_required"
+                fingerprint = _research_gate_fingerprint(session, gate_key, gaps)
+                progress = _research_gate_progress(session)
+                repeats = _gate_repeat_count(gate_watch, gate_key, fingerprint, progress)
                 attempts = review_attempts.get(gate_key, 0) + 1
                 review_attempts[gate_key] = attempts
-                if attempts >= harness.MAX_INTERVENTIONS:
+                if repeats >= 2 or attempts >= harness.MAX_INTERVENTIONS:
+                    missing_ids = ", ".join(gaps.get("missing_run_ids") or [])
                     answer = (
-                        "Research execution stopped after %d attempts with no progress on planned "
-                        "run IDs: %s. No completion claim was published."
-                        % (attempts, ", ".join(gaps["missing_run_ids"]))
+                        "Research execution stopped: the approved plan still lacks run IDs (%s) "
+                        "after %d corrective round%s with no new successful run or figure "
+                        "(phase=%s, plan v%03d, no-progress fingerprint=%s). No completion claim "
+                        "was published. Revise the question or approve a revised plan in a new "
+                        "message."
+                        % (
+                            missing_ids,
+                            attempts,
+                            "" if attempts == 1 else "s",
+                            (project or {}).get("phase", "approved"),
+                            int((project or {}).get("plan_version") or 0),
+                            fingerprint,
+                        )
                     )
                     events.append(
-                        _event("harness_stop", rule="model_run_no_progress", reason=answer)
+                        _event(
+                            "harness_stop",
+                            rule="model_run_no_progress",
+                            reason=answer,
+                            phase=(project or {}).get("phase"),
+                            plan_version=(project or {}).get("plan_version"),
+                            fingerprint=fingerprint,
+                            repeats=repeats,
+                            missing_run_ids=gaps.get("missing_run_ids") or [],
+                            successful_runs=[
+                                item.get("id") for item in session.get("successful_runs") or ()
+                            ],
+                            figures=[
+                                item.get("chart_id") or item.get("id")
+                                for item in session.get("figures") or ()
+                            ],
+                        )
                     )
                     break
                 events.append(
@@ -1438,6 +1535,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         detail="Approved research is missing planned model runs: %s."
                         % ", ".join(gaps["missing_runs"]),
                         intervention=attempts,
+                        fingerprint=fingerprint,
+                        repeats=repeats,
                     )
                 )
                 messages.append(
@@ -1552,13 +1651,30 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         )
                     break
                 gate_key = "research_gate:figure_required"
+                fingerprint = _research_gate_fingerprint(session, gate_key, gaps)
+                progress = _research_gate_progress(session)
+                repeats = _gate_repeat_count(gate_watch, gate_key, fingerprint, progress)
                 attempts = review_attempts.get(gate_key, 0)
-                if attempts >= harness.MAX_INTERVENTIONS:
+                if repeats >= 2 or attempts >= harness.MAX_INTERVENTIONS:
                     detail = (
-                        "%s Automatic correction stopped after %d attempts to prevent a loop."
-                        % (gaps["figure_problem"], harness.MAX_INTERVENTIONS)
+                        "%s No corrective round changed the figure state (fingerprint=%s, "
+                        "attempts=%d); automatic correction stopped instead of looping."
+                        % (gaps["figure_problem"], fingerprint, max(attempts, repeats))
                     )
-                    events.append(_event("harness_stop", rule="figure_required", reason=detail))
+                    events.append(
+                        _event(
+                            "harness_stop",
+                            rule="figure_required",
+                            reason=detail,
+                            phase=(project or {}).get("phase"),
+                            plan_version=(project or {}).get("plan_version"),
+                            fingerprint=fingerprint,
+                            repeats=repeats,
+                            figure_problem=gaps.get("figure_problem"),
+                            selected_chart=(gaps.get("selected_chart") or {}).get("id"),
+                            figures=[item.get("chart_id") or item.get("id") for item in session.get("figures") or ()],
+                        )
+                    )
                     answer = (
                         "Research execution paused because the selected result figure is incomplete. "
                         "%s No scientific completion claim has been published." % detail
@@ -1572,6 +1688,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         rule="figure_required",
                         detail=gaps["figure_problem"],
                         intervention=review_attempts[gate_key],
+                        fingerprint=fingerprint,
+                        repeats=repeats,
                     )
                 )
                 messages.append(

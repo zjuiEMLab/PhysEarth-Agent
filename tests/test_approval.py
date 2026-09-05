@@ -582,3 +582,118 @@ def test_the_approval_bar_appears_only_while_something_waits():
     approval.decide(box, "approve")
     approval.wait(box, timeout=1.0)
     assert "hidden" in render.approval_bar(box)
+
+
+def test_research_gate_fingerprint_and_repeat_watch_are_progress_aware():
+    box = _asking()
+    box["research"] = {
+        "phase": "approved",
+        "plan_version": 2,
+        "plan": {"runs": [{"id": "r1"}, {"id": "r2"}]},
+    }
+    gaps = {"missing_run_ids": ["r2"]}
+    fingerprint = agent._research_gate_fingerprint(
+        box, "research_gate:formal_model_required", gaps
+    )
+    assert "r2" in fingerprint and "r1" in fingerprint
+    progress = agent._research_gate_progress(box)
+    assert progress[1:] == (0, 0)
+
+    watch = {}
+    assert agent._gate_repeat_count(watch, "formal", fingerprint, progress) == 1
+    assert agent._gate_repeat_count(watch, "formal", fingerprint, progress) == 2
+
+    # A new successful run is progress: the same fingerprint no longer counts as a repeat.
+    box["successful_runs"].append({"id": "r1", "status": "success"})
+    progressed = agent._research_gate_progress(box)
+    assert agent._gate_repeat_count(watch, "formal", fingerprint, progressed) == 1
+    assert agent._gate_repeat_count(watch, "formal", fingerprint, progressed) == 2
+
+
+def test_figure_gate_stops_after_one_corrective_round_without_state_change(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    box["research"] = {
+        "phase": "approved",
+        "plan_version": 1,
+        "plan": {"runs": [{"id": "r1"}], "charts": [{"id": "c1"}]},
+    }
+    script = [
+        [_Chunk(_Delta(content="I will draw the figure next."))],
+        [_Chunk(_Delta(content="Still preparing the figure."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.research, "allow_model", lambda _session: True)
+
+    def same_gaps(_session):
+        return {
+            "figure_problem": "selected chart c1 has no formal figure",
+            "missing_runs": [],
+            "missing_run_ids": [],
+            "selected_chart": {"id": "c1"},
+            "unreviewed_chart_ids": [],
+            "expected_figure_series": {"c1": ["tb_v", "tb_h"]},
+        }
+
+    monkeypatch.setattr(agent.research, "execution_gaps", same_gaps)
+    monkeypatch.setattr(agent.research, "report_warnings", lambda _s, _a: "")
+    monkeypatch.setattr(agent.research, "complete", lambda _s: {"status": "success"})
+
+    answer, events, _ = agent.run("produce the formal figure", session=box)
+
+    # One corrective LLM round was allowed; the identical figure state then stopped the
+    # loop instead of paying for a third rewrite.
+    assert len(sent) == 2
+    stops = [
+        event for event in events
+        if event["kind"] == "harness_stop" and event.get("rule") == "figure_required"
+    ]
+    assert stops
+    assert stops[0]["repeats"] == 2
+    assert stops[0]["fingerprint"]
+    assert stops[0]["figure_problem"]
+    assert "no-progress fingerprint" in answer or "fingerprint=" in answer
+
+
+def test_formal_model_gate_stops_when_missing_runs_do_not_change(monkeypatch):
+    box = _asking()
+    box["research_required"] = True
+    box["research"] = {
+        "phase": "approved",
+        "plan_version": 1,
+        "plan": {"runs": [{"id": "qca"}, {"id": "qcacp"}]},
+    }
+    script = [
+        [_Chunk(_Delta(content="I will run the approved runs next."))],
+        [_Chunk(_Delta(content="The runs are in progress."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(agent.research, "allow_model", lambda _session: True)
+
+    def same_gaps(_session):
+        return {
+            "figure_problem": "",
+            "missing_runs": ["qcacp (SMRT QCA-CP passive)"],
+            "missing_run_ids": ["qcacp"],
+            "selected_chart": None,
+            "unreviewed_chart_ids": [],
+            "expected_figure_series": {},
+        }
+
+    monkeypatch.setattr(agent.research, "execution_gaps", same_gaps)
+    monkeypatch.setattr(agent.research, "report_warnings", lambda _s, _a: "")
+    monkeypatch.setattr(agent.research, "complete", lambda _s: {"status": "success"})
+
+    answer, events, _ = agent.run("execute the approved plan", session=box)
+
+    assert len(sent) == 2
+    stops = [
+        event for event in events
+        if event["kind"] == "harness_stop" and event.get("rule") == "model_run_no_progress"
+    ]
+    assert stops
+    assert stops[0]["repeats"] == 2
+    assert stops[0]["missing_run_ids"] == ["qcacp"]
+    assert "qcacp" in answer

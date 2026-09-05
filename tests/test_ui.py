@@ -40,6 +40,32 @@ def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypat
     assert "stable answer" in frames[1][3]
     assert frames[2][3].get("__type__") == "update"
     assert "MODEL CALL" in frames[2][4]
+def test_correction_blank_frame_never_clears_the_visible_answer(monkeypatch):
+    """A correction that empties the draft must not flash a blank Conversation panel."""
+    import app
+    from physearth import session as session_state
+
+    box = session_state.new_session(agent.default_model())
+    state = session_state.new_state(box)
+    state["phase"] = "calling_model"
+    correction = [{"kind": "harness_block", "at": "00:00:00", "rule": "citation_integrity"}]
+
+    def fake_stream(*_args, **_kwargs):
+        yield "stable draft text", [], state
+        yield "", correction, state  # the backend cleared the stale draft for a rewrite
+        yield "final report text", [], state
+
+    monkeypatch.setattr(app.agent, "stream", fake_stream)
+    frames = list(app.respond("question", [], box, agent.default_model()))
+
+    # The blank correction frame must be a no-op update (the previous text stays visible),
+    # never a placeholder or an empty live bubble.
+    assert "stable draft text" in frames[1][3]
+    assert frames[2][3].get("__type__") == "update"
+    assert "Waiting for the first token." not in frames[2][3].get("value", "")
+    assert "final report text" in frames[3][3]
+
+
 
 
 def test_execution_continuation_preserves_conversation_and_only_removes_plan_card(monkeypatch):

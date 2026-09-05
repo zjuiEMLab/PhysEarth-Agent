@@ -233,6 +233,12 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
     approval_html = render.research_context(session)
     head_html = render.conversation_head(index, session=session, events=events, state=state)
     logged_agent_events = 0
+    # A correction round intentionally yields an empty answer while a stale draft is
+    # replaced.  Rendering that blank frame is what makes the Conversation panel flash or
+    # sit on "Waiting for the first token." while the backend keeps working: keep the last
+    # non-empty text on screen until the replacement report actually streams, and never
+    # downgrade a populated panel to the empty placeholder mid-turn.
+    last_answer = ""
     try:
         for answer, events, state in agent.stream(question, seen, model_id, session):
             # A direct ``run_model`` approval resumes the original generator rather than
@@ -256,6 +262,9 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
                 )
                 logged_agent_events += 1
             running = state.get("phase") != "done"
+            frame_answer = answer or last_answer
+            if answer:
+                last_answer = answer
             # The evidence panel is the most expensive thing on the page and the only one
             # holding scroll position, an open tab and decoded figure images. Pushing it
             # unchanged on every chunk would reset all three many times a turn, so it goes
@@ -264,9 +273,9 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
             changed = key != evidence_key
             evidence_key = key
             next_live = (
-                render.live_result(answer, running=running)
+                render.live_result(frame_answer, running=running)
                 if preserve_conversation
-                else render.live(question, answer, running=running)
+                else render.live(question, frame_answer, running=running)
             )
             next_trace = render.trace(
                 events, state, running=running, include_footer=False
