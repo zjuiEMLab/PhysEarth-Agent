@@ -1991,3 +1991,114 @@ def test_question_coverage_gate_rejects_single_curve_for_multi_stage_attribution
     assert "ka_per_m" in result["summary"]
     assert "tb_v" in result["summary"] and "tb_h" in result["summary"]
     assert "dort_streams" in result["summary"]
+
+
+def test_q4_all_point_plan_promotes_runs_to_a_shared_density_response():
+    question = (
+        "Can sticky hard spheres, scaled non-sticky spheres, and exponential "
+        "autocorrelation functions be parameterized to produce equivalent microwave "
+        "brightness temperatures, and is that equivalence transferable across densities, "
+        "frequencies and incidence angles?"
+    )
+
+    def run(run_id, microstructure, **extra):
+        return {
+            "id": run_id,
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "output": "tb",
+                "electromagnetic_model": "iba",
+                "microstructure_model": microstructure,
+                "density_kg_m3": 300.0,
+                "temperature_k": 265.0,
+                "frequency_ghz": 37.0,
+                **extra,
+            },
+        }
+
+    runs = [
+        run("scaled_spheres", "non_sticky_hard_spheres", radius_m=0.0002),
+        run("exponential_acf", "exponential", corr_length_m=0.00015),
+    ]
+    charts = [
+        {
+            "id": "equivalence",
+            "label": "equivalence comparison",
+            "x": "microstructure_model",
+            "ys": ["tb_v", "tb_h"],
+            "required": True,
+        }
+    ]
+
+    repairs = reproduction.repair(question, runs, charts)
+
+    promoted = [
+        repair for repair in repairs
+        if repair.get("field") == "sweep" and repair.get("run_id")
+    ]
+    assert len(promoted) == 2
+    assert all(
+        run["parameters"]["sweep_parameter"] == "density_kg_m3" for run in runs
+    )
+    for run in runs:
+        sweep_start = run["parameters"]["sweep_start"]
+        sweep_stop = run["parameters"]["sweep_stop"]
+        assert sweep_stop - sweep_start >= 20.0
+        assert 1.0 <= sweep_start < sweep_stop <= 917.0
+        assert run["parameters"]["sweep_points"] >= 6
+        assert (
+            run["parameters"].get("radius_m") == 0.0002
+            or run["parameters"].get("corr_length_m") == 0.00015
+        )
+
+
+def test_q4_sweeping_plan_is_not_touched_by_point_run_promotion():
+    question = (
+        "Can sticky hard spheres and exponential autocorrelation functions be "
+        "parameterized to produce equivalent brightness temperatures, and is that "
+        "equivalence transferable across densities and frequencies?"
+    )
+    runs = [
+        {
+            "id": "radius_response",
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "output": "tb",
+                "microstructure_model": "non_sticky_hard_spheres",
+                "sweep_parameter": "radius_m",
+                "sweep_start": 0.0001,
+                "sweep_stop": 0.0003,
+                "sweep_points": 10,
+                "density_kg_m3": 300.0,
+            },
+        },
+        {
+            "id": "corr_response",
+            "model": "smrt",
+            "stage": "main",
+            "parameters": {
+                "output": "tb",
+                "microstructure_model": "exponential",
+                "sweep_parameter": "corr_length_m",
+                "sweep_start": 0.0001,
+                "sweep_stop": 0.0003,
+                "sweep_points": 10,
+                "density_kg_m3": 300.0,
+            },
+        },
+    ]
+    charts = [{"id": "radius", "x": "radius_m", "ys": ["tb_v"], "required": True}]
+    before = [dict(run["parameters"]) for run in runs]
+
+    repairs = reproduction.repair(question, runs, charts)
+
+    assert not any(
+        repair.get("field") == "sweep" and repair.get("run_id")
+        for repair in repairs
+    )
+    assert all(
+        run["parameters"] == before_run
+        for run, before_run in zip(runs, before)
+    )

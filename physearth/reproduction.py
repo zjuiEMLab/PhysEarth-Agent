@@ -760,6 +760,55 @@ def _repair_q4(runs, charts):
             and (run.get("parameters") or {}).get("output") == "tb"
         ],
     }
+    # Providers sometimes submit Q4 as single-point TB runs per microstructure plus a
+    # categorical comparison chart.  The registered plot contract has no categorical
+    # axis, so such a plan loops on "no planned run produces tb_v over
+    # x=microstructure_model" forever.  Q4 itself asks whether the equivalence transfers
+    # across density, so the executable recovery is a shared density response: promote
+    # the point runs to a density sweep around their own authored density (the SHS
+    # baseline above stays a scalar inversion target) and let the generic chart repair
+    # convert the categorical panel into that numeric axis.  Every promotion is auditable
+    # in the review card; no microstructure parameter is invented.
+    point_runs = [
+        run for run in runs
+        if (run.get("parameters") or {}).get("sweep_parameter") in (None, "none")
+        and (run.get("parameters") or {}).get("output") in ("tb", "sigma")
+        and str(run.get("stage") or "main").strip().lower() in ("main", "")
+    ]
+    sweeping_runs = [
+        run for run in runs
+        if (run.get("parameters") or {}).get("sweep_parameter") not in (None, "none")
+        and (run.get("parameters") or {}).get("output") in ("tb", "sigma")
+    ]
+    if charts and len(point_runs) >= 2 and not sweeping_runs:
+        for run in point_runs:
+            spec = run.get("parameters") or {}
+            density = float(spec.get("density_kg_m3") or 300.0)
+            half_span = density * 0.5
+            start = max(1.0, round(density - half_span, 1))
+            stop = min(917.0, round(density + half_span, 1))
+            if stop - start < 20.0:
+                start = max(1.0, density - 100.0)
+                stop = min(917.0, density + 100.0)
+            previous_axis = spec.get("sweep_parameter")
+            spec["sweep_parameter"] = "density_kg_m3"
+            spec["sweep_start"] = start
+            spec["sweep_stop"] = stop
+            spec["sweep_points"] = 12
+            repairs.append(
+                {
+                    "run_id": run.get("id"),
+                    "field": "sweep",
+                    "from": previous_axis or "none",
+                    "to": "density_kg_m3 %s-%s kg m-3" % (start, stop),
+                    "reason": (
+                        "Q4 equivalence must be shown as curves; promote the single-point "
+                        "configuration to a density response around its authored density so "
+                        "the planned comparison chart is executable and the density "
+                        "transferability part of the question is actually measured"
+                    ),
+                }
+            )
     wanted = []
     definitions = (
         ("radius_m", "q4_radius_response", "Brightness-temperature response for scaled spheres", "Sphere radius (m)"),
