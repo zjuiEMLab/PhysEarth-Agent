@@ -125,6 +125,33 @@ def included(tool):
     return any(fnmatch.fnmatch(str(tool or ""), pattern) for pattern in patterns)
 
 
+def _seconds(raw):
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+    return value if value > 0 else 0.0
+
+
+def _env_suffix(tool):
+    return "".join(ch if ch.isalnum() else "_" for ch in str(tool or "")).upper()
+
+
+def tool_deadline_seconds(tool):
+    """Configured wall-clock deadline for one tool call, 0 when none is set.
+
+    A physical-model sweep cannot be interrupted safely inside the process, so the deadline
+    is opt-in rather than automatic: ``PHYSEARTH_TOOL_DEADLINE_S`` bounds every tool and
+    ``PHYSEARTH_TOOL_DEADLINE_<TOOL>`` (upper-case, non-alphanumerics as ``_``) overrides it
+    for one tool.  A call that outruns its deadline gets a structured ``tool_timeout``
+    result, because a legible failure is better than a silent hang.
+    """
+    specific = _seconds(config.get("PHYSEARTH_TOOL_DEADLINE_" + _env_suffix(tool)))
+    if specific:
+        return specific
+    return _seconds(config.get("PHYSEARTH_TOOL_DEADLINE_S"))
+
+
 def reset(session):
     """Clear the repeat chain. A new user question is never a continuation of a loop."""
     if session is None:

@@ -1,4 +1,5 @@
 import ast
+import concurrent.futures
 import json
 import re
 import time
@@ -181,6 +182,100 @@ def _gate_repeat_count(gate_watch, gate_key, fingerprint, progress):
         count = 1
     gate_watch[gate_key] = (fingerprint, progress, count)
     return count
+
+
+def _tool_exception_result(name, exc):
+    """Turn a raised tool exception into one structured result the loop can route.
+
+    The tool layer is supposed to return a status, but an adapter bug, a missing optional
+    dependency or an upstream package that raises on one configuration would otherwise end
+    the whole turn.  Presenting it as an error result keeps the failure legible to the
+    model (it can change parameters or choose another route) and keeps the run trace's
+    "models never fail silently" contract, because the exception is also logged.
+    """
+    detail = "%s: %s" % (type(exc).__name__, exc)
+    return {
+        "status": "terminal_error",
+        "summary": "The %s tool raised %s while executing the call." % (name, detail),
+        "data": {
+            "error_code": "tool_exception",
+            "exception": type(exc).__name__,
+            "detail": str(exc),
+        },
+        "error": detail,
+        "citations": [],
+        "qc": None,
+        "ui": None,
+    }
+
+
+_TOOL_EXECUTOR = None
+
+
+def _tool_executor():
+    """One small pool for deadline-bounded tool calls, created on first use."""
+    global _TOOL_EXECUTOR
+    if _TOOL_EXECUTOR is None:
+        _TOOL_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+            max_workers=4, thread_name_prefix="physearth-tool"
+        )
+    return _TOOL_EXECUTOR
+
+
+def _call_tool(name, arguments, session, state):
+    """Run one tool call and return ``(result, timed_out)``.
+
+    Without a configured deadline the call runs inline, exactly as before. With one, it runs
+    on a worker thread so the turn can report a structured ``tool_timeout`` result when the
+    call outruns it. The worker is not killed: a physical-model sweep cannot be interrupted
+    safely midway, so the caller records that its side effects may land later instead of
+    pretending the work stopped.
+    """
+    deadline = guards.tool_deadline_seconds(name)
+    if deadline <= 0:
+        return (
+            tools.call(
+                name,
+                arguments,
+                owner=session["id"],
+                switches_in=state["switches"],
+                session=session,
+            ),
+            False,
+        )
+    future = _tool_executor().submit(
+        tools.call,
+        name,
+        arguments,
+        owner=session["id"],
+        switches_in=state["switches"],
+        session=session,
+    )
+    try:
+        return future.result(timeout=deadline), False
+    except TimeoutError:
+        return _tool_timeout_result(name, deadline), True
+
+
+def _tool_timeout_result(name, deadline):
+    """The structured result a deadline-bounded call returns when it outruns its limit."""
+    return {
+        "status": "terminal_error",
+        "summary": (
+            "The %s tool did not finish within %.1f s. It may still be running in the "
+            "background, so treat its results as unavailable until verified."
+            % (name, deadline)
+        ),
+        "data": {
+            "error_code": "tool_timeout",
+            "deadline_s": deadline,
+            "may_be_orphaned": True,
+        },
+        "error": "tool timeout after %.1f s" % deadline,
+        "citations": [],
+        "qc": None,
+        "ui": None,
+    }
 
 
 def _requests_tool_bypass(question):
@@ -775,8 +870,11 @@ def stream(question, history=None, model=None, session=None, switches=None):
     # guarding plus the progress markers (plan version, successful runs, figures).  When
     # the same gate fires twice with the identical fingerprint and no marker moved, the
     # previous corrective round changed nothing, so another full rewrite is not worth a
-    # model call: the agent stops with a structured record instead.
-    gate_watch = {}
+    # model call: the agent stops with a structured record instead.  The watch lives in the
+    # session: a new user message does not by itself change the research state, so a gate
+    # that fires again with the same fingerprint and the same markers is the same stuck
+    # state rather than a fresh attempt.
+    gate_watch = session.setdefault("gate_watch", {})
 
     allowed, message = budget.acquire()
     if not allowed:
@@ -1084,17 +1182,36 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         )
                     )
                     yield answer, events, state
-                result = (
-                    approval.declined_result(name, arguments)
-                    if declined
-                    else tools.call(
-                        name,
-                        arguments,
-                        owner=session["id"],
-                        switches_in=state["switches"],
-                        session=session,
+                timed_out = False
+                if declined:
+                    result = approval.declined_result(name, arguments)
+                else:
+                    try:
+                        result, timed_out = _call_tool(name, arguments, session, state)
+                    except Exception as exc:
+                        # A tool that raises must not end the turn.  The failure becomes data
+                        # the model can route around, exactly like a refused or failed call,
+                        # so one broken adapter cannot cost the conversation its context.
+                        result = _tool_exception_result(name, exc)
+                        events.append(
+                            _event(
+                                "tool_exception",
+                                name=name,
+                                detail="%s: %s" % (type(exc).__name__, exc),
+                                arguments=arguments,
+                            )
+                        )
+                        audit.exception("tool_exception", exc, session=session, tool=name)
+                if timed_out:
+                    events.append(
+                        _event(
+                            "tool_timeout",
+                            name=name,
+                            deadline_s=guards.tool_deadline_seconds(name),
+                            may_be_orphaned=True,
+                            detail=result["summary"],
+                        )
                     )
-                )
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
 

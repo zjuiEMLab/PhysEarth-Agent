@@ -151,6 +151,20 @@ Every setting has a working default, so the application starts with no `.env` pr
 | `PHYSEARTH_LOG_MAX_BYTES` | `5242880` | rotating application/global-event log size |
 | `PHYSEARTH_SESSION_LOG_MAX_BYTES` | `10485760` | rotating log size for one research session |
 | `PHYSEARTH_LOG_BACKUP_COUNT` | `5` | old log generations retained |
+| `PHYSEARTH_REPEAT_GUARD_THRESHOLDS` | `3,5,8` | identical-call counts that raise an advisory reminder before the loop stops |
+| `PHYSEARTH_REPEAT_GUARD_EXCLUDE` | empty | tool patterns the guard ignores (they neither count nor reset) |
+| `PHYSEARTH_TOOL_DEADLINE_S` | `0` (off) | per-call wall-clock limit; an overrun returns a structured `tool_timeout` result |
+| `PHYSEARTH_TOOL_DEADLINE_<TOOL>` | empty | per-tool override, e.g. `PHYSEARTH_TOOL_DEADLINE_RUN_MODEL` |
+
+### Loop hygiene
+
+Advisory first, bounded after: an identical tool call is answered with a reminder at each
+threshold so the model can change approach, and only a call that outruns the last threshold
+stops the turn. The same rule holds across turns — a rejected research plan that comes back
+unchanged after a new message is the same attempt rather than a fresh one, so it stops
+instead of spending another full corrective budget. A tool that raises, or one that outruns
+a configured deadline, becomes a structured error result the model can route around rather
+than the end of the turn.
 
 ### Persistent audit logs
 

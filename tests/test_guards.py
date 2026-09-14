@@ -189,3 +189,100 @@ def test_plan_loop_does_not_restart_for_free_after_a_new_message(monkeypatch):
     ]
     assert stops and stops[0]["session_repeats"] == budget + 1
     assert "identical research_plan validation failure" in answer2
+
+
+def test_a_tool_that_raises_becomes_a_result_the_model_can_route(monkeypatch):
+    box = _box()
+    script = [
+        [_call_chunk("list_models", '{"model": "smrt"}')],
+        [_Chunk(_Delta(content="The models tool failed, so I will use what the paper says."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    def boom(name, arguments, **_kwargs):
+        raise RuntimeError("adapter exploded")
+
+    monkeypatch.setattr(agent.tools, "call", boom)
+
+    answer, events, _ = agent.run("list the models", session=box)
+
+    assert any(event["kind"] == "tool_exception" for event in events)
+    tool_messages = [m for turn in sent for m in turn if m.get("role") == "tool"]
+    assert tool_messages and "tool_exception" in tool_messages[-1]["content"]
+    assert answer.startswith("The models tool failed")
+
+
+def test_a_tool_that_outruns_its_deadline_reports_a_structured_timeout(monkeypatch):
+    import time as _time
+
+    monkeypatch.setenv("PHYSEARTH_TOOL_DEADLINE_LIST_MODELS", "0.2")
+    box = _box()
+    script = [
+        [_call_chunk("list_models", '{"model": "smrt"}')],
+        [_Chunk(_Delta(content="The listing timed out, so I will continue with the paper evidence."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    def slow(name, arguments, **_kwargs):
+        _time.sleep(1.5)
+        return {"status": "success", "summary": "registered models", "data": {}}
+
+    monkeypatch.setattr(agent.tools, "call", slow)
+
+    answer, events, _ = agent.run("list the models", session=box)
+
+    timeouts = [event for event in events if event["kind"] == "tool_timeout"]
+    assert timeouts and timeouts[0]["may_be_orphaned"] is True
+    tool_messages = [m for turn in sent for m in turn if m.get("role") == "tool"]
+    assert "tool_timeout" in tool_messages[-1]["content"]
+    assert answer.startswith("The listing timed out")
+
+
+def test_gate_watch_remembers_a_stuck_state_across_turns(monkeypatch):
+    box = _box()
+    box["research_required"] = True
+    box["research"] = {
+        "phase": "approved",
+        "plan_version": 1,
+        "plan": {"runs": [{"id": "r1"}], "charts": [{"id": "c1"}]},
+    }
+    monkeypatch.setattr(agent.research, "allow_model", lambda _session: True)
+    gaps = {
+        "figure_problem": "selected chart c1 has no formal figure",
+        "missing_runs": [],
+        "missing_run_ids": [],
+        "selected_chart": {"id": "c1"},
+        "unreviewed_chart_ids": [],
+        "expected_figure_series": {"c1": ["tb_v", "tb_h"]},
+    }
+    monkeypatch.setattr(agent.research, "execution_gaps", lambda _session: dict(gaps))
+    monkeypatch.setattr(agent.research, "report_warnings", lambda _s, _a: "")
+    monkeypatch.setattr(agent.research, "complete", lambda _s: {"status": "success"})
+
+    # A previous turn already spent one corrective round on this exact state.
+    box["gate_watch"] = {}
+    agent._gate_repeat_count(
+        box["gate_watch"],
+        "research_gate:figure_required",
+        agent._research_gate_fingerprint(box, "research_gate:figure_required", gaps),
+        agent._research_gate_progress(box),
+    )
+
+    script = [
+        [_Chunk(_Delta(content="I will draw the figure now."))],
+        [_Chunk(_Delta(content="still drawing"))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+
+    answer, events, _ = agent.run("produce the formal figure", session=box)
+
+    stops = [
+        event for event in events
+        if event["kind"] == "harness_stop" and event["rule"] == "figure_required"
+    ]
+    assert stops and stops[0]["repeats"] == 2
+    assert len(sent) == 1
+    assert "No corrective round changed the figure state" in answer
