@@ -11,6 +11,7 @@ from physearth import (
     artifacts,
     audit,
     budget,
+    compaction,
     config,
     guards,
     harness,
@@ -484,16 +485,33 @@ def _short_content(content, limit):
     return content[:kept] + "\n...[older context compacted by PhysEarth]..."
 
 
-def _compact_messages(messages):
+def _compact_messages(messages, session=None):
     """Keep a long research run below the provider context window.
 
     The current question and the latest tool round are authoritative. Older turns remain
     useful for conversational continuity, but their full prose and raw tool payloads do not
     need to be sent on every call: the session state already retains citations, handles,
     plans and model outputs, and the agent can re-read a section when needed.
+
+    Relief happens in the cheapest order that can be proven correct: first a deterministic
+    head/tail prune of oversized tool output (no model call, no meaning change, reported to
+    the journal), then the history trimming below.  A model-written summary would only be
+    added once neither of those is enough.
     """
     if not messages:
         return messages
+    pruned, prune_report = compaction.prune_tool_outputs(messages)
+    if prune_report:
+        messages = pruned
+        if session is not None:
+            journal.record(
+                session,
+                "context_pruned",
+                messages=len(prune_report),
+                before_chars=sum(item["before_chars"] for item in prune_report),
+                after_chars=sum(item["after_chars"] for item in prune_report),
+                tools=sorted({item["tool"] for item in prune_report if item["tool"]}),
+            )
     system = dict(messages[0])
     system["content"] = _short_content(system.get("content", ""), 72000)
     last_user = max(
@@ -918,7 +936,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
         state["phase"] = "calling_model"
         yield answer, events, state
 
-        messages = _compact_messages(messages)
+        messages = _compact_messages(messages, session)
 
         completion = None
         requested_tool = forced_tool_name
