@@ -2023,8 +2023,11 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 # The report is one replaceable document.  Do not preserve the status-only
                 # draft in the visible answer while the corrected report is generated.
+                # The revision marks this frame as a replacement rather than an append, so a
+                # consumer that already showed the new text can ignore a stale late frame.
                 segments = []
                 answer = ""
+                state["answer_revision"] = int(state.get("answer_revision") or 0) + 1
                 yield answer, events, state
                 continue
 
@@ -2067,6 +2070,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
             # again after every rewrite and could never be removed by the model.
             segments = []
             answer = ""
+            state["answer_revision"] = int(state.get("answer_revision") or 0) + 1
             yield answer, events, state
             continue
 

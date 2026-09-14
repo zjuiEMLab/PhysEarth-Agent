@@ -155,6 +155,7 @@ Every setting has a working default, so the application starts with no `.env` pr
 | `PHYSEARTH_REPEAT_GUARD_EXCLUDE` | empty | tool patterns the guard ignores (they neither count nor reset) |
 | `PHYSEARTH_TOOL_DEADLINE_S` | `0` (off) | per-call wall-clock limit; an overrun returns a structured `tool_timeout` result |
 | `PHYSEARTH_TOOL_DEADLINE_<TOOL>` | empty | per-tool override, e.g. `PHYSEARTH_TOOL_DEADLINE_RUN_MODEL` |
+| `PHYSEARTH_TOOL_OUTPUT_MAX_CHARS` | `8192` | size past which a tool result is head/tail pruned before history is shortened |
 
 ### Loop hygiene
 

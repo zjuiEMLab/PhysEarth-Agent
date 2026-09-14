@@ -102,6 +102,9 @@ def new_state(session=None, model=None):
         "paper_figures_inspected": session["paper_figures_inspected"],
         "abstracts_seen": session["abstracts_seen"],
         "figures": [],
+        # Monotone revision of the visible answer: a correction replaces the document
+        # rather than appending to it, and a consumer can drop stale frames by it.
+        "answer_revision": 0,
     }
     state.update({name: 0 for name in COUNTERS})
     return state

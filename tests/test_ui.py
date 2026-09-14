@@ -847,3 +847,27 @@ def test_clear_is_wired_as_a_cancellation_boundary_for_streaming_send():
     assert "active_stream_events.append(resume_event)" in source
     assert "cancels=active_stream_events" in source
     assert "clear.click(" in source and "queue=False" in source
+
+
+def test_a_stale_answer_revision_never_repaints_the_conversation(monkeypatch):
+    """A superseded frame is applied to the trace, never to the transcript."""
+    import app
+    from physearth import session as session_state
+
+    box = session_state.new_session(agent.default_model())
+    state = session_state.new_state(box)
+    state["phase"] = "calling_model"
+    state["answer_revision"] = 2
+
+    def fake_stream(*_args, **_kwargs):
+        yield "replacement report", [], dict(state)
+        stale = dict(state)
+        stale["answer_revision"] = 1
+        yield "older draft", [], stale
+
+    monkeypatch.setattr(app.agent, "stream", fake_stream)
+    frames = list(app.respond("question", [], box, agent.default_model()))
+
+    assert "replacement report" in frames[1][3]
+    assert frames[2][3].get("__type__") == "update"
+    assert "older draft" not in str(frames[2][3])

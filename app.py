@@ -239,6 +239,10 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
     # non-empty text on screen until the replacement report actually streams, and never
     # downgrade a populated panel to the empty placeholder mid-turn.
     last_answer = ""
+    # Monotone revision of the replaceable answer, as the agent reports it.  A frame
+    # whose revision is older than what is already on screen is a stale repeat of a
+    # superseded attempt: keep the newer text instead of repainting the old one.
+    applied_revision = 0
     try:
         for answer, events, state in agent.stream(question, seen, model_id, session):
             # A direct ``run_model`` approval resumes the original generator rather than
@@ -262,8 +266,11 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
                 )
                 logged_agent_events += 1
             running = state.get("phase") != "done"
-            frame_answer = answer or last_answer
-            if answer:
+            revision = int(state.get("answer_revision") or 0)
+            stale = revision < applied_revision
+            applied_revision = max(applied_revision, revision)
+            frame_answer = last_answer if stale else (answer or last_answer)
+            if answer and not stale:
                 last_answer = answer
             # The evidence panel is the most expensive thing on the page and the only one
             # holding scroll position, an open tab and decoded figure images. Pushing it
