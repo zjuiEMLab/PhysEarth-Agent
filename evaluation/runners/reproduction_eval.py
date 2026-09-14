@@ -46,6 +46,47 @@ def _safe(value):
     return "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in value)
 
 
+class FatalWorkflowError(RuntimeError):
+    """A configuration error that must stop the whole matrix, not one cell.
+
+    A mistyped task id, an unreadable task file or missing inference credentials is not an
+    experiment result: recording it as a failed cell would hide an operator mistake behind a
+    plausible-looking zero.  Failures *inside* a cell take the other branch and are recorded.
+    """
+
+
+def _failed_cell(task, model, exc, started):
+    """One cell's failure as a result, so the rest of the matrix still runs."""
+    session = agent.new_session(model)
+    return {
+        "task": task.get("id"),
+        "question": task.get("question"),
+        "llm": model,
+        "build": _build_id(),
+        "phase": None,
+        "completed": False,
+        "stop_reason": "runner_error",
+        "runner_error": {"type": type(exc).__name__, "message": str(exc)},
+        "answer": "",
+        "answers": [],
+        "events": [],
+        "event_kinds": {},
+        "figure_count": 0,
+        "figures": [],
+        "paper_figures": list(task.get("paper_figures") or []),
+        "model_calls": session.get("model_calls", 0),
+        "tool_calls": session.get("tool_calls", 0),
+        "review_actions": [],
+        "sections_read": [],
+        "successful_runs": [],
+        "protocol": _protocol_score(session),
+        "tokens": {"total": 0},
+        "elapsed_s": round(time.time() - started, 1),
+        "visual_similarity": {"method": "no figure was produced", "per_figure": [], "mean_best_match": None},
+        "_session": session,
+    }
+
+
 def _jsonable(value):
     if isinstance(value, dict):
         return {str(key): _jsonable(item) for key, item in value.items()}
@@ -338,10 +379,32 @@ def main(argv=None):
     parser.add_argument("--max-turns", type=int, default=8)
     args = parser.parse_args(argv)
     config.load_dotenv()
-    models = args.models or config.llm_models()
-    tasks = [yaml.safe_load(path.read_text(encoding="utf-8")) for path in sorted(TASK_DIR.glob("*.yaml"))]
+    tasks = []
+    for task_path in sorted(TASK_DIR.glob("*.yaml")):
+        task = yaml.safe_load(task_path.read_text(encoding="utf-8"))
+        if not isinstance(task, dict) or not task.get("id") or not task.get("question"):
+            raise FatalWorkflowError("%s must declare both id and question" % task_path.name)
+        tasks.append(task)
+    known_ids = [task["id"] for task in tasks]
     if args.tasks:
+        unknown = [item for item in args.tasks if item not in known_ids]
+        if unknown:
+            raise FatalWorkflowError(
+                "unknown task id(s): %s. Known: %s"
+                % (", ".join(unknown), ", ".join(known_ids) or "none")
+            )
         tasks = [task for task in tasks if task["id"] in args.tasks]
+    if not tasks:
+        raise FatalWorkflowError("no reproduction task matched --tasks %s" % " ".join(args.tasks or []))
+    models = args.models or config.llm_models()
+    if not models:
+        raise FatalWorkflowError("no language model configured: set PHYSEARTH_LLM_MODELS or pass --models")
+    base = str(config.llm_api_base() or "")
+    if not config.has_token() and not any(host in base for host in ("127.0.0.1", "localhost")):
+        raise FatalWorkflowError(
+            "no inference credentials: set PHYSEARTH_LLM_API_KEY (or MODELSCOPE_TOKEN) before "
+            "running the reproduction matrix"
+        )
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     records = []
     total = len(models) * len(tasks)
@@ -356,7 +419,18 @@ def main(argv=None):
                 records.append(json.loads(record_path.read_text(encoding="utf-8")))
                 continue
             print("[%d/%d] running %s / %s" % (index, total, model, task["id"]), flush=True)
-            record = run_cell(task, model, max_turns=args.max_turns)
+            started = time.time()
+            try:
+                record = run_cell(task, model, max_turns=args.max_turns)
+            except FatalWorkflowError:
+                raise
+            except Exception as exc:
+                # A cell that fails is a result; the matrix keeps going and says so.
+                print(
+                    "  !! cell failed: %s: %s" % (type(exc).__name__, exc),
+                    flush=True,
+                )
+                record = _failed_cell(task, model, exc, started)
             path = _persist(record, output_dir)
             stored = json.loads(path.read_text(encoding="utf-8"))
             records.append(stored)
