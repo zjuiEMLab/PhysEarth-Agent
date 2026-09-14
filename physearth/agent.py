@@ -1147,6 +1147,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 if result["status"] == "success" or human_wait:
                     tool_failure_streak = {"name": None, "count": 0, "detail": ""}
+                    # An accepted proposal is progress: the failure chain that remembered
+                    # repeated rejections must not keep counting against the new plan.
+                    if name == "research_plan":
+                        guards.clear_failure(session, name)
                 else:
                     failure_data = result.get("data") or {}
                     failure_code = failure_data.get("error_code")
@@ -1177,6 +1181,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     if name == "research_plan":
                         last_plan_error = result["summary"]
                         last_plan_problems = list(failure_data.get("problems") or [])
+                        # The per-turn budget restarts at every question, so one rejected
+                        # plan could be re-submitted for free after each user message. This
+                        # session-level chain is what remembers the repetition across turns.
+                        guards.remember_failure(session, name, failure_signature)
                         if not session.get("research"):
                             # Resource gates are actionable workflow repairs. Force the
                             # missing read operation instead of asking the model to submit
@@ -1282,7 +1290,15 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         yield answer, events, state
                         return
 
-                if tool_failure_streak["count"] >= harness.max_interventions(tool=name):
+                session_repeats = (
+                    guards.failure_count(session, name, tool_failure_streak.get("signature"))
+                    if name == "research_plan"
+                    else 0
+                )
+                over_turn_budget = tool_failure_streak["count"] >= harness.max_interventions(
+                    tool=name
+                )
+                if over_turn_budget or session_repeats > harness.max_interventions(tool=name):
                     stop_detail = tool_failure_streak["detail"]
                     if name == "research_plan":
                         structured_stop_problems = [
@@ -1302,21 +1318,37 @@ def stream(question, history=None, model=None, session=None, switches=None):
                                 structured_stop_problems,
                                 ensure_ascii=False,
                             )
-                    answer = (
-                        "Stopped after %d consecutive failed %s calls with no state progress. "
-                        "Last error: %s"
-                        % (
-                            tool_failure_streak["count"],
-                            name,
-                            stop_detail,
+                    if over_turn_budget:
+                        answer = (
+                            "Stopped after %d consecutive failed %s calls with no state progress. "
+                            "Last error: %s"
+                            % (
+                                tool_failure_streak["count"],
+                                name,
+                                stop_detail,
+                            )
                         )
-                    )
+                        stop_rule = "no_progress"
+                    else:
+                        # The per-turn budget restarted after the previous message, so this
+                        # is the same rejected proposal coming back rather than new work.
+                        answer = (
+                            "Stopped: the identical research_plan validation failure has now been "
+                            "rejected %d times in this conversation, and the corrective message "
+                            "between turns did not change it. Last error: %s Submit a different "
+                            "plan, change the scientific question, or switch model; repeating the "
+                            "same proposal cannot be accepted."
+                            % (session_repeats, stop_detail)
+                        )
+                        stop_rule = "plan_loop_no_progress"
                     events.append(
                         _event(
                             "harness_stop",
-                            rule="no_progress",
+                            rule=stop_rule,
                             tool=name,
                             reason=answer,
+                            session_repeats=session_repeats,
+                            turn_repeats=tool_failure_streak["count"],
                         )
                     )
                     state["phase"] = "done"

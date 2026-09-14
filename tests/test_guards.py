@@ -118,3 +118,74 @@ def test_repeated_identical_tool_call_gets_reminders_before_the_hard_stop(monkey
         for message in third_request
     )
     assert "identical successful list_models calls" in answer
+
+
+def test_failure_chain_remembers_repeats_and_resets_on_progress():
+    box = _box()
+    assert guards.remember_failure(box, "research_plan", "sig-a") == 1
+    assert guards.remember_failure(box, "research_plan", "sig-a") == 2
+    # A different failure is progress, not a repeat of the first one.
+    assert guards.remember_failure(box, "research_plan", "sig-b") == 1
+    assert guards.failure_count(box, "research_plan", "sig-a") == 0
+    assert guards.failure_count(box, "research_plan") == 1
+
+    guards.clear_failure(box, "research_plan")
+
+    assert guards.failure_count(box, "research_plan") == 0
+    assert "guard_failures" not in box
+
+
+def test_plan_loop_does_not_restart_for_free_after_a_new_message(monkeypatch):
+    from physearth import harness
+
+    box = _box()
+    box["research_required"] = True
+    problem = {
+        "field": "parameter_mapping[0].model_input",
+        "source": "registered_model_declaration",
+        "actual": "density",
+        "expected": "an exact registered model input",
+        "allowed_values": ["density_kg_m3"],
+        "repair": "Replace the unknown input with an exact parameter returned by list_models.",
+        "blocking": True,
+    }
+
+    def failing_call(name, arguments, **_kwargs):
+        assert name == "research_plan"
+        return {
+            "status": "terminal_error",
+            "summary": "Reproduction plan incomplete: 1 parameter mapping issue(s).",
+            "data": {
+                "error_code": "reproduction_evidence_incomplete",
+                "problems": [problem],
+            },
+            "error": "mapping incomplete",
+        }
+
+    monkeypatch.setattr(agent.tools, "call", failing_call)
+    budget = harness.max_interventions(tool="research_plan")
+
+    first = [[_call_chunk("research_plan", '{"action":"propose"}')] for _ in range(budget + 2)]
+    client, _ = _fake_client(first)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    _, events, _ = agent.run("Reproduce the paper result", session=box)
+
+    assert any(
+        event["kind"] == "harness_stop" and event["rule"] == "no_progress"
+        for event in events
+    )
+    assert guards.failure_count(box, "research_plan") == budget
+
+    # The next message must not buy another full corrective budget for the same failure.
+    second = [[_call_chunk("research_plan", '{"action":"propose"}')] for _ in range(budget + 2)]
+    client2, sent2 = _fake_client(second)
+    monkeypatch.setattr(agent, "_client", lambda: client2)
+    answer2, events2, _ = agent.run("Try the plan again", session=box)
+
+    assert len(sent2) == 1
+    stops = [
+        event for event in events2
+        if event["kind"] == "harness_stop" and event["rule"] == "plan_loop_no_progress"
+    ]
+    assert stops and stops[0]["session_repeats"] == budget + 1
+    assert "identical research_plan validation failure" in answer2

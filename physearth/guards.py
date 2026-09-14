@@ -27,6 +27,7 @@ from physearth import config
 DEFAULT_THRESHOLDS = (3, 5, 8)
 DEFAULT_PREVIEW_CHARS = 500
 STATE_KEY = "guard_repeats"
+FAILURE_KEY = "guard_failures"
 
 
 def _thresholds():
@@ -129,6 +130,48 @@ def reset(session):
     if session is None:
         return
     session.pop(STATE_KEY, None)
+
+
+def remember_failure(session, tool, signature):
+    """Count how often one failure signature has repeated in this conversation.
+
+    Failures are counted separately from successful repeats: a validation failure that
+    survives a corrective round and comes back after the next user message is not a fresh
+    attempt.  The per-turn budget restarts at every question, which is what let one
+    rejected Q4 plan be re-submitted across eight turns; this counter is what keeps that
+    memory.  A different signature is progress and starts a new chain.
+    """
+    if session is None:
+        return 0
+    state = session.get(FAILURE_KEY)
+    if not isinstance(state, dict):
+        state = {}
+    entry = state.get(tool)
+    if not isinstance(entry, dict) or entry.get("signature") != signature:
+        entry = {"signature": signature, "count": 0}
+    entry["count"] = int(entry.get("count") or 0) + 1
+    state[tool] = entry
+    session[FAILURE_KEY] = state
+    return entry["count"]
+
+
+def failure_count(session, tool, signature=None):
+    """How many times this exact failure has been seen, 0 when the chain is gone."""
+    entry = ((session or {}).get(FAILURE_KEY) or {}).get(tool)
+    if not isinstance(entry, dict):
+        return 0
+    if signature is not None and entry.get("signature") != signature:
+        return 0
+    return int(entry.get("count") or 0)
+
+
+def clear_failure(session, tool):
+    """Forget a tool's failure chain after the tool actually made progress."""
+    state = (session or {}).get(FAILURE_KEY)
+    if isinstance(state, dict):
+        state.pop(tool, None)
+        if not state:
+            session.pop(FAILURE_KEY, None)
 
 
 def observe(session, tool, arguments):
