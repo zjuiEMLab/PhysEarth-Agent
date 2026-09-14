@@ -102,8 +102,17 @@ DSH 的稳定性不来自某个"防死循环算法"，而来自四条结构性�
 1. ✅ **已实施**（commit `bcbb5d3`）`physearth/guards.py`：分级重复提醒（3/5/8，顾问式，永不阻断）+ 参数规范化同一性 + 按会话计数 + 新问题清零；`agent.py` 在每次工具结果后注入提醒消息与 `harness_warning` 事件；identical-success 硬停移到最后一个阈值之后（第 9 次）。
 2. ✅ **已实施**（commit `b179429`）失败记忆提升到会话级：`guards.remember_failure/failure_count/clear_failure` + `agent.py` 的 `plan_loop_no_progress`——同一 `research_plan` 校验失败跨 turn 复现时不再免费重启 5 次预算，第二次消息里一次相同失败即停并给出改变计划/问题/模型的指引；计划被接受即清除链条。
 3. ✅ **已实施**（commit `8cd4fe5`）gate 监视提升到 session 级：新用户消息本身不改变研究状态，因此同一指纹 + 同一进度标记的 gate 再次触发就是同一个卡住状态，直接停并记录指纹；同时①工具抛异常转为 `tool_exception` 结构化结果（不再结束整轮）②新增可选工具 deadline （`PHYSEARTH_TOOL_DEADLINE_S` / `PHYSEARTH_TOOL_DEADLINE_<TOOL>`，超时返回 `tool_timeout` 并标注 `may_be_orphaned`）。
-4. ✅ **第一片已实施**（commit `69f961a`）`physearth/journal.py`：追加式 JSONL 会话日志（seq 单调 + `verify()` 连续性校验 + 凭据字段过滤 + 写入失败不破坏运行），agent 在工具结果记录点写入事实、并在副作用工具执行前写入并 sync checkpoint。下一步：让 gate 从日志投影而不是直读散装 dict。
-5. ✅ 部分完成 UI：回答面板级去重 + 空帧保留（commit `b9b6341`）；仍缺 `attempt_id + revision` 帧协议。
+4. ✅ **已实施**（commits `69f961a`、`0e43986`）`physearth/journal.py`：追加式 JSONL 会话日志（seq 单调 + `verify()` 连续性校验 + 凭据字段过滤 + 写入失败不破坏运行），agent 在工具结果记录点写入事实、并在副作用工具执行前写入并 sync checkpoint。并新增 DSH 式不变量检查（`journal.drift`）：只报告"日志领先于现场"的
+   不可能方向（日志里有成功 run 而 session 没有、plan_version 倒退），命中则产生 `state_drift` 事件。
+   下一步：让 gate 从日志投影而不是直读散装 dict。
+5. ✅ **已实施**（commit `7c6e7c7`）回答 `revision` 帧协议：agent 在每次"替换式改写"时递增
+   `state["answer_revision"]`，`respond()` 记住已展示的最高 revision，落后帧只应用事件、保留较新文本
+   （等价于 no-op update）。加上此前的面板级去重与空帧保留（`b9b6341`）。
+6. ✅ **已实施**（commit `9fa695c`）评测 runner 区分**致命配置错**与**单 cell 失败**：未知 task id /
+   任务文件缺字段 / 空选择 / 缺凭据（localhost 端点除外）在任何 cell 前抛 `FatalWorkflowError`；
+   单个 cell 抛异常则记为 `stop_reason=runner_error` 的结果并继续，summary 如实反映失败。
+7. ✅ **已实施**（commit `7f06608`）确定性工具输出剪枝（head/tail + 标记 + 报告 + 幂等），在历史裁剪之前
+   运行并把 `context_pruned` 写进日志；`PHYSEARTH_TOOL_OUTPUT_MAX_CHARS` 默认 8192。
 
 ### P1（结构性，1–2 周）
 5. research 投影层：runs/figures/targets 覆盖关系由日志投影；gate 不再直读 dict。
