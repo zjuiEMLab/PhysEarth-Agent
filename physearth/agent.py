@@ -11,6 +11,7 @@ from physearth import (
     audit,
     budget,
     config,
+    guards,
     harness,
     prompt,
     reproduction,
@@ -707,6 +708,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
     )
     session["turns"] = session.get("turns", 0) + 1
     audit.bind(session, turn=session["turns"])
+    # A new question is a new instruction, not a continuation of an earlier loop: the
+    # repeat guard's chain starts empty so a fresh instruction is never counted as a
+    # repetition of the previous one.
+    guards.reset(session)
     audit.emit(
         "agent_turn_started",
         session=session,
@@ -1095,19 +1100,22 @@ def stream(question, history=None, model=None, session=None, switches=None):
 
                 # Unlimited total budgets must not mean unlimited identical work. A model
                 # occasionally redraws the same handles with the generic plot tool forever,
-                # or replays another successful call without changing research state. Stop
-                # that exact signature after three successes; different arguments and any
-                # failed/corrective call remain available without a hard global cap.
+                # or replays another successful call without changing research state. By the
+                # time this fires the repeat guard has already spent its advisory reminders
+                # (3/5/8 by default), so the hard stop sits one call past the last threshold:
+                # a repeat is answered with advice first and only then treated as no
+                # progress. Different arguments and any failed/corrective call stay available.
                 if result["status"] == "success":
                     if repeated_success["signature"] == success_signature:
                         repeated_success["count"] += 1
                     else:
                         repeated_success = {"signature": success_signature, "count": 1}
-                    if repeated_success["count"] >= harness.MAX_INTERVENTIONS:
+                    if repeated_success["count"] >= guards.hard_stop_count():
                         answer = (
                             "Stopped after %d identical successful %s calls with no state "
-                            "progress. Reuse the existing result or call the required planned "
-                            "workflow tool instead of repeating it."
+                            "progress, after the repeat guard had already asked for a change of "
+                            "approach at every threshold. Reuse the existing result or call the "
+                            "required planned workflow tool instead of repeating it."
                             % (repeated_success["count"], name)
                         )
                         events.append(
@@ -1337,6 +1345,26 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         "content": tool_content,
                     }
                 )
+                # Loop hygiene, advisory rather than a veto: when the model repeats one
+                # exact call (same tool, same canonical arguments) the guard names the
+                # repetition so the next request can change approach or finish. Counting
+                # lives in the session, so a loop cannot restart for free after a new
+                # message, and a call with different arguments starts a new chain.
+                reminder = guards.observe(session, name, arguments)
+                if reminder:
+                    events.append(
+                        _event(
+                            "harness_warning",
+                            rule=reminder["rule"],
+                            tool=reminder["tool"],
+                            repeats=reminder["count"],
+                            threshold=reminder["threshold"],
+                            detail=reminder["detail"],
+                        )
+                    )
+                    session_state.bump(state, "boundary_flags")
+                    messages.append({"role": "user", "content": reminder["detail"]})
+                    yield transcript(segments), events, state
                 if (
                     name == "research_plan"
                     and result["status"] == "terminal_error"
