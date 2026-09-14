@@ -103,3 +103,65 @@ def test_agent_journals_tool_results_and_checkpoints_side_effects(tmp_path, monk
     # The checkpoint is written before the side effect, the outcome after it.
     assert kinds[:2] == ["tool_start", "tool_result"]
     assert journal.verify(box["id"])[0] is True
+
+
+def test_drift_reports_state_the_journal_holds_and_the_session_lost(tmp_path, monkeypatch):
+    box = _box(tmp_path, monkeypatch)
+    box["research"] = {"phase": "approved", "plan_version": 3}
+    box["successful_runs"] = [{"planned_run_id": "r1", "status": "success"}]
+    journal.record(
+        box,
+        "tool_result",
+        tool="run_planned_model",
+        status="success",
+        phase="approved",
+        plan_version=3,
+        successful_run_ids=["r1"],
+    )
+    assert journal.drift(box) == []
+
+    # Losing the recorded run is exactly the drift that used to look like "the run is still
+    # missing" forever: the journal says it happened, the live state does not hold it.
+    box["successful_runs"] = []
+    findings = journal.drift(box)
+    assert findings and "r1" in findings[0]
+
+    # A session that moved *forward* is ordinary progress, never drift.
+    box["successful_runs"] = [{"planned_run_id": "r1", "status": "success"}]
+    box["research"]["plan_version"] = 4
+    assert journal.drift(box) == []
+
+
+def test_drift_reports_a_session_that_went_backwards_in_plan_version(tmp_path, monkeypatch):
+    box = _box(tmp_path, monkeypatch)
+    box["research"] = {"phase": "approved", "plan_version": 5}
+    journal.record(box, "tool_result", tool="research_plan", status="success", plan_version=5)
+
+    box["research"]["plan_version"] = 2
+
+    findings = journal.drift(box)
+    assert findings and "v005" in findings[0] and "v002" in findings[0]
+
+
+def test_agent_reports_no_drift_in_a_normal_run(tmp_path, monkeypatch):
+    box = _box(tmp_path, monkeypatch)
+    script = [
+        [_call_chunk("list_models", '{"model": "smrt"}')],
+        [_Chunk(_Delta(content="Listed."))],
+    ]
+    client, _ = _fake_client(script)
+    monkeypatch.setattr(agent, "_client", lambda: client)
+    monkeypatch.setattr(
+        agent.tools,
+        "call",
+        lambda name, arguments, **_kwargs: {
+            "status": "success",
+            "summary": "registered models",
+            "data": {},
+        },
+    )
+
+    _, events, _ = agent.run("list the models", session=box)
+
+    assert not [event for event in events if event["kind"] == "state_drift"]
+    assert journal.latest(box["id"])["tool"] == "list_models"

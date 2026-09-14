@@ -1233,16 +1233,24 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 # but every decision they make is now also recorded in order, so the same
                 # facts can be projected later instead of re-derived from scattered state.
                 project = session.get("research") or {}
-                journal.record(
+                result_data = result.get("data") or {}
+                recorded = journal.record(
                     session,
                     "tool_result",
                     tool=name,
                     status=result["status"],
-                    error_code=(result.get("data") or {}).get("error_code"),
+                    error_code=result_data.get("error_code"),
                     phase=project.get("phase"),
                     plan_version=project.get("plan_version"),
                     summary=str(result.get("summary") or "")[:400],
                     successful_runs=len(session.get("successful_runs") or ()),
+                    successful_run_ids=sorted(
+                        str(item.get("planned_run_id"))
+                        for item in (session.get("successful_runs") or ())[-20:]
+                        if item.get("planned_run_id")
+                    ),
+                    planned_run_id=result_data.get("planned_run_id"),
+                    planned_chart_id=result_data.get("planned_chart_id"),
                     figures=len(
                         [
                             item for item in session.get("figures") or ()
@@ -1250,6 +1258,19 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         ]
                     ),
                 )
+                if recorded:
+                    # The invariant half of "the log is the source of truth": report state
+                    # the journal says happened but the session no longer holds.  Advisory,
+                    # because the run trace is where a human first looks for this.
+                    findings = journal.drift(session)
+                    if findings:
+                        events.append(
+                            _event(
+                                "state_drift",
+                                rule="journal_projection",
+                                detail="; ".join(findings),
+                            )
+                        )
 
                 # Unlimited total budgets must not mean unlimited identical work. A model
                 # occasionally redraws the same handles with the generic plot tool forever,
