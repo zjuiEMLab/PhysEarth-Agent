@@ -14,6 +14,7 @@ from physearth import (
     config,
     guards,
     harness,
+    journal,
     prompt,
     reproduction,
     research,
@@ -210,6 +211,10 @@ def _tool_exception_result(name, exc):
 
 
 _TOOL_EXECUTOR = None
+# Tools whose execution can leave something behind: a result handle, a file, a figure.
+# Their start is journalled and synced first, so an interrupted run can be explained after
+# a restart instead of being guessed at.
+SIDE_EFFECT_TOOLS = ("run_model", "run_planned_model", "plot_planned_chart")
 
 
 def _tool_executor():
@@ -232,6 +237,11 @@ def _call_tool(name, arguments, session, state):
     pretending the work stopped.
     """
     deadline = guards.tool_deadline_seconds(name)
+    if name in SIDE_EFFECT_TOOLS:
+        # Checkpoint before the side effect, not after: the entry is what makes "the run
+        # was interrupted here" answerable after a restart.
+        journal.record(session, "tool_start", tool=name)
+        journal.flush(session)
     if deadline <= 0:
         return (
             tools.call(
@@ -716,7 +726,11 @@ def _record_tool_result(name, result, state, events):
         if result["status"] == "success":
             if not data.get("reused"):
                 session_state.bump(state, "model_runs")
-            state["models_run"].add("%s@%s" % (data["model"], data["version"]))
+            # A result without a model identity is not evidence: record what the adapter
+            # actually reported instead of raising on a key the tool did not send.
+            model_name, model_version = data.get("model"), data.get("version")
+            if model_name and model_version:
+                state["models_run"].add("%s@%s" % (model_name, model_version))
             # A cached physical result still fulfils the *current* planned run.  Previously
             # reused results were deliberately not counted as new computations, but their
             # planned_run_id was never registered either.  execution_gaps then requested the
@@ -1214,6 +1228,28 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     )
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
+                # Append the fact that decides what happens next.  This is the first half of
+                # the "log is the source of truth" change: the gates still read the session,
+                # but every decision they make is now also recorded in order, so the same
+                # facts can be projected later instead of re-derived from scattered state.
+                project = session.get("research") or {}
+                journal.record(
+                    session,
+                    "tool_result",
+                    tool=name,
+                    status=result["status"],
+                    error_code=(result.get("data") or {}).get("error_code"),
+                    phase=project.get("phase"),
+                    plan_version=project.get("plan_version"),
+                    summary=str(result.get("summary") or "")[:400],
+                    successful_runs=len(session.get("successful_runs") or ()),
+                    figures=len(
+                        [
+                            item for item in session.get("figures") or ()
+                            if not item.get("preview")
+                        ]
+                    ),
+                )
 
                 # Unlimited total budgets must not mean unlimited identical work. A model
                 # occasionally redraws the same handles with the generic plot tool forever,
