@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Option C — reorganisation plan</title>
+<style>
+  :root{
+    --bg:#fbfaf8; --panel:#ffffff; --ink:#1c1b19; --muted:#6b6862; --line:#e3ded6;
+    --accent:#9a5b2c; --accent-soft:#f4ece3; --good:#2f6b46; --warn:#8a6d1f; --bad:#a13c2f;
+    --code-bg:#f5f2ed;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#16151a; --panel:#1e1d23; --ink:#eceae5; --muted:#a09c95; --line:#33313a;
+      --accent:#d99a63; --accent-soft:#2a2229; --good:#7fc39a; --warn:#d8bd72; --bad:#e2887a;
+      --code-bg:#121116;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1140px;margin:0 auto;padding:56px 28px 120px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:16px}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:2.3rem;line-height:1.15;margin:0 0 10px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:1.05rem;max-width:74ch;margin:0}
+  .statline{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;font-size:.82rem}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--muted);background:var(--panel)}
+  .chip b{color:var(--ink)}
+  h2{font-family:Georgia,serif;font-size:1.5rem;margin:54px 0 6px;letter-spacing:-.01em}
+  h2 .num{color:var(--accent);font-size:.85rem;font-family:ui-monospace,Menlo,monospace;
+    display:block;margin-bottom:6px;letter-spacing:.14em;text-transform:uppercase}
+  h3{font-size:1.05rem;margin:26px 0 8px}
+  p{max-width:78ch}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  code{background:var(--code-bg);padding:.1em .38em;border-radius:4px;font-size:.87em}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:15px 17px;overflow-x:auto;font-size:.8rem;line-height:1.6}
+  pre .c{color:var(--muted)} pre .n{color:var(--accent)} pre .g{color:var(--good)} pre .r{color:var(--bad)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin:18px 0}
+  .callout{border-left:3px solid var(--accent);background:var(--accent-soft);padding:14px 20px;
+    border-radius:0 10px 10px 0;margin:18px 0}
+  .callout p{margin:0}
+  .warnbox{border-left:3px solid var(--warn);background:var(--panel);padding:14px 20px;
+    border-radius:0 10px 10px 0;margin:18px 0;border-top:1px solid var(--line);
+    border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .tablewrap{overflow-x:auto;margin:14px 0}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:640px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  td.y{color:var(--good);font-weight:600} td.n{color:var(--bad)} td.p{color:var(--warn)}
+  td.mono{font-family:ui-monospace,monospace;font-size:.83rem}
+  .phase{border:1px solid var(--line);border-radius:14px;background:var(--panel);margin:20px 0;overflow:hidden}
+  .phase > header{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;
+    align-items:baseline;gap:14px;flex-wrap:wrap;background:linear-gradient(0deg,transparent,var(--accent-soft))}
+  .phase h3{margin:0;font-size:1.15rem;font-family:Georgia,serif}
+  .phase .badge{font-family:ui-monospace,monospace;font-size:.72rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 10px}
+  .phase .est{margin-left:auto;font-size:.82rem;color:var(--muted)}
+  .phase .body{padding:16px 22px 22px}
+  .vf{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}
+  .vf h4{margin:0 0 6px;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .vf p{margin:0;font-size:.92rem}
+  ul.tight{margin:8px 0 0;padding-left:20px} ul.tight li{margin-bottom:5px;font-size:.94rem}
+  footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>Option C — the reorganisation plan</h1>
+  <p class="sub">Backend/frontend split, layered prompts, a user-facing <code>models/</code> and a
+  consolidated <code>evaluation/</code>. Re-measured against <code>main</code> as it stands after the
+  pull, with per-phase verification and rollback.</p>
+  <div class="statline">
+    <span class="chip">HEAD <b>f111c34</b> · fast-forwarded 6 commits</span>
+    <span class="chip"><b>374</b> tracked files</span>
+    <span class="chip"><b>17,457</b> lines of Python</span>
+    <span class="chip">45 modules · 81 edges · <b>0 cycles</b></span>
+    <span class="chip">baseline <b>301 pass / 1 fail / 1 skip</b></span>
+  </div>
+</header>
+
+<h2><span class="num">Section 00</span>What the pull changed, and why it matters here</h2>
+<p>The six incoming commits added a capability gate, the figure-inspection workflow and canonical
+evaluation tasks. They also grew the four files this plan is about to split:</p>
+<div class="tablewrap"><table>
+<tr><th>File</th><th>Before pull</th><th>After pull</th><th>Change</th></tr>
+<tr><td class="mono">physearth/research.py</td><td>3,552</td><td>3,894</td><td class="p">+342</td></tr>
+<tr><td class="mono">physearth/tools.py</td><td>2,247</td><td>2,579</td><td class="p">+332</td></tr>
+<tr><td class="mono">physearth/agent.py</td><td>1,681</td><td>1,770</td><td class="p">+89</td></tr>
+<tr><td class="mono">physearth/evals.py</td><td>790</td><td>1,086</td><td class="p">+296</td></tr>
+<tr><td class="mono">total Python</td><td>15,388</td><td>17,457</td><td class="p">+2,069 (+13%)</td></tr>
+</table></div>
+<p>Two things follow. First, every structural fact the plan depends on was re-verified against the new
+tree and all of them still hold — the graph is still acyclic, <code>app.py</code> is still the only file
+importing Gradio, the <code>pywatershed → config</code> back-edge and the private
+<code>_ensure_smrt_importable</code> import are both still there. Second, <b>13% growth in a single
+pull, concentrated in exactly the files that are already too large</b>, is the argument for doing
+Phase 2 sooner rather than later: every week of delay makes the same split more expensive.</p>
+
+<div class="warnbox">
+<p><b>Pre-flight, before any of this: the venv has drifted from the lockfile.</b> <code>pymupdf</code> is
+declared in <code>pyproject.toml</code> and present in <code>uv.lock</code> but is not installed, and
+<code>gradio 6.22.0</code> is installed against a pinned <code>6.17.3</code>. That is the whole reason
+for the one failing test — <code>tools.py:116</code> does <code>import fitz</code> for figure
+inspection, so <code>test_bundled_smrt_figures_are_readable…</code> falls back and never sees
+<code>"Density"</code>. It is not a code defect and not caused by the pull. Run
+<code>uv sync --extra dev</code> and re-record the baseline before Phase 1; a migration whose premise is
+"green at every phase" needs a green starting point.</p>
+</div>
+
+<h2><span class="num">Section 01</span>The target</h2>
+<pre>PhysEarth-Agent/
+├─ README.md  AGENTS.md  NOTICE  LICENSE  pyproject.toml  uv.lock  .env.example
+├─ <span class="n">app.py</span>                      <span class="c">3-line shim — satisfies deployspec entry_file: app.py</span>
+│
+├─ <span class="n">frontend/</span>
+│   ├─ studio.py               <span class="c">← app.py (961) — Gradio blocks, events, wiring only</span>
+│   ├─ views/                  <span class="c">← physearth/ui/render.py (1,881), split by panel</span>
+│   │   answer.py  trace.py  evidence.py  charts.py  review.py  registration.py
+│   ├─ theme.py                <span class="c">← physearth/ui/theme.py</span>
+│   └─ static/                 <span class="c">← assets/  (ui.css, ui.js, fonts/)</span>
+│
+├─ <span class="n">backend/physearth/</span>          <span class="c">the installable package. never imports gradio</span>
+│   ├─ api.py                  <span class="g">the only module frontend/ may import</span>
+│   ├─ paths.py                <span class="g">single resolver for knowledge/ models/ prompts/</span>
+│   ├─ agent/                  <span class="c">← agent.py (1,770)</span>
+│   │   __main__.py  loop.py  stream.py  messages.py  faults.py
+│   ├─ research/               <span class="c">← research.py (3,894)</span>
+│   │   plan.py  repair.py  review.py  coverage.py  protocol.py
+│   ├─ tools/                  <span class="c">← tools.py (2,579)</span>
+│   │   literature.py  models.py  charts.py  data.py  registration.py
+│   ├─ harness/                <span class="c">the guarantees, gathered</span>
+│   │   validation.py  approval.py  audit.py  budget.py  untrusted.py
+│   │   results.py  switches.py  harness.py
+│   ├─ registry/               <span class="c">← physearth/models/{registry,contract,check}.py</span>
+│   ├─ corpus/                 <span class="c">← knowledge.py  live.py  reference.py  model_guidelines.py</span>
+│   ├─ ingest/  schemas/  plotting.py  session.py  config.py
+│   ├─ artifacts.py  github_models.py  diagnostics.py  evaluation.py  evals.py
+│   └─ prompts.py              <span class="c">assembles ../../prompts/ — no prompt text in Python</span>
+│
+├─ <span class="n">prompts/</span>                    <span class="c">Section 04 — L0…L5, one file per level</span>
+├─ <span class="n">models/</span>                     <span class="c">Section 05 — registration, for reading</span>
+├─ <span class="n">evaluation/</span>                 <span class="c">Section 06 — one entry point, one taxonomy</span>
+│
+├─ knowledge/                  <span class="c">literature + figures + reference data (unchanged)</span>
+├─ docs/                       <span class="c">← TODO.md, tasks/*.md, evaluation/*.html</span>
+├─ tests/                      <span class="c">mirrors backend/ — zero sys.path inserts</span>
+└─ scripts/
+</pre>
+
+<h2><span class="num">Section 02</span>Move map</h2>
+<p>Every current path and where it lands. Nothing in the repository is unaccounted for.</p>
+<div class="tablewrap"><table>
+<tr><th>From</th><th>To</th><th>Phase</th><th>Note</th></tr>
+<tr><td class="mono">app.py</td><td class="mono">frontend/studio.py + root shim</td><td>3</td><td>deployspec keeps working</td></tr>
+<tr><td class="mono">assets/</td><td class="mono">frontend/static/</td><td>3</td><td>update <code>gr.Blocks</code> asset paths, <code>test_ui.py</code></td></tr>
+<tr><td class="mono">physearth/ui/render.py</td><td class="mono">frontend/views/*.py</td><td>3</td><td>1,881 lines → 6 files</td></tr>
+<tr><td class="mono">physearth/ui/theme.py</td><td class="mono">frontend/theme.py</td><td>3</td><td>—</td></tr>
+<tr><td class="mono">physearth/{agent,research,tools}.py</td><td class="mono">backend/physearth/{agent,research,tools}/</td><td>2</td><td>package + re-exporting <code>__init__</code></td></tr>
+<tr><td class="mono">physearth/{validation,approval,audit,budget,<br>untrusted,results,switches,harness}.py</td><td class="mono">backend/physearth/harness/</td><td>4</td><td>the guarantees, in one place</td></tr>
+<tr><td class="mono">physearth/models/{registry,contract,check}.py</td><td class="mono">backend/physearth/registry/</td><td>6</td><td>mechanism ≠ content</td></tr>
+<tr><td class="mono">physearth/models/bundled/</td><td class="mono">models/bundled/</td><td>6</td><td>needs wheel force-include</td></tr>
+<tr><td class="mono">physearth/{knowledge,live,reference,<br>model_guidelines}.py</td><td class="mono">backend/physearth/corpus/</td><td>4</td><td>3 hard-coded <code>parent.parent</code> jumps → <code>paths.py</code></td></tr>
+<tr><td class="mono">physearth/prompt.py</td><td class="mono">prompts/*.md + backend/physearth/prompts.py</td><td>5</td><td>Section 04</td></tr>
+<tr><td class="mono">physearth/{config,session,plotting,ingest,<br>schemas,artifacts,github_models,<br>diagnostics,evaluation,evals}</td><td class="mono">backend/physearth/ (same names)</td><td>4</td><td>path move only</td></tr>
+<tr><td class="mono">examples/toy_model/</td><td class="mono">models/examples/toy_model/</td><td>6</td><td><code>test_models.py</code>, <code>test_evaluation_workbench.py</code> repoint</td></tr>
+<tr><td class="mono">evaluation/tasks/ + evaluation/tiers/</td><td class="mono">evaluation/tiers/&lt;tier&gt;/{manifest,tasks/}</td><td>6</td><td>two taxonomies → one</td></tr>
+<tr><td class="mono">evaluation/prompts/*.yaml</td><td class="mono">prompts/profiles/</td><td>5</td><td>becomes L5</td></tr>
+<tr><td class="mono">knowledge/skills/</td><td class="mono">prompts/skills/</td><td>5</td><td>becomes L4</td></tr>
+<tr><td class="mono">evaluation/*.html, REPRODUCTION_EVAL.md</td><td class="mono">docs/evaluation/</td><td>1</td><td>design notes, not runnable</td></tr>
+<tr><td class="mono">TODO.md (untracked), tasks/*.md</td><td class="mono">docs/</td><td>1</td><td><code>tasks/</code> collides with <code>evaluation/tasks/</code></td></tr>
+<tr><td class="mono">knowledge/{literature,reference,model_guidelines}</td><td class="mono">unchanged</td><td>—</td><td>incl. the new <code>smrt-v1/figures/</code></td></tr>
+</table></div>
+
+<h2><span class="num">Section 03</span>The six phases</h2>
+<p>Each phase is one commit on a branch, moved with <code>git mv</code> so blame survives, and ends with
+the full suite passing and the Studio launching. Rollback is always <code>git revert</code> of a single
+commit.</p>
+
+<div class="phase">
+  <header><span class="badge">Phase 1</span><h3>Clean, document, no code moves</h3><span class="est">0.5 d</span></header>
+  <div class="body">
+<pre><span class="c"># untracked junk already ignored by .gitignore — verify, then remove</span>
+rm -rf dummy/ __pycache__/ .DS_Store
+mkdir -p docs/evaluation
+git mv tasks/*.md docs/
+git mv evaluation/COMPETITION_EVAL_PLAN.html evaluation/EVALUATION_PROPOSAL.html docs/evaluation/
+git mv evaluation/REPRODUCTION_EVAL.md docs/evaluation/
+git add TODO.md &amp;&amp; git mv TODO.md docs/          <span class="c"># currently untracked</span>
+<span class="c"># write AGENTS.md: canonical commands, entry points, the two invariants of Phase 3</span>
+</pre>
+    <p>This also retires the <code>tasks/</code> ↔ <code>evaluation/tasks/</code> name collision, which
+    is the single most confusing thing in the current tree.</p>
+    <div class="vf"><h4>Verify</h4><p><code>pytest tests -q</code> — must match the Phase 0 baseline
+    exactly. No import touched, so any change here is a real regression.</p></div>
+  </div>
+</div>
+
+<div class="phase">
+  <header><span class="badge">Phase 2</span><h3>Split the four oversized modules, in place</h3><span class="est">1.5 d</span></header>
+  <div class="body">
+    <p>Each becomes a package whose <code>__init__.py</code> re-exports every public name, so
+    <em>no import anywhere else in the repository changes</em>. This is the highest-value, lowest-risk
+    phase, and it is worth doing even if you stop here.</p>
+<pre>physearth/research.py  3,894 → research/{plan,repair,review,coverage,protocol}.py
+physearth/tools.py     2,579 → tools/{literature,models,charts,data,registration}.py
+physearth/agent.py     1,770 → agent/{loop,stream,messages,faults}.py + __main__.py
+physearth/ui/render.py 1,881 → ui/views/{answer,trace,evidence,charts,review,registration}.py
+</pre>
+    <p><code>agent/__main__.py</code> is new, not a move: it gives you
+    <code>python -m physearth.agent "question" --model smrt</code> headless, which is the
+    "standalone script" requirement and also the fastest way to reproduce a bug without the UI.</p>
+    <div class="vf"><h4>Verify</h4><p><code>pytest tests -q</code> green with <b>zero</b> import edits
+    outside the four split directories — <code>git diff --stat</code> proves it. Plus
+    <code>python -m physearth.agent --help</code>.</p></div>
+  </div>
+</div>
+
+<div class="phase">
+  <header><span class="badge">Phase 3</span><h3>Lift the frontend, install the invariants</h3><span class="est">1.0 d</span></header>
+  <div class="body">
+<pre>git mv app.py frontend/studio.py
+git mv assets frontend/static
+git mv physearth/ui/views frontend/views
+git mv physearth/ui/theme.py frontend/theme.py
+cat &gt; app.py &lt;&lt;'PY'
+from frontend.studio import demo
+if __name__ == "__main__":
+    demo.launch()
+PY
+</pre>
+    <p>Then collapse the coupling. <code>ui/render.py</code> currently imports 8 backend modules
+    (<code>agent, approval, budget, knowledge, live, models, reference, research</code>), three of them
+    lazily inside functions; <code>studio.py</code> calls roughly 25 backend functions. All of it goes
+    through one new <code>backend/physearth/api.py</code>.</p>
+    <div class="callout"><p><b>The two invariants, as tests:</b> no file under <code>backend/</code> may
+    import <code>gradio</code>; no file under <code>frontend/</code> may import
+    <code>physearth.research</code>, <code>physearth.tools</code> or <code>physearth.agent</code>
+    directly. Three lines each, and they are what stops the split eroding.</p></div>
+    <div class="vf"><h4>Verify</h4><p><code>pytest tests -q</code>; the two new invariant tests;
+    <code>python app.py</code> serves and renders. <code>test_ui.py</code> needs its
+    <code>assets/</code> and <code>app.py</code> paths updated — 6 call sites.</p></div>
+  </div>
+</div>
+
+<div class="phase">
+  <header><span class="badge">Phase 4</span><h3>Move the package under <code>backend/</code></h3><span class="est">1.0 d</span></header>
+  <div class="body">
+<pre>mkdir backend &amp;&amp; git mv physearth backend/physearth
+<span class="c"># pyproject.toml</span>
+[tool.hatch.build.targets.wheel]
+packages = ["backend/physearth"]
+</pre>
+    <p>Two jobs beyond the move. <b>One</b>: <code>backend/physearth/paths.py</code> replaces the three
+    hard-coded <code>Path(__file__).resolve().parent.parent / "knowledge"</code> constants in
+    <code>knowledge.py</code>, <code>reference.py</code> and <code>model_guidelines.py</code>. Those
+    fail <em>silently</em> — an empty corpus, no exception — so they must resolve through one function
+    that works from a checkout and from an installed wheel. <b>Two</b>: delete the 20
+    <code>sys.path.insert</code> calls across <code>evaluation/</code> and <code>tests/</code>, which
+    become unnecessary once the package is installed with <code>uv sync</code>.</p>
+    <div class="vf"><h4>Verify</h4><p><code>uv build</code>, then in a clean venv:
+    <code>pip install dist/*.whl &amp;&amp; python -c "import physearth; physearth.paths.knowledge()"</code>
+    and confirm the corpus is non-empty. Plus <code>python evaluation/runners/tier0.py</code> reproducing
+    its committed JSON. Do not accept a passing <code>pytest</code> as proof here — the checkout masks
+    a broken wheel.</p></div>
+  </div>
+</div>
+
+<div class="phase">
+  <header><span class="badge">Phase 5</span><h3>Extract prompts into levels</h3><span class="est">1.0 d</span></header>
+  <div class="body">
+    <p>The mapping is in Section 04. <code>prompts.py</code> keeps <code>build(state)</code>'s current
+    assembly order and switch behaviour exactly; only the text moves out to files.</p>
+    <div class="callout"><p><b>Do this before deleting anything:</b> capture
+    <code>prompt.build(state)</code> output for every combination of the three switches
+    (<code>literature</code>, <code>capability</code>, online on/off) as fixtures, then assert the new
+    assembler reproduces them <b>byte for byte</b>. A prompt reorganisation that quietly becomes a
+    behaviour change would invalidate every committed evaluation record in
+    <code>evaluation/results/</code>.</p></div>
+    <div class="vf"><h4>Verify</h4><p>The byte-identical fixture test, then
+    <code>pytest tests/test_switches.py tests/test_evals.py -q</code>, then one live agent run compared
+    against a cached record.</p></div>
+  </div>
+</div>
+
+<div class="phase">
+  <header><span class="badge">Phase 6</span><h3>Consolidate <code>models/</code> and <code>evaluation/</code></h3><span class="est">1.0 d</span></header>
+  <div class="body">
+    <p>Sections 05 and 06. The registry mechanism moves to
+    <code>backend/physearth/registry/</code>; the cards, template and examples come to top-level
+    <code>models/</code>. In <code>evaluation/</code>, the two taxonomies merge and a single
+    <code>run.py</code> replaces 12 separately-invoked runners.</p>
+    <div class="vf"><h4>Verify</h4><p><code>python evaluation/run.py tier0</code> and
+    <code>python evaluation/run.py registration</code> must reproduce
+    <code>evaluation/results/tier0.json</code> and <code>model_registration.json</code> byte-identically
+    — these are deterministic and need no LLM, so any drift is a real defect. Then rebuild the wheel and
+    confirm <code>registry</code> still finds all six bundled models from an installed wheel.</p></div>
+  </div>
+</div>
+
+<h2><span class="num">Section 04</span>Prompt levels — mapped to what is in <code>prompt.py</code> today</h2>
+<p>Re-read after the pull; <code>prompt.py</code> is now 364 lines and <code>build()</code> assembles in
+this order.</p>
+<div class="tablewrap"><table>
+<tr><th>Level</th><th>New file</th><th>Current source</th><th>Edited by</th></tr>
+<tr><td><b>L0</b> identity</td><td class="mono">prompts/00_identity.md</td><td class="mono">ROLE:5, STYLE:185</td><td>almost never</td></tr>
+<tr><td><b>L1</b> policy</td><td class="mono">prompts/10_policy.md<br>11_online.md</td><td class="mono">CITATION_RULES:152, ABSTRACT_RULE:144,<br>ONLINE_RULES:128, untrusted.RULE</td><td>a scientific decision</td></tr>
+<tr><td><b>L2</b> workflow</td><td class="mono">prompts/20_workflow.md<br>21_research.md, 22_no_corpus.md</td><td class="mono">WORKFLOW:15, RESEARCH_WORKFLOW:46,<br>TRIGGERS:220, NO_CORPUS_*:295,310</td><td>a UX decision</td></tr>
+<tr><td><b>L3</b> context</td><td><em>generated in</em> <code class="mono">prompts.py</code></td><td class="mono">models_section():191, reference_section():212,<br>catalogue_section():251, skills_section():244,<br>status_block():265, held_block()</td><td>every turn</td></tr>
+<tr><td><b>L4</b> skills</td><td class="mono">prompts/skills/*.md</td><td class="mono">knowledge/skills/ — 3 method notes</td><td>per method</td></tr>
+<tr><td><b>L5</b> profiles</td><td class="mono">prompts/profiles/*.yaml</td><td class="mono">evaluation/prompts/p0,p1,p3 +<br>evaluation/configs/*.yaml</td><td>per experiment</td></tr>
+</table></div>
+<p>The payoff past tidiness: <code>build()</code>'s three ablation branches stop being
+<code>if flags["literature"]</code> in Python and become a declaration of which levels loaded — which is
+also what a run record should carry for the evaluation to be reproducible from the record alone.</p>
+
+<h2><span class="num">Section 05</span><code>models/</code></h2>
+<pre>models/
+├─ README.md            <span class="c">register a model in five minutes; demo vs local tier; PHYSEARTH_MODEL_PATH</span>
+├─ CONTRACT.md          <span class="c">the card schema in prose, beside the JSON schema it describes</span>
+├─ TEMPLATE/            <span class="g">copy this → model_card.yaml + adapter.py, TODOs marked</span>
+├─ examples/toy_model/  <span class="c">← examples/</span>
+└─ bundled/             <span class="c">← physearth/models/bundled/ — 6 models</span>
+</pre>
+<div class="warnbox"><p><b>The one real technical risk in this plan.</b> <code>models/</code> now sits
+outside the package, so the wheel must <code>force-include</code> it and
+<code>registry.BUNDLED_DIR</code> must resolve through <code>paths.py</code> in both a checkout and an
+installed wheel. Verified by building and importing from a clean venv, never by reading the config. If
+you would rather not carry it: leave <code>bundled/</code> inside the package and give top-level
+<code>models/</code> only the README, contract, template and examples. Slightly less tidy, zero
+packaging risk — say which you want and I will plan Phase 6 accordingly.</p></div>
+
+<h2><span class="num">Section 06</span><code>evaluation/</code></h2>
+<p>Upstream already removed <code>tasks/reproduction/</code> in this pull, which helps. What remains is
+the parallel <code>tasks/tier*</code> ↔ <code>tiers/t*_*</code> split, 12 runners, and 7 loose files at
+the folder root.</p>
+<pre>evaluation/
+├─ README.md         <span class="c">one page: what each tier asks, how to run it</span>
+├─ REPORT.md         <span class="c">generated</span>
+├─ run.py            <span class="g">python evaluation/run.py tier0 | agent | registration | report</span>
+├─ tiers/
+│   t0_registry/     <span class="c">manifest.yaml + tasks/*.yaml + README.md</span>
+│   t1_onboarding/   t2_reconstruction/   t3_reproduction/   probe/
+├─ metrics/  configs/  fixtures/  provenance/  demos/
+└─ results/          <span class="c">committed evidence — untouched</span>
+</pre>
+<p>Three changes carry the value: <b>one taxonomy</b> (a tier folder owns its manifest, tasks and
+README), <b>one entry point</b> (<code>run.py</code>; the 12 runners become an implementation folder),
+<b>no <code>sys.path</code> inserts</b>. No task, metric, config or committed result is deleted.</p>
+
+<h2><span class="num">Section 07</span>Decisions taken during the work, for D-compatibility</h2>
+<p>These cost nothing now and cut a later two-package split from days to hours. Carried forward from the
+C-vs-D analysis.</p>
+<div class="tablewrap"><table>
+<tr><th>Decision</th><th>Action</th><th>Phase</th></tr>
+<tr><td>Dependency direction</td><td>Cut <code>models/bundled/pywatershed/adapter.py:53</code>'s
+<code>from physearth import config</code>; pass the state directory in as an argument. It is the only
+edge from a model back into the package.</td><td>6</td></tr>
+<tr><td>No private cross-boundary imports</td><td>Replace <code>diagnostics.py:140</code>'s import of
+<code>_ensure_smrt_importable</code> with a declared <code>warmup()</code> hook on the registry
+contract.</td><td>6</td></tr>
+<tr><td>A real public surface</td><td><code>api.py</code> as the frontend's only entry — it becomes the
+package's public API unchanged.</td><td>3</td></tr>
+<tr><td>Content resolution</td><td>One <code>paths.py</code>, working from checkout and wheel
+alike.</td><td>4</td></tr>
+</table></div>
+
+<h2><span class="num">Section 08</span>Risks</h2>
+<div class="tablewrap"><table>
+<tr><th>Risk</th><th>Likelihood</th><th>Detection</th><th>Mitigation</th></tr>
+<tr><td>Wheel loses <code>models/</code> or <code>knowledge/</code> — silent empty corpus, no exception</td>
+<td class="n">high</td><td>Build + import from a clean venv, assert non-empty</td><td>Single <code>paths.py</code>; make this the phase-4 and phase-6 exit criterion</td></tr>
+<tr><td>Prompt extraction changes behaviour, invalidating committed eval records</td>
+<td class="p">medium</td><td>Byte-identical fixture test across all switch combinations</td><td>Write fixtures before touching <code>prompt.py</code></td></tr>
+<tr><td>ModelScope deployment breaks on the moved entry point</td>
+<td class="p">medium</td><td>Deploy a branch before merging</td><td>Root <code>app.py</code> shim keeps <code>entry_file</code> valid</td></tr>
+<tr><td>Merge pain against upstream work in flight</td>
+<td class="p">medium</td><td>The pull just added 2,069 lines to the files being split</td><td>Phase 2 first, in one short-lived branch; coordinate before starting</td></tr>
+<tr><td>Frontend/backend boundary erodes again</td>
+<td class="p">medium</td><td>The two invariant tests</td><td>Land them in Phase 3, not later</td></tr>
+</table></div>
+
+<h2><span class="num">Section 09</span>Explicitly not in scope</h2>
+<ul class="tight">
+  <li>No behaviour change: no physics, prompt wording, tool contract or UI copy is edited. Only locations
+  and module boundaries.</li>
+  <li>No dependency changes beyond syncing the venv to the existing lockfile.</li>
+  <li>No package split — that is Option D, and Section 07 only keeps the door open.</li>
+  <li><code>evaluation/results/</code> is evidence; nothing in it is regenerated or deleted.</li>
+  <li>The failing figure test is not fixed by this plan; it is fixed by <code>uv sync</code> in
+  pre-flight. If it still fails afterwards, that is a real defect and a separate task.</li>
+</ul>
+
+<div class="callout" style="margin-top:34px">
+<p><b>Sequence to start:</b> pre-flight (<code>uv sync --extra dev</code>, record a green baseline) →
+Phase 1 → Phase 2. Those three are safe, independently valuable, and reversible with a single
+<code>git revert</code> each. Phases 3–6 want the <code>models/</code> packaging decision in Section 05
+answered first.</p>
+</div>
+
+<footer>
+  <p>Measured on <code>main</code> at <code>f111c34</code> after fast-forwarding 6 commits: 374 tracked
+  files, 17,457 lines of Python, 45 modules, 81 internal edges, 0 cycles, 20 <code>sys.path.insert</code>
+  calls, 3 hard-coded <code>knowledge/</code> path constants, 1 file importing Gradio. Test baseline
+  301 passed / 1 failed / 1 skipped in 48 s, the failure attributable to <code>pymupdf</code> missing
+  from the venv. Day figures are estimates including verification, not measurements.</p>
+</footer>
+
+</div>
+</body>
+</html>

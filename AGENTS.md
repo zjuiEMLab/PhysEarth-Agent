@@ -92,6 +92,10 @@ figure-inspection tests fail in a way that looks like a code defect but is not.
   build step. `prompts/README.md` explains the stack and where L3–L5 live.
 - `evaluation/` — task set, ablation configs, runners, and committed result records.
 - `docs/` — design notes and research task documents. Not runnable.
+  `docs/reorganisation/` is the decision trail behind the current layout: the four
+  candidate structures, why Option C was chosen, and the six conditions that a
+  multi-package split (Option D) would have to meet. Read it before proposing a
+  different layout — the alternatives have been costed twice already.
 
 ## Invariants that are not style preferences
 
@@ -175,7 +179,7 @@ Never commit `.env`. Never put a real token in a test fixture.
 ## Reorganisation in progress
 
 The reorganisation to a backend/frontend split (Option C) is complete, in six commits,
-each green: the four oversized modules split into packages, the frontend lifted out, the
+each green (the plan itself is `docs/reorganisation/option-c-plan.html`): the four oversized modules split into packages, the frontend lifted out, the
 package moved under `backend/`, the prompt text levelled into `prompts/`, and the models
 lifted into `models/`.
 
