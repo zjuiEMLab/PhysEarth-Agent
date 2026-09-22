@@ -401,3 +401,34 @@ def review(session_id, choice):
         return {"status": "terminal_error", "error": "unknown_session", "summary": session_id}
     result = research.review_action(session, choice)
     return _jsonable(result)
+
+def knowledge_read(slug, section_id):
+    """One bundled paper section, addressed the way a citation addresses it."""
+    section = knowledge.read_section(slug, section_id)
+    if not section:
+        return {
+            "status": "terminal_error",
+            "error": "unknown_section",
+            "summary": "%r is not a section of the bundled paper %r." % (section_id, slug),
+        }
+    return _jsonable(section)
+
+
+def reference_query(slug, filters=None):
+    """Rows from a bundled reference dataset, which is measurement evidence, not a model."""
+    if slug not in set(reference.slugs() or ()):
+        return {
+            "status": "terminal_error",
+            "error": "unknown_dataset",
+            "summary": "%r is not a bundled reference dataset. Available: %s."
+            % (slug, ", ".join(sorted(reference.slugs() or ()))),
+        }
+    try:
+        rows = reference.query(slug, filters or {})
+    except Exception as exc:
+        return {
+            "status": "terminal_error",
+            "error": "dataset_query_failed",
+            "summary": "%s" % exc,
+        }
+    return _jsonable(rows)
