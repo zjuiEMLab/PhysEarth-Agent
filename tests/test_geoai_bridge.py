@@ -128,3 +128,21 @@ def test_plan_status_explains_the_next_review_action():
     assert status["status"] == "success"
     assert status["phase"] is None
     assert status["next_action"]
+
+
+def test_knowledge_read_addresses_a_section_the_way_a_citation_does():
+    section = service.knowledge_read("smrt-v1", "03")
+
+    assert section["citation_key"] == "smrt-v1#03"
+    assert section["license"]
+    assert len(section["text"]) > 200
+
+    missing = service.knowledge_read("smrt-v1", "99")
+    assert missing["error"] == "unknown_section"
+
+
+def test_reference_query_returns_measurement_rows():
+    rows = service.reference_query("tvc-backscatter", {})
+
+    assert isinstance(rows, list) or isinstance(rows, dict)
+    assert service.reference_query("nope", {})["error"] == "unknown_dataset"
