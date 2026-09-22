@@ -1,0 +1,20 @@
+# Registering the PhysEarth-Agent MCP server with Codex.
+#
+# This is the file form of:
+#   codex mcp add physearth-geoai --env PYTHONPATH=backend -- python -m integrations.geoai serve
+#
+# Merge the `mcp_servers` table into ~/.codex/config.toml (or the project-local config).
+# `cwd` must be the repository root: the backend package lives under backend/, and the
+# knowledge, models and prompts trees are found by walking up from there.
+
+[mcp_servers.physearth-geoai]
+command = "python"
+args = ["-m", "integrations.geoai", "serve"]
+cwd = "/absolute/path/to/PhysEarth-Agent"
+
+[mcp_servers.physearth-geoai.env]
+PYTHONPATH = "backend"
+# Only needed for the agent turn (geoai_ask). Leave it out and the tools, resources and
+# prompts still work; the agent turn then refuses in one line instead of guessing.
+# PHYSEARTH_LLM_API_KEY = "…"
+# PHYSEARTH_LLM_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"

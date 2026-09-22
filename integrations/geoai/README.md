@@ -1,0 +1,95 @@
+# PhysEarth-Agent as a Codex plugin
+
+Codex gets this repository's physics, evidence rules and bundled literature as **tools,
+resources and prompts** over MCP. Codex cannot change this project's interface — that is a
+Gradio app in `frontend/` — so the plugin is deliberately text-and-tool shaped: capability
+plus knowledge, no pixels.
+
+## What ships
+
+| Host tool | What it is for |
+|---|---|
+| `geoai_health` | registered models, runnable models, declared tools, bundled evidence, credentials |
+| `geoai_session_new` | open a session; result handles resolve only inside it |
+| `geoai_ask` | one agent turn: plan → run registered models → answer with citations |
+| `geoai_evidence` | what a session actually read, ran and drew |
+| `geoai_plan_status` | the research plan and the review action a human should take |
+| `geoai_review` | advance the human review gate (the same call the Studio makes) |
+| `geoai_prompt_stack` | the L0–L2 prompt stack plus the generated registry context |
+
+Plus **every declared engine tool** (`list_models`, `run_model`, `run_planned_model`,
+`read_literature`, `research_plan`, `plot`, …), each carrying the validation, approval gate
+and quality control the interactive product applies.
+
+Resources: `geoai://prompt-stack`, `geoai://models`, `geoai://knowledge`, `geoai://tools`,
+and `geoai://paper/<slug>/<section>` for every bundled paper section — the same
+`slug#section` id a citation resolves to.
+
+Prompts: `geoai-reproduce-figure`, `geoai-sweep-parameter`, `geoai-compare-models`. Each
+carries the evidence rules with the task, so the host's own reasoning is held to them.
+
+## Install
+
+The server is stdio JSON-RPC and has no third-party dependency; it only needs this checkout
+importable.
+
+```bash
+# from the repository root
+python -m integrations.geoai health      # or: .venv/bin/python, with PYTHONPATH=backend
+```
+
+Register it with Codex (see `codex.toml.example` for the same block in file form):
+
+```bash
+codex mcp add physearth-geoai --env PYTHONPATH=backend -- python -m integrations.geoai serve
+codex mcp list
+```
+
+Then paste the block in `AGENTS.snippet.md` into the project's `AGENTS.md` (or your
+`~/.codex/AGENTS.md`) so Codex reaches for these tools instead of estimating numbers.
+
+## Verify
+
+```bash
+# the surface answers without a host
+python -m integrations.geoai health
+python -m integrations.geoai models | head -40
+python -m integrations.geoai prompt | head -40
+
+# one real physics call, offline except for the model itself
+python -m integrations.geoai call list_models --arguments '{"model":"smrt"}'
+
+# the MCP protocol itself
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
+  | PYTHONPATH=backend python -m integrations.geoai serve
+```
+
+`pytest tests/test_geoai_bridge.py tests/test_geoai_mcp.py -q` covers the same ground
+offline: the tool catalogue, the model declarations, a real SMRT sweep through the bridge
+and through MCP, a refused call, resources and prompts.
+
+## Design notes
+
+- **One engine, one route.** The service layer imports the package's own surface; a plugin
+  never reaches past it, so the Studio and both plugins cannot drift into calling the
+  engine three different ways.
+- **A refusal is a result.** A worked-out validation, a missing credential or an unknown
+  session comes back as a structured error the model can read and route around. Nothing is
+  estimated locally to fill a gap.
+- **The approval gate stays on** unless the caller passes `approve_runs: true`, which states
+  that the host owns that consent decision. A plugin cannot approve a physical model run on
+  the user's behalf by accident.
+- **Numbers come from runs.** `run_model` returns a handle and a bounded preview; the
+  arrays stay in the session store, and a citation marker resolves only against evidence the
+  session actually gathered.
+
+## Known limitations
+
+- Codex cannot change this project's UI; the Studio remains the place to see figures, the run
+  trace and the evidence panel.
+- `geoai_ask` needs inference credentials (`PHYSEARTH_LLM_API_KEY` or `MODELSCOPE_TOKEN`).
+  Without them it refuses in one line instead of inventing an answer; the tool-only and
+  knowledge-only paths work offline.
+- Sessions live in the server process: restarting it invalidates handles, and
+  `geoai_evidence` says so rather than pretending.
