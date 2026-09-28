@@ -88,19 +88,45 @@ root-first so deeper files win; truncated at `project_doc_max_bytes` (32 KiB).
 ## What this integration deliberately does not do
 
 - **No UI.** Codex gives a third-party plugin no panel, no widget, no status-line item. The
-  engine's output here is text, tool results and generated figures. (A `.tmTheme` in
-  `$CODEX_HOME/themes` can recolour the terminal, but that is a global user preference, not
-  something this repository can ship as part of a plugin.)
+  engine's output here is text, tool results and generated figures. A `.tmTheme` in
+  `$CODEX_HOME/themes` can recolour the terminal (`/theme`, persisted as `tui.theme`), but that
+  is a global user preference — a plugin cannot activate it, so it is not part of this package.
 - **No `instructions` key.** Codex's own config reference marks it "reserved for future use".
-  `developer_instructions` exists but is unreliable across Codex surfaces.
-- **No `~/.codex/prompts/*.md`.** That directory is deprecated in favour of skills, which is why
-  the workflow lives in `.agents/skills/geoai/`.
+  `developer_instructions` and `model_instructions_file` exist but are reported unreliable
+  across Codex surfaces (issues #11004, #33238), so nothing here depends on them.
+- **No `~/.codex/prompts/*.md`.** That directory is deprecated in favour of skills ("Custom
+  prompts are deprecated. Use skills."), which is why the workflow lives in
+  `.agents/skills/geoai/`.
 - **No `codex mcp-server`.** That command and its standalone binary were removed; use the app
   server if you need that shape.
+- **No `codex mcp login`.** It exists, but it is OAuth for streamable-HTTP servers; a stdio
+  server has nothing to authenticate.
 - **No assumption that MCP resources or prompts reach the model.** The server publishes
   `geoai://…` resources and three prompts, and they work in hosts that surface them; Codex's
   documentation does not describe them as reachable, so every one of them is also available as a
   tool (`geoai_prompt_stack`, `list_models`, `read_literature`).
+- **No IDE-extension story.** Codex's docs are explicit that plugins are not available there,
+  though skills are, and the MCP server is shared through the same `~/.codex/config.toml`. So
+  the skill is the part of this package that still works in the extension.
+
+## Where this package stops, and why
+
+`plugins/geoai/` plus `.agents/plugins/marketplace.json` make this installable in two commands
+from a repository marketplace:
+
+```bash
+codex plugin marketplace add /path/to/PhysEarth-Agent
+codex plugin add geoai@physearth-agent
+```
+
+That path exists for people who want the skill and the author metadata delivered as a unit. It
+is **not** the recommended install, and it does not register the MCP server — see
+`plugins/geoai/README.md` for why, and for the one command that finishes the job.
+
+Public submission to a remote marketplace is a different thing and needs something this
+repository cannot provide: an official requirement of a remotely hosted HTTPS MCP endpoint. That
+is an infrastructure project (expose the engine behind a streamable-HTTP MCP server and keep it
+alive), not a packaging one.
 
 ## Troubleshooting
 

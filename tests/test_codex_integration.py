@@ -9,6 +9,7 @@ model calling something that is not there. None of those produce an error a user
 from __future__ import annotations
 
 
+import json
 import os
 import re
 import tomllib
@@ -36,9 +37,11 @@ MCP_SERVER_KEYS = {
     "enabled_tools",
     "disabled_tools",
     "startup_timeout_sec",
+    "startup_timeout_ms",
     "tool_timeout_sec",
     "default_tools_approval_mode",
     "tools",
+    "experimental_environment",
 }
 
 
@@ -181,3 +184,91 @@ def test_the_agents_md_snippet_matches_the_skill_on_the_rules_that_matter():
     for rule in ("[abs:doi]", "approve_runs", "geoai_evidence"):
         assert rule in snippet, f"AGENTS snippet lost {rule}"
         assert rule in skill, f"skill lost {rule}"
+
+
+# ── the installable bundle (repo marketplace) ────────────────────────────────────────────────
+
+PLUGIN = ROOT / "plugins" / "geoai"
+MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def _plugin_manifest() -> dict:
+    return json.loads((PLUGIN / ".codex-plugin" / "plugin.json").read_text())
+
+
+def test_the_plugin_manifest_carries_every_field_the_validator_requires():
+    manifest = _plugin_manifest()
+
+    # These are not style: the bundled validator rejects a manifest missing any of them, and a
+    # rejected plugin fails at install time with a field list rather than a plugin.
+    assert manifest["name"] == PLUGIN.name
+    assert SEMVER_RE.fullmatch(manifest["version"]), manifest["version"]
+    assert manifest["description"]
+    assert manifest["author"]["name"]
+    interface = manifest["interface"]
+    required_strings = (
+        "displayName",
+        "shortDescription",
+        "longDescription",
+        "developerName",
+        "category",
+    )
+    for field in required_strings:
+        assert interface[field], field
+    assert isinstance(interface["capabilities"], list) and interface["capabilities"]
+    assert interface.get("defaultPrompt") or interface.get("default_prompt")
+    assert re.fullmatch(r"#[0-9A-Fa-f]{6}", interface["brandColor"])
+
+
+def test_every_asset_the_plugin_names_exists():
+    interface = _plugin_manifest()["interface"]
+
+    for field in ("composerIcon", "logo", "logoDark"):
+        path = interface.get(field)
+        if path is not None:
+            assert (PLUGIN / path).is_file(), path
+    for path in interface.get("screenshots", []):
+        assert (PLUGIN / path).is_file(), path
+
+
+def test_the_plugin_declares_no_mcp_server_and_says_why():
+    manifest = _plugin_manifest()
+    readme = (PLUGIN / "README.md").read_text()
+
+    # `codex plugin add` copies the plugin into a cache, so a bundled `mcpServers` entry could
+    # only reach the engine through a machine-specific absolute path — a manifest that has to be
+    # edited per machine is not repository content. The absence is deliberate and the README has
+    # to keep explaining it, or the next person "fixes" it and ships a plugin that installs and
+    # offers no tools.
+    assert "mcpServers" not in manifest
+    assert "copies" in readme and "cache" in readme
+    assert "codex mcp add geoai --" in readme
+
+
+def test_the_bundled_skill_is_byte_identical_to_the_repository_one():
+    # Two copies exist because two discovery paths exist. A test rather than a symlink: the
+    # installer copies the plugin root, so a symlink pointing outside it would arrive broken.
+    for relative in ("SKILL.md", "references/tools.md", "references/troubleshooting.md"):
+        bundled = (PLUGIN / "skills" / "geoai" / relative).read_bytes()
+        assert bundled == (SKILL_DIR / relative).read_bytes(), relative
+
+
+def test_the_repository_marketplace_points_at_the_plugin_it_catalogues():
+    catalog = json.loads(MARKETPLACE.read_text())
+
+    assert catalog["name"] == "physearth-agent"
+    assert catalog["interface"]["displayName"]
+    entry, = catalog["plugins"]
+    assert entry["name"] == PLUGIN.name
+    assert entry["source"]["source"] == "local"
+    # The path is relative to the marketplace root, i.e. the repository root.
+    target = (ROOT / entry["source"]["path"]).resolve()
+    assert target == PLUGIN.resolve(), target
+    # `policy.installation`, `policy.authentication` and `category` are required on every entry.
+    installation = entry["policy"]["installation"]
+    assert installation in {"NOT_AVAILABLE", "AVAILABLE", "INSTALLED_BY_DEFAULT"}
+    assert entry["policy"]["authentication"] in {"ON_INSTALL", "ON_USE"}
+    assert entry["category"]
+    installed_name = json.loads((target / ".codex-plugin" / "plugin.json").read_text())["name"]
+    assert installed_name == entry["name"]
