@@ -124,20 +124,73 @@ In the browser, the observable acceptance steps are:
   timeout are corrected *with a warning*; a host without `loader.update`, a scope without
   `watch`, or a missing `theme.overrideTokens` is named in the log rather than ignored.
 
+## Verified, with the transcript
+
+This plugin has been run inside a real harness, in an isolated profile on port 3199, with a
+headless browser driven over it. What that pass found is what the code now handles; the values
+below are measurements, not expectations.
+
+| Claim | Measured |
+|---|---|
+| The rows compose with this machine's paths | `dsh --profile geoai-verify --dump-config` shows both rows patched by the profile layer |
+| The harness boots with the plugin mounted | OK; the plugin row is in `window.__DSH_BOOT__` with its four inject edges |
+| The browser half is served | `/plugins/dsh-plugin-physearth-geoai/client.js` → 200, 41 KB, `rev` changes with content |
+| The restyle applies | `body.geoai-restyled`, `data-geoai-accent=ice`, `--dsw-alias-bg-base` = `#05070d`, `--dsw-alias-brand-primary` = `#22d3ee` (host default background: `rgb(21, 21, 23)`) |
+| The card appears in 设置 → 插件 | `.geoai-card` found; full zh copy, switch, two selects, three inputs, three checkboxes, probe button |
+| The switch turns it off live, without a reload | after one click: class gone, `data-geoai-enabled=false`, `--dsw-alias-bg-base` back to `rgb(21, 21, 23)` |
+| The switch turns it back on live | after a second click: restyled again, `#05070d` |
+| The engine tools exist | 28 over stdio MCP: `run_model`, `plot`, `research_plan`, `read_literature`, `read_reference_dataset`, the `geoai_*` host tools, … |
+| The optional bridge answers when asked | started through `BridgeClient`: `{"models":6,"runnable_models":6,"tools":21,"knowledge":{"papers":8,"sections":79,"skills":3}}` |
+| No console errors | 0 at every step |
+| Four viewport widths | 1440/1024 → 564 px card, two 255 px columns; 768 → 484 px, two 215 px columns, 44 px touch target; 390 → 106 px column (the host keeps a 154 px options rail), one column, no clipping and no page overflow at any width |
+
+The pass also produced the five fixes recorded in the commit messages: `schemastery` was not
+resolvable through a symlinked package (the installer now copies the package into the profile);
+the `mcp-geoai` override was partial, and a `config` is *replaced* rather than merged (the
+installer now writes both rows complete, derived from the bundle patch); the spawned bridge had no
+`PYTHONPATH` and died silently inside a `stdio: 'ignore'` spawn; the client bundle registered
+under the wrong id, so the row was dropped with a console error and nothing happened in the
+browser at all; and the token layer stayed stacked after the switch went off, so the palette did
+not come back.
+
+### Reproducing it
+
+```bash
+# an isolated profile: base + web-app bundles, this plugin, nothing else of the operator's
+integrations/dsh/scripts/verify-profile.sh geoai-verify 3199
+
+# boot it, optionally turning the plugin on through the composition
+cat > /tmp/geoai-on.yml <<'YAML'
+- id: geoai
+  config:
+    enabled: true
+YAML
+dsh --profile geoai-verify --patch /tmp/geoai-on.yml --port 3199
+# then open http://127.0.0.1:3199/ and go to 设置 → 插件
+```
+
+**A `config`-targeted patch replaces the whole config.** That is why the overlay above is three
+lines and why the installer writes its managed block the way it does. If you turn
+`autoStartBridge` on through such a patch, restate `projectRoot` and `pythonCmd` in the same
+object or the plugin loses them — the optional bridge then has no interpreter to start.
+
 ## Known limitations
 
-- **Runtime behaviour not yet exercised here.** The loader-based half of the switch
-  (`ctx.loader.update`), the theme cascade order (this layer versus the six sheets `ui-theme`
-  injects) and the visual result at 375/768/1024/1440 px are read out of the harness source and
-  pinned by the stub tests, not measured in a live browser. Treat the first run as a
-  verification step, not as a finished claim.
-- The switch's effect on the MCP row lives in the running process: it is a loader update, and
-  the harness does not persist runtime loader updates. On restart the profile layer
-  (`physearth-geoai.patch.yml`) is what decides, and the plugin re-applies the row state from the
-  stored `enabled` setting as soon as it mounts.
+- **One host, one harness build.** Everything above ran against DeepSeek Harness 0.1.0-rc.7 on
+  macOS, with the `anaconda3/envs/physearth-agent` interpreter. Another build could name a token,
+  a slot key or a scope method differently; the failure modes are then named in the log rather
+  than swallowed, and `tests/` pins the contracts read out of this one.
+- **The 390 px case is the host's layout, not a card defect.** The settings shell keeps a 154 px
+  options rail at that width, leaving 106 px for any plugin card. This card degrades to one narrow
+  column without overflow rather than widening past its container; the host's own cards face the
+  same column.
+- The switch's effect on the MCP row lives in the running process: it is a loader update, and the
+  harness does not persist runtime loader updates. The `enabled` setting itself *is* persisted
+  (into the host's settings document), so a restart re-applies the row state on mount.
 - The MCP row and this plugin are two rows: disabling the *plugin row* in a profile layer (rather
   than using the switch) leaves the MCP row mounted, because a bundle patch cannot express "this
   row follows that switch". Use the card, or comment out both rows.
 - Codex and other non-DSH hosts use the MCP server directly (see `integrations/geoai/README.md`);
   this package is only the Harness UI shell.
+
 

@@ -100,6 +100,11 @@ function stubClientContext(settings = {}) {
       stored = { ...stored, [field]: value }
       return Promise.resolve()
     },
+    // What the host pushes when the document changes under the card (another tab, the API).
+    __set: (patch) => {
+      stored = { ...stored, ...patch }
+      for (const listener of listeners) listener()
+    },
   }
   const ctx = {
     logger: {
@@ -130,7 +135,9 @@ function stubClientContext(settings = {}) {
           }
         }
         calls.tokens.push({ source, tokens })
-        return () => {}
+        return () => {
+          calls.tokenLayersReleased = (calls.tokenLayersReleased ?? 0) + 1
+        }
       },
     },
     locale: {
@@ -192,10 +199,15 @@ function withDom(run) {
   }
 }
 
-test('the browser half declares the services it reaches for', () => {
+test('the browser half registers under its module id, which is the package name', () => {
   const { id, exports } = mountClient()
+  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
 
-  assert.equal(id, 'physearth-geoai')
+  // The client module registry checks this id after importing the bundle and drops the row when
+  // it does not match, with a console error and no visible effect. It is the package name, not
+  // the settings namespace and not a display name.
+  assert.equal(id, manifest.name)
+  assert.equal(exports.NS, 'physearth-geoai')
   for (const service of ['settingsScope', 'slots', 'theme', 'locale']) {
     assert.ok(exports.inject.includes(service), service)
   }
@@ -293,6 +305,38 @@ test('the restyle stays off when the plugin is off, and the card stays styleable
     assert.equal(dom.classes.has('geoai-restyled'), false, 'disabled leaves the shell alone')
     assert.equal(dom.body.dataset.geoaiEnabled, 'false')
     assert.equal(calls.subscribed, 2, 'the token layer and the stylesheet both follow the settings')
+    assert.equal(calls.tokens.length, 0, 'no palette is stacked while the plugin is off')
+  })
+})
+
+test('turning the switch off releases the host palette, not just the class', () => {
+  const { exports } = mountClient()
+  const { ctx, calls, scope } = stubClientContext({ enabled: true, restyleHost: true })
+
+  withDom(() => {
+    exports.apply(ctx)
+    assert.equal(calls.tokens.length, 1, 'on: one token layer')
+
+    // The first click of the switch used to leave the layer stacked: the body class went away
+    // and the palette did not, which a browser showed and no unit test would have.
+    scope.__set({ enabled: false })
+    assert.equal(calls.tokenLayersReleased, 1, 'off: the layer is released')
+    assert.equal(calls.tokens.length, 1, 'and not replaced by another')
+
+    scope.__set({ enabled: true })
+    assert.equal(calls.tokens.length, 2, 'on again: restacked')
+  })
+})
+
+test('the host restyle switch alone decides the palette', () => {
+  const { exports } = mountClient()
+  const { ctx, calls, scope } = stubClientContext({ enabled: true, restyleHost: true })
+
+  withDom(() => {
+    exports.apply(ctx)
+    scope.__set({ restyleHost: false })
+    assert.equal(calls.tokenLayersReleased, 1, 'restyleHost off releases it too')
+    assert.equal(calls.tokens.length, 1)
   })
 })
 

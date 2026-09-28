@@ -10,10 +10,26 @@ export const DEFAULTS = Object.freeze({
   enabled: false,
   /** Loopback address of the Python bridge (`python -m integrations.geoai serve-http`). */
   bridgeUrl: 'http://127.0.0.1:8799',
-  /** Start the bridge from this plugin when it is not answering yet. */
-  autoStartBridge: true,
-  /** Python executable used for that, relative or absolute. */
-  pythonCmd: 'python',
+  /**
+   * Whether this plugin starts the optional HTTP bridge itself.
+   *
+   * Off by default, and that default is load-bearing. The tool surface does not come from the
+   * bridge: it comes from the MCP row, which the installer points at a proven interpreter. The
+   * bridge is an extra process for the card's status probe and for a host that wants a JSON API
+   * over loopback. Starting it by default bought a second Python process and a hard dependency
+   * on the plugin guessing an interpreter correctly — a guess that a `config`-targeted patch can
+   * erase, because such a patch replaces the row's whole config rather than merging into it.
+   */
+  autoStartBridge: false,
+  /**
+   * Python executable used for the bridge and for the MCP server row.
+   *
+   * `python3` rather than `python`: on macOS and on most Linux distributions `python` is not on
+   * PATH at all, and a plugin that silently spawns nothing is worse than one that says so. A
+   * virtualenv path belongs here when the engine's dependencies are not in the system one —
+   * `scripts/install.sh` resolves it and writes it into the profile layer.
+   */
+  pythonCmd: 'python3',
   /** Repository root the bridge is started in; empty means "inherit the host cwd". */
   projectRoot: '',
   /** Whether this deployment owns the human approval step for physical model runs. */
@@ -209,11 +225,29 @@ export function portOf(bridgeUrl) {
   }
 }
 
+/**
+ * The extra environment the bridge needs, given a checkout.
+ *
+ * `-m integrations.geoai` puts the working directory on `sys.path`, which is enough to find
+ * `integrations` — but the engine itself lives under `backend/`, so without this the child dies
+ * with `ModuleNotFoundError: No module named 'physearth'`. It died silently, too: the spawn uses
+ * `stdio: 'ignore'` so nothing surfaced, and the plugin simply reported a bridge that never
+ * answered. `PYTHONUNBUFFERED` keeps a future crash's traceback in order.
+ *
+ * @param root - the checkout, or empty for "inherit whatever the host has".
+ * @returns environment entries to merge over `process.env`.
+ */
+export function engineEnv(root) {
+  if (!root) return {}
+  return { PYTHONPATH: `${root}/backend:${root}`, PYTHONUNBUFFERED: '1' }
+}
+
 /** The bridge command this plugin starts when nothing is listening yet. */
 export function bridgeCommand(settings) {
   return {
     command: settings.pythonCmd,
     args: ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', String(portOf(settings.bridgeUrl))],
     cwd: settings.projectRoot || undefined,
+    env: engineEnv(settings.projectRoot),
   }
 }

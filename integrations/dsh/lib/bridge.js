@@ -119,6 +119,11 @@ export class BridgeClient {
    * The plugin owns this process: it is spawned detached and killed on disable, so switching
    * the plugin off leaves nothing running behind it. A bridge the operator started already
    * is detected first and left alone.
+   *
+   * The child's stderr is captured while we wait, because the failure this used to hide was a
+   * one-line `ModuleNotFoundError` in a process spawned with `stdio: 'ignore'`: the plugin
+   * reported "did not answer within 10 s" and nothing said why. Once the bridge is up the pipes
+   * are dropped and the child is unref'd, so the long run stays out of the host's event loop.
    */
   async ensureRunning() {
     const alive = await this.health()
@@ -127,19 +132,55 @@ export class BridgeClient {
       return { started: false, detail: 'autoStartBridge is off and no bridge is listening' }
     }
     const spec = bridgeCommand(this.settings)
-    this.child = spawn(spec.command, spec.args, {
-      cwd: spec.cwd || process.cwd(),
-      env: process.env,
-      detached: true,
-      stdio: 'ignore',
-    })
-    this.child.unref()
+    let child
+    try {
+      child = spawn(spec.command, spec.args, {
+        cwd: spec.cwd || process.cwd(),
+        env: { ...process.env, ...(spec.env || {}) },
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+    } catch (error) {
+      return { started: false, detail: `could not spawn ${spec.command}: ${error.message}` }
+    }
+    this.child = child
+    let stderr = ''
+    const capture = (chunk) => {
+      stderr = (stderr + String(chunk)).slice(-2000)
+    }
+    child.stderr?.on('data', capture)
+    child.stdout?.on('data', () => {})
+
+    const release = () => {
+      child.stdout?.destroy()
+      child.stderr?.destroy()
+      child.unref()
+    }
+
     for (let attempt = 0; attempt < 40; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 250))
+      if (child.exitCode !== null) {
+        release()
+        const tail = stderr.trim().split('\n').slice(-3).join(' | ')
+        return {
+          started: false,
+          detail:
+            `${spec.command} exited with code ${child.exitCode} before the bridge came up` +
+            (tail ? `: ${tail}` : ` (no output; is ${spec.command} the right interpreter?)`),
+        }
+      }
       const ready = await this.health()
-      if (ready.ok) return { started: true, detail: `bridge started on port ${portOf(this.settings.bridgeUrl)}` }
+      if (ready.ok) {
+        release()
+        return { started: true, detail: `bridge started on port ${portOf(this.settings.bridgeUrl)}` }
+      }
     }
-    return { started: false, detail: 'bridge did not answer within 10 s' }
+    release()
+    const tail = stderr.trim().split('\n').slice(-3).join(' | ')
+    return {
+      started: false,
+      detail: `bridge did not answer within 10 s${tail ? `: ${tail}` : ''}`,
+    }
   }
 
   /** Stop the bridge this client started, if it started one. */

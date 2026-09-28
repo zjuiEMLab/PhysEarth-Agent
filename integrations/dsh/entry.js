@@ -23,8 +23,18 @@
 // colour changed.
 
 import z from '@deepseek-ai/schemastery'
+import { existsSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { BridgeClient } from './lib/bridge.js'
+import {
+  findCheckout,
+  interpreterCandidates,
+  interpreterProvenance,
+  pickInterpreter,
+} from './lib/host-env.js'
 import { ACCENTS, DEFAULTS, ENGINE_TOOLS, HOST_TOOLS, normaliseSettings } from './lib/logic.js'
 
 export const name = 'physearth-geoai'
@@ -97,10 +107,70 @@ export function apply(ctx, config = {}) {
 
   let client
   let disposers = []
-  const scope = ctx.settings.register(NAMESPACE, Config)
+  // The composition config is registered as the namespace's `base` layer, which is the
+  // precedence the settings service resolves in: schema defaults, then base, then the user's
+  // stored section. Without this the `config:` block in a patch layer would be decorative —
+  // `scope.get()` would answer with the schema defaults and a cordis.patch.yml that says
+  // `enabled: true` would mount a plugin that stays off.
+  const scope = ctx.settings.register(NAMESPACE, Config, { base: settings })
 
   /** The settings in force right now: the stored section wins over the composition config. */
   const current = () => normaliseSettings(scope.get ? scope.get() : settings).settings
+
+  // ── Environment ───────────────────────────────────────────────────────────────────────────
+  // Resolved once per mount, not per settings change: neither answer changes while the process
+  // runs, and probing an interpreter is a subprocess. See lib/host-env.js for why the two are
+  // resolved here rather than written into a patch layer.
+
+  const here = dirname(fileURLToPath(import.meta.url))
+
+  function resolveCheckout() {
+    if (settings.projectRoot) {
+      if (existsSync(settings.projectRoot)) return settings.projectRoot
+      ctx.logger?.warn?.(`physearth-geoai: projectRoot ${settings.projectRoot} does not exist; searching instead`)
+    }
+    return findCheckout({ startDirs: [here], cwd: process.cwd(), exists: existsSync })
+  }
+
+  function resolveInterpreter(checkout) {
+    const candidates = interpreterCandidates({ configured: settings.pythonCmd, checkout, env: process.env })
+    let probed = 0
+    const chosen = pickInterpreter({
+      candidates,
+      probe(command) {
+        probed += 1
+        if (!checkout) return false
+        const result = spawnSync(
+          command,
+          ['-c', 'from integrations.geoai import service'],
+          { cwd: checkout, env: { ...process.env, PYTHONPATH: checkout ? `${checkout}/backend:${checkout}` : '' }, timeout: 20000 },
+        )
+        return result.status === 0
+      },
+    })
+    ctx.logger?.info?.(`physearth-geoai: interpreter ${interpreterProvenance(chosen, probed)}`)
+    return chosen
+  }
+
+  const checkout = resolveCheckout()
+  if (!checkout) {
+    ctx.logger?.error?.(
+      'physearth-geoai: cannot find this repository. Set `projectRoot` in the plugin row to the ' +
+        'checkout that holds backend/physearth and integrations/geoai, or run ' +
+        'integrations/dsh/scripts/install.sh, which resolves it for you.',
+    )
+  }
+  // Only the optional bridge needs an interpreter, so a failure here is informational. The tool
+  // surface comes from the MCP row, whose interpreter the installer proved before writing it.
+  const pythonCmd = checkout && settings.autoStartBridge ? resolveInterpreter(checkout) : undefined
+  if (settings.autoStartBridge && checkout && !pythonCmd) {
+    ctx.logger?.warn?.(
+      `physearth-geoai: autoStartBridge is on but no interpreter could import the engine from ` +
+        `${checkout}. Set pythonCmd (or PHYSEARTH_PYTHON), or turn autoStartBridge off — the ` +
+        'tools do not depend on the bridge.',
+    )
+  }
+  const engine = { ...settings, projectRoot: checkout || settings.projectRoot, pythonCmd: pythonCmd || settings.pythonCmd }
 
   function stop() {
     for (const dispose of disposers.reverse()) {
@@ -116,21 +186,31 @@ export function apply(ctx, config = {}) {
   }
 
   async function start() {
-    const active = current()
-    client = new BridgeClient(active)
-    const readiness = await client.ensureRunning()
-    if (!readiness.started && readiness.detail !== 'bridge already answering') {
-      // Loud, because every tool would otherwise fail one by one with a connection error.
-      ctx.logger?.warn?.(`physearth-geoai: ${readiness.detail}`)
-    }
+    // The prompt rules are this half's own contribution and never depend on a subprocess, so
+    // they are registered first and unconditionally.
     disposers.push(
       ctx.systemPrompt.section({ name: 'geoai-physics', order: PROMPT_ORDER, text: PROMPT_SECTION }),
     )
     ctx.logger?.info?.(
-      `physearth-geoai: enabled — bridge at ${active.bridgeUrl}, ` +
-        `${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present as mcp__geoai__*, ` +
-        `${ACCENTS.length} accents, prompt section at order ${PROMPT_ORDER}`,
+      `physearth-geoai: enabled — ${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present ` +
+        `as mcp__geoai__*, ${ACCENTS.length} accents, prompt section at order ${PROMPT_ORDER}`,
     )
+
+    // Then the optional bridge. It is a second Python process, so its absence is reported at the
+    // level it deserves: a warning when the operator asked for it, information otherwise.
+    client = new BridgeClient(engine)
+    const readiness = await client.ensureRunning()
+    const asked = engine.autoStartBridge
+    if (readiness.started) {
+      ctx.logger?.info?.(`physearth-geoai: ${readiness.detail}`)
+    } else if (asked) {
+      ctx.logger?.warn?.(`physearth-geoai: autoStartBridge is on, but ${readiness.detail}`)
+    } else {
+      ctx.logger?.info?.(
+        `physearth-geoai: no bridge at ${engine.bridgeUrl} (${readiness.detail}); the tools are ` +
+          'served over MCP and do not need one',
+      )
+    }
   }
 
   /**
@@ -140,6 +220,11 @@ export function apply(ctx, config = {}) {
    * while the plugin is off, the model would still see every `mcp__geoai__*` tool and "off"
    * would be cosmetic. `loader.update` is async and live (the web profile reloads patches
    * without a restart), so the tool list follows the switch and a page refresh shows it.
+   *
+   * The row itself is declared by this package's bundle patch and given absolute paths by
+   * `scripts/install.sh`. When it is absent — a harness that mounted this plugin some other way
+   * — the update throws, and the warning says which layer is missing rather than blaming the
+   * switch.
    */
   function applyToolRow(disabled) {
     if (typeof ctx.loader?.update !== 'function') {
@@ -150,7 +235,11 @@ export function apply(ctx, config = {}) {
       return
     }
     Promise.resolve(ctx.loader.update(MCP_ENTRY_ID, { disabled })).catch((error) => {
-      ctx.logger?.warn?.(`physearth-geoai: loader.update(${MCP_ENTRY_ID}, ${disabled}) failed: ${error.message}`)
+      ctx.logger?.warn?.(
+        `physearth-geoai: loader.update(${MCP_ENTRY_ID}, ${disabled}) failed: ${error.message}. ` +
+          'The row comes from this package’s bundle patch; run integrations/dsh/scripts/install.sh ' +
+          'if it is missing.',
+      )
     })
   }
 

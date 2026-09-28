@@ -9,44 +9,52 @@
 # Two rows, and the split is deliberate:
 #
 #   geoai       our plugin: the settings switch, the prompt rules, the browser restyle.
+#               It carries no paths: the host half finds the checkout by walking up from its own
+#               file and finds a Python by proving candidates against the engine, so this row is
+#               the same in every checkout. See lib/host-env.js.
 #   mcp-geoai   the harness' own MCP client, pointed at this repository's MCP server. The
 #               engine's tools are therefore *discovered* rather than hand-declared, and the
-#               tool list follows the server (`notifications/tools/list_changed`) instead of
-#               being frozen into this file. Tools appear as `mcp__geoai__<tool>`.
+#               tool list follows the server (`notifications/tools/list_changed`). Tools appear
+#               as `mcp__geoai__<tool>`.
 #
 # The switch in 设置 → 插件 (PhysEarth Geo-AI) flips this plugin's `enabled` setting and, in the
 # same gesture, disables the mcp-geoai row through the loader, so the model's tool list follows
 # the switch. That loader update is live in the web profile; a page refresh shows the result.
 #
-# Absolute paths: replace REPLACE_WITH_CHECKOUT below, or install through the helper at
-# integrations/dsh/scripts/install.sh, which writes the resolved path for you.
+# Paths. A patch layer cannot carry a checkout's absolute path, and it must not pretend to: the
+# harness composes layers with a *shallow* per-entry assignment, so a later layer cannot add one
+# field to a `config` — it has to restate the whole object. The MCP row below is therefore a
+# complete, path-free default that works when the harness runs from the checkout, and
+# integrations/dsh/scripts/install.sh writes a complete override with absolute
+# interpreter/cwd/PYTHONPATH values into the profile layer, which is the one that survives a
+# restart.
 
 - insert:
     - id: geoai
       name: dsh-plugin-physearth-geoai
       config:
+        # The one setting that has to be declared: off until a user turns it on. Everything else
+        # is the schema default in entry.js, and the card edits the stored layer on top.
         enabled: false
-        bridgeUrl: http://127.0.0.1:8799
-        autoStartBridge: true
-        pythonCmd: python
-        projectRoot: REPLACE_WITH_CHECKOUT
-        approveRuns: false
-        accent: ice
-        restyleHost: true
-        requestTimeoutMs: 120000
 
     - id: mcp-geoai
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: geoai
         transport: stdio
-        command: python
+        # `python3`, not `python`: `python` is absent on macOS and on most Linux distributions,
+        # and a row that cannot spawn shows up as an empty tool list with no error. install.sh
+        # replaces this with an interpreter it has proved can import the engine.
+        command: python3
         args: ['-m', 'integrations.geoai', 'serve']
-        cwd: REPLACE_WITH_CHECKOUT
+        # Relative to the harness' working directory, which is the checkout for anyone who
+        # follows the README. install.sh rewrites this and `cwd` as absolute paths.
         env:
           PYTHONPATH: backend
+        # The engine tools are the MCP row's job; the plugin's own optional HTTP bridge is off
+        # by default (see lib/logic.js) so nothing here has to guess an interpreter.
+        toolCallTimeoutMs: 120000
         # The bridge needs the same credentials the engine does; leave the key unset and the
         # tool-only and knowledge-only paths still work while `geoai_ask` refuses in one line.
         # failOnStartupError stays false so a missing Python does not stop the whole harness.
-        toolCallTimeoutMs: 120000
         failOnStartupError: false

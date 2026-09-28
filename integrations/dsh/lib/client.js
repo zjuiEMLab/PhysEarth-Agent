@@ -23,8 +23,15 @@
 //   3. the card says what the bridge can actually do, because a claim about 20 registered
 //      models is worth less than one answered health probe.
 
+// The registration id is the MODULE id, which is this package's name — the same string the
+// client module registry writes into the boot manifest as the row id, and the string it checks
+// after importing this file. It is neither the settings namespace nor a display name. A mismatch
+// produces `bundle /plugins/…/client.js loaded without registering "…" via __ModuleLoader__.load`,
+// the row is dropped, and nothing at all happens in the browser — which is exactly what happened
+// the first time this plugin was opened in a real one. `tests/client.test.mjs` ties the constant
+// below to package.json's `name` so the two cannot drift.
 window.__ModuleLoader__.load({
-  id: 'physearth-geoai',
+  id: 'dsh-plugin-physearth-geoai',
   factory: (require) => {
     const module = { exports: {} }
     const exports = module.exports
@@ -45,8 +52,8 @@ window.__ModuleLoader__.load({
     const DEFAULTS = {
       enabled: false,
       bridgeUrl: 'http://127.0.0.1:8799',
-      autoStartBridge: true,
-      pythonCmd: 'python',
+      autoStartBridge: false,
+      pythonCmd: 'python3',
       projectRoot: '',
       approveRuns: false,
       accent: 'ice',
@@ -480,6 +487,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
 /* A switch, not a checkbox: it reads as a state, and the label says which state. */
 .geoai-switch {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   min-height: 44px;
@@ -544,6 +552,22 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+}
+
+/* A settings panel can hand this card a very narrow column — measured at 106px on a 390px
+   viewport, where the host keeps its two-column shell. Nothing here tries to widen past its
+   container (that would overflow); instead every text node wraps and every grid child may
+   shrink, so the card degrades to a tall readable column instead of clipping. */
+.geoai-card,
+.geoai-card * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.geoai-card__desc,
+.geoai-row__hint,
+.geoai-status {
+  overflow-wrap: anywhere;
 }
 
 .geoai-grid label {
@@ -1054,16 +1078,27 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       // 1. The host's semantic token layer. One layer per accent identity, and every value is a
       //    { light, dark } pair — the theme service rejects a bare string precisely because it
       //    would go illegible when the user switches scheme.
+      //
+      //    The layer is gated on the switch. A layer left stacked while the plugin is off would
+      //    keep the whole palette overridden — measured, not assumed: after the first click of
+      //    the switch the body class was gone and `--dsw-alias-bg-base` was still ours.
       ctx.effect(() => {
         if (typeof ctx.theme?.overrideTokens !== 'function') {
           ctx.logger?.warn?.('physearth-geoai: no theme.overrideTokens on this host; the restyle falls back to the stylesheet alone')
           return () => {}
         }
-        let dispose = ctx.theme.overrideTokens(NS, themeTokens(current()))
-        const stop = scope.subscribe(() => {
-          if (typeof dispose === 'function') dispose()
-          dispose = ctx.theme.overrideTokens(NS, themeTokens(current()))
-        })
+        let dispose
+        const sync = () => {
+          if (typeof dispose === 'function') {
+            dispose()
+            dispose = undefined
+          }
+          const value = current()
+          if (!value.enabled || !value.restyleHost) return
+          dispose = ctx.theme.overrideTokens(NS, themeTokens(value))
+        }
+        sync()
+        const stop = scope.subscribe(sync)
         return () => {
           if (typeof stop === 'function') stop()
           if (typeof dispose === 'function') dispose()

@@ -29,6 +29,7 @@ test('the plugin ships off, so mounting it changes nothing until a user asks', (
   assert.equal(DEFAULTS.enabled, false)
   assert.equal(DEFAULTS.approveRuns, false)
   assert.equal(DEFAULTS.restyleHost, true)
+  assert.equal(DEFAULTS.autoStartBridge, false)
   assert.equal(DEFAULTS.colorScheme, 'dark')
   assert.deepEqual(ACCENTS, ['ice', 'amber', 'deep-blue'])
 })
@@ -115,11 +116,17 @@ test('the bundle patch mounts the plugin and the MCP row that brings the tools',
   assert.match(patch, /id: mcp-geoai/)
   assert.match(patch, /@deepseek-ai\/dsh-mcp-client/)
   assert.match(patch, /serverName: geoai/)
-  assert.match(patch, /command: python/)
+  assert.match(patch, /command: python3/)
   assert.match(patch, /args: \['-m', 'integrations\.geoai', 'serve'\]/)
-  // Off by default, and the checkout path is a placeholder a human must resolve.
+  // Off by default.
   assert.match(patch, /enabled: false/)
-  assert.match(patch, /REPLACE_WITH_CHECKOUT/)
+  // And no placeholder: a patch layer cannot carry an absolute checkout path, and a later
+  // layer's `config` REPLACES this row's config rather than merging into it (the harness
+  // composes layers with a shallow per-entry assignment), so a placeholder would force every
+  // installer to restate the whole object. The row is complete and path-free instead, and
+  // install.sh writes a complete override for a real machine.
+  assert.doesNotMatch(patch, /REPLACE_WITH_CHECKOUT/)
+  assert.doesNotMatch(patch, /projectRoot:/)
 })
 
 test('the manifest points a host at the two halves it loads', () => {

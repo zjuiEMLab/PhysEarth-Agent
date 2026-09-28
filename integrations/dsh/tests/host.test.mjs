@@ -61,8 +61,8 @@ function stubContext(config = {}) {
       warn: (message) => calls.logs.push(['warn', message]),
       error: (message) => calls.logs.push(['error', message]),
     },
-    settings: { register: (ns, schema) => {
-      calls.registered = { ns, schema }
+    settings: { register: (ns, schema, options) => {
+      calls.registered = { ns, schema, options }
       return scope
     } },
     systemPrompt: {
@@ -151,6 +151,19 @@ test('the settings schema declares exactly the keys both halves agree on', () =>
 test('the settings namespace is one the host accepts', () => {
   // `dsh-settings-file` validates against /^[a-z][a-z0-9-]*$/ before registering.
   assert.match(NAMESPACE, /^[a-z][a-z0-9-]*$/)
+})
+
+test('the composition config is registered as the namespace base layer', () => {
+  const { ctx, calls } = stubContext({ enabled: true })
+  apply(ctx, { enabled: true, bridgeUrl: 'http://127.0.0.1:9123' })
+
+  // The service resolves schema defaults, then `base`, then the user's stored section. Without
+  // `base`, the `config:` block in a patch layer would be decorative: `scope.get()` would answer
+  // with the schema defaults, so a cordis.patch.yml saying `enabled: true` would mount a plugin
+  // that stays off.
+  assert.ok(calls.registered.options, 'register() received an options object')
+  assert.equal(calls.registered.options.base.enabled, true)
+  assert.equal(calls.registered.options.base.bridgeUrl, 'http://127.0.0.1:9123')
 })
 
 test('the prompt section is registered in the shape the service accepts', async () => {
