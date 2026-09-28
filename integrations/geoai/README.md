@@ -1,9 +1,18 @@
-# PhysEarth-Agent as a Codex plugin
+# PhysEarth-Agent in a coding agent
 
 Codex gets this repository's physics, evidence rules and bundled literature as **tools,
 resources and prompts** over MCP. Codex cannot change this project's interface — that is a
-Gradio app in `frontend/` — so the plugin is deliberately text-and-tool shaped: capability
-plus knowledge, no pixels.
+Gradio app in `frontend/` — so this integration is deliberately text-and-tool shaped:
+capability plus knowledge, no pixels.
+
+Four artifacts make that up, and only the first needs installing:
+
+| Artifact | Where | Why |
+|---|---|---|
+| MCP server | `integrations/geoai/mcp_server.py` | the capability: 28 tools, resources, prompts |
+| Skill | `.agents/skills/geoai/` | the procedure: which tool for which question, what a valid run looks like, which refusals are results. Discovered from the repository, so nothing to install |
+| Config | `codex/config.snippet.toml` | the file form of the registration |
+| Guide | `codex/install-codex.md` | the two commands, the checks, and the honest limits |
 
 ## What ships
 
@@ -31,22 +40,36 @@ carries the evidence rules with the task, so the host's own reasoning is held to
 ## Install
 
 The server is stdio JSON-RPC and has no third-party dependency; it only needs this checkout
-importable.
+importable. **`codex/install-codex.md` is the authoritative guide** — this is the short form.
 
 ```bash
 # from the repository root
-python -m integrations.geoai health      # or: .venv/bin/python, with PYTHONPATH=backend
+.venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
+  from integrations.geoai import service; print('ok')"    # which interpreter to register
+scripts/codex-doctor.sh                                   # checks the interpreter, then the tools
 ```
 
-Register it with Codex (see `codex.toml.example` for the same block in file form):
+Register it with Codex (`codex.toml.example` has the same thing in file form):
 
 ```bash
-codex mcp add physearth-geoai --env PYTHONPATH=backend -- python -m integrations.geoai serve
+codex mcp add geoai -- "$PWD/.venv/bin/python" "$PWD/integrations/geoai/mcp_server.py" --stdio
 codex mcp list
 ```
 
-Then paste the block in `AGENTS.snippet.md` into the project's `AGENTS.md` (or your
-`~/.codex/AGENTS.md`) so Codex reaches for these tools instead of estimating numbers.
+Two things the older revision of this file got wrong, both of which produce a server that
+**starts and lists no tools**, with nothing said anywhere:
+
+- `python` does not exist on macOS or on most Linux distributions, and `python3` is frequently a
+  system interpreter without PyYAML. Register an interpreter you have proved can import the
+  engine — an absolute path.
+- The file form of the server (`mcp_server.py`) is used rather than `-m integrations.geoai`,
+  because a script run that way gets its own directory on `sys.path` and finds neither
+  `integrations` nor `physearth`; the file therefore adds both roots itself. That removes the
+  dependence on getting `cwd` and `PYTHONPATH` right.
+
+The skill in `.agents/skills/geoai/` needs no install step: Codex discovers it from the
+repository. `AGENTS.snippet.md` remains for a project that is *not* this one — here the rules
+already live in this repository's own `AGENTS.md`.
 
 ## Verify
 

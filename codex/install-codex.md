@@ -1,0 +1,110 @@
+# PhysEarth-Agent in Codex
+
+Two commands and a check. Everything the engine offers — 28 tools, the bundled CC-BY corpus,
+reference measurements, the research workflow with its approval gate — arrives through one MCP
+server; the skill in `.agents/skills/geoai/` is what tells Codex *how* to use it, and it is
+already in the repository, so there is nothing to install for it.
+
+Verified against **codex-cli 0.155.1**.
+
+## 1. Point Codex at an interpreter that has the engine
+
+```bash
+cd /path/to/PhysEarth-Agent
+
+# Which Python can import the engine? Use exactly this path below.
+.venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
+  from integrations.geoai import service; print('ok')"     # (uv sync --extra dev creates .venv)
+```
+
+If nothing prints `ok`, install the environment first (`uv sync --extra dev`, or
+`pip install -e backend` plus PyYAML). A server pointed at an interpreter without the
+dependencies **starts and offers an empty tool list**, with nothing in the log — this is the
+single most common way this integration appears broken.
+
+## 2. Register the server
+
+```bash
+codex mcp add geoai -- \
+  /path/to/PhysEarth-Agent/.venv/bin/python \
+  /path/to/PhysEarth-Agent/integrations/geoai/mcp_server.py --stdio
+```
+
+Use absolute paths: Codex launches the command from its own working directory.
+
+The file form of the server (`.../integrations/geoai/mcp_server.py`) is deliberate. A script run
+that way gets its own directory on `sys.path`, which finds neither `integrations` nor
+`physearth`, so the file adds the repository root and `backend/` to `sys.path` itself. That means
+no `cwd` and no `PYTHONPATH` are needed, and it removes the failure where the module form dies of
+`ModuleNotFoundError` in a subprocess whose stderr nobody reads.
+
+Prefer the TOML? Merge `codex/config.snippet.toml` into `~/.codex/config.toml` instead. The key
+is `mcp_servers`, not `mcpServers`, and `startup_timeout_sec = 30` is worth setting: the default
+10 s is tight for a scientific Python import.
+
+## 3. Check it
+
+```bash
+codex mcp list                                   # geoai should be listed, enabled
+codex mcp get geoai --json                       # transport, command, args, timeouts
+scripts/codex-doctor.sh                          # both of the above, plus an import check
+```
+
+Then, in a Codex session, ask for something only the engine can answer — *"sweep snow density in
+SMRT and plot brightness temperature"* — and confirm it calls the tools rather than answering
+from memory. Start a **new** session after registering: MCP servers are read at session start.
+
+## 4. Skills (already present, nothing to do)
+
+`.agents/skills/geoai/SKILL.md` is discovered from the repository root, per Codex's search order
+(`$CWD/.agents/skills`, up to the repo root, then `$HOME/.agents/skills`). It gives the model the
+*procedure* the tools cannot: which tool answers which kind of question, what a valid run looks
+like, which refusals are results, and the citation rules. Invoke it explicitly with `/skills` or
+by typing `$`, or let the description trigger it.
+
+Two notes on it:
+
+- Its front matter carries `name` and `description`, and the description is the trigger — it
+  front-loads the geophysics vocabulary and states the boundaries ("does not run arbitrary
+  Python for a number").
+- `agents/openai.yaml` declares the MCP dependency formally. If a validator rejects the
+  `dependencies` block, delete it; nothing in `SKILL.md` needs it.
+
+## 5. Rules for the whole repository (optional)
+
+`integrations/geoai/AGENTS.snippet.md` is the same rules in `AGENTS.md` form, for a project that
+is not this one. This repository already has its own `AGENTS.md`; if you want the Geo-AI rules to
+be unconditional rather than skill-triggered, append the snippet to it — or to a global
+`~/.codex/AGENTS.md`.
+
+Nothing here writes that file for you. It is the user's own instructions, and a tool that
+silently edits it is a tool that has decided what your agent should believe.
+
+Discovery order Codex uses, for reference: `$CODEX_HOME/AGENTS.override.md`, else
+`$CODEX_HOME/AGENTS.md` (first non-empty only); then, per directory from the repository root down
+to the working directory, `AGENTS.override.md`, else `AGENTS.md`, **one per directory**; merged
+root-first so deeper files win; truncated at `project_doc_max_bytes` (32 KiB).
+
+## What this integration deliberately does not do
+
+- **No UI.** Codex gives a third-party plugin no panel, no widget, no status-line item. The
+  engine's output here is text, tool results and generated figures. (A `.tmTheme` in
+  `$CODEX_HOME/themes` can recolour the terminal, but that is a global user preference, not
+  something this repository can ship as part of a plugin.)
+- **No `instructions` key.** Codex's own config reference marks it "reserved for future use".
+  `developer_instructions` exists but is unreliable across Codex surfaces.
+- **No `~/.codex/prompts/*.md`.** That directory is deprecated in favour of skills, which is why
+  the workflow lives in `.agents/skills/geoai/`.
+- **No `codex mcp-server`.** That command and its standalone binary were removed; use the app
+  server if you need that shape.
+- **No assumption that MCP resources or prompts reach the model.** The server publishes
+  `geoai://…` resources and three prompts, and they work in hosts that surface them; Codex's
+  documentation does not describe them as reachable, so every one of them is also available as a
+  tool (`geoai_prompt_stack`, `list_models`, `read_literature`).
+
+## Troubleshooting
+
+`.agents/skills/geoai/references/troubleshooting.md` covers the four failures that cost real time
+here — reaching for `python` where only `python3` exists, an interpreter without PyYAML, the 10 s
+startup timeout, and a refusal mistaken for an error — plus the engine's own refusals and what
+they mean.

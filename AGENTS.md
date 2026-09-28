@@ -3,6 +3,23 @@
 Working notes for anyone — human or coding agent — changing this repository. Only what is
 specific to this project and not obvious from the code.
 
+## Geo-AI inside a coding agent
+
+The engine is published as an MCP server (`integrations/geoai/`), and `.agents/skills/geoai/`
+carries the workflow a model should follow with it. Both live in the repository, so a Codex
+session opened here already discovers the skill and needs one command to register the server:
+
+```bash
+codex mcp add geoai -- "$PWD/.venv/bin/python" "$PWD/integrations/geoai/mcp_server.py" --stdio
+scripts/codex-doctor.sh     # proves the interpreter can import the engine, then lists the tools
+```
+
+`codex/install-codex.md` is the full guide.
+`.agents/skills/geoai/references/troubleshooting.md` covers the failures that look like
+something else — chiefly a server pointed at an interpreter without PyYAML, which starts and
+offers an empty tool list with nothing in any log. DeepSeek Harness gets the same engine as the
+plugin in `integrations/dsh/`.
+
 ## Commands
 
 ```bash

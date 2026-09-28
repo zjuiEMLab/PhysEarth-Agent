@@ -1,20 +1,47 @@
-# Registering the PhysEarth-Agent MCP server with Codex.
+# Registering the PhysEarth-Agent MCP server with Codex — the file form.
 #
-# This is the file form of:
-#   codex mcp add physearth-geoai --env PYTHONPATH=backend -- python -m integrations.geoai serve
+# NOTE: the canonical copy of this block is `codex/config.snippet.toml` at the repository root,
+# next to `codex/install-codex.md`. This file is kept because links point at it; prefer the root
+# one when the two disagree.
 #
-# Merge the `mcp_servers` table into ~/.codex/config.toml (or the project-local config).
-# `cwd` must be the repository root: the backend package lives under backend/, and the
-# knowledge, models and prompts trees are found by walking up from there.
+# The primary instruction is the one-liner, which writes the config for you and cannot get the
+# TOML shape wrong:
+#
+#   codex mcp add geoai -- "$PWD/.venv/bin/python" "$PWD/integrations/geoai/mcp_server.py" --stdio
+#
+# Two details that cost time if you get them wrong:
+#
+#   1. The key is `mcp_servers`, NOT `mcpServers`. (camelCase appears only in a plugin's own
+#      `.mcp.json`, which is a different file.)
+#   2. `command` must be an interpreter that can import this repository's engine. `python` does
+#      not exist on macOS or on most Linux distributions, and `python3` is often a system
+#      interpreter with no PyYAML — the server then starts and offers an EMPTY tool list, with
+#      nothing in any log. Prove the interpreter before writing it down:
+#
+#        .venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
+#          from integrations.geoai import service; print('ok')"
+#
+# The file form of the server (`mcp_server.py`) is used rather than `-m integrations.geoai`
+# because a script run that way gets its own directory on `sys.path`, finding neither
+# `integrations` nor `physearth`; the file adds both roots itself. So `cwd` and `PYTHONPATH` are
+# conveniences here, not requirements.
 
-[mcp_servers.physearth-geoai]
-command = "python"
-args = ["-m", "integrations.geoai", "serve"]
+[mcp_servers.geoai]
+command = "/absolute/path/to/PhysEarth-Agent/.venv/bin/python"
+args = ["/absolute/path/to/PhysEarth-Agent/integrations/geoai/mcp_server.py", "--stdio"]
 cwd = "/absolute/path/to/PhysEarth-Agent"
+enabled = true
+# `required = false`: a missing interpreter should leave Codex usable without this server, rather
+# than refusing to start a session.
+required = false
+# The 10 s default is tight for a scientific Python import on a cold filesystem, and a server
+# that misses the window shows up as a server with no tools.
+startup_timeout_sec = 30
+# Engine runs are genuinely long: a sweep or a planned chart can take minutes.
+tool_timeout_sec = 300
 
-[mcp_servers.physearth-geoai.env]
-PYTHONPATH = "backend"
-# Only needed for the agent turn (geoai_ask). Leave it out and the tools, resources and
-# prompts still work; the agent turn then refuses in one line instead of guessing.
+[mcp_servers.geoai.env]
+# Only needed for the agent turn (`geoai_ask`). Without it, the tools, resources and prompts
+# still work; that tool then refuses in one line instead of guessing.
 # PHYSEARTH_LLM_API_KEY = "…"
 # PHYSEARTH_LLM_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
