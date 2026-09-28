@@ -4,19 +4,28 @@
 // that make an answer scientific, and the lifecycle that starts and stops the Python bridge
 // the tools run on. What it deliberately does not own: the tool definitions. Those arrive
 // through the harness' own MCP client row (`mcp-geoai`), because a server's tool list is then
-// discovered rather than hand-declared, and it carries `notifications/tools/list_changed`.
+// *discovered* rather than hand-declared, and it carries `notifications/tools/list_changed`.
 //
-// Two facts from the harness shaped this file:
-// - a third-party plugin can be mounted from outside the repository (package.json declares
-//   `dsh.bundle.patch` + `dsh.client`), so nothing here patches DeepSeek Harness itself;
-// - the Plugins settings section has no enable/disable control of its own — the inventory is
-//   read-only — so the one-click switch below is this plugin's own, and it flips both this
-//   plugin's behaviour and the MCP row through the documented loader update.
+// Three facts about the harness shaped this file, each checked against the installed packages
+// rather than assumed:
+//
+// - a third-party plugin can be mounted from outside the repository (`package.json` declares
+//   `dsh.bundle.patch` and `dsh.client`), so nothing here patches DeepSeek Harness itself;
+// - `settings.register(ns, schema)` returns a scope with `get` / `watch` / `update` / `replace`
+//   — there is no `subscribe`, and a namespace must match `/^[a-z][a-z0-9-]*$/`;
+// - `systemPrompt.section` takes `{ name, order, text }` and throws if `order` is not a finite
+//   number, and `loader.update(id, options)` is async.
+//
+// The Plugins settings section is a read-only inventory, so the one-click switch is this
+// plugin's own, in its browser half, and it writes the `enabled` setting below. That single
+// value moves the tools, the prompt section, the restyle and the bridge process together —
+// which is the point: "off" has to mean the model cannot call a physics tool, not just that a
+// colour changed.
 
 import z from '@deepseek-ai/schemastery'
 
 import { BridgeClient } from './lib/bridge.js'
-import { DEFAULTS, ENGINE_TOOLS, HOST_TOOLS, HOST_TOKEN_OVERRIDES, normaliseSettings, themeId, themeTokens } from './lib/logic.js'
+import { ACCENTS, DEFAULTS, ENGINE_TOOLS, HOST_TOOLS, normaliseSettings } from './lib/logic.js'
 
 export const name = 'physearth-geoai'
 export const inject = ['settings', 'tools', 'systemPrompt']
@@ -27,6 +36,16 @@ export const NAMESPACE = 'physearth-geoai'
 /** The MCP row that brings the engine's tools; the switch disables it with the plugin. */
 export const MCP_ENTRY_ID = 'mcp-geoai'
 
+/**
+ * Where the Geo-AI rules sit in the assembled prompt.
+ *
+ * The harness' own tool-guidance sections run 100-116 and the deployment-level sections 190+.
+ * 120 puts these rules after every tool's own guidance — so a model that has just read what
+ * `run_model` does then reads what may be *claimed* about it — and before the deployment layer,
+ * which is allowed to override them.
+ */
+export const PROMPT_ORDER = 120
+
 export const Config = z.object({
   enabled: z.boolean().default(DEFAULTS.enabled),
   bridgeUrl: z.string().default(DEFAULTS.bridgeUrl),
@@ -35,6 +54,7 @@ export const Config = z.object({
   projectRoot: z.string().default(DEFAULTS.projectRoot),
   approveRuns: z.boolean().default(DEFAULTS.approveRuns),
   accent: z.string().default(DEFAULTS.accent),
+  colorScheme: z.string().default(DEFAULTS.colorScheme),
   restyleHost: z.boolean().default(DEFAULTS.restyleHost),
   requestTimeoutMs: z.number().default(DEFAULTS.requestTimeoutMs),
 })
@@ -42,9 +62,9 @@ export const Config = z.object({
 /**
  * The rules this plugin adds to the system prompt, on top of whatever the host asks for.
  *
- * They are the engine's own rules restated for a host model, because a harness model that
- * never calls `run_model` could otherwise sound exactly like one that did: the citation
- * markers below are refused by the engine unless the session actually gathered them.
+ * They restate the engine's own rules for a host model, because a harness model that never
+ * called `run_model` could otherwise sound exactly like one that did: every marker named below
+ * is refused by the engine unless the session actually gathered it.
  */
 export const PROMPT_SECTION = `
 ## Geo-AI physics (PhysEarth-Agent)
@@ -68,16 +88,10 @@ parameter ranges, a human approval gate and post-run quality control.
 /**
  * Mount the plugin.
  *
- * The switch is read from the settings section on every change, so flipping it takes effect
- * without restarting the harness; disabling also frees the bridge process this plugin started.
+ * The switch is re-read on every settings change, so flipping it takes effect without a
+ * restart; disabling also frees the bridge process this plugin started.
  */
 export function apply(ctx, config = {}) {
-  if (!ctx.settings || !ctx.tools || !ctx.systemPrompt) {
-    throw new Error(
-      'physearth-geoai needs the settings, tools and systemPrompt capabilities; ' +
-        'mount it in a profile that composes them (the shipped web profile does).',
-    )
-  }
   const { settings, warnings } = normaliseSettings(config)
   for (const warning of warnings) ctx.logger?.warn?.(`physearth-geoai: ${warning}`)
 
@@ -85,6 +99,7 @@ export function apply(ctx, config = {}) {
   let disposers = []
   const scope = ctx.settings.register(NAMESPACE, Config)
 
+  /** The settings in force right now: the stored section wins over the composition config. */
   const current = () => normaliseSettings(scope.get ? scope.get() : settings).settings
 
   function stop() {
@@ -109,20 +124,40 @@ export function apply(ctx, config = {}) {
       ctx.logger?.warn?.(`physearth-geoai: ${readiness.detail}`)
     }
     disposers.push(
-      ctx.systemPrompt.section({ id: 'geoai-physics', content: PROMPT_SECTION }),
-    )
-    disposers.push(
-      registerToolToggle(ctx, active),
+      ctx.systemPrompt.section({ name: 'geoai-physics', order: PROMPT_ORDER, text: PROMPT_SECTION }),
     )
     ctx.logger?.info?.(
-      `physearth-geoai: enabled, bridge at ${active.bridgeUrl}, ` +
-        `${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present as mcp__geoai__*, theme ${themeId(active)}`,
+      `physearth-geoai: enabled — bridge at ${active.bridgeUrl}, ` +
+        `${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present as mcp__geoai__*, ` +
+        `${ACCENTS.length} accents, prompt section at order ${PROMPT_ORDER}`,
     )
   }
 
-  function apply_() {
+  /**
+   * Reconcile the MCP row with the switch.
+   *
+   * This runs on *both* transitions, which is the whole mechanism: with the row left composed
+   * while the plugin is off, the model would still see every `mcp__geoai__*` tool and "off"
+   * would be cosmetic. `loader.update` is async and live (the web profile reloads patches
+   * without a restart), so the tool list follows the switch and a page refresh shows it.
+   */
+  function applyToolRow(disabled) {
+    if (typeof ctx.loader?.update !== 'function') {
+      ctx.logger?.warn?.(
+        'physearth-geoai: this host exposes no loader.update; the mcp-geoai row keeps its ' +
+          'composed state, so the tools stay in the model’s list even while the plugin is off.',
+      )
+      return
+    }
+    Promise.resolve(ctx.loader.update(MCP_ENTRY_ID, { disabled })).catch((error) => {
+      ctx.logger?.warn?.(`physearth-geoai: loader.update(${MCP_ENTRY_ID}, ${disabled}) failed: ${error.message}`)
+    })
+  }
+
+  function reconcile() {
     stop()
     const active = current()
+    applyToolRow(!active.enabled)
     if (!active.enabled) {
       ctx.logger?.info?.('physearth-geoai: disabled — no tools, no prompt section, no restyle')
       return
@@ -132,43 +167,19 @@ export function apply(ctx, config = {}) {
     })
   }
 
-  apply_()
-  ctx.effect(() => {
-    if (typeof scope.subscribe !== 'function') return () => {}
-    return scope.subscribe(() => apply_())
-  }, 'physearth-geoai: settings adoption')
-  ctx.effect(() => stop, 'physearth-geoai: teardown')
-}
+  reconcile()
 
-/**
- * The switch, exposed to the browser card and to the loader.
- *
- * `enabled` in the settings namespace is what the card writes; the MCP row is disabled in the
- * same gesture so the model's tool list follows the switch, and re-enabled when it comes back.
- * The loader update is live (the web profile reloads patches live), so a refresh of the page
- * is enough to see the whole surface appear or disappear.
- */
-function registerToolToggle(ctx, settings) {
-  const applyRow = (disabled) => {
-    if (!ctx.loader || typeof ctx.loader.update !== 'function') {
-      ctx.logger?.warn?.(
-        'physearth-geoai: this host exposes no loader.update; the MCP row keeps its composed ' +
-          'state and only this plugin’s prompt/UI half follows the switch.',
-      )
-      return false
+  // `watch`, not `subscribe`: the settings scope exposes `get`/`watch`/`update`/`replace`. A
+  // wrong name here fails silently, and the switch would only ever apply at mount time.
+  ctx.effect(() => {
+    if (typeof scope.watch !== 'function') {
+      ctx.logger?.warn?.('physearth-geoai: settings scope exposes no watch(); the switch applies at mount only')
+      return () => {}
     }
-    try {
-      ctx.loader.update(MCP_ENTRY_ID, { disabled })
-      return true
-    } catch (error) {
-      ctx.logger?.warn?.(`physearth-geoai: loader.update(${MCP_ENTRY_ID}) failed: ${error.message}`)
-      return false
-    }
-  }
-  applyRow(!settings.enabled)
-  return () => {
-    /* Nothing to undo: the row keeps the state the switch last set. */
-  }
+    return scope.watch(() => reconcile())
+  }, 'physearth-geoai: settings adoption')
+
+  ctx.effect(() => stop, 'physearth-geoai: teardown')
 }
 
 export default { name, inject, Config, apply }

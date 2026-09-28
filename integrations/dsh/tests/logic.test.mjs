@@ -1,7 +1,9 @@
 // What can be verified without a DeepSeek Harness runtime: the plugin's own logic, and the
-// shape of the three files a host loads (manifest, bundle patch, client bundle). Everything
-// that needs the harness (loader toggle, theme cascade, visual acceptance) is listed in the
-// README as a runtime step, not faked here.
+// shape of the files a host loads (manifest, bundle patch, client bundle). Everything that
+// needs the harness itself (the loader toggle, the theme cascade, visual acceptance) is a
+// runtime step in the README, not faked here — but the *contracts* those steps exercise are
+// pinned in `host.test.mjs` and `client.test.mjs`, because a wrong service method name fails
+// silently rather than loudly and only a live browser would show it.
 
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -11,17 +13,13 @@ import { fileURLToPath } from 'node:url'
 
 import {
   ACCENTS,
-  BASE_TOKENS,
   DEFAULTS,
-  HOST_TOKEN_OVERRIDES,
   auditFields,
   bridgeCommand,
   normaliseSettings,
   portOf,
   resultHeadline,
   resultTone,
-  themeTokens,
-  themeId,
   toolCard,
 } from '../lib/logic.js'
 
@@ -31,6 +29,7 @@ test('the plugin ships off, so mounting it changes nothing until a user asks', (
   assert.equal(DEFAULTS.enabled, false)
   assert.equal(DEFAULTS.approveRuns, false)
   assert.equal(DEFAULTS.restyleHost, true)
+  assert.equal(DEFAULTS.colorScheme, 'dark')
   assert.deepEqual(ACCENTS, ['ice', 'amber', 'deep-blue'])
 })
 
@@ -55,6 +54,13 @@ test('an unknown accent and an out-of-range timeout fall back with a reason', ()
   assert.equal(warnings.length, 2)
 })
 
+test('an unknown colour scheme falls back, but an absent one is not a warning', () => {
+  assert.equal(normaliseSettings({ colorScheme: 'sepia' }).settings.colorScheme, 'dark')
+  assert.equal(normaliseSettings({ colorScheme: 'sepia' }).warnings.length, 1)
+  assert.equal(normaliseSettings({}).warnings.length, 0)
+  assert.equal(normaliseSettings({ colorScheme: 'light' }).settings.colorScheme, 'light')
+})
+
 test('booleans and paths are coerced, so a settings document written by hand still loads', () => {
   const { settings } = normaliseSettings({ enabled: 1, approveRuns: 'yes', projectRoot: '  /tmp/x  ', pythonCmd: '  ' })
 
@@ -62,27 +68,6 @@ test('booleans and paths are coerced, so a settings document written by hand sti
   assert.equal(settings.approveRuns, true)
   assert.equal(settings.projectRoot, '/tmp/x')
   assert.equal(settings.pythonCmd, DEFAULTS.pythonCmd)
-})
-
-test('theme tokens carry the base surfaces plus exactly one accent', () => {
-  const ice = themeTokens({ accent: 'ice' })
-  const amber = themeTokens({ accent: 'amber' })
-
-  assert.equal(ice['--geoai-bg'], BASE_TOKENS['--geoai-bg'])
-  assert.equal(ice['--geoai-accent'], '#22d3ee')
-  assert.equal(amber['--geoai-accent'], '#f59e0b')
-  assert.notEqual(ice['--geoai-accent'], amber['--geoai-accent'])
-  assert.equal(themeId({ accent: 'amber' }), 'geoai-amber')
-})
-
-test('only token names the theme directory declares are overridden', () => {
-  // Three names verified present in the shipped token sheets; a fourth would be rejected by
-  // the theme service at runtime, so it must not appear here silently.
-  assert.deepEqual(Object.keys(HOST_TOKEN_OVERRIDES).sort(), [
-    '--dsw-alias-scrollbar-thumb',
-    '--dsw-alias-scrollbar-thumb-hover',
-    '--dsw-elevation-stroke-color',
-  ])
 })
 
 test('the bridge command matches the address the settings name', () => {
@@ -145,6 +130,10 @@ test('the manifest points a host at the two halves it loads', () => {
   assert.equal(manifest.dsh.client.platform, 'web')
   assert.equal(manifest.exports['./client'], './lib/client.js')
   assert.ok(manifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-ui-settings'))
+  // The client bundle is read and served verbatim by the module registry, so `files` has to
+  // carry the whole of `lib/` — a published package missing it fails at boot, not at install.
+  assert.ok(manifest.files.includes('lib'))
+  assert.ok(manifest.files.includes('cordis.patch.yml'))
 })
 
 test('the client half is a self-contained factory that can be unloaded', () => {
@@ -162,14 +151,30 @@ test('the client half is a self-contained factory that can be unloaded', () => {
   assert.match(client, /style\.remove\(\)/)
 })
 
-test('the stylesheet is scoped to the enabled class and respects reduced motion', () => {
-  const css = readFileSync(join(ROOT, 'lib', 'client.css.js'), 'utf8')
+test('the client half requires nothing but its declared rows', () => {
+  const source = readFileSync(join(ROOT, 'lib', 'client.js'), 'utf8')
+  // Comments are stripped first: this file documents *why* a relative require would fail, and
+  // that prose must not read as a call.
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1')
+  const required = [...code.matchAll(/require\((['"])([^'"]+)\1\)/g)].map((match) => match[2])
 
-  assert.match(css, /body\.geoai-restyled/)
-  assert.match(css, /prefers-reduced-motion: reduce/)
-  assert.match(css, /focus-visible/)
-  // Mobile first, then one relaxation at the tablet breakpoint.
-  assert.match(css, /grid-template-columns: 1fr/)
-  assert.match(css, /@media \(min-width: 768px\)/)
-  assert.doesNotMatch(css, /\u{1F300}-\u{1FAFF}/u, 'no emoji as icons')
+  // The module table answers `require` only for platform seed words and for rows already in
+  // the boot graph, so a relative path — the obvious way to split a stylesheet out — would
+  // miss the table and throw at load.
+  assert.deepEqual([...new Set(required)], ['react'])
+})
+
+test('the stylesheet is scoped to the enabled class and respects reduced motion', () => {
+  const client = readFileSync(join(ROOT, 'lib', 'client.js'), 'utf8')
+
+  assert.match(client, /body\.geoai-restyled/)
+  assert.match(client, /prefers-reduced-motion: reduce/)
+  assert.match(client, /focus-visible/)
+  // Mobile first, then two relaxations as room appears.
+  assert.match(client, /grid-template-columns: 1fr/)
+  assert.match(client, /@media \(min-width: 640px\)/)
+  assert.match(client, /@media \(min-width: 1024px\)/)
+  // A switch needs a touch target; iOS asks for 44 CSS pixels.
+  assert.match(client, /min-height: 44px/)
+  assert.doesNotMatch(client, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'no emoji as icons')
 })

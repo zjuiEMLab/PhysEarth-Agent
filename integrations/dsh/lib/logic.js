@@ -20,6 +20,14 @@ export const DEFAULTS = Object.freeze({
   approveRuns: false,
   /** Visual accent of the Geo-AI surface. */
   accent: 'ice',
+  /**
+   * Which exposure the accent was tuned against.
+   *
+   * The token layer carries both modes, so the host picks per user preference; this only says
+   * whether the *accent* was mixed for a dark or a light field, which decides the fill and
+   * the text that sits on it.
+   */
+  colorScheme: 'dark',
   /** Restyle the host interface while enabled, or only add the Geo-AI cards. */
   restyleHost: true,
   /** Milliseconds before a bridge call is reported as unreachable. */
@@ -91,6 +99,12 @@ export function normaliseSettings(raw, fallback = DEFAULTS) {
     warnings.push(`accent ${JSON.stringify(merged.accent)} is unknown; using ${fallback.accent}`)
     merged.accent = fallback.accent
   }
+  if (merged.colorScheme !== 'dark' && merged.colorScheme !== 'light') {
+    if (merged.colorScheme !== undefined && merged.colorScheme !== '') {
+      warnings.push(`colorScheme ${JSON.stringify(merged.colorScheme)} is neither dark nor light; using ${fallback.colorScheme}`)
+    }
+    merged.colorScheme = fallback.colorScheme
+  }
   const timeout = Number(merged.requestTimeoutMs)
   if (!Number.isFinite(timeout) || timeout < 1000 || timeout > 600000) {
     warnings.push(`requestTimeoutMs ${JSON.stringify(merged.requestTimeoutMs)} is outside 1000-600000; using ${fallback.requestTimeoutMs}`)
@@ -108,73 +122,30 @@ export function normaliseSettings(raw, fallback = DEFAULTS) {
 }
 
 /**
- * Accent palettes as design-system values rather than inline literals in the host.
+ * Accent palettes, in the shape the host theme service actually accepts.
  *
- * The base is a dark, high-contrast surface for numbers people stare at, with one accent
- * that says which family you are looking at: ice for the microwave/cold half of the corpus,
- * amber for the hydrological half, deep blue for a neutral default. Every accent meets AA
- * on the shared surfaces below; contrast is not left to whatever theme is active.
+ * `theme.overrideTokens(source, tokens)` takes token-name → `{ light, dark }` value pairs and
+ * throws a teaching error on a bare string, because a single value goes illegible the moment
+ * the user flips the colour scheme. So every accent below carries both modes.
+ *
+ * The two modes are not the same design in different greys. The dark mode is the one this
+ * plugin is designed for: an OLED-grade near-black field for numbers people stare at, one
+ * accent that says which half of the corpus you are looking at. The light mode is a daylight
+ * version of the same identity rather than a fallback, because a user who reads in light mode
+ * should still be able to tell the plugin is on.
+ *
+ * The accent names follow the subject matter: ice for the microwave/cold-region half of the
+ * corpus, amber for the hydrological half, deep blue for a neutral default.
  */
-export const ACCENT_TOKENS = {
-  ice: {
-    '--geoai-accent': '#22d3ee',
-    '--geoai-accent-strong': '#67e8f9',
-    '--geoai-accent-soft': 'rgba(34, 211, 238, 0.14)',
-    '--geoai-accent-line': 'rgba(34, 211, 238, 0.42)',
-  },
-  amber: {
-    '--geoai-accent': '#f59e0b',
-    '--geoai-accent-strong': '#fbbf24',
-    '--geoai-accent-soft': 'rgba(245, 158, 11, 0.16)',
-    '--geoai-accent-line': 'rgba(245, 158, 11, 0.45)',
-  },
-  'deep-blue': {
-    '--geoai-accent': '#3b82f6',
-    '--geoai-accent-strong': '#60a5fa',
-    '--geoai-accent-soft': 'rgba(59, 130, 246, 0.16)',
-    '--geoai-accent-line': 'rgba(59, 130, 246, 0.45)',
-  },
-}
-
-/** Surface tokens shared by every accent. */
-export const BASE_TOKENS = {
-  '--geoai-bg': '#05070d',
-  '--geoai-surface': '#0b1220',
-  '--geoai-surface-2': '#111a2b',
-  '--geoai-border': 'rgba(148, 163, 184, 0.18)',
-  '--geoai-text': '#e6edf7',
-  '--geoai-text-muted': '#93a4bf',
-  '--geoai-pass': '#34d399',
-  '--geoai-warn': '#fbbf24',
-  '--geoai-block': '#f87171',
-  '--geoai-font-sans': "'Fira Sans', 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
-  '--geoai-font-mono': "'Fira Code', ui-monospace, 'SFMono-Regular', 'JetBrains Mono', monospace",
-  '--geoai-radius': '12px',
-  '--geoai-radius-sm': '8px',
-}
-
 /**
- * Host theme tokens this plugin overrides.
+ * Palette, stylesheet and token layer deliberately live in `lib/client.js`, not here.
  *
- * Only names the theme directory already declares are safe to override: the theme service
- * validates an override layer against that directory and rejects unknown names. These three
- * are the ones verified present in the shipped token sheets, and the rest of the visible
- * restyle travels in the plugin's own stylesheet, which is removed with the plugin.
+ * Every one of them is presentational, only the browser half can apply them, and a client
+ * bundle cannot value-import a sibling file — so keeping them here would mean shipping the
+ * same data twice and having one copy silently drift. What stays here is what the two halves
+ * genuinely share: the settings shape and its coercion, the tool surface, and the bridge
+ * routes. `tests/logic.test.mjs` pins the accent ids and the settings keys on both sides.
  */
-export const HOST_TOKEN_OVERRIDES = {
-  '--dsw-alias-scrollbar-thumb': '#1f2b45',
-  '--dsw-alias-scrollbar-thumb-hover': '#2c3b5c',
-  '--dsw-elevation-stroke-color': 'rgba(148, 163, 184, 0.22)',
-}
-
-export function themeTokens(settings) {
-  return { ...BASE_TOKENS, ...ACCENT_TOKENS[settings.accent] }
-}
-
-/** Theme id derived from the accent, so two accents can coexist in one deployment. */
-export function themeId(settings) {
-  return `geoai-${settings.accent}`
-}
 
 export function toolCard(name) {
   return TOOL_CARDS[name] || undefined
