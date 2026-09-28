@@ -1,0 +1,52 @@
+# PhysEarth-Agent bundle layer for DeepSeek Harness.
+#
+# Applied automatically when the package is installed (package.json declares
+# dsh.bundle.patch), so a profile that runs
+#   dsh plugin add /absolute/path/to/PhysEarth-Agent/integrations/dsh
+# gets this wiring without hand-editing cordis.yml. Later layers (the profile's own
+# cordis.patch.yml, --patch overlays) override these rows by id.
+#
+# Two rows, and the split is deliberate:
+#
+#   geoai       our plugin: the settings switch, the prompt rules, the browser restyle.
+#   mcp-geoai   the harness' own MCP client, pointed at this repository's MCP server. The
+#               engine's tools are therefore *discovered* rather than hand-declared, and the
+#               tool list follows the server (`notifications/tools/list_changed`) instead of
+#               being frozen into this file. Tools appear as `mcp__geoai__<tool>`.
+#
+# The switch in 设置 → 插件 (PhysEarth Geo-AI) flips this plugin's `enabled` setting and, in the
+# same gesture, disables the mcp-geoai row through the loader, so the model's tool list follows
+# the switch. That loader update is live in the web profile; a page refresh shows the result.
+#
+# Absolute paths: replace REPLACE_WITH_CHECKOUT below, or install through the helper at
+# integrations/dsh/scripts/install.sh, which writes the resolved path for you.
+
+- insert:
+    - id: geoai
+      name: dsh-plugin-physearth-geoai
+      config:
+        enabled: false
+        bridgeUrl: http://127.0.0.1:8799
+        autoStartBridge: true
+        pythonCmd: python
+        projectRoot: REPLACE_WITH_CHECKOUT
+        approveRuns: false
+        accent: ice
+        restyleHost: true
+        requestTimeoutMs: 120000
+
+    - id: mcp-geoai
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: geoai
+        transport: stdio
+        command: python
+        args: ['-m', 'integrations.geoai', 'serve']
+        cwd: REPLACE_WITH_CHECKOUT
+        env:
+          PYTHONPATH: backend
+        # The bridge needs the same credentials the engine does; leave the key unset and the
+        # tool-only and knowledge-only paths still work while `geoai_ask` refuses in one line.
+        # failOnStartupError stays false so a missing Python does not stop the whole harness.
+        toolCallTimeoutMs: 120000
+        failOnStartupError: false
