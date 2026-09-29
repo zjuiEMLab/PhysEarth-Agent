@@ -232,6 +232,35 @@ def test_every_script_sources_the_shared_interpreter_search():
         assert "scripts/lib/find-python.sh" in text, script
 
 
+def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
+    # "The plugin must carry the whole project" includes the way the project is started. The
+    # launcher that existed only on the Codex branch failed on `python app.py` for the two reasons
+    # its header names, so it belongs on every branch and must not re-implement the search.
+    launcher = ROOT / "scripts" / "studio.sh"
+    assert launcher.is_file() and os.access(launcher, os.X_OK)
+    body = launcher.read_text()
+    assert "scripts/lib/find-python.sh" in body
+    assert "physearth_find_python_for_studio" in body
+    assert "PYTHONPATH=backend" in body, "the package lives under backend/"
+    wrapper = ROOT / "start-local.command"
+    assert wrapper.is_file() and os.access(wrapper, os.X_OK)
+    assert "scripts/studio.sh" in wrapper.read_text(), "one implementation, not a second copy"
+
+
+def test_the_settings_half_resolves_its_interpreter_before_the_read_only_path():
+    # `--check` reads the settings file with PYTHON_BIN. When that assignment sat below the branch,
+    # `set -u` turned the report into "unbound variable" — a crash in the one mode that exists to
+    # keep working on a broken install. Order is the assertion, so it is asserted positionally.
+    script = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    assignment = script.index('PYTHON_BIN=')
+    read_only = script.index('if [ "$CHECK" = "1" ]; then')
+    assert assignment < read_only
+    # And the status line names the interpreter that was proved, shlex-quoted because a checkout
+    # path may contain spaces; `python3` is exactly the interpreter the search exists to distrust.
+    assert 'command": f"{shlex.quote(python_bin)} {shlex.quote(statusline)}"' in script
+    assert script.count('PYTHON_BIN=') == 1, "assigned once, before it is used"
+
+
 def test_the_server_can_be_run_as_a_file_without_cwd_or_pythonpath():
     # This is what makes the installer's one command enough. A file run gets its own directory on
     # sys.path, finding neither `integrations` nor `physearth`, so the file adds both roots itself.

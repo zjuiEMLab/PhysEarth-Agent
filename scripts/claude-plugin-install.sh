@@ -6,7 +6,9 @@
 #   output-styles/         the answer discipline — the one mechanism that changes every
 #                          response's *text* with no user action (`force-for-plugin: true`)
 #   themes/                the Geo-AI colour scheme
-#   .mcp.json              the engine's 28 tools
+#
+# The engine's 28 tools are NOT in that list on purpose; this script registers the MCP server
+# instead. The measurement behind that is in the MCP section below.
 #
 # What only a settings file can do, and why this script exists:
 #   statusLine             Claude Code renders ANSI colour from a status-line command's stdout,
@@ -69,6 +71,18 @@ settings_path() {
   esac
 }
 
+# Both interpreters are resolved here, before the --check branch, rather than after it. That
+# branch reads the settings file with one of them, and under `set -u` reaching it unset is an
+# "unbound variable" crash — inside the one code path whose whole job is to keep working on a
+# broken install.
+#
+# ENGINE_PYTHON is the interpreter that can import `integrations.geoai.service`; PYTHON_BIN is
+# whatever runs the status line. The status line needs nothing but the standard library, so it
+# prefers the engine interpreter and falls back to any interpreter at all: a coloured status line
+# in a checkout whose environment is still being built is worth more than a blank one.
+ENGINE_PYTHON="$(physearth_find_python_for_engine "$ROOT" || true)"
+PYTHON_BIN="${ENGINE_PYTHON:-$(physearth_find_python "import json" || true)}"
+
 if [ "$CHECK" = "1" ]; then
   echo
   claude plugin list 2>&1 | head -20
@@ -110,7 +124,6 @@ claude plugin install "$PLUGIN_NAME@$MARKETPLACE" --scope "$SCOPE" 2>&1 | head -
 # The file form of the server is registered instead, because it needs neither `cwd` nor
 # PYTHONPATH: `mcp_server.py` adds the repository root and `backend/` to sys.path from its own
 # location. That reduces this step to naming an interpreter that can import the engine.
-ENGINE_PYTHON="$(physearth_find_python_for_engine "$ROOT" || true)"
 if [ -z "$ENGINE_PYTHON" ]; then
   echo "WARNING: no interpreter could import integrations.geoai.service." >&2
   echo "         The skill, output style and theme still work; every engine tool will fail." >&2
@@ -123,9 +136,8 @@ else
 fi
 
 # ── The two settings a plugin cannot set ─────────────────────────────────────────────────────
-PYTHON_BIN="$(physearth_find_python "import json" || true)"
 if [ -z "$PYTHON_BIN" ]; then
-  echo "No python3 on PATH; the status line needs one. Skipping the settings half." >&2
+  echo "No interpreter on PATH can run the status line. Skipping the settings half." >&2
   exit 1
 fi
 
@@ -136,12 +148,13 @@ if [ "$DO_SETTINGS" = "1" ]; then
     cp "$PATH_JSON" "$PATH_JSON.bak-$(date +%Y%m%d-%H%M%S)"
     echo "==> backed up $PATH_JSON"
   fi
-  "$PYTHON_BIN" - "$PATH_JSON" "$ROOT/plugins/$PLUGIN_NAME/scripts/statusline.py" "$PLUGIN_NAME" <<'PY'
+  "$PYTHON_BIN" - "$PATH_JSON" "$ROOT/plugins/$PLUGIN_NAME/scripts/statusline.py" "$PLUGIN_NAME" "$PYTHON_BIN" <<'PY'
 import json
 import os
+import shlex
 import sys
 
-path, statusline, plugin = sys.argv[1], sys.argv[2], sys.argv[3]
+path, statusline, plugin, python_bin = sys.argv[1:5]
 data = {}
 if os.path.exists(path):
     try:
@@ -153,8 +166,10 @@ if os.path.exists(path):
 data["theme"] = f"custom:{plugin}:geoai-night"
 data["statusLine"] = {
     "type": "command",
-    # Quoted: a checkout path may contain spaces, and Claude Code runs this through a shell.
-    "command": f'python3 "{statusline}"',
+    # The interpreter this script *proved*, not `python3`: the status line is rendered by a
+    # subprocess of the editor, whose PATH is not this shell's, and quoting is shlex's job
+    # because a checkout path may contain spaces.
+    "command": f"{shlex.quote(python_bin)} {shlex.quote(statusline)}",
     "padding": 0,
     "refreshInterval": 10,
 }
