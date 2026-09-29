@@ -10,7 +10,9 @@
 #      plain interpreter needs `PYTHONPATH=backend`.
 #   2. The interpreter that can actually import the app is not necessarily `python3`. On macOS
 #      that is frequently a bare system Python with no Gradio, so candidates are *proved* by
-#      importing the frontend rather than found on PATH.
+#      importing the frontend rather than found on PATH. The search itself lives in
+#      `scripts/lib/find-python.sh`, because the same mistake was made here, in the Codex doctor
+#      and in the DSH installer.
 #
 # Usage:
 #   scripts/studio.sh              # start, print the URL
@@ -24,64 +26,24 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/find-python.sh
+. "$ROOT/scripts/lib/find-python.sh"
 OPEN=0
 for argument in "$@"; do
   case "$argument" in
     --open) OPEN=1 ;;
-    -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $argument" >&2; exit 2 ;;
   esac
 done
 
-# ── Which interpreter ───────────────────────────────────────────────────────────────────────
-# Candidates in order of how deliberate they are, and every one of them *proved* by importing the
-# app rather than found on PATH. That distinction is the whole point: on this machine `python3` is
-# a system interpreter with no Gradio, so a PATH lookup finds the one interpreter that cannot run
-# the Studio. Conda environments are searched by glob for the same reason — a working environment
-# is usually a named env, not whatever `python3` happens to point at.
-interpreter_candidates() {
-  [ -n "${PHYSEARTH_PYTHON:-}" ] && echo "$PHYSEARTH_PYTHON"
-  echo "$ROOT/.venv/bin/python"
-  [ -n "${CONDA_PREFIX:-}" ] && echo "$CONDA_PREFIX/bin/python"
-
-  local root env_dir
-  for root in "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/mambaforge" "$HOME/miniforge3" \
-              /opt/miniconda3 /opt/anaconda3 /opt/homebrew/Caskroom/miniconda/base; do
-    [ -d "$root/envs" ] || continue
-    [ -x "$root/bin/python" ] && echo "$root/bin/python"
-    # An env named for this project first, then the rest, so `physearth-agent` wins over an
-    # unrelated env that merely happens to import.
-    for env_dir in "$root/envs"/*physearth* "$root/envs"/*geoai* "$root/envs"/*; do
-      [ -x "$env_dir/bin/python" ] && echo "$env_dir/bin/python"
-    done
-  done
-
-  echo python3
-  echo python
-}
-
-find_python() {
-  local candidate
-  while IFS= read -r candidate; do
-    [ -n "$candidate" ] || continue
-    command -v "$candidate" >/dev/null 2>&1 || [ -x "$candidate" ] || continue
-    # Prove it: the frontend is what the app imports first, and Gradio is the dependency missing
-    # from a system Python.
-    if (cd "$ROOT" && PYTHONPATH=backend "$candidate" -c "import gradio, physearth" >/dev/null 2>&1); then
-      FOUND="$candidate"
-      command -v "$candidate" >/dev/null 2>&1 && command -v "$candidate" || echo "$candidate"
-      return 0
-    fi
-  done < <(interpreter_candidates)
-  return 1
-}
-
-if ! PYTHON="$(find_python)"; then
-  cat >&2 <<'MESSAGE'
+export PHYSEARTH_ROOT="$ROOT"
+if ! PYTHON="$(physearth_find_python_for_studio "$ROOT")"; then
+  cat >&2 <<MESSAGE
 No interpreter could import the Studio (gradio + physearth).
 
-Looked at $PHYSEARTH_PYTHON, .venv, $CONDA_PREFIX, conda envs under the usual roots, python3 and
-python — none of them satisfied `import gradio, physearth`.
+Looked at \$PHYSEARTH_PYTHON, $ROOT/.venv, \$CONDA_PREFIX, conda envs under the usual roots,
+python3 and python — none of them satisfied \`import gradio, physearth\`.
 
   uv sync --extra dev            # the supported way; creates .venv with everything
   # or:  pip install -e backend  plus gradio

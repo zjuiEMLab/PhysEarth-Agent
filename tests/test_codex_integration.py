@@ -176,6 +176,24 @@ def test_the_doctor_script_is_executable_and_checks_the_engine_before_the_regist
     assert "PHYSEARTH_PYTHON" in body
 
 
+def test_the_shell_scripts_share_one_interpreter_search():
+    # This script and `studio.sh` each carried their own candidate list, and both lists were the
+    # same wrong shape: `python3` before the conda environments, proved against `import physearth`
+    # — whose `__init__` is lazy, so a PyYAML-less interpreter passes and then offers no tools.
+    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    assert library.is_file() and os.access(library, os.X_OK)
+    for name, probe in (
+        ("codex-doctor.sh", "physearth_find_python_for_engine"),
+        ("studio.sh", "physearth_find_python_for_studio"),
+        ("codex-theme-install.sh", '"import plistlib"'),
+    ):
+        body = (ROOT / "scripts" / name).read_text()
+        assert "scripts/lib/find-python.sh" in body, name
+        assert probe in body, name
+        # The duplicate is gone, not merely bypassed: no script keeps a fallback `python3` loop.
+        assert 'for candidate in "${PHYSEARTH_PYTHON:-}"' not in body, name
+
+
 def test_the_agents_md_snippet_matches_the_skill_on_the_rules_that_matter():
     snippet = (ROOT / "integrations" / "geoai" / "AGENTS.snippet.md").read_text()
     skill = SKILL.read_text()

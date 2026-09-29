@@ -21,6 +21,8 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/find-python.sh
+. "$ROOT/scripts/lib/find-python.sh"
 SERVER="$ROOT/integrations/geoai/mcp_server.py"
 NAME="${GEOAI_MCP_NAME:-geoai}"
 failures=0
@@ -41,15 +43,7 @@ if [ ! -f "$SERVER" ]; then
 fi
 ok "found $SERVER"
 
-PYTHON=""
-for candidate in "${PHYSEARTH_PYTHON:-}" "$ROOT/.venv/bin/python" python3 python; do
-  [ -n "$candidate" ] || continue
-  command -v "$candidate" >/dev/null 2>&1 || [ -x "$candidate" ] || continue
-  if (cd "$ROOT" && PYTHONPATH=backend:. "$candidate" -c "from integrations.geoai import service" >/dev/null 2>&1); then
-    PYTHON="$(command -v "$candidate" >/dev/null 2>&1 && command -v "$candidate" || echo "$candidate")"
-    break
-  fi
-done
+PYTHON="$(physearth_find_python_for_engine "$ROOT" || true)"
 if [ -z "$PYTHON" ]; then
   bad "no interpreter could import the engine."
   echo "        Install it (uv sync --extra dev), then re-run with PHYSEARTH_PYTHON=/path/to/python."

@@ -21,6 +21,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/lib/find-python.sh
+. "$ROOT/scripts/lib/find-python.sh"
 THEME_SRC="$ROOT/codex/geoai.tmTheme"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 THEMES_DIR="$CODEX_HOME/themes"
@@ -43,15 +45,10 @@ done
 echo "codex home: $CODEX_HOME"
 
 # A Python that can read a plist is the validator: a .tmTheme *is* an XML plist, so "did Codex
-# accept it" starts with "is it a plist at all". Finding one that imports plistlib is the same
-# candidate search the rest of this repository uses, for the same reason — `python3` on PATH is
-# not reliably the interpreter with the libraries.
-PY=""
-for candidate in "${PHYSEARTH_PYTHON:-}" python3 python; do
-  [ -n "$candidate" ] || continue
-  command -v "$candidate" >/dev/null 2>&1 || continue
-  if "$candidate" -c "import plistlib" >/dev/null 2>&1; then PY="$candidate"; break; fi
-done
+# accept it" starts with "is it a plist at all". plistlib is standard library, so the probe is
+# `import plistlib` — but the *search* is still the shared one, because this script's own copy
+# looked only at PATH and therefore missed every conda environment on the machine.
+PY="$(physearth_find_python "import plistlib" || true)"
 if [ -z "$PY" ]; then
   echo "No Python with plistlib was found, so the theme cannot be validated. Install python3." >&2
   exit 1
