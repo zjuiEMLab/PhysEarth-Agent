@@ -170,6 +170,38 @@ That path exists for people who want the skill and the author metadata delivered
 is **not** the recommended install, and it does not register the MCP server — see
 `plugins/geoai/README.md` for why, and for the one command that finishes the job.
 
+Both commands were run against this tree, in a throwaway `CODEX_HOME`, so what follows is a
+measurement rather than an expectation:
+
+```
+$ codex plugin marketplace add /path/to/PhysEarth-Agent
+Added marketplace `physearth-agent` from /path/to/PhysEarth-Agent.
+Installed marketplace root: /path/to/PhysEarth-Agent
+Marketplace `physearth-agent`
+  /path/to/PhysEarth-Agent/.agents/plugins/marketplace.json
+
+PLUGIN                 STATUS         VERSION  SOURCE
+geoai@physearth-agent  not installed           /path/to/PhysEarth-Agent/plugins/geoai
+
+$ codex plugin add geoai@physearth-agent
+Added plugin `geoai` from marketplace `physearth-agent`.
+Installed plugin root: $CODEX_HOME/plugins/cache/physearth-agent/geoai/1.0.0
+
+$ codex plugin list
+PLUGIN                 STATUS              VERSION  SOURCE
+geoai@physearth-agent  installed, enabled  1.0.0    /path/to/PhysEarth-Agent/plugins/geoai
+```
+
+The install copies the plugin into `$CODEX_HOME/plugins/cache/<marketplace>/<plugin>/<version>/`,
+which is the same constraint that decides how the MCP server is registered: a plugin cannot ship
+a path to anything outside itself, so the server's absolute command is written by the user's own
+`codex mcp add`.
+
+Unlike `claude plugin`, Codex 0.155.1 has **no `validate` subcommand** — `plugin add|list|remove`
+and `plugin marketplace add|list|upgrade|remove` only. The shape the CLI accepts is therefore
+pinned by `tests/test_codex_integration.py` instead and confirmed by the run above; a rejection
+would show up as a marketplace listing zero plugins, or an `add` failing on a field name.
+
 Public submission to a remote marketplace is a different thing and needs something this
 repository cannot provide: an official requirement of a remotely hosted HTTPS MCP endpoint. That
 is an infrastructure project (expose the engine behind a streamable-HTTP MCP server and keep it

@@ -398,3 +398,21 @@ def test_the_theme_installer_probes_the_theme_before_claiming_success():
     # them.
     block = script.split('block="$BEGIN', 1)[1].split('$END"', 1)[0]
     assert "`" not in block, "backticks inside a double-quoted heredoc run as command substitution"
+
+
+def test_the_marketplace_entry_carries_what_the_cli_needs_to_install_it():
+    # Measured against Codex 0.155.1: `plugin marketplace add` reports the marketplace, and
+    # `plugin add` copies the plugin to $CODEX_HOME/plugins/cache/<marketplace>/<plugin>/<version>.
+    # There is no `validate` subcommand to lean on, so these are the fields that run proved
+    # necessary — a missing `source.source` is the difference between "installed, enabled" and a
+    # marketplace that lists nothing.
+    catalog = json.loads(MARKETPLACE.read_text())
+    entry, = catalog["plugins"]
+    manifest = _plugin_manifest()
+
+    assert entry["source"] == {"source": "local", "path": "./plugins/geoai"}
+    assert (ROOT / entry["source"]["path"]).resolve() == PLUGIN.resolve()
+    # The version the CLI printed in `plugin list` is the manifest's, not the catalogue's.
+    assert manifest["version"] == "1.0.0"
+    assert entry["policy"]["installation"] == "AVAILABLE"
+    assert "version" not in entry, "the manifest is the one place a version lives"
