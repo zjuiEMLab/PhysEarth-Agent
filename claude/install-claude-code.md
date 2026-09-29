@@ -85,14 +85,51 @@ Verified after install: `claude mcp list` → `geoai: … - ✓ Connected`.
 ## Verify
 
 ```bash
-scripts/claude-plugin-install.sh --check     # plugin inventory, component list, settings
-claude plugin details geoai-claude           # skills / agents / MCP servers / token cost
-claude mcp list | grep geoai                 # must say ✓ Connected
+claude plugin validate ./plugins/geoai-claude    # the manifest, before anything is installed
+claude plugin tag ./plugins/geoai-claude --dry-run   # plugin.json and the marketplace entry agree
+scripts/claude-plugin-install.sh --check         # plugin inventory, component list, settings
+claude plugin details geoai-claude               # skills / agents / MCP servers / token cost
+claude mcp list | grep geoai                     # must say ✓ Connected
 ```
+
+The first two are the pre-flight pair and both were run against this tree:
+
+```
+✔ Validation passed
+Plugin:  geoai-claude
+Version: 1.0.0 (from plugin.json)
+Marketplace entry: plugins[0] in …/.claude-plugin/marketplace.json
+Tag:     geoai-claude--v1.0.0
+```
+
+`tag --dry-run` is worth keeping in that list because it checks the thing `validate` cannot: that
+the manifest and the marketplace entry describe the *same* plugin and version. It refuses to run
+on a dirty tree, which is a feature — a tag that points at uncommitted code is worse than no tag.
 
 In a session: `/output-style` shows `geoai-claude:geoai-brief`, and the status row carries the
 Geo-AI palette. Ask a question only the engine can answer — *"sweep snow density in SMRT and plot
 brightness temperature"* — and confirm it calls the tools instead of answering from memory.
+
+### Two facts measured here, one left to a session
+
+Measured: the status line renders colour (the row above was printed by
+`plugins/geoai-claude/scripts/statusline.py` with `FORCE_COLOR=1`), and the theme id form is
+`custom:<plugin>:<slug>` — `claude plugin details` reports the plugin as `geoai-claude`, and the
+installer writes `theme: "custom:geoai-claude:geoai-night"`, which is the form Claude Code resolves
+for a plugin-supplied theme.
+
+Not measured, and left to a session on purpose: that `force-for-plugin: true` really does apply the
+output style with no user action. The only way to observe it without a human is a real session with
+a status line that logs its own stdin — Claude Code passes `output_style.name` there, which would
+settle it mechanically — and a session needs a login. A throwaway `CLAUDE_CONFIG_DIR` cannot borrow
+the operator's: on macOS the credential lives in the login keychain, scoped to the default config
+directory, so `claude -p` in an isolated home answers `Not logged in · Please run /login`. Rather
+than copy a secret out of the keychain or log into somebody's account from a test, the claim is
+recorded as documented-not-measured. One command settles it in your own session:
+
+```bash
+claude -p "Reply with exactly: OK"   # then run /output-style and look for geoai-claude:geoai-brief
+```
 
 ## What this cannot do
 

@@ -267,3 +267,37 @@ def test_the_server_can_be_run_as_a_file_without_cwd_or_pythonpath():
     source = (ROOT / "integrations" / "geoai" / "mcp_server.py").read_text()
     assert "_bootstrap_path" in source
     assert "if __package__ in (None, \"\"):" in source
+
+
+def test_the_manifest_and_the_marketplace_entry_describe_the_same_plugin():
+    # This is the check `claude plugin tag --dry-run` makes, and it is the one `validate` cannot:
+    # a manifest and a catalogue entry that disagree on name or version produce a tag pointing at
+    # something other than what a user installs. Measured: both commands pass on this tree.
+    data = manifest()
+    entry = next(
+        item
+        for item in json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text())["plugins"]
+        if item["name"] == data["name"]
+    )
+    assert (ROOT / entry["source"]).resolve() == PLUGIN.resolve()
+    # Only `name` and `source` are required in an entry; a version here would have to be kept in
+    # step with the manifest by hand, and `tag` reads the manifest when it is absent.
+    assert entry.get("version", data["version"]) == data["version"]
+
+
+def test_the_plugin_declares_no_settings_block_because_only_two_keys_survive():
+    # Claude Code filters a plugin's `settings` down to `agent` and `subagentStatusLine`; every
+    # other key is dropped without an error. Declaring one would look like configuration and
+    # configure nothing, so the theme and the status line are written by the installer instead.
+    assert "settings" not in manifest()
+
+
+def test_the_theme_id_is_the_prefixed_form_claude_code_resolves():
+    # A plugin *supplies* a theme; it cannot activate one, and the id a session resolves is
+    # `custom:<plugin-name>:<slug>`. The installer builds that from the manifest name rather than
+    # from a literal, so renaming the plugin cannot leave a theme id pointing at nothing.
+    installer = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+
+    assert 'PLUGIN_NAME="geoai-claude"' in installer
+    assert 'f"custom:{plugin}:geoai-night"' in installer
+    assert 'settings.json' in installer and 'backed up' in installer
