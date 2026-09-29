@@ -24,6 +24,34 @@ from __future__ import annotations
 import json
 import sys
 
+
+def _bootstrap_path() -> None:
+    """Make this file runnable as a script, and not only as ``-m integrations.geoai serve``.
+
+    Both forms are needed. The module form is what a host runs from the checkout (``cwd`` =
+    repository root, ``PYTHONPATH=backend``), and it can leave ``sys.path`` alone. The file
+    form is what an MCP client's documentation almost always shows —
+    ``command = "python3"``, ``args = ["/abs/path/to/integrations/geoai/mcp_server.py"]`` —
+    and a file run that way gets *its own directory* on ``sys.path``, which finds neither
+    ``integrations`` nor ``physearth``. So the file form has to establish both roots itself:
+    the repository root (for ``integrations.geoai``) and ``backend/`` (for the engine).
+
+    Doing it here rather than requiring every host to get ``cwd`` right also removes this
+    server's commonest failure: a subprocess that dies of ``ModuleNotFoundError``, whose
+    stderr nobody reads, surfacing as an MCP server that "starts but has no tools".
+    """
+    from pathlib import Path
+
+    here = Path(__file__).resolve()
+    for candidate in (here.parents[2], here.parents[2] / "backend"):
+        text = str(candidate)
+        if text not in sys.path:
+            sys.path.insert(0, text)
+
+
+if __package__ in (None, ""):  # executed as a script rather than imported as a module
+    _bootstrap_path()
+
 from physearth import tools
 
 from integrations.geoai import service
@@ -440,8 +468,20 @@ def _error(request_id, code, message):
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
-def main():
-    """Serve newline-delimited JSON-RPC on stdio until the host closes the pipe."""
+def main(argv=None):
+    """Serve newline-delimited JSON-RPC on stdio until the host closes the pipe.
+
+    stdio is the only transport here, so an argument that names it is accepted and ignored:
+    every MCP client's documentation spells the invocation as ``mcp_server.py --stdio``, and
+    a host that copies that line should not get an argparse error where a server belongs.
+    """
+    argv = list(sys.argv[1:] if argv is None else argv)
+    unknown = [item for item in argv if item not in ('--stdio', '--transport=stdio')]
+    if unknown:
+        sys.stderr.write(
+            f"physearth-geoai: ignoring unrecognised argument(s): {' '.join(unknown)}\n"
+            'this server speaks newline-delimited JSON-RPC on stdin/stdout.\n'
+        )
     for line in sys.stdin:
         line = line.strip()
         if not line:

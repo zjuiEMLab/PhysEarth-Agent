@@ -8,11 +8,12 @@
 #
 # Four things happen, and each one exists because a live boot said so.
 #
-# 1. RESOLVE THE INTERPRETER. A candidate is accepted only after it imports
-#    `integrations.geoai.service`. Not `physearth`: that package's `__init__` is lazy, so
-#    `import physearth` succeeds on an interpreter with no PyYAML, and the row then mounts and
-#    offers an empty tool list with nothing in the log. Order: $PHYSEARTH_PYTHON, a checkout
-#    virtualenv, python3, python.
+# 1. RESOLVE THE INTERPRETER. The search is `scripts/lib/find-python.sh`, shared with the Codex
+#    and Claude integrations — every one of them had written the same wrong candidate list. A
+#    candidate is accepted only after it imports `integrations.geoai.service`, and not
+#    `physearth`: that package's `__init__` is lazy, so `import physearth` succeeds on an
+#    interpreter with no PyYAML, and the row then mounts and offers an empty tool list with
+#    nothing in the log.
 #
 # 2. MAKE THE PACKAGE RESOLVABLE FROM THE PROFILE. `@deepseek-ai/schemastery` is a peer the host
 #    supplies; the entry imports it by name. Node resolves a bare specifier from the *realpath*
@@ -56,20 +57,14 @@ echo "checkout:  $CHECKOUT"
 echo "profile:   $PROFILE_DIR"
 
 # ── 1. The interpreter ──────────────────────────────────────────────────────────────────────
-resolve_python() {
-  local candidate
-  for candidate in "${PHYSEARTH_PYTHON:-}" "$CHECKOUT/.venv/bin/python" "python3" "python"; do
-    [ -n "$candidate" ] || continue
-    command -v "$candidate" >/dev/null 2>&1 || [ -x "$candidate" ] || continue
-    if (cd "$CHECKOUT" && PYTHONPATH=backend:. "$candidate" -c "from integrations.geoai import service" >/dev/null 2>&1); then
-      command -v "$candidate" >/dev/null 2>&1 && command -v "$candidate" || echo "$candidate"
-      return 0
-    fi
-  done
-  return 1
-}
+# The search itself is `scripts/lib/find-python.sh`, shared with the Codex and Claude
+# integrations. It has to be sourced after the checkout is known, which is why the root is
+# resolved with git rather than assumed to be two directories up: this script also ships inside
+# the plugin bundle.
+# shellcheck source=scripts/lib/find-python.sh
+. "$CHECKOUT/scripts/lib/find-python.sh"
 
-if PYTHON="$(resolve_python)"; then
+if PYTHON="$(physearth_find_python_for_engine "$CHECKOUT" || true)" && [ -n "$PYTHON" ]; then
   echo "python:    $PYTHON (imports the bridge service)"
 else
   PYTHON="python3"
