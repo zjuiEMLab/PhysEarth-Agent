@@ -234,27 +234,69 @@ def knowledge_manifest():
     }
 
 
-def prompt_stack():
+# The three reasons a host wants this text, and they are not the same size.
+PROMPT_SCOPES = ("identity", "rules", "context")
+
+
+def prompt_sections():
+    """The prompt stack as named groups rather than one string.
+
+    A host that is not this agent's own loop needs this text for three different reasons:
+
+      identity  who the agent is and how it writes. A coding agent already has an identity of
+                its own, and this group *replaces* it — "You are PhysEarth, an
+                Earth-science physical-modeling agent" is a persona, so a host that takes it
+                inherits the persona too, including the parts that are not its job.
+      rules     what makes an answer scientific: the citation and evidence-tier rules, the
+                untrusted-text boundary, and the explore → plan → approve → run → report
+                workflow. This is the part that changes what a model *does*, which is why it is
+                the group worth somebody else's system prompt.
+      context   the registered models, reference datasets, method notes and tool catalogue,
+                generated from this checkout. It is also available at runtime through the tools
+                and resources, so a host that can call those leaves it out rather than paying
+                for a copy that goes stale inside a session.
+    """
+    return {
+        "identity": [prompt.ROLE, prompt.STYLE],
+        "rules": [
+            prompt.CITATION_RULES,
+            prompt.ABSTRACT_RULE,
+            prompt.ONLINE_RULES,
+            prompt.WORKFLOW,
+            prompt.RESEARCH_WORKFLOW,
+            prompt.TRIGGERS,
+        ],
+        "context": [
+            prompt.models_section(),
+            prompt.reference_section(),
+            prompt.skills_section(),
+            prompt.catalogue_section(),
+        ],
+    }
+
+
+def prompt_stack(scopes=None):
     """The L0-L2 prompt blocks plus the generated context: what makes an answer scientific.
 
     This is the text a host injects so the model it runs behaves like this project's agent:
     identity and style, the citation and evidence-tier rules, the untrusted-text boundary,
     and the explore → plan → approve → run → report workflow.
+
+    Every scope by default, in the order the agent's own loop stacks them, so a host that asks
+    for all of it gets exactly what the engine gives its own model. `scopes` is for hosts that
+    want part of it — see `prompt_sections` for why they would — and an unknown name is an
+    error rather than an omission, because a silently narrower prompt is the failure this
+    repository treats as the worst kind: one that changes answers with nothing in the log.
     """
-    blocks = [
-        prompt.ROLE,
-        prompt.STYLE,
-        prompt.CITATION_RULES,
-        prompt.ABSTRACT_RULE,
-        prompt.ONLINE_RULES,
-        prompt.WORKFLOW,
-        prompt.RESEARCH_WORKFLOW,
-        prompt.TRIGGERS,
-        prompt.models_section(),
-        prompt.reference_section(),
-        prompt.skills_section(),
-        prompt.catalogue_section(),
-    ]
+    selected = PROMPT_SCOPES if scopes is None else tuple(scopes)
+    unknown = [scope for scope in selected if scope not in PROMPT_SCOPES]
+    if unknown:
+        raise ValueError(
+            "unknown prompt scope(s): %s. Known scopes: %s"
+            % (", ".join(map(str, unknown)), ", ".join(PROMPT_SCOPES))
+        )
+    sections = prompt_sections()
+    blocks = [block for scope in selected for block in sections[scope]]
     return "\n\n".join(block.strip() for block in blocks if block and block.strip())
 
 

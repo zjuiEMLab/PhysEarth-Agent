@@ -24,7 +24,16 @@ def main(argv=None):
     sub.add_parser("tools", help="the declared tool catalogue")
     sub.add_parser("models", help="registered models and their declarations")
     sub.add_parser("knowledge", help="bundled papers, method notes and datasets")
-    sub.add_parser("prompt", help="the prompt stack the agent is given")
+    prompt_cmd = sub.add_parser("prompt", help="the prompt stack the agent is given")
+    prompt_cmd.add_argument(
+        "--scopes",
+        default=",".join(service.PROMPT_SCOPES),
+        help=(
+            "comma-separated: %s (default: all). `rules` is the group that changes what a model "
+            "does without replacing the host's identity." % ",".join(service.PROMPT_SCOPES)
+        ),
+    )
+    prompt_cmd.add_argument("--list", action="store_true", help="print the scopes and their sizes")
     sub.add_parser("serve", help="serve MCP on stdio")
 
     http = sub.add_parser("serve-http", help="serve the loopback HTTP bridge")
@@ -55,9 +64,28 @@ def main(argv=None):
     elif args.command == "knowledge":
         _emit(service.knowledge_manifest())
     elif args.command == "prompt":
-        sys.stdout.write(service.prompt_stack() + "\n")
+        scopes = [scope.strip() for scope in args.scopes.split(",") if scope.strip()]
+        if args.list:
+            sections = service.prompt_sections()
+            _emit(
+                {
+                    "scopes": list(service.PROMPT_SCOPES),
+                    "sections": {
+                        scope: {
+                            "chars": len("\n\n".join(block.strip() for block in blocks if block and block.strip())),
+                            "blocks": len(blocks),
+                        }
+                        for scope, blocks in sections.items()
+                    },
+                }
+            )
+        else:
+            sys.stdout.write(service.prompt_stack(scopes) + "\n")
     elif args.command == "serve":
-        mcp_server.main()
+        # `argv=[]`, not `argv=None`: this subcommand has already consumed the word `serve`, and
+        # leaving it in `sys.argv` made the server warn about "unrecognised argument(s): serve"
+        # on every launch by a host that spells the invocation `-m integrations.geoai serve`.
+        mcp_server.main([])
     elif args.command == "serve-http":
         argv = ["--host", args.host, "--port", str(args.port)]
         if args.allow_remote:

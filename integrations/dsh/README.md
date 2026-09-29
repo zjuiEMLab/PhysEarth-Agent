@@ -16,8 +16,62 @@ half), which is exactly how the two working external plugins on this machine (`d
 |---|---|---|
 | Switch + settings | 设置 → 插件 → **PhysEarth Geo-AI** | one click enables/disables the whole surface |
 | Tools | `mcp__geoai__*` via the harness' own MCP client row | `run_model`, `research_plan`, `read_literature`, … with validation, approval gate and QC behind them |
-| Prompt rules | host half, `ctx.systemPrompt.section()` | numbers come from runs; citations resolve only against evidence the session gathered |
+| Prompt rules | host half, `ctx.systemPrompt.section()` | the project's own citation, evidence-tier and workflow rules, injected whole; numbers come from runs, citations resolve only against evidence the session gathered |
 | Restyle | 60 host semantic tokens + this plugin's own stylesheet | dark Geo-AI surface, ice/amber/deep-blue accent, Fira stack for numbers, tabular figures, 44px touch targets |
+
+## What gets injected into the system prompt
+
+The prompt section is the engine's own text, not a paraphrase of it. Four depths, chosen in the
+card (`promptDepth`), and the argument for each:
+
+| Depth | Text | Size here | Why |
+|---|---|---|---|
+| `rules` (default) | `python -m integrations.geoai prompt --scopes rules` | 13.8k chars | the citation, evidence-tier, untrusted-text and workflow blocks — the part that changes what a model *does* |
+| `full` | `--scopes identity,rules,context` | 39.6k chars | adds the registered models, reference datasets, method notes and tool catalogue |
+| `compact` | this plugin's own fifteen lines | 1.2k chars | the fallback when no interpreter can be reached, and for an operator who wants the cheap version |
+| `off` | nothing | — | registers no section at all |
+
+Two of those defaults are arguments rather than preferences.
+
+**`identity` is left out of the default.** It begins "You are PhysEarth, an Earth-science
+physical-modeling agent" — a persona. Injecting it into a coding agent would make that agent's
+model claim to be this one while still being asked to do the host's work, which is the opposite of
+keeping what the host is good at. The *rules* are host-neutral; the persona is not.
+
+**`context` is left out of the default** because the same session can read all of it through
+`mcp__geoai__*` — `list_models`, `read_reference_dataset`, `geoai_prompt_stack` — so paying 24.5k
+characters in every turn buys a snapshot that starts going stale the moment a model is registered.
+That is the rule this repository applies everywhere else: a description that can be *fetched* does
+not belong in a prompt.
+
+The compact text deliberately names no model. It used to list all six, which is the
+drift-in-the-one-place-nobody-re-reads failure the repository's own notes warn about: the names
+live in the registry, `list_models` reads them, and the fetched text is generated from them.
+
+**The fetch is synchronous at mount, and a live run is why.** The first version registered the
+compact text and replaced it when an awaited child process answered. A one-shot
+`dsh --profile headless "…"` then had a model quote the *compact* text back verbatim: the harness
+had already composed the prompt for its first request. The fetch measures 0.46 s on this checkout,
+so it is paid at mount instead — half a second of startup against a first turn that is told the
+wrong rules.
+
+### Verified by asking a model
+
+```bash
+DSH_HOME=/tmp/dsh-verify-home dsh --profile headless --patch /tmp/geoai-on.yml \
+  "Does your system prompt contain a section headed '## Geo-AI physics (PhysEarth-Agent)'? …"
+```
+
+With `promptDepth: rules` the answer was: yes; the line under the heading is
+`Everything you assert must be traceable to something you did, through one of these markers.` —
+the engine's `10-citations` block, verbatim — and in the same turn the model ran `uname -s` with
+its own shell tool and reported `Darwin`. That is the requirement in one transcript: the project's
+rules are in the prompt, and the host is still a working coding agent.
+
+The one thing the live check found that this README could not: the injected block had no heading,
+because the engine's text is a stack of rule blocks with no title of its own. The heading is now
+added by the plugin, and the text under it is still the engine's, verbatim — a test asserts that
+split, so it cannot quietly become a paraphrase.
 
 ## Install
 
@@ -76,7 +130,7 @@ python -m integrations.geoai call list_models --arguments '{"model":"smrt"}'
 dsh --profile web --dump-config | grep -A3 -E '(geoai|mcp-geoai)'
 ```
 
-The 36 tests are split by what they can prove. `logic.test.mjs` covers the settings coercion,
+The 59 tests are split by what they can prove. `logic.test.mjs` covers the settings coercion,
 the tool cards and the shipped file shapes. `host.test.mjs` mounts `entry.js` against a stub
 cordis context and is the reason three real bugs are not in this revision: the prompt section
 was registered as `{ id, content }` instead of `{ name, order, text }` (which throws), the
@@ -141,6 +195,8 @@ below are measurements, not expectations.
 | The switch turns it back on live | after a second click: restyled again, `#05070d` |
 | The engine tools exist | 28 over stdio MCP: `run_model`, `plot`, `research_plan`, `read_literature`, `read_reference_dataset`, the `geoai_*` host tools, … |
 | The optional bridge answers when asked | started through `BridgeClient`: `{"models":6,"runnable_models":6,"tools":21,"knowledge":{"papers":8,"sections":79,"skills":3}}` |
+| The engine's own rules are in the system prompt | a one-shot headless turn reported the `## Geo-AI physics (PhysEarth-Agent)` heading and quoted the line under it: `Everything you assert must be traceable to something you did, through one of these markers.` — the engine's `10-citations` block, with `promptDepth: rules` |
+| The host is still a coding agent | in that same turn the model ran `uname -s` with its own shell tool and reported `Darwin` |
 | No console errors | 0 at every step |
 | Four viewport widths | 1440/1024 → 564 px card, two 255 px columns; 768 → 484 px, two 215 px columns, 44 px touch target; 390 → 106 px column (the host keeps a 154 px options rail), one column, no clipping and no page overflow at any width |
 

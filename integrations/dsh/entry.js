@@ -34,6 +34,7 @@ import {
   interpreterCandidates,
   interpreterProvenance,
   pickInterpreter,
+  readPromptStack,
 } from './lib/host-env.js'
 import { ACCENTS, DEFAULTS, ENGINE_TOOLS, HOST_TOOLS, normaliseSettings } from './lib/logic.js'
 
@@ -66,22 +67,43 @@ export const Config = z.object({
   accent: z.string().default(DEFAULTS.accent),
   colorScheme: z.string().default(DEFAULTS.colorScheme),
   restyleHost: z.boolean().default(DEFAULTS.restyleHost),
+  promptDepth: z.string().default(DEFAULTS.promptDepth),
   requestTimeoutMs: z.number().default(DEFAULTS.requestTimeoutMs),
 })
 
 /**
- * The rules this plugin adds to the system prompt, on top of whatever the host asks for.
+ * The heading the injected block always carries, whoever wrote the text under it.
  *
- * They restate the engine's own rules for a host model, because a harness model that never
- * called `run_model` could otherwise sound exactly like one that did: every marker named below
- * is refused by the engine unless the session actually gathered it.
+ * A live check asked a model whether its system prompt had a "Geo-AI physics" section and it
+ * answered, correctly, that it had the *rules* but no such heading — because the engine's text is
+ * a stack of rule blocks with no title of its own. Without a label the injected material is hard
+ * to point at, in a prompt or in a transcript, so the heading is added here and the text under it
+ * stays the engine's own, verbatim. `tests/host.test.mjs` asserts exactly that split.
+ */
+export const PROMPT_HEADING = '## Geo-AI physics (PhysEarth-Agent)'
+
+/**
+ * The short form of this plugin's prompt contribution, and the one it can produce with no
+ * subprocess.
+ *
+ * It is a *fallback*, not the contribution. Everything past `promptDepth: 'compact'` is the
+ * engine's own prompt text, fetched at mount, so the rules a host injects are the rules the
+ * engine implements. This text exists for the two cases where that fetch cannot happen (no
+ * interpreter, or the engine refuses), and for an operator who deliberately wants the cheap
+ * version — so it has to be true on its own, which is why it names no model.
+ *
+ * It used to name all six. That is exactly the anti-pattern this repository's own notes
+ * describe: a hardcoded list of names in the one place nobody re-reads, so registering a
+ * seventh model leaves the prompt asserting something the registry no longer says. The names
+ * live in the registry, `list_models` reads them, and the fetched text is generated from them.
  */
 export const PROMPT_SECTION = `
-## Geo-AI physics (PhysEarth-Agent)
+${PROMPT_HEADING}
 
-Physics tools are available under the \`mcp__geoai__\` namespace; they run registered
-physical models (SMRT, tau-omega, water cloud, PROSAIL, pyet, pywatershed) with declared
-parameter ranges, a human approval gate and post-run quality control.
+Physics tools are available under the \`mcp__geoai__\` namespace. They run the physical models
+this checkout has registered — call \`list_models\` for the current list and each model's
+declared parameters rather than assuming one — with declared physical ranges, a human approval
+gate and post-run quality control.
 
 - Any number that carries a unit (K, dB, m3/m3) comes from a \`run_model\` result, never from
   an estimate. A run returns a handle; the arrays stay in the session that produced them.
@@ -160,14 +182,20 @@ export function apply(ctx, config = {}) {
         'integrations/dsh/scripts/install.sh, which resolves it for you.',
     )
   }
-  // Only the optional bridge needs an interpreter, so a failure here is informational. The tool
-  // surface comes from the MCP row, whose interpreter the installer proved before writing it.
-  const pythonCmd = checkout && settings.autoStartBridge ? resolveInterpreter(checkout) : undefined
-  if (settings.autoStartBridge && checkout && !pythonCmd) {
+  // The interpreter is needed by the optional bridge, and by the prompt fetch whenever the
+  // operator asked for more than the compact text. It is resolved once per mount either way: the
+  // answer cannot change while the process runs, and proving a candidate is a subprocess.
+  const needsInterpreter = settings.autoStartBridge || settings.promptDepth !== 'compact'
+  const pythonCmd = checkout && needsInterpreter ? resolveInterpreter(checkout) : undefined
+  if (needsInterpreter && checkout && !pythonCmd) {
     ctx.logger?.warn?.(
-      `physearth-geoai: autoStartBridge is on but no interpreter could import the engine from ` +
-        `${checkout}. Set pythonCmd (or PHYSEARTH_PYTHON), or turn autoStartBridge off — the ` +
-        'tools do not depend on the bridge.',
+      `physearth-geoai: no interpreter could import the engine from ${checkout}. ` +
+        (settings.autoStartBridge ? 'Set pythonCmd (or PHYSEARTH_PYTHON), or turn autoStartBridge off. ' : '') +
+        (settings.promptDepth !== 'compact'
+          ? `promptDepth is "${settings.promptDepth}", so the prompt section falls back to the ` +
+            'compact text this plugin carries; set pythonCmd to get the engine’s own rules. '
+          : '') +
+        'The tools come from the MCP row and do not depend on either.',
     )
   }
   const engine = { ...settings, projectRoot: checkout || settings.projectRoot, pythonCmd: pythonCmd || settings.pythonCmd }
@@ -181,20 +209,93 @@ export function apply(ctx, config = {}) {
       }
     }
     disposers = []
+    promptDispose = undefined
     client?.dispose()
     client = undefined
   }
 
+  let promptDispose
+
+  /**
+   * Prompt text already read from the engine, keyed by what it was read with.
+   *
+   * `reconcile()` runs on *every* settings change, and the card writes a setting on every select
+   * and checkbox change — so without this, changing the accent would spawn a Python interpreter
+   * and rebuild 14 KB of prompt text. The engine's prompt text cannot change while this process
+   * runs, so reading it once per (depth, interpreter, checkout) is the correct amount.
+   */
+  const promptCache = new Map()
+
+  /** Register the prompt section, replacing any previous one. Returns whether it registered. */
+  function setPromptSection(text) {
+    if (!text) return false
+    try {
+      if (promptDispose) promptDispose()
+      promptDispose = ctx.systemPrompt.section({ name: 'geoai-physics', order: PROMPT_ORDER, text })
+      disposers.push(promptDispose)
+      return true
+    } catch (error) {
+      ctx.logger?.warn?.(`physearth-geoai: could not register the prompt section: ${error.message}`)
+      return false
+    }
+  }
+
+  /**
+   * The text for one depth, from the engine when it can be had and from this plugin otherwise.
+   *
+   * Synchronous, and that is the finding rather than an oversight. The first version registered
+   * the compact text and replaced it when an awaited fetch answered; a live one-shot run then
+   * showed the model quoting the compact text back, because the harness had already composed the
+   * prompt for its first request. The fetch measures 0.46 s on this checkout, which is cheap
+   * enough to pay at mount and much cheaper than a first turn that is told the wrong rules.
+   *
+   * The compact text is therefore a fallback, not a stage: it is used when the depth asks for it,
+   * and when the engine cannot be reached at all — in which case the warning names the depth and
+   * the reason.
+   */
+  function promptTextFor(engine, depth) {
+    if (depth === 'compact') return { text: PROMPT_SECTION, source: 'compact' }
+    const key = `${depth}|${engine.pythonCmd}|${engine.projectRoot}`
+    const cached = promptCache.get(key)
+    if (cached) return cached
+    try {
+      const fetched = readPromptStack({
+        pythonCmd: engine.pythonCmd,
+        checkout: engine.projectRoot,
+        scope: depth,
+        env: process.env,
+      })
+      promptCache.set(key, {
+        text: `${PROMPT_HEADING}\n\n${fetched.text}`,
+        source: 'engine',
+        detail: fetched.detail,
+      })
+      return promptCache.get(key)
+    } catch (error) {
+      ctx.logger?.warn?.(
+        `physearth-geoai: promptDepth "${depth}" could not be read from the engine ` +
+          `(${error.message}); the compact rules are used instead.`,
+      )
+      return { text: PROMPT_SECTION, source: 'compact', failed: true }
+    }
+  }
+
   async function start() {
-    // The prompt rules are this half's own contribution and never depend on a subprocess, so
-    // they are registered first and unconditionally.
-    disposers.push(
-      ctx.systemPrompt.section({ name: 'geoai-physics', order: PROMPT_ORDER, text: PROMPT_SECTION }),
-    )
-    ctx.logger?.info?.(
-      `physearth-geoai: enabled — ${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present ` +
-        `as mcp__geoai__*, ${ACCENTS.length} accents, prompt section at order ${PROMPT_ORDER}`,
-    )
+    const active = current()
+    const depth = active.promptDepth
+    // `off` registers nothing at all, which is a choice rather than a failure.
+    if (depth === 'off') {
+      ctx.logger?.info?.('physearth-geoai: promptDepth is "off"; no prompt section is registered')
+    } else {
+      const chosen = promptTextFor(engine, depth)
+      if (setPromptSection(chosen.text)) {
+        ctx.logger?.info?.(
+          `physearth-geoai: enabled — ${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present ` +
+            `as mcp__geoai__*, ${ACCENTS.length} accents, prompt section at order ${PROMPT_ORDER} ` +
+            `(depth ${depth}, text from ${chosen.source}${chosen.detail ? `: ${chosen.detail}` : ''})`,
+        )
+      }
+    }
 
     // Then the optional bridge. It is a second Python process, so its absence is reported at the
     // level it deserves: a warning when the operator asked for it, information otherwise.

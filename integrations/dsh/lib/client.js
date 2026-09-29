@@ -59,8 +59,16 @@ window.__ModuleLoader__.load({
       accent: 'ice',
       colorScheme: 'dark',
       restyleHost: true,
+      promptDepth: 'rules',
       requestTimeoutMs: 120000,
     }
+
+    const PROMPT_DEPTHS = [
+      { id: 'rules', label: '规则栈 Rules', hint: '引擎自己的引用、证据与流程规则' },
+      { id: 'full', label: '全部 Full', hint: '再加模型、数据集与工具目录（更长）' },
+      { id: 'compact', label: '精简 Compact', hint: '本插件内置的短版，不起子进程' },
+      { id: 'off', label: '不注入 Off', hint: '完全不改系统提示词' },
+    ]
 
     const ACCENTS = [
       { id: 'ice', label: '冰蓝 Ice', hint: '微波、积雪与冰冻圈' },
@@ -899,6 +907,18 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
           React.createElement(
             'label',
             null,
+            t('promptDepth'),
+            React.createElement(
+              'select',
+              { value: value.promptDepth, onChange: (event) => write('promptDepth', event.target.value) },
+              PROMPT_DEPTHS.map((item) =>
+                React.createElement('option', { key: item.id, value: item.id }, `${item.label} · ${item.hint}`),
+              ),
+            ),
+          ),
+          React.createElement(
+            'label',
+            null,
             t('bridgeUrl'),
             React.createElement('input', {
               type: 'text',
@@ -994,12 +1014,13 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       writeFailed: '写入设置失败，值没有保存。',
       switchOn: '点击停用',
       switchOff: '点击启用',
-      hintOn: '工具以 mcp__geoai__* 出现，系统提示里加入引用与单位规则，界面换成 Geo-AI 视觉。',
+      hintOn: '工具以 mcp__geoai__* 出现，系统提示注入本项目的引用/证据/流程规则（深度见下），界面换成 Geo-AI 视觉。',
       hintOff: '停用后不注册工具、不注入提示词、不改界面；桥进程也会被释放。',
       accent: '视觉强调色',
       colorScheme: '强调色曝光',
       colorSchemeDark: '暗场（OLED）',
       colorSchemeLight: '亮场（日光）',
+      promptDepth: '提示词注入深度',
       bridgeUrl: 'Python 桥地址',
       pythonCmd: 'Python 解释器',
       projectRoot: '仓库根目录（桥的工作目录）',
@@ -1029,12 +1050,13 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       writeFailed: 'The settings write failed; nothing was saved.',
       switchOn: 'Click to disable',
       switchOff: 'Click to enable',
-      hintOn: 'Tools appear as mcp__geoai__*, the system prompt gains the citation and unit rules, and the interface takes the Geo-AI look.',
+      hintOn: 'Tools appear as mcp__geoai__*, the system prompt gains this project’s citation, evidence and workflow rules (depth below), and the interface takes the Geo-AI look.',
       hintOff: 'Disabled: no tools, no prompt rules, no restyle, and the bridge process is released.',
       accent: 'Accent',
       colorScheme: 'Accent exposure',
       colorSchemeDark: 'Dark field (OLED)',
       colorSchemeLight: 'Light field (daylight)',
+      promptDepth: 'Prompt rules injected',
       bridgeUrl: 'Python bridge URL',
       pythonCmd: 'Python interpreter',
       projectRoot: 'Checkout root (bridge working directory)',

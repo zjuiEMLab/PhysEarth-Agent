@@ -22,6 +22,7 @@
 // Both are pure functions over an injected `exists`/`probe`, so `tests/host-env.test.mjs` can
 // exercise the interesting cases without a real filesystem or a real interpreter.
 
+import { spawnSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 
 /**
@@ -131,4 +132,88 @@ export function pickInterpreter({ candidates, probe }) {
 export function interpreterProvenance(command, probed) {
   if (!command) return 'no candidate could import the engine'
   return probed === 1 ? `${command} (first candidate)` : `${command} (candidate ${probed})`
+}
+
+/**
+ * The scopes the engine publishes (`service.PROMPT_SCOPES`), which is what a depth may name.
+ *
+ * Duplicated from Python rather than imported, because the plugin cannot import Python. A scope
+ * the engine drops shows up as a failed fetch with the engine's own error in the log, which is
+ * the loud failure — not as a silently narrower prompt.
+ */
+export const PROMPT_SCOPES = Object.freeze(['identity', 'rules', 'context'])
+
+/**
+ * How deep a host takes the project's prompt stack, and what each answer costs.
+ *
+ * These are the card's choices. The sizes below are what this checkout reports, not guesses —
+ * `python -m integrations.geoai prompt --list` prints them for any revision, and they are the
+ * reason the default is not `full`: `context` is 24k characters of registered-model and corpus
+ * text that the same session can also read through `mcp__geoai__*`, so paying for a copy in
+ * every turn buys a snapshot that starts going stale immediately.
+ *
+ * `identity` is deliberately absent from the default for a different reason. It is 1.3k
+ * characters that begin "You are PhysEarth, an Earth-science physical-modeling agent" — a
+ * persona, and a host has one of its own. Injecting it would make the harness model claim to be
+ * this agent while still being asked to do the host's work, which is the opposite of keeping
+ * what the host is good at.
+ */
+export const PROMPT_SCOPE_ARGS = Object.freeze({
+  compact: null,
+  rules: 'rules',
+  full: 'identity,rules,context',
+})
+
+/**
+ * Read the project's prompt text out of the engine, so the section a host injects is the
+ * engine's own words rather than a summary written next to them.
+ *
+ * The summary was the bug this replaces. `entry.js` carried a fifteen-line paraphrase that named
+ * the six registered models literally — so registering a seventh model, or renaming one, would
+ * leave the prompt asserting something the registry no longer says, in the one place nobody
+ * re-reads. Text fetched here cannot drift: it is composed from `prompts/` and the registry at
+ * the moment the plugin mounts.
+ *
+ * Synchronous, deliberately, and the measurement is the reason. On this checkout the fetch takes
+ * 0.46 s, and a *live boot found the hard way* that asynchronous is wrong here: the harness
+ * composes its prompt for the first request before an awaited child process can answer, so the
+ * one-shot `dsh --profile headless "…"` run reported the compact text verbatim — the engine's
+ * text would have arrived into a request that had already gone out. Half a second at mount is
+ * the price of the first turn being right.
+ *
+ * @param options.pythonCmd - the interpreter to run.
+ * @param options.checkout - repository root, used as the working directory and on PYTHONPATH.
+ * @param options.scope - a key of {@link PROMPT_SCOPE_ARGS}.
+ * @param options.env - the process environment.
+ * @param options.run - `(command, args, options) => { status, stdout, stderr }`, defaults to
+ *   `spawnSync`.
+ * @returns the text and a one-line provenance note.
+ * @throws when the interpreter fails, with the engine's own stderr in the message.
+ */
+export function readPromptStack({
+  pythonCmd,
+  checkout,
+  scope,
+  env = {},
+  run = spawnSync,
+  timeout = 30000,
+}) {
+  const scopes = PROMPT_SCOPE_ARGS[scope]
+  if (!scopes) throw new Error(`prompt depth "${scope}" does not ask the engine for anything`)
+  if (!pythonCmd || !checkout) throw new Error('no interpreter or checkout to ask')
+  const args = ['-m', 'integrations.geoai', 'prompt', '--scopes', scopes]
+  const result = run(pythonCmd, args, {
+    cwd: checkout,
+    timeout,
+    env: { ...env, PYTHONPATH: `${checkout}/backend:${checkout}` },
+    encoding: 'utf8',
+  })
+  if (!result || result.error) throw new Error(result?.error?.message || 'the run produced no result')
+  if (result.status !== 0) {
+    const stderr = String(result.stderr || '').trim().split('\n').slice(-3).join(' | ')
+    throw new Error(`exit ${result.status}${stderr ? `: ${stderr}` : ''}`)
+  }
+  const text = String(result.stdout || '').trim()
+  if (!text) throw new Error('the engine printed nothing')
+  return { text, scope, detail: `${text.length} chars, scope=${scopes} from ${pythonCmd}` }
 }

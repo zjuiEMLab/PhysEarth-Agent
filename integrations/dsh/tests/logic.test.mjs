@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import {
   ACCENTS,
   DEFAULTS,
+  PROMPT_DEPTHS,
   auditFields,
   bridgeCommand,
   normaliseSettings,
@@ -184,4 +185,32 @@ test('the stylesheet is scoped to the enabled class and respects reduced motion'
   // A switch needs a touch target; iOS asks for 44 CSS pixels.
   assert.match(client, /min-height: 44px/)
   assert.doesNotMatch(client, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'no emoji as icons')
+})
+
+test('an unknown prompt depth falls back loudly, because it changes a prompt', () => {
+  const { settings, warnings } = normaliseSettings({ promptDepth: 'everything' })
+  assert.equal(settings.promptDepth, DEFAULTS.promptDepth)
+  assert.equal(DEFAULTS.promptDepth, 'rules')
+  assert.ok(warnings.some((line) => /promptDepth/.test(line)), 'a prompt that silently changes is the worst kind')
+
+  // A known depth is passed through, and an absent one is a default rather than a warning.
+  assert.equal(normaliseSettings({ promptDepth: 'full' }).settings.promptDepth, 'full')
+  assert.equal(normaliseSettings({ promptDepth: 'off' }).settings.promptDepth, 'off')
+  assert.equal(normaliseSettings({}).warnings.length, 0)
+  assert.deepEqual(PROMPT_DEPTHS, ['compact', 'rules', 'full', 'off'])
+})
+
+test('the card offers exactly the prompt depths the host half understands', () => {
+  const client = readFileSync(join(ROOT, 'lib', 'client.js'), 'utf8')
+
+  // The two halves cannot import each other, so the same list ships twice. A depth offered here
+  // and unknown to the host is a select whose value is silently coerced back on every write —
+  // the card would appear to work and change nothing.
+  const offered = [...client.matchAll(/id: '([a-z-]+)', label: '[^']*', hint: '/g)].map((match) => match[1])
+  for (const depth of PROMPT_DEPTHS) {
+    assert.ok(offered.includes(depth), `the card offers ${depth}`)
+  }
+  // And the card's own defaults carry the key, or readSettings would drop the user's choice.
+  assert.match(client, /promptDepth: 'rules'/)
+  assert.match(client, /write\('promptDepth'/)
 })

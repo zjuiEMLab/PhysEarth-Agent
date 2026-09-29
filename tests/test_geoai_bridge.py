@@ -1,5 +1,7 @@
 """The shared plugin surface: capabilities, knowledge, prompt stack, one call, one turn."""
 
+import pytest
+
 from integrations.geoai import service
 
 
@@ -58,6 +60,39 @@ def test_prompt_stack_carries_the_evidence_rules_and_the_registry_context():
     # The registry is rendered into the prompt, so a newly registered model appears here
     # without anyone editing prompt text.
     assert "tau_omega" in lowered or "tau-omega" in lowered
+
+
+def test_a_host_can_take_the_rules_without_this_agent_identity():
+    # A coding-agent host has an identity of its own: injecting "You are PhysEarth, an
+    # Earth-science physical-modeling agent" would make its model claim to be this agent while
+    # still being asked to do the host's work. The rules are the part that changes behaviour,
+    # and the generated context is the part the same session can read through the tools.
+    scopes = service.prompt_sections()
+    assert set(scopes) == set(service.PROMPT_SCOPES)
+
+    rules = service.prompt_stack(["rules"])
+    assert "citation" in rules.lower()
+    assert "PhysEarth, an Earth-science" not in rules
+    assert "tau_omega" not in rules.lower(), "the registry context is its own scope, not the rules"
+
+    # The default is still everything, in the order the engine's own loop stacks it, so a host
+    # that asks for all of it gets byte-identical text to the version before scopes existed.
+    assert service.prompt_stack() == "\n\n".join(
+        block.strip()
+        for scope in service.PROMPT_SCOPES
+        for block in scopes[scope]
+        if block and block.strip()
+    )
+    assert len(service.prompt_stack(["identity"])) < len(rules) < len(service.prompt_stack())
+
+
+def test_an_unknown_prompt_scope_is_an_error_rather_than_an_omission():
+    # A silently narrower prompt is the failure this repository treats as the worst kind: it
+    # changes answers with nothing in the log.
+    with pytest.raises(ValueError) as error:
+        service.prompt_stack(["rules", "everything"])
+    assert "everything" in str(error.value)
+    assert "rules" in str(error.value)
 
 
 def test_call_runs_a_real_model_and_returns_a_handle():

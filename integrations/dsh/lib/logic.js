@@ -46,11 +46,27 @@ export const DEFAULTS = Object.freeze({
   colorScheme: 'dark',
   /** Restyle the host interface while enabled, or only add the Geo-AI cards. */
   restyleHost: true,
+  /**
+   * How much of this project's prompt stack the host's system prompt carries.
+   *
+   * `rules` is the default, and it is the answer to "inject the project's knowledge and
+   * workflow without breaking the host": `compact` is the short paraphrase this plugin can write
+   * on its own with no subprocess, `rules` is the engine's own citation, evidence-tier,
+   * untrusted-text and workflow blocks (13.8k characters in this checkout), `full` adds the
+   * generated model/dataset/catalogue context (24.5k more), and `off` registers nothing.
+   *
+   * Anything past `compact` is fetched from the engine at mount, so the text cannot drift from
+   * `prompts/` and the registry. See `lib/host-env.js` for the argument for each default.
+   */
+  promptDepth: 'rules',
   /** Milliseconds before a bridge call is reported as unreachable. */
   requestTimeoutMs: 120000,
 })
 
 export const ACCENTS = ['ice', 'amber', 'deep-blue']
+
+/** The `promptDepth` choices a card offers, in the order it lists them. */
+export const PROMPT_DEPTHS = ['compact', 'rules', 'full', 'off']
 
 /** Engine tools this plugin surfaces, in the order a reviewer reads them. */
 export const ENGINE_TOOLS = [
@@ -127,6 +143,12 @@ export function normaliseSettings(raw, fallback = DEFAULTS) {
     merged.requestTimeoutMs = fallback.requestTimeoutMs
   } else {
     merged.requestTimeoutMs = Math.round(timeout)
+  }
+  if (!PROMPT_DEPTHS.includes(merged.promptDepth)) {
+    // Loud, because this one is a *prompt*: silently falling back would change what the model is
+    // told and leave nothing anywhere that says so.
+    warnings.push(`promptDepth ${JSON.stringify(merged.promptDepth)} is unknown; using ${fallback.promptDepth} (known: ${PROMPT_DEPTHS.join(', ')})`)
+    merged.promptDepth = fallback.promptDepth
   }
   merged.pythonCmd = String(merged.pythonCmd || fallback.pythonCmd).trim() || fallback.pythonCmd
   merged.projectRoot = String(merged.projectRoot || '').trim()
