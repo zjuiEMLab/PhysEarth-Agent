@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import plistlib
 import re
 import tomllib
 from pathlib import Path
@@ -272,3 +273,110 @@ def test_the_repository_marketplace_points_at_the_plugin_it_catalogues():
     assert entry["category"]
     installed_name = json.loads((target / ".codex-plugin" / "plugin.json").read_text())["name"]
     assert installed_name == entry["name"]
+
+
+# ── text and colour: the only surface a CLI plugin has ───────────────────────────────────────
+
+THEME = ROOT / "codex" / "geoai.tmTheme"
+THEME_SNIPPET = ROOT / "codex" / "config-theme.snippet.toml"
+
+# Every scope Codex names in its own theme scope list, plus the markdown ones an answer here
+# actually uses. A colour scheme that misses one of these leaves that construct at the terminal
+# default, which looks like a half-applied theme rather than a missing scope.
+THEME_SCOPES_REQUIRED = [
+    "comment",
+    "keyword",
+    "keyword.control",
+    "keyword.operator",
+    "storage.type",
+    "storage.modifier",
+    "entity.name.function",
+    "entity.name.tag",
+    "constant.language",
+    "constant.other",
+    "markup.heading",
+    "markup.underline.link",
+    "entity.name.section",
+    "markup.inserted",
+]
+
+
+def test_the_theme_is_a_well_formed_plist():
+    # A .tmTheme *is* an XML plist, so this is the first thing Codex's parser needs and the first
+    # thing that breaks silently in hand-written XML. It caught exactly that while being written:
+    # one `<key>guide</string>` made the whole scheme unusable.
+    with open(THEME, "rb") as handle:
+        theme = plistlib.load(handle)
+
+    assert theme["name"] == "PhysEarth Geo-AI"
+    settings = theme["settings"]
+    assert isinstance(settings, list) and len(settings) >= 10
+    globals_ = [entry for entry in settings if "scope" not in entry]
+    assert globals_, "a theme needs one global block for background/foreground"
+    for key in ("background", "foreground", "caret", "selection"):
+        assert globals_[0]["settings"][key].startswith("#"), key
+
+
+def test_the_theme_colours_every_scope_codex_emits():
+    with open(THEME, "rb") as handle:
+        theme = plistlib.load(handle)
+
+    declared = set()
+    for entry in theme["settings"]:
+        scope = entry.get("scope")
+        if isinstance(scope, str):
+            declared.update(part.strip() for part in scope.split(","))
+    missing = [scope for scope in THEME_SCOPES_REQUIRED if scope not in declared]
+    assert not missing, f"scopes left at the terminal default: {missing}"
+
+
+def test_the_theme_palette_is_the_same_product_as_the_other_integrations():
+    with open(THEME, "rb") as handle:
+        theme = plistlib.load(handle)
+    by_scope = {
+        entry["scope"]: entry["settings"]
+        for entry in theme["settings"]
+        if isinstance(entry.get("scope"), str)
+    }
+    globals_ = next(entry["settings"] for entry in theme["settings"] if "scope" not in entry)
+
+    # The DSH plugin applies this field and this accent to that surface; two integrations of the
+    # same product should not look like two experiments.
+    assert globals_["background"] == "#05070D"
+    assert globals_["foreground"] == "#E8EEFB"
+    assert globals_["caret"] == "#22D3EE"
+    # Amber marks what was measured or refused, which is this project's central distinction.
+    assert by_scope["constant.other"]["foreground"] == "#F59E0B"
+
+
+def test_the_theme_snippet_writes_only_keys_that_were_probed():
+    data = tomllib.loads(THEME_SNIPPET.read_text())
+    tui = data["tui"]
+
+    # These two are the ones an installer can set safely: a string and a boolean. The list-valued
+    # keys are deliberately absent — an unknown item id is accepted at load and filtered later, so
+    # a wrong id is a silently empty slot, and guessing is worse than pointing at the picker.
+    assert tui["theme"] == "geoai"
+    assert tui["status_line_use_colors"] is True
+    assert "status_line" not in tui
+    assert "terminal_title" not in tui
+    # The snippet has to record the evidence, or the next reader will "fix" it from memory.
+    body = THEME_SNIPPET.read_text()
+    assert "accepts a string; rejects a boolean" in body
+    assert "/statusline" in body
+
+
+def test_the_theme_installer_probes_the_theme_before_claiming_success():
+    script = (ROOT / "scripts" / "codex-theme-install.sh").read_text()
+
+    assert os.access(ROOT / "scripts" / "codex-theme-install.sh", os.X_OK)
+    # It must validate, must not touch config.toml without being asked, and must say how to undo.
+    assert "plistlib" in script
+    assert "--write-config" in script
+    assert "backed up" in script
+    assert "--check" in script
+    # A backtick inside the double-quoted block would run as a command substitution; that bug
+    # shipped once (`terminal_title: command not found`), so the block is asserted to be free of
+    # them.
+    block = script.split('block="$BEGIN', 1)[1].split('$END"', 1)[0]
+    assert "`" not in block, "backticks inside a double-quoted heredoc run as command substitution"

@@ -109,6 +109,53 @@ root-first so deeper files win; truncated at `project_doc_max_bytes` (32 KiB).
   though skills are, and the MCP server is shared through the same `~/.codex/config.toml`. So
   the skill is the part of this package that still works in the extension.
 
+## 6. Text and colour
+
+A Codex plugin cannot add a panel, a widget or a status-line item of its own, so colour and text
+are the whole surface a third party can change. Both are supported properly, and both are
+shipped here.
+
+```bash
+scripts/codex-theme-install.sh              # installs the scheme, prints the one manual step
+scripts/codex-theme-install.sh --check      # verifies an installed copy
+```
+
+Then, in the TUI, `/theme` and choose **PhysEarth Geo-AI**. The scheme is
+`codex/geoai.tmTheme` — a TextMate/Sublime plist, which is what Codex parses (with the `two-face`
+crate) from `$CODEX_HOME/themes/`. `codex/config-theme.snippet.toml` explains each config key.
+
+The three levers, and how far each reaches:
+
+| Lever | Effect | Who activates it |
+|---|---|---|
+| `tui.theme` + a `.tmTheme` | rewrites the colours of every syntax scope Codex emits | the user, once, in `/theme` (or the config key) |
+| `tui.status_line_use_colors` | makes the status line follow the active theme's colours | the config key |
+| `tui.status_line`, `tui.terminal_title` | choose which items appear — i.e. the *text* | the TUI pickers (`/statusline`), which write the ids |
+
+**Why this file pins only two keys.** `theme` (string) and `status_line_use_colors` (boolean)
+were probed against codex-cli by writing a value of the wrong type and reading the error, which
+names both the key and the type it expects:
+
+```
+$ printf '[tui]\ntheme = true\n' > $CODEX_HOME/config.toml && codex mcp list
+Error: failed to load bootstrap configuration
+Caused by:
+    invalid type: boolean `true`, expected a string
+    in `tui.theme`
+```
+
+That probe also corrected the record: an earlier version of this guide said `tui.terminal_title`
+was a boolean. It is a list, and the mistake came from probing several keys against one shared
+config file, where a stale invalid key from the previous probe masked the next one. One probe,
+one fresh config, and read the key name out of the error rather than trusting your own label.
+
+The item **ids** for `status_line` and `terminal_title` are deliberately not pinned: the config
+layer accepts any string and filters unknown ids later, so a wrong id is not an error — it is a
+silently empty slot. `/statusline` writes the right ones, so let it.
+
+What this cannot do: a plugin cannot force a theme. Switching back to `dark` or `light` stays the
+user's choice in `/theme`, and the plugin neither fights it nor reapplies itself.
+
 ## Where this package stops, and why
 
 `plugins/geoai/` plus `.agents/plugins/marketplace.json` make this installable in two commands
