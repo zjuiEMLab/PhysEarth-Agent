@@ -239,6 +239,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     max_tokens=output_tokens,
                     stream=True,
                     stream_options={"include_usage": True},
+                    # Qwen3.8 rejects a forced tool_choice in thinking mode with HTTP 400,
+                    # and long reasoning truncates a forced research_plan on other models.
+                    extra_body={"enable_thinking": False} if requested_tool else None,
                 )
                 for chunk in chunks:
                     if candidate.feed(chunk) and candidate.content:

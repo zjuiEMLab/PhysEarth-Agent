@@ -12,7 +12,7 @@ _DEFAULTS = {
     "MODELSCOPE_TOKEN": "",
     "MODELSCOPE_NAMESPACE": "",
     "MODELSCOPE_API_BASE": "https://api-inference.modelscope.cn/v1",
-    "MODELSCOPE_MODEL": "Qwen/Qwen3.5-122B-A10B",
+    "MODELSCOPE_MODEL": "deepseek-ai/DeepSeek-V4.1-Flash",
     # Source-paper figure inspection should include the image by default. Providers that
     # do not expose a vision-capable endpoint can opt out with PHYSEARTH_LLM_VISION=0;
     # vector labels and captions are still extracted when available.
@@ -67,9 +67,9 @@ def llm_models():
     if raw:
         return [item.strip() for item in raw.split(",") if item.strip()]
     return [
-        "Qwen/Qwen3.5-122B-A10B",
-        "deepseek-ai/DeepSeek-V4-Flash-0731",
-        "ZhipuAI/GLM-4.7-Flash",
+        "Qwen/Qwen3.8-Flash-Next",
+        "deepseek-ai/DeepSeek-V4.1-Flash",
+        "ZhipuAI/GLM-5.2",
     ]
 
 

@@ -135,15 +135,15 @@ python app.py
 ```
 
 `MODELSCOPE_MODEL` sets the language model the agent starts with. The interface offers
-three, and the choice is per session: Qwen3.5-122B-A10B, DeepSeek-V4-Flash and
-GLM-4.7-Flash, all reached through the public ModelScope API-Inference endpoint.
+three, and the choice is per session: DeepSeek-V4.1-Flash (the default),
+Qwen3.8-Flash-Next and GLM-5.2, all reached through the public ModelScope API-Inference endpoint.
 
 Every setting has a working default, so the application starts with no `.env` present.
 
 | Variable | Default | What it does |
 |---|---|---|
 | `MODELSCOPE_TOKEN` | empty | the only secret; needed to reach the inference endpoint |
-| `MODELSCOPE_MODEL` | `Qwen/Qwen3.5-122B-A10B` | which language model a session starts on |
+| `MODELSCOPE_MODEL` | `deepseek-ai/DeepSeek-V4.1-Flash` | which language model a session starts on |
 | `PHYSEARTH_ONLINE` | `1` | `0` removes the two online literature tools entirely |
 | `PHYSEARTH_MODEL_PATH` | empty | extra model directories to register |
 | `PHYSEARTH_STATE_DIR` | `_state` | the one directory written to |

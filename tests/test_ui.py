@@ -569,13 +569,13 @@ def test_the_quota_message_names_the_model_and_the_alternatives():
         "at": "00:00:00",
         "rule": "quota",
         "reason": "rate limited (HTTP 429)",
-        "model": "Qwen/Qwen3.5-122B-A10B",
-        "upstream": "You have exceeded today's quota for model Qwen/Qwen3.5-122B-A10B",
+        "model": "Qwen/Qwen3.8-Flash-Next",
+        "upstream": "You have exceeded today's quota for model Qwen/Qwen3.8-Flash-Next",
     }
     out = render.trace([event], agent.new_state())
     assert "what the endpoint said" in out
     assert "exceeded today" in out
-    assert "Qwen/Qwen3.5-122B-A10B" in out
+    assert "Qwen/Qwen3.8-Flash-Next" in out
 
 
 def test_a_spent_daily_quota_is_not_retried():

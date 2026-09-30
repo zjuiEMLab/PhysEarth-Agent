@@ -42,10 +42,8 @@ FAULTS = ("quota", "withdrawn", "upstream", "global_budget")
 # -- never straddles two models. A block whose model runs out is discarded whole and
 # retried on the next model, never left half finished.
 DEFAULT_POOL = [
-    "Qwen/Qwen3-Next-80B-A3B-Instruct",
     "Qwen/Qwen3.5-35B-A3B",
-    "Qwen/Qwen3-30B-A3B",
-    "Qwen/Qwen3-14B",
+    "Qwen/Qwen3.5-27B",
     "stepfun-ai/Step-3.5-Flash",
 ]
 PACE_S = 3.0

@@ -8,9 +8,9 @@ from physearth import config
 from physearth import session as session_state
 
 _MODEL_LABELS = {
-    "Qwen/Qwen3.5-122B-A10B": "Qwen3.5 122B-A10B",
-    "deepseek-ai/DeepSeek-V4-Flash-0731": "DeepSeek V4 Flash",
-    "ZhipuAI/GLM-4.7-Flash": "GLM 4.7 Flash",
+    "Qwen/Qwen3.8-Flash-Next": "Qwen3.8 Flash-Next",
+    "deepseek-ai/DeepSeek-V4.1-Flash": "DeepSeek V4.1 Flash",
+    "ZhipuAI/GLM-5.2": "GLM 5.2",
     "qwen-plus": "Qwen Plus",
     "qwen-turbo": "Qwen Turbo",
     "qwen-max": "Qwen Max",
