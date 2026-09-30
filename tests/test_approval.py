@@ -196,13 +196,13 @@ def test_raw_reproduction_cannot_stop_after_reading_one_page(monkeypatch):
     assert client.tool_choices[3] == {"type": "function", "function": {"name": "run_raw_smrt"}}
 
 
-def test_a_truncated_research_plan_gets_one_larger_retry_budget(monkeypatch):
+def test_a_truncated_research_plan_is_retried_on_the_same_budget(monkeypatch):
     box = _asking()
     first = _call_chunk(
         "research_plan",
         '{"action":"propose","charts":[',
         finish_reason="length",
-        completion_tokens=4096,
+        completion_tokens=agent.MAX_OUTPUT_TOKENS,
     )
     script = [
         [first],
@@ -214,10 +214,9 @@ def test_a_truncated_research_plan_gets_one_larger_retry_budget(monkeypatch):
     answer, events, _ = agent.run("Draft a research plan", session=box)
 
     assert answer == "I could not form the plan."
-    assert client.max_tokens[:2] == [agent.MAX_OUTPUT_TOKENS, 8192]
+    assert client.max_tokens[:2] == [agent.MAX_OUTPUT_TOKENS, agent.MAX_OUTPUT_TOKENS]
     invalid = next(event for event in events if event["kind"] == "tool_arguments_invalid")
     assert invalid["output_truncated"] is True
-    assert invalid["retry_output_tokens"] == 8192
 
 
 def test_normal_question_does_not_force_research_plan(monkeypatch):

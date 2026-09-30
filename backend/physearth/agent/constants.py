@@ -14,15 +14,9 @@ RETRY_BACKOFF_S = 1.5
 # would have worked. These three attempts span just over a minute instead.
 RATE_LIMIT_BACKOFF_S = 12.0
 RATE_LIMIT_RETRIES = 4
-# A three-configuration research_plan is itself a sizeable JSON tool call. At 2048 the
-# provider stopped exactly at the limit and left function.arguments without its closing
-# braces, which then poisoned the next OpenAI-compatible request. Keep ordinary calls at
-# this size; the loop escalates only a malformed research_plan retry for a large
-# multi-figure proposal.
-MAX_OUTPUT_TOKENS = 4096
-# A two-figure reproduction can legitimately need more structured fields than the normal
-# plan budget. This is a retry ceiling, not the default for every provider request.
-MAX_RESEARCH_PLAN_RETRY_TOKENS = 8192
+# One budget for every request. Thinking models spend part of it on reasoning, and at 4096
+# both a research_plan tool call and an ordinary step were cut off mid-output.
+MAX_OUTPUT_TOKENS = 40960
 # ModelScope providers differ slightly in their advertised context windows. Keep a
 # conservative request budget and compact old tool output before the provider rejects the
 # request. This is a character budget because the tokenizer is model-specific; it leaves

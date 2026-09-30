@@ -12,7 +12,6 @@ from physearth.agent.constants import (
     _TOOL_BYPASS_PATTERNS,
     EMPTY_RESPONSE_RETRIES,
     MAX_OUTPUT_TOKENS,
-    MAX_RESEARCH_PLAN_RETRY_TOKENS,
     RATE_LIMIT_BACKOFF_S,
     RATE_LIMIT_RETRIES,
     RETRY_BACKOFF_S,
@@ -156,9 +155,6 @@ def stream(question, history=None, model=None, session=None, switches=None):
     plan_tool_called = False
     revision_forced = False
     segments = []
-    # Most calls should stay on the normal provider budget. A malformed research_plan is
-    # the one case where the loop has evidence that its structured output did not fit; give
-    # the next planning attempt more room without increasing the cost of ordinary turns.
     output_tokens = MAX_OUTPUT_TOKENS
 
     allowed, message = budget.acquire()
@@ -381,14 +377,6 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         )
                     )
                 )
-                retry_output_tokens = None
-                if (
-                    call.get("name") == "research_plan"
-                    and output_truncated
-                    and output_tokens < MAX_RESEARCH_PLAN_RETRY_TOKENS
-                ):
-                    retry_output_tokens = MAX_RESEARCH_PLAN_RETRY_TOKENS
-                    output_tokens = retry_output_tokens
                 events.append(
                     _event(
                         "tool_arguments_invalid",
@@ -398,7 +386,6 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         argument_chars=len(argument_text),
                         completion_tokens=completion.completion_tokens,
                         output_truncated=output_truncated,
-                        retry_output_tokens=retry_output_tokens,
                     )
                 )
                 if attempts >= harness.max_interventions(tool=call.get("name")):
@@ -432,12 +419,6 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         retry_content = (
                             "The previous research_plan arguments were incomplete. Keep the next "
                             "tool call compact. "
-                        )
-                    if retry_output_tokens:
-                        retry_content += (
-                            "The next planning attempt has a larger output allowance. Keep one "
-                            "target and one chart per source figure, use short labels and omit "
-                            "optional explanatory prose inside the JSON. "
                         )
                     if has_recovery_state:
                         retry_content += (
