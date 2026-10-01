@@ -688,3 +688,107 @@ def test_full_reproduction_is_ineligible_when_provenance_is_missing():
     )
     assert gates["provenance_failure"] is True
     assert sum(gates.values()) == 1
+
+
+def _planned_record(runs, mapping=(), conditions=None, repairs=()):
+    return {
+        "research": {
+            "plan": {
+                "runs": runs,
+                "parameter_mapping": list(mapping),
+                "condition_provenance": conditions or {},
+                "automatic_repairs": list(repairs),
+            }
+        },
+        "parameter_provenance": [],
+    }
+
+
+def _sticky_run(defaulted, **parameters):
+    spec = {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "density_kg_m3": 300.0,
+        **parameters,
+    }
+    return {"id": "run_1", "model": "smrt", "resolved_parameters": spec,
+            "defaulted_parameters": defaulted}
+
+
+def test_a_default_labelled_as_paper_evidence_is_mislabelled():
+    from metrics import provenance_check
+
+    record = _planned_record(
+        [_sticky_run(["frequency_ghz", "angle_deg"])],
+        mapping=[
+            {"model": "smrt", "model_input": "stickiness", "provenance_class": "backend_default"},
+            {"model": "smrt", "model_input": "radius_m", "provenance_class": "paper_explicit"},
+        ],
+        conditions={
+            "frequency_ghz": "paper_inferred",
+            "electromagnetic_model": "smrt-v1#fig03",
+            "microstructure_model": "smrt-v1#fig03",
+            "output": "smrt-v1#fig03",
+            "density_kg_m3": "smrt-v1#fig03",
+        },
+    )
+    result = provenance_check.check(record)
+    assert [item["parameter"] for item in result["mislabelled"]] == ["frequency_ghz"]
+    assert result["unlabelled"] == []
+    assert "angle_deg" in result["inert"]
+    assert result["passed"] is False
+
+
+def test_a_label_the_planner_filled_in_is_not_credited_to_the_agent():
+    from metrics import provenance_check
+
+    record = _planned_record(
+        [_sticky_run([])],
+        mapping=[
+            {"model": "smrt", "model_input": "stickiness", "provenance_class": "backend_default"},
+        ],
+        repairs=[{"field": "parameter_mapping.smrt.stickiness", "from": "", "to": "stickiness"}],
+    )
+    result = provenance_check.check(record)
+    assert {"parameter": "stickiness", "card_default": False, "run": "run_1"} in result[
+        "unlabelled"
+    ]
+
+
+def test_outcome_tag_is_computed_from_the_record():
+    figure = {"complete": True, "passed": True, "summary": "same figure"}
+    report = {"complete": True, "passed": False, "summary": "never answers the question"}
+    ran = {
+        "numeric_results": [{"handle": "h"}],
+        "figures": [{"preview": False}],
+        "event_log": [
+            {"kind": "harness_stop", "turn": 1, "rule": "research_approval_required"},
+            {"kind": "harness_pass", "turn": 2},
+        ],
+        "dashboard_metrics": {"figure_judgement": figure, "report_judgement": report},
+    }
+    task = {"quality": "complete"}
+    partial = competition_score.outcome_tag(ran, task, {"passed": True})
+    assert partial["tag"] == "Partial"
+    assert partial["reasons"] == ["report judge fail: never answers the question"]
+
+    report["passed"] = True
+    assert competition_score.outcome_tag(ran, task, {"passed": True})["tag"] == "Success"
+
+    stopped = dict(ran, event_log=[{"kind": "harness_stop", "turn": 1, "rule": "no_progress",
+                                    "reason": "Stopped after 3 failed calls"}])
+    failed = competition_score.outcome_tag(stopped, task, None)
+    assert failed["tag"] == "Failed"
+    assert failed["reasons"] == ["stopped by no_progress: Stopped after 3 failed calls"]
+
+    nothing = {"numeric_results": [], "figures": [], "event_log": []}
+    assert competition_score.outcome_tag(nothing, task, None)["reasons"] == [
+        "no successful physical model run",
+        "no figure",
+    ]
+    assert competition_score.outcome_tag(nothing, {"quality": "false_premise"}, None) is None

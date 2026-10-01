@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from . import oracles, score
+from . import oracles, provenance_check, score
 
 ROOT = Path(__file__).resolve().parent.parent
 GOLD = ROOT / "provenance" / "gold_fields.yaml"
@@ -266,6 +266,67 @@ def reproduction_hard_gates(legacy, workflow, provenance, independent, task):
     }
 
 
+def final_stop(record):
+    """The rule that ended the last turn, if one did.
+
+    A run pauses for plan review by design, which ends its first turn with a harness stop;
+    only a stop in the last turn means the run itself was stopped.
+    """
+    events = record.get("event_log") or []
+    last = max((event.get("turn") or 0 for event in events), default=0)
+    for event in events:
+        if (event.get("turn") or 0) == last and event.get("kind") in (
+            "harness_stop", "harness_giveup"
+        ):
+            return event
+    return None
+
+
+def _judged(metrics, name):
+    judgement = (metrics or {}).get(name) or {}
+    if not judgement.get("complete"):
+        return "not_scoreable", judgement.get("error") or "not run"
+    return ("pass" if judgement.get("passed") else "fail"), judgement.get("summary") or ""
+
+
+def outcome_tag(record, task, default_provenance):
+    """B6: Success, Partial or Failed, computed from the record and never typed.
+
+    Success: the model ran, a figure was drawn, and both the figure judge (B2) and the
+    report judge (B5) passed. Partial: it ran and drew a figure, but a judge did not pass
+    or a parameter source is unresolved (B4). Failed: stopped by a rule in its last turn,
+    no successful model run, or no figure. A false-premise task is scored by protocol A.
+    """
+    if task.get("quality") == "false_premise":
+        return None
+    reasons = []
+    stop = final_stop(record)
+    if stop:
+        detail = stop.get("reason") or stop.get("detail") or ""
+        reasons.append(f"stopped by {stop.get('rule')}: {detail}")
+    if not record.get("numeric_results"):
+        reasons.append("no successful physical model run")
+    if not any(not figure.get("preview") for figure in record.get("figures") or ()):
+        reasons.append("no figure")
+    if reasons:
+        return {"tag": "Failed", "reasons": reasons}
+    metrics = record.get("dashboard_metrics") or {}
+    figure, figure_reason = _judged(metrics, "figure_judgement")
+    report, report_reason = _judged(metrics, "report_judgement")
+    if figure != "pass":
+        reasons.append(f"figure judge {figure}: {figure_reason}")
+    if report != "pass":
+        reasons.append(f"report judge {report}: {report_reason}")
+    if default_provenance and not default_provenance["passed"]:
+        mislabelled = [item["parameter"] for item in default_provenance["mislabelled"]]
+        unlabelled = [item["parameter"] for item in default_provenance["unlabelled"]]
+        reasons.append(
+            f"parameter source unresolved: mislabelled {mislabelled or 'none'}; "
+            f"unlabelled {unlabelled or 'none'}"
+        )
+    return {"tag": "Partial" if reasons else "Success", "reasons": reasons}
+
+
 def score_record(record, task):
     legacy = score.score_record(record, task)
     independent = independent_reproduction(record, task)
@@ -276,6 +337,7 @@ def score_record(record, task):
     label_match = declared in expected if declared else False
     hard_gates = reproduction_hard_gates(legacy, workflow, provenance, independent, task)
     eligible = not any(hard_gates.values())
+    default_provenance = provenance_check.check(record)
     return {
         **legacy,
         "prompt_profile": record.get("prompt_profile"),
@@ -292,4 +354,6 @@ def score_record(record, task):
         "outcome_calibrated": label_match and (declared != "reproduced" or eligible),
         "elapsed_s": record.get("elapsed_s"),
         "dashboard_metrics": record.get("dashboard_metrics"),
+        "default_provenance": default_provenance,
+        "outcome": outcome_tag(record, task, default_provenance),
     }
