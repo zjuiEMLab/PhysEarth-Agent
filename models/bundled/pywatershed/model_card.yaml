@@ -22,7 +22,7 @@ parameters:
     type: string
     unit: none
     description: >-
-      Which simulated quantity to return as the series. Each is a basin total or mean over
+      Which simulated quantity to return as the series. Each is an area-weighted mean over
       the Sagehen hydrologic response units.
     enum:
       - snowpack_water_equivalent
@@ -76,7 +76,7 @@ outputs:
   value:
     unit: mm
     description: >-
-      The selected variable as a basin-mean depth over the period, one value per time step
+      The selected variable as an area-weighted basin-mean depth, one value per time step
       of the chosen aggregation.
     valid_min: 0.0
     valid_max: 5000.0

@@ -173,6 +173,9 @@ def run(spec):
     parameters = pws.parameters.PrmsParameters.load(domain / "myparam.param")
     processes = [getattr(pws, name) for name in PROCESSES]
     model = pws.Model(processes, control=control, parameters=parameters)
+    # A basin mean weights each response unit by its area; the Sagehen units differ in
+    # area twentyfold, so a plain mean over them is not the basin's depth.
+    area = np.asarray(parameters.parameters["hru_area"], dtype=float)
 
     wanted_from = np.datetime64(start)
     collected, dates = [], []
@@ -189,7 +192,7 @@ def run(spec):
             )
         if control.current_time >= wanted_from:
             field = np.asarray(getattr(holder, variable), dtype=float)
-            collected.append(float(np.nanmean(field)) * INCH_TO_MM)
+            collected.append(float(np.nansum(field * area) / area.sum()) * INCH_TO_MM)
             dates.append(control.current_time.astype("datetime64[D]").item())
     model.finalize()
 
