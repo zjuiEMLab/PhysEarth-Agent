@@ -87,7 +87,7 @@ physearth_find_python() {
     resolved="$(command -v "$candidate" 2>/dev/null || echo "$candidate")"
     echo "$resolved"
     return 0
-  done < <(physearth_python_candidates)
+  done < <(PHYSEARTH_ROOT="${PHYSEARTH_ROOT:-$cwd}" physearth_python_candidates)
   return 1
 }
 
