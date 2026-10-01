@@ -12,14 +12,17 @@ uv sync --extra dev                  # the only supported way to build the envir
 .venv/bin/python -m ruff check .     # line-length 100, rules E,F,I,W,UP,B
 ```
 
-Evaluation, in increasing cost:
+Evaluation. Both commands only print the plan and the cache state; neither calls an LLM
+until `--execute` (competition) or without `--dry-run` (agent tasks) is given:
 
 ```bash
-.venv/bin/python evaluation/runners/tier0.py               # deterministic, free, ~20 s
-.venv/bin/python evaluation/runners/model_registration.py  # deterministic, no LLM
-.venv/bin/python evaluation/runners/agent_tasks.py --dry-run
-.venv/bin/python evaluation/runners/report.py              # rebuild REPORT.md from cache
+.venv/bin/python evaluation/runners/competition.py            # frozen competition matrix
+.venv/bin/python evaluation/runners/agent_tasks.py --dry-run  # tier2 and probe task suites
 ```
+
+The deterministic runners `tier0.py` and `model_registration.py`, and `report.py`, were
+removed in `35eee2c`. Their tests are parked in `tests/archive/`, whose README says how to
+restore a runner. Until then the deterministic gate is the pytest suite above.
 
 `uv sync` matters: the venv drifts silently otherwise, and a missing `pymupdf` makes the
 figure-inspection tests fail in a way that looks like a code defect but is not.
@@ -123,12 +126,7 @@ demo.
 ## Evidence and evaluation
 
 `evaluation/results/` is committed evidence behind `REPORT.md`, not build output. Do not
-regenerate or delete records to make something pass. Tier 0 and the registration runner are deterministic
-in what they *assert*: `9/9 tasks, 38 checks` and `20/20 checks`. Those are the gate.
-They do **not** reproduce their committed JSON byte-for-byte — re-running them shifts
-values by 1e-16 to 1e-11 through BLAS and library round-off, which is why a verification
-run leaves `results/tier0.json` and `results/model_registration.json` modified. Revert
-them; do not commit the drift.
+regenerate or delete records to make something pass.
 
 Changing prompt text or tool contracts invalidates comparisons against existing records.
 Say so in the commit message. `tests/test_prompt_layers.py` pins all 48 combinations of
