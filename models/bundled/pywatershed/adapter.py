@@ -165,6 +165,10 @@ def run(spec):
     )
     control.options["calc_method"] = "numpy"
     control.options["verbosity"] = 0
+    # The control file asks for every variable as NetCDF under the working directory. The
+    # series is read from memory below, and one shared process must not write there.
+    control.options.pop("netcdf_output_dir", None)
+    control.options.pop("netcdf_output_var_names", None)
 
     parameters = pws.parameters.PrmsParameters.load(domain / "myparam.param")
     processes = [getattr(pws, name) for name in PROCESSES]
