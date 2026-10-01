@@ -38,6 +38,9 @@ say so instead of writing it. A plausible-looking density is worse than an admit
    makes are visible to you and the handles it returns resolve in that session.
 3. Before asserting anything, `geoai_evidence` — it lists the sections read, models run, datasets
    queried and figures produced. Cite that list.
+4. Before giving the user an answer you wrote yourself, `geoai_verify_report` with the full text.
+   It runs the engine's own final-answer checks; fix every failed check it reports and verify
+   again.
 
 Read `references/tools.md` for each tool's parameters and result shape, and
 `references/troubleshooting.md` when a call is refused or a session is not found.
@@ -84,9 +87,15 @@ registered to answer.
 
 ## Approval
 
-A physical run needs a human's approval. The tools only run unattended when the caller states
-`approve_runs: true`, which means the host owns that decision. Do not set it to get past a
-question you have not asked the user.
+A physical run needs a human's approval, and whether the server asks is the operator's setting,
+chosen when it starts (`--approval ask|always`). No argument you pass changes it.
+
+When a run needs approval, `run_model` or `geoai_ask` returns `status: awaiting_approval` with a
+`pending` description of the run, and nothing has been computed. If the host can prompt the user
+directly, the server asks them itself and you receive the outcome. Otherwise show the user the
+pending run, ask them, and call `geoai_decide` with their answer — `approve` or `reject` — which
+continues from where the run was held. Never decide it yourself, and do not treat silence as
+approval: a new question drops the request instead.
 
 ## Boundaries
 

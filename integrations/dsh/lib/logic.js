@@ -32,7 +32,7 @@ export const DEFAULTS = Object.freeze({
   pythonCmd: 'python3',
   /** Repository root the bridge is started in; empty means "inherit the host cwd". */
   projectRoot: '',
-  /** Whether this deployment owns the human approval step for physical model runs. */
+  /** Start the bridge with runs approved in advance (`--approval always`); off means ask. */
   approveRuns: false,
   /** Visual accent of the Geo-AI surface. */
   accent: 'ice',
@@ -232,6 +232,8 @@ export const BRIDGE_ROUTES = Object.freeze({
   session: '/session',
   call: '/call',
   ask: '/ask',
+  decide: '/decide',
+  verify: '/verify',
   evidence: '/evidence',
   plan: '/plan',
   review: '/review',
@@ -268,7 +270,10 @@ export function engineEnv(root) {
 export function bridgeCommand(settings) {
   return {
     command: settings.pythonCmd,
-    args: ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', String(portOf(settings.bridgeUrl))],
+    args: [
+      '-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', String(portOf(settings.bridgeUrl)),
+      '--approval', settings.approveRuns ? 'always' : 'ask',
+    ],
     cwd: settings.projectRoot || undefined,
     env: engineEnv(settings.projectRoot),
   }

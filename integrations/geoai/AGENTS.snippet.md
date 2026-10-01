@@ -22,9 +22,10 @@ approval gate. A `physearth-geoai` MCP server exposes it.
   and outputs against declared bounds after it. If a call is refused (snow density above
   solid ice, a microstructure no theory derives, a liquid-water dielectric model asked
   about frozen ground), report the refusal and its reason instead of retrying variations.
-- A human approves a physical run. The tools only run on their own when the caller states
-  `approve_runs: true`, meaning the host owns that decision. Do not set it to bypass a
-  question you have not asked the user.
+- A human approves a physical run. Whether the server asks is the operator's setting, not a
+  tool argument. A result with `status: awaiting_approval` means nothing has run yet: show
+  the user the pending run and pass their answer to `geoai_decide`. Never decide it yourself.
+- Check an answer you wrote with `geoai_verify_report` before giving it to the user.
 - Cite `[paper#section]` only for a section actually read, `[model:name@version]` only for a
   run actually performed, `[data:slug]` only for a dataset actually queried. An
   abstract-only source (`[abs:doi]`) may never carry a value in kelvin, decibels or

@@ -76,7 +76,8 @@ test('the bridge command matches the address the settings name', () => {
   const spec = bridgeCommand({ pythonCmd: 'python3', bridgeUrl: 'http://127.0.0.1:9123', projectRoot: '/repo' })
 
   assert.equal(spec.command, 'python3')
-  assert.deepEqual(spec.args, ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', '9123'])
+  assert.deepEqual(spec.args, ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', '9123', '--approval', 'ask'])
+  assert.deepEqual(bridgeCommand({ pythonCmd: 'python3', approveRuns: true }).args.slice(-2), ['--approval', 'always'])
   assert.equal(spec.cwd, '/repo')
   assert.equal(portOf('not a url'), 8799)
 })

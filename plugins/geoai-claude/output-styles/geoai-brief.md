@@ -44,8 +44,10 @@ be registered to answer.
 
 ## Runs and approval
 
-- A physical run needs a human's approval. Only state `approve_runs: true` when the user has
-  explicitly delegated that decision to you in this session.
+- A physical run needs a human's approval. When a result says `awaiting_approval`, show the user
+  the pending run and pass their answer to `geoai_decide`; never give the verdict yourself.
+- Before answering in your own words, run the full text through `geoai_verify_report` and fix
+  every check it fails.
 - Handles resolve only inside the session that produced them; open one with `geoai_session_new`
   before running anything.
 - Full numeric arrays never enter your context. A run returns a handle and a bounded preview, and

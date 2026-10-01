@@ -1027,7 +1027,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       projectRootPlaceholder: '留空则使用宿主进程的当前目录',
       restyleHost: '改版宿主界面（关掉只保留本卡片）',
       autoStartBridge: '桥未启动时由本插件拉起（停用时一并关闭）',
-      approveRuns: '由本部署承担物理运行的人工批准（慎用：勾选即表示你代替人审）',
+      approveRuns: '启动 Python 桥时预先批准物理运行（慎用：勾选即表示你代替人审）',
       probe: '测试桥连接',
       probing: '正在连接桥…',
       probeOk: (p) =>
@@ -1063,7 +1063,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       projectRootPlaceholder: 'Empty uses the host process working directory',
       restyleHost: 'Restyle the host interface (off keeps only this card)',
       autoStartBridge: 'Start the bridge when it is not answering (released on disable)',
-      approveRuns: 'This deployment owns human approval for physical runs (careful: ticking this means you approve in the human’s place)',
+      approveRuns: 'Start the Python bridge with physical runs approved in advance (careful: ticking this means you approve in the human’s place)',
       probe: 'Probe the bridge',
       probing: 'Reaching the bridge…',
       probeOk: (p) =>

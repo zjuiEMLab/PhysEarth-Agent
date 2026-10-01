@@ -80,7 +80,7 @@ export class BridgeClient {
   }
 
   newSession(model) {
-    return this.post(BRIDGE_ROUTES.session, { model, approve_runs: this.settings.approveRuns })
+    return this.post(BRIDGE_ROUTES.session, { model })
   }
 
   call(name, args = {}, sessionId) {
@@ -88,7 +88,6 @@ export class BridgeClient {
       name,
       arguments: args,
       session_id: sessionId,
-      approve_runs: this.settings.approveRuns,
     })
   }
 
@@ -97,8 +96,15 @@ export class BridgeClient {
       question,
       session_id: sessionId,
       model,
-      approve_runs: this.settings.approveRuns,
     })
+  }
+
+  decide(sessionId, decision) {
+    return this.post(BRIDGE_ROUTES.decide, { session_id: sessionId, decision })
+  }
+
+  verify(sessionId, text) {
+    return this.post(BRIDGE_ROUTES.verify, { session_id: sessionId, text })
   }
 
   evidence(sessionId) {

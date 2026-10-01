@@ -1,11 +1,15 @@
 # PhysEarth-Agent in Codex
 
-Two commands and a check. Everything the engine offers — 28 tools, the bundled CC-BY corpus,
+Two commands and a check. Everything the engine offers — 30 tools, the bundled CC-BY corpus,
 reference measurements, the research workflow with its approval gate — arrives through one MCP
 server; the skill in `.agents/skills/geoai/` is what tells Codex *how* to use it, and it is
 already in the repository, so there is nothing to install for it.
 
 Verified against **codex-cli 0.155.1**.
+
+Run approval is the operator's setting, fixed when the server starts: `ask` by default, or
+`--approval always` appended to the server's arguments to pre-approve. With `ask`, a physical run stops with
+`awaiting_approval`; Codex shows you the pending run and passes your answer to `geoai_decide`.
 
 ## 1. Point Codex at an interpreter that has the engine
 

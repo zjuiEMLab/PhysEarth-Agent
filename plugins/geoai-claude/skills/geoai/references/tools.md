@@ -13,9 +13,11 @@ replacing the schema.
 | Tool | Required | What it is for |
 |---|---|---|
 | `geoai_health` | — | Once per session. Registered models, runnable models, declared tools, bundled evidence, whether inference credentials are configured. |
-| `geoai_session_new` | — | Open a research session. Optional `model`, `approve_runs`. Handles resolve **only** inside the session that produced them, so this comes before any run. |
-| `geoai_ask` | `question` | A whole question in one call: the agent plans, runs registered models and reports the evidence it used. Optional `session_id`, `model`, `approve_runs`. |
+| `geoai_session_new` | — | Open a research session. Optional `model`. Handles resolve **only** inside the session that produced them, so this comes before any run. The result says which approval setting the operator chose. |
+| `geoai_ask` | `question` | A whole question in one call: the agent plans, runs registered models and reports the evidence it used. Optional `session_id`, `model`. Returns `awaiting_approval` with a `pending` run when the turn stops for a verdict. |
+| `geoai_decide` | `session_id`, `decision` | The user's verdict on a pending run, `approve` or `reject`. A paused question resumes where it stopped; a held `run_model` call runs or comes back declined. Only with the user's own answer. |
 | `geoai_evidence` | — | The audit trail for a session: sections read, models run, datasets queried, method notes, result handles, figures. Cite this, not your recollection. |
+| `geoai_verify_report` | `session_id`, `text` | Check an answer you wrote against the session before giving it: every marker must resolve to evidence the session gathered, and `[abs:doi]` may carry no result value. Failed checks come with the fix. |
 | `geoai_prompt_stack` | — | The rules the engine itself answers under: citation and evidence-tier policy, the untrusted-text boundary, the research workflow. |
 
 ## Models and runs

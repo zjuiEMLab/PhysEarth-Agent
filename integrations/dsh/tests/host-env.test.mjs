@@ -111,7 +111,7 @@ test('the bridge child inherits a PYTHONPATH that can reach the engine', () => {
 
   const spec = bridgeCommand({ pythonCmd: '/opt/py', bridgeUrl: 'http://127.0.0.1:8799', projectRoot: '/repo' })
   assert.equal(spec.command, '/opt/py')
-  assert.deepEqual(spec.args, ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', '8799'])
+  assert.deepEqual(spec.args, ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', '8799', '--approval', 'ask'])
   assert.equal(spec.cwd, '/repo')
   assert.equal(spec.env.PYTHONPATH, '/repo/backend:/repo')
 })

@@ -113,8 +113,9 @@ def test_the_output_style_forces_itself_on_and_keeps_the_coding_instructions():
     # ...while leaving ordinary engineering behaviour in place: this adds claim discipline, it
     # does not remove the ability to write code.
     assert fields["keep-coding-instructions"] == "true"
-    for rule in ("[abs:doi]", "approve_runs", "needs_input"):
+    for rule in ("[abs:doi]", "geoai_decide", "geoai_verify_report", "needs_input"):
         assert rule in prose, rule
+    assert "approve_runs" not in prose
 
 
 def test_the_skill_is_the_same_one_the_codex_plugin_ships():

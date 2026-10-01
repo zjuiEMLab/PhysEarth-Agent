@@ -92,8 +92,16 @@ def test_the_skill_states_the_rules_the_engine_actually_enforces():
 
     # Each of these is a guarantee in the engine, so an omission here is a model that will
     # confidently break one.
-    for phrase in ("geoai_health", "geoai_evidence", "approve_runs", "[abs:doi]", "needs_input"):
+    for phrase in (
+        "geoai_health",
+        "geoai_evidence",
+        "geoai_decide",
+        "geoai_verify_report",
+        "[abs:doi]",
+        "needs_input",
+    ):
         assert phrase in body, phrase
+    assert "approve_runs" not in body
     assert "comes from a tool result" in body
 
 
@@ -200,7 +208,7 @@ def test_the_agents_md_snippet_matches_the_skill_on_the_rules_that_matter():
 
     # Two documents, one policy: a rule present in one and absent from the other is a model that
     # behaves differently depending on which surface it was loaded through.
-    for rule in ("[abs:doi]", "approve_runs", "geoai_evidence"):
+    for rule in ("[abs:doi]", "geoai_decide", "geoai_evidence", "geoai_verify_report"):
         assert rule in snippet, f"AGENTS snippet lost {rule}"
         assert rule in skill, f"skill lost {rule}"
 

@@ -7,7 +7,7 @@
 #                          response's *text* with no user action (`force-for-plugin: true`)
 #   themes/                the Geo-AI colour scheme
 #
-# The engine's 28 tools are NOT in that list on purpose; this script registers the MCP server
+# The server's 30 tools are NOT in that list on purpose; this script registers the MCP server
 # instead. The measurement behind that is in the MCP section below.
 #
 # What only a settings file can do, and why this script exists:
