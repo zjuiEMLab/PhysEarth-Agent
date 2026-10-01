@@ -256,6 +256,9 @@ def research_capability_check(
         )
         for item in not_comparable
     ) or "none"
+    unavailable_outputs_text = ", ".join(
+        str(item) for item in report.get("unavailable_outputs") or ()
+    ) or "none"
     resolved_text = "; ".join(
         "%s -> %s (%s)" % (
             item.get("asked"), item.get("registered"), item.get("match_basis", "registered spelling"),
@@ -292,14 +295,22 @@ def research_capability_check(
             )
         summary = (
             "Capability check by reproduction target\n\n%s\n\n"
-            "Unified summary\nSupported: %s\nUnavailable: %s\nNot comparable: %s"
-            % ("\n\n".join(target_sections), supported_text, unavailable_text, incomparable_text)
+            "Unified summary\nSupported: %s\nUnavailable: %s\nNot comparable: %s\n"
+            "Outputs no registered model declares: %s"
+            % (
+                "\n\n".join(target_sections), supported_text, unavailable_text,
+                incomparable_text, unavailable_outputs_text,
+            )
         )
     else:
         summary = (
             "Capability check\n\nResolved names: %s\n\nSupported: %s\n\n"
-            "Unavailable: %s\n\nNot comparable: %s"
-            % (resolved_text, supported_text, unavailable_text, incomparable_text)
+            "Unavailable: %s\n\nNot comparable: %s\n\n"
+            "Outputs no registered model declares: %s"
+            % (
+                resolved_text, supported_text, unavailable_text, incomparable_text,
+                unavailable_outputs_text,
+            )
         )
     if resource_gaps:
         return {

@@ -17,7 +17,14 @@ def _upstream_text(exc):
     """Whatever the endpoint actually said, bounded. This is what makes a fault diagnosable."""
     body = getattr(exc, "body", None)
     if isinstance(body, dict):
-        message = body.get("message") or (body.get("error") or {}).get("message")
+        error = body.get("error") if isinstance(body.get("error"), dict) else {}
+        message = body.get("message") or error.get("message")
+        # A router (OpenRouter) says only "Provider returned error" and puts what the
+        # provider said under metadata.raw; without it every such fault looks alike.
+        metadata = body.get("metadata") or error.get("metadata") or {}
+        raw = metadata.get("raw") if isinstance(metadata, dict) else None
+        if message and raw:
+            return f"{message}: {raw}"[:400]
         if message:
             return str(message)[:400]
     return str(exc)[:400]

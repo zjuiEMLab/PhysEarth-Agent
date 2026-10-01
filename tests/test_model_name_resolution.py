@@ -194,3 +194,30 @@ def test_the_registered_parameter_index_finds_a_model_named_as_the_paper_names_i
     index = _registered_parameter_index(None, ["SMRT"])
     assert index, "a paper-spelled model contributed no declared parameters"
     assert any("density_kg_m3" in params for params in index.values())
+
+
+@pytest.mark.parametrize("written", ["pywatershed v3.0.0", "pywatershed 3.0.0", "SMRT v1.5.1"])
+def test_a_name_with_the_cards_own_version_resolves(written):
+    entry, canonical, configuration, options = registry.resolve_configuration(written)
+    assert entry is not None and canonical == written.split()[0].lower()
+    assert configuration == {} and options == []
+
+
+@pytest.mark.parametrize("written", ["pywatershed v2.0.0", "SMRT 1.0"])
+def test_a_name_with_another_version_does_not_resolve(written):
+    assert registry.resolve_configuration(written)[0] is None
+
+
+def test_the_capability_summary_names_outputs_no_card_declares():
+    session = session_state.new_session(None)
+    owner = session["id"]
+    for name in ("list_models", "read_model_instruction"):
+        tools.call(name, {"model": "pyet"}, owner=owner, session=session)
+    result = tools.call(
+        "research_capability_check",
+        {"reference_models": ["pyet"], "requested_outputs": ["et0_mm_day", "published_et0"]},
+        owner=owner,
+        session=session,
+    )
+    assert result["status"] == "needs_input"
+    assert "Outputs no registered model declares: published_et0" in result["summary"]

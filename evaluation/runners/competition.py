@@ -67,6 +67,15 @@ CONTINUATION = (
 )
 
 
+# What the scripted reviewer answers when the capability check asks whether to plan the
+# supported components only.
+CAPABILITY_CONFIRMATION = (
+    "Yes. I confirm the partial scope exactly as your capability check reported it. "
+    "Generate the research plan for the supported components only, and name everything "
+    "outside that scope as unavailable in the report."
+)
+
+
 def load_manifest():
     return common.load_yaml(MANIFEST)
 
@@ -481,8 +490,33 @@ def run_one(
     )
     first_events = [{**event, "turn": 1} for event in first_events]
     review_error = None
+    capability_log = []
+    if (
+        batch_approved
+        and not session.get("research")
+        and (session.get("capability_review") or {}).get("status") == "waiting_user"
+    ):
+        # The capability check stopped to ask whether a partial scope is acceptable. The
+        # scripted reviewer answers as it answers a plan: it accepts what was reported,
+        # unmodified, and the agent records that consent itself.
+        capability_log.append(
+            {
+                "actor": "scripted_human_reviewer",
+                "policy": "confirm_reported_partial_scope",
+                "before": "capability waiting_user",
+                "summary": CAPABILITY_CONFIRMATION,
+            }
+        )
+        first_answer, more_events, _ = agent.run(
+            CAPABILITY_CONFIRMATION, model=llm, session=session,
+            switches=config_entry["switches"],
+        )
+        first_events += [{**event, "turn": 2} for event in more_events]
+        status = (session.get("capability_review") or {}).get("status")
+        capability_log[-1]["after"] = f"capability {status}"
+    next_turn = max((event["turn"] for event in first_events), default=1) + 1
     if not session.get("research"):
-        review_log = []
+        review_log = list(capability_log)
         second_answer, second_events = "", []
     else:
         if not batch_approved:
@@ -496,7 +530,7 @@ def run_one(
             ]
         try:
             if not review_error:
-                review_log = _approve_unmodified(session)
+                review_log = capability_log + _approve_unmodified(session)
         except RuntimeError as exc:
             # A text-only paper may correctly be unable to produce a reviewable figure-
             # reproduction plan. Archive that stopped outcome instead of crashing the
@@ -517,7 +551,7 @@ def run_one(
             second_answer, second_events, _ = agent.run(
                 continuation, model=llm, session=session, switches=config_entry["switches"]
             )
-            second_events = [{**event, "turn": 2} for event in second_events]
+            second_events = [{**event, "turn": next_turn} for event in second_events]
 
     events = first_events + second_events
     answer = second_answer or first_answer

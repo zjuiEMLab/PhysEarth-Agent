@@ -103,3 +103,12 @@ def test_a_forced_call_turns_reasoning_off_in_each_provider_s_terms(monkeypatch)
     assert loop._thinking_off() == {"enable_thinking": False, "reasoning": {"enabled": False}}
     monkeypatch.setattr(config, "llm_api_base", lambda: "https://api-inference.modelscope.cn/v1")
     assert loop._thinking_off() == {"enable_thinking": False}
+
+
+def test_a_router_fault_keeps_what_the_provider_said():
+    from physearth.agent.faults import _upstream_text
+
+    class Fault(Exception):
+        body = {"message": "Provider returned error", "metadata": {"raw": "invalid_image"}}
+
+    assert _upstream_text(Fault("HTTP 400")) == "Provider returned error: invalid_image"

@@ -323,7 +323,8 @@ def resolve_configuration(name, session=None):
     options come back so the plan can pin one.
 
     A remainder matching nothing declared still resolves to nothing: a name that merely
-    starts like a registered model is not that model.
+    starts like a registered model is not that model. The one other remainder it accepts
+    is the card's own declared version.
     """
     model, canonical = resolve(name, session)
     if model is not None:
@@ -338,6 +339,11 @@ def resolve_configuration(name, session=None):
         remainder = key[len(prefix):]
         if not remainder:
             continue
+        # "pywatershed v3.0.0" names the model and pins the version its card declares.
+        # Another version is another implementation and still resolves to nothing.
+        version = _spelling_key(candidate.card.get("version"))
+        if version and remainder in (version, "v" + version, "version" + version):
+            return candidate, registered, {}, []
         exact, contained = [], []
         for parameter, spec in (candidate.card.get("parameters") or {}).items():
             for value in (spec or {}).get("enum") or ():
