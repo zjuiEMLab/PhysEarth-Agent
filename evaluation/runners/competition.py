@@ -151,25 +151,43 @@ def _event_summary(events):
         "intervention", "detail", "reason", "upstream", "prompt_tokens",
         "completion_tokens", "cost_usd", "reasoning_chars", "elapsed_s",
     )
+    # What the trace view needs to redraw a step: the one-line result, the arguments the
+    # model sent, and the reasons a gate gave. Bounded, and passed through the redactor.
+    trace_fields = ("summary", "problems", "unresolved", "markers", "decision", "model")
     secret_values = [config.llm_api_key(), config.eval_llm_api_key()]
 
-    def safe(value):
+    def redact(value):
         text = str(value or "")
         for secret in secret_values:
             if secret:
                 text = text.replace(str(secret), "[REDACTED]")
-        text = re.sub(
+        return re.sub(
             r"(?i)(authorization\s*[:=]\s*bearer\s+)[^\s,}]+",
             r"\1[REDACTED]",
             text,
         )
-        return text[:800]
+
+    def safe(value):
+        return redact(value)[:800]
 
     summary = []
     for event in events:
         item = {field: event.get(field) for field in keep if event.get(field) is not None}
         if "upstream" in item:
             item["upstream"] = safe(item["upstream"])
+        for field in trace_fields:
+            value = event.get(field)
+            if value is None:
+                continue
+            if isinstance(value, (list, tuple)):
+                item[field] = [safe(entry) for entry in list(value)[:8]]
+            else:
+                item[field] = safe(value)
+        if event.get("arguments") is not None:
+            text = redact(json.dumps(event["arguments"], ensure_ascii=False, default=str))
+            item["arguments"] = json.loads(text) if len(text) <= 6000 else {
+                "_truncated": text[:6000]
+            }
         summary.append(item)
     return summary
 

@@ -173,6 +173,27 @@ def test_event_summary_keeps_bounded_upstream_error_without_secrets(monkeypatch)
     assert len(summary[0]["upstream"]) <= 800
 
 
+def test_event_summary_keeps_what_the_trace_view_redraws_without_secrets(monkeypatch):
+    competition = _load_runner("competition")
+    monkeypatch.setattr(competition.config, "llm_api_key", lambda: "candidate-secret")
+    monkeypatch.setattr(competition.config, "eval_llm_api_key", lambda: "judge-secret")
+    (call, block) = competition._event_summary(
+        [
+            {
+                "kind": "tool_call",
+                "name": "run_model",
+                "summary": "ran smrt; token candidate-secret",
+                "arguments": {"model": "smrt", "note": "judge-secret"},
+            },
+            {"kind": "harness_block", "tool": "run_model", "problems": ["density too high"]},
+        ]
+    )
+    assert call["arguments"]["model"] == "smrt"
+    assert "secret" not in json.dumps(call)
+    assert call["summary"].startswith("ran smrt")
+    assert block["problems"] == ["density too high"]
+
+
 def _perfect_figure3_record(tmp_path):
     gold = figure3.reference()
     axis = [float(value) for value in gold["recipe"]["densities_kg_m3"]]
