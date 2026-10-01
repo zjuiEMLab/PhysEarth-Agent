@@ -4,9 +4,9 @@
   "suite": "registry_contract",
   "execution": "deterministic",
   "n_models": 6,
-  "n_checks": 191,
+  "n_checks": 197,
   "n_passed": 6,
-  "n_checks_passed": 191,
+  "n_checks_passed": 197,
   "rejected_registrations": [],
   "llm_usage": {
     "calls": 0,
@@ -417,7 +417,7 @@
       "registration_tier": "demo",
       "runnable": true,
       "coverage": {
-        "numeric_parameters": 12,
+        "numeric_parameters": 15,
         "enum_parameters": 2,
         "combination_rules": 1,
         "sweep_contract": true
@@ -444,6 +444,7 @@
           "resolved_fields": [
             "air_pressure_kpa",
             "air_temperature_c",
+            "day_of_year",
             "latitude_deg",
             "method",
             "net_radiation_mj_m2_day",
@@ -451,8 +452,6 @@
             "solar_radiation_mj_m2_day",
             "sweep_parameter",
             "sweep_points",
-            "tmax_c",
-            "tmin_c",
             "wind_speed_m_s"
           ]
         },
@@ -523,6 +522,22 @@
         {
           "check": "range_guard",
           "passed": true,
+          "detail": "day_of_year rejects a value beyond its minimum",
+          "field": "day_of_year",
+          "boundary": "minimum",
+          "tested_value": -364
+        },
+        {
+          "check": "range_guard",
+          "passed": true,
+          "detail": "day_of_year rejects a value beyond its maximum",
+          "field": "day_of_year",
+          "boundary": "maximum",
+          "tested_value": 730
+        },
+        {
+          "check": "range_guard",
+          "passed": true,
           "detail": "net_radiation_mj_m2_day rejects a value beyond its minimum",
           "field": "net_radiation_mj_m2_day",
           "boundary": "minimum",
@@ -581,6 +596,38 @@
           "passed": true,
           "detail": "relative_humidity_pct rejects a value beyond its maximum",
           "field": "relative_humidity_pct",
+          "boundary": "maximum",
+          "tested_value": 200.0
+        },
+        {
+          "check": "range_guard",
+          "passed": true,
+          "detail": "relative_humidity_max_pct rejects a value beyond its minimum",
+          "field": "relative_humidity_max_pct",
+          "boundary": "minimum",
+          "tested_value": -99.0
+        },
+        {
+          "check": "range_guard",
+          "passed": true,
+          "detail": "relative_humidity_max_pct rejects a value beyond its maximum",
+          "field": "relative_humidity_max_pct",
+          "boundary": "maximum",
+          "tested_value": 200.0
+        },
+        {
+          "check": "range_guard",
+          "passed": true,
+          "detail": "relative_humidity_min_pct rejects a value beyond its minimum",
+          "field": "relative_humidity_min_pct",
+          "boundary": "minimum",
+          "tested_value": -99.0
+        },
+        {
+          "check": "range_guard",
+          "passed": true,
+          "detail": "relative_humidity_min_pct rejects a value beyond its maximum",
+          "field": "relative_humidity_min_pct",
           "boundary": "maximum",
           "tested_value": 200.0
         },

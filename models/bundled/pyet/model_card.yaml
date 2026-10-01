@@ -36,17 +36,18 @@ parameters:
     unit: degC
     minimum: -40.0
     maximum: 60.0
-    default: 28.0
     required: false
-    description: Daily maximum air temperature, used by hargreaves.
+    description: Daily maximum air temperature. Required by hargreaves. When given with tmin_c, penman
+      and pm take the saturation vapour pressure as the mean over the two extremes (FAO-56 Eq. 12)
+      instead of evaluating it at the mean temperature.
   tmin_c:
     type: number
     unit: degC
     minimum: -60.0
     maximum: 45.0
-    default: 12.0
     required: false
-    description: Daily minimum air temperature, used by hargreaves.
+    description: Daily minimum air temperature. Required by hargreaves; used by penman and pm together
+      with tmax_c.
   latitude_deg:
     type: number
     unit: degree
@@ -54,6 +55,14 @@ parameters:
     maximum: 66.5
     default: 40.0
     description: Latitude, which sets extraterrestrial radiation for the temperature-only methods.
+  day_of_year:
+    type: integer
+    unit: day
+    minimum: 1
+    maximum: 365
+    default: 182
+    description: Day of the year (1 January is 1). Sets the extraterrestrial radiation that
+      hargreaves and oudin derive from latitude and date.
   net_radiation_mj_m2_day:
     type: number
     unit: MJ m-2 d-1
@@ -85,7 +94,23 @@ parameters:
     maximum: 100.0
     default: 60.0
     required: false
-    description: Relative humidity.
+    description: Daily mean relative humidity, used by penman and pm when the extremes are not given.
+  relative_humidity_max_pct:
+    type: number
+    unit: percent
+    minimum: 1.0
+    maximum: 100.0
+    required: false
+    description: Daily maximum relative humidity. With relative_humidity_min_pct and both temperature
+      extremes, penman and pm derive the actual vapour pressure from the extremes (FAO-56 Eq. 17)
+      instead of from the mean humidity.
+  relative_humidity_min_pct:
+    type: number
+    unit: percent
+    minimum: 1.0
+    maximum: 100.0
+    required: false
+    description: Daily minimum relative humidity, used with relative_humidity_max_pct.
   air_pressure_kpa:
     type: number
     unit: kPa
@@ -106,6 +131,7 @@ parameters:
     - wind_speed_m_s
     - relative_humidity_pct
     - latitude_deg
+    - day_of_year
     description: Numeric parameter to sweep instead of holding fixed.
   sweep_start:
     type: number

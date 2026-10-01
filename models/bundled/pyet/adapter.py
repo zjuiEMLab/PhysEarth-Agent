@@ -23,14 +23,27 @@ def _require():
 def _et0(values):
     pyet, pandas = _require()
     method = values["method"]
-    series = lambda x: pandas.Series([float(x)])  # noqa: E731
+    day = pandas.Timestamp(2001, 1, 1) + pandas.Timedelta(days=int(values["day_of_year"]) - 1)
+    index = pandas.DatetimeIndex([day])
+    series = lambda x: pandas.Series([float(x)], index=index)  # noqa: E731
     latitude = values["latitude_deg"] * 3.141592653589793 / 180.0
     common = {"tmean": series(values["air_temperature_c"])}
+    extremes = {}
+    if values.get("tmax_c") is not None and values.get("tmin_c") is not None:
+        extremes = {"tmax": series(values["tmax_c"]), "tmin": series(values["tmin_c"])}
+    humidity = {"rh": series(values["relative_humidity_pct"])}
+    rh_extremes = (values.get("relative_humidity_max_pct"), values.get("relative_humidity_min_pct"))
+    if None not in rh_extremes:
+        if not extremes:
+            raise ValueError(
+                "relative_humidity_max_pct and relative_humidity_min_pct need tmax_c and tmin_c: "
+                "the actual vapour pressure is taken from the humidity at each temperature extreme."
+            )
+        humidity = {"rhmax": series(rh_extremes[0]), "rhmin": series(rh_extremes[1])}
     if method == "hargreaves":
-        out = pyet.hargreaves(
-            tmax=series(values["tmax_c"]), tmin=series(values["tmin_c"]),
-            lat=latitude, **common,
-        )
+        if not extremes:
+            raise ValueError("hargreaves needs tmax_c and tmin_c, the daily temperature range.")
+        out = pyet.hargreaves(lat=latitude, **extremes, **common)
     elif method == "oudin":
         out = pyet.oudin(lat=latitude, **common)
     elif method == "makkink":
@@ -49,8 +62,7 @@ def _et0(values):
             wind=series(values["wind_speed_m_s"]),
             rn=series(values["net_radiation_mj_m2_day"]),
             pressure=series(values["air_pressure_kpa"]),
-            rh=series(values["relative_humidity_pct"]),
-            **common,
+            **extremes, **humidity, **common,
         )
     return {"et0_mm_day": float(out.iloc[0])}
 

@@ -39,15 +39,18 @@ This table is here so you can choose a model and get a call right the first time
   outputs: et0_mm_day
   method: string; one of penman, pm, priestley_taylor, makkink, hargreaves, oudin; default pm -- Which published formulation to evaluate. penman and pm need wind, net radiation, pressure and humidity; priestley_taylor needs net radiation and pressure; makkink needs solar radiation and pressure; hargreaves needs the daily temperature range; oudin needs temperature and latitude alone.
   air_temperature_c: number; -40.0 to 55.0 degC; default 20.0 -- Daily mean air temperature.
-  tmax_c: number; -40.0 to 60.0 degC; default 28.0; optional -- Daily maximum air temperature, used by hargreaves.
-  tmin_c: number; -60.0 to 45.0 degC; default 12.0; optional -- Daily minimum air temperature, used by hargreaves.
+  tmax_c: number; -40.0 to 60.0 degC; optional -- Daily maximum air temperature. Required by hargreaves. When given with tmin_c, penman and pm take the saturation vapour pressure as the mean over the two extremes (FAO-56 Eq. 12) instead of evaluating it at the mean temperature.
+  tmin_c: number; -60.0 to 45.0 degC; optional -- Daily minimum air temperature. Required by hargreaves; used by penman and pm together with tmax_c.
   latitude_deg: number; -66.5 to 66.5 degree; default 40.0 -- Latitude, which sets extraterrestrial radiation for the temperature-only methods.
+  day_of_year: integer; 1 to 365 day; default 182 -- Day of the year (1 January is 1). Sets the extraterrestrial radiation that hargreaves and oudin derive from latitude and date.
   net_radiation_mj_m2_day: number; -5.0 to 35.0 MJ m-2 d-1; default 12.0; optional -- Net radiation at the surface.
   solar_radiation_mj_m2_day: number; 0.0 to 45.0 MJ m-2 d-1; default 20.0; optional -- Incoming shortwave radiation, used by makkink.
   wind_speed_m_s: number; 0.0 to 30.0 m s-1; default 2.0; optional -- Wind speed at two metres.
-  relative_humidity_pct: number; 1.0 to 100.0 percent; default 60.0; optional -- Relative humidity.
+  relative_humidity_pct: number; 1.0 to 100.0 percent; default 60.0; optional -- Daily mean relative humidity, used by penman and pm when the extremes are not given.
+  relative_humidity_max_pct: number; 1.0 to 100.0 percent; optional -- Daily maximum relative humidity. With relative_humidity_min_pct and both temperature extremes, penman and pm derive the actual vapour pressure from the extremes (FAO-56 Eq. 17) instead of from the mean humidity.
+  relative_humidity_min_pct: number; 1.0 to 100.0 percent; optional -- Daily minimum relative humidity, used with relative_humidity_max_pct.
   air_pressure_kpa: number; 50.0 to 110.0 kPa; default 101.3; optional -- Atmospheric pressure at the site.
-  sweep_parameter: string; one of none, air_temperature_c, net_radiation_mj_m2_day, wind_speed_m_s, relative_humidity_pct, latitude_deg; default none; optional -- Numeric parameter to sweep instead of holding fixed.
+  sweep_parameter: string; one of none, air_temperature_c, net_radiation_mj_m2_day, wind_speed_m_s, relative_humidity_pct, latitude_deg, day_of_year; default none; optional -- Numeric parameter to sweep instead of holding fixed.
   sweep_start: number; -1000000000.0 to 1000000000.0 same as the swept parameter; optional -- First value of the sweep.
   sweep_stop: number; -1000000000.0 to 1000000000.0 same as the swept parameter; optional -- Last value of the sweep.
   sweep_points: integer; 2 to 60 count; default 10; optional -- Number of points in the sweep.

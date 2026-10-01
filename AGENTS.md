@@ -147,7 +147,7 @@ demo.
 
 `evaluation/results/` is committed evidence behind `REPORT.md`, not build output. Do not
 regenerate or delete records to make something pass. The registry contract, Tier 0 and the
-registration runner are deterministic in what they *assert*: `6/6 models, 191 checks`,
+registration runner are deterministic in what they *assert*: `6/6 models, 197 checks`,
 `10/10 tasks, 42 checks` and `21/21 checks`. Those are the gate. Tier 0 and the registration
 runner do **not** reproduce their committed JSON byte-for-byte: re-running them shifts
 values by 1e-16 to 1e-11 through BLAS and library round-off, so a verification run leaves

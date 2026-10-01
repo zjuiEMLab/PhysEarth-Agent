@@ -285,6 +285,40 @@ def test_water_cloud_canopy_closes_as_vegetation_water_rises():
     assert gamma[0] == 1.0 and gamma == sorted(gamma, reverse=True)
 
 
+FAO56_EXAMPLE_18 = {
+    "air_temperature_c": 16.9, "tmax_c": 21.5, "tmin_c": 12.3,
+    "relative_humidity_max_pct": 84.0, "relative_humidity_min_pct": 63.0,
+    "wind_speed_m_s": 2.078, "net_radiation_mj_m2_day": 13.28, "air_pressure_kpa": 100.1,
+    "latitude_deg": 50.8, "day_of_year": 187,
+}
+
+
+def _et0(parameters):
+    result = tools.call("run_model", {"model": "pyet", "parameters": parameters})
+    assert result["status"] == "success", result["error"]
+    return _series(result, "et0_mm_day")[0]
+
+
+def test_pyet_reproduces_fao56_example_18_from_the_daily_extremes():
+    assert abs(_et0({"method": "pm", **FAO56_EXAMPLE_18}) - 3.9) < 0.05
+    mean_only = {k: v for k, v in FAO56_EXAMPLE_18.items()
+                 if not k.startswith(("tmax", "tmin", "relative_humidity_m"))}
+    assert abs(_et0({"method": "pm", **mean_only, "relative_humidity_pct": 73.5}) - 3.9) > 0.1
+
+
+def test_pyet_temperature_methods_follow_the_date():
+    site = {"method": "oudin", "air_temperature_c": 16.9, "latitude_deg": 50.8}
+    summer = _et0({**site, "day_of_year": 187})
+    winter = _et0({**site, "day_of_year": 15})
+    assert summer > 3.0 and winter < summer
+
+
+def test_pyet_hargreaves_without_the_temperature_range_says_so():
+    result = tools.call("run_model", {"model": "pyet", "parameters": {"method": "hargreaves"}})
+    assert result["status"] != "success"
+    assert "tmax_c" in str(result["error"])
+
+
 def test_the_comparison_method_note_is_readable_but_not_a_paper():
     from physearth.corpus import knowledge
 
