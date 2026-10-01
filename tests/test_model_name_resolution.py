@@ -221,3 +221,15 @@ def test_the_capability_summary_names_outputs_no_card_declares():
     )
     assert result["status"] == "needs_input"
     assert "Outputs no registered model declares: published_et0" in result["summary"]
+
+
+def test_a_versioned_local_candidate_is_reported_as_supported():
+    session = session_state.new_session(None)
+    owner = session["id"]
+    for name in ("list_models", "read_model_instruction"):
+        tools.call(name, {"model": "pywatershed"}, owner=owner, session=session)
+    report = capability.capability_check(
+        session, question="Sagehen", reference_models=[], requested_outputs=["value"],
+        local_models=["pywatershed@3.0.0"],
+    )
+    assert [item["model"] for item in report["supported"]] == ["pywatershed"]

@@ -348,7 +348,11 @@ def _capability_check_one(
     for name in candidates:
         if name in refs:
             continue
-        entry, canonical = registry.resolve(name, session)
+        # The same resolution as a reference name, so "pywatershed@3.0.0" is the local
+        # candidate it plainly names rather than silently nothing.
+        entry, canonical, _configuration, _options = registry.resolve_configuration(
+            name, session
+        )
         evidence_resolution = None
         if entry is None:
             evidence_resolution = _resolve_from_paper_evidence(name, session, targets)

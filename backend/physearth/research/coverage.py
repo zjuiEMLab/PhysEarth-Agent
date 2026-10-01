@@ -91,12 +91,19 @@ def _target_coverage(targets, runs, charts, session=None):
                         "target %s run %s uses %s, not one of reference_models: %s"
                         % (target_id, run_id, run_model, ", ".join(sorted(reference_models)))
                     )
-                if requested_outputs:
+                if requested_outputs and not substitute:
                     parameters = run.get("resolved_parameters") or run.get("parameters") or {}
                     output_group = str(parameters.get("output") or "").strip()
                     entry, _ = registry.resolve(run_model, session)
-                    output_groups = (entry.card.get("output_groups") or {}) if entry else {}
-                    declared_outputs = set(output_groups.get(output_group) or ())
+                    card = entry.card if entry else {}
+                    output_groups = card.get("output_groups") or {}
+                    # A card that groups its outputs by an `output` switch (SMRT) is read
+                    # through the group; any other card through the outputs it declares.
+                    declared_outputs = set(
+                        output_groups.get(output_group) or ()
+                        if output_groups
+                        else (card.get("outputs") or {}).keys()
+                    )
                     if not declared_outputs.intersection(requested_outputs):
                         problems.append(
                             "target %s run %s does not declare a requested output: %s"

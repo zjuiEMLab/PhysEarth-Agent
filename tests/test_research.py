@@ -1581,3 +1581,20 @@ def test_question_coverage_gate_rejects_single_curve_for_multi_stage_attribution
     assert "ka_per_m" in result["summary"]
     assert "tb_v" in result["summary"] and "tb_h" in result["summary"]
     assert "dort_streams" in result["summary"]
+
+
+def test_a_card_without_output_groups_is_covered_by_its_declared_outputs():
+    target = {
+        "id": "sagehen",
+        "reference_models": ["pywatershed"],
+        "requested_outputs": ["value"],
+        "status": "planned",
+        "run_ids": ["swe"],
+        "chart_ids": [],
+    }
+    runs = [{"id": "swe", "model": "pywatershed", "parameters": {"variable": "snowmelt"}}]
+    problems, _, _ = research._target_coverage([target], runs, [], {})
+    assert not any("does not declare a requested output" in problem for problem in problems)
+    missing = dict(target, requested_outputs=["streamflow"])
+    problems, _, _ = research._target_coverage([missing], runs, [], {})
+    assert any("does not declare a requested output" in problem for problem in problems)
