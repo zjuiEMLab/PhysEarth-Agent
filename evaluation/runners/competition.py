@@ -54,6 +54,19 @@ relabel a guess as paper-derived.
 """.strip()
 
 
+
+
+# What the scripted reviewer sends once it has approved the plan unmodified. The report is
+# written in this turn, so the appendix the evaluation scores is restated here: asked for
+# only in the first turn, it was lost in every recorded Q1 report before this.
+CONTINUATION = (
+    "The research plan, pseudo-data chart package, and formal execution are now "
+    "approved without modification. Execute every approved run by its exact run_id, "
+    "render and review every selected planned chart, then deliver the report and the "
+    "required provenance/outcome appendix.\n\n" + PROVENANCE_APPENDIX
+)
+
+
 def load_manifest():
     return common.load_yaml(MANIFEST)
 
@@ -500,12 +513,7 @@ def run_one(
         if review_error:
             second_answer, second_events = "", []
         else:
-            continuation = (
-                "The research plan, pseudo-data chart package, and formal execution are now "
-                "approved without modification. Execute every approved run by its exact run_id, "
-                "render and review every selected planned chart, then deliver the report and the "
-                "required provenance/outcome appendix."
-            )
+            continuation = CONTINUATION
             second_answer, second_events, _ = agent.run(
                 continuation, model=llm, session=session, switches=config_entry["switches"]
             )
