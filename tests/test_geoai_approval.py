@@ -1,4 +1,4 @@
-"""The host side of the approval gate.
+"""The host side of the approval gate, and checking an answer the host wrote.
 
 No language model is called: the agent turn is driven by a scripted client.
 """
@@ -236,3 +236,77 @@ def test_the_operator_chooses_approval_when_the_server_starts(monkeypatch, askin
     created = json.loads(out.getvalue().splitlines()[-1])["result"]["content"][0]["text"]
     assert json.loads(created)["approval"] == "always"
     assert service.health()["approval"] == "always"
+
+
+@pytest.fixture()
+def evidenced(monkeypatch):
+    """A session that read one section, ran one model and queried one dataset."""
+    monkeypatch.setitem(service._OPERATOR, "approval", "always")
+    session_id = service.new_session()["session_id"]
+    service.call("read_literature", {"slug": "smrt-v1", "section_id": "03"}, session_id=session_id)
+    service.call("run_model", json.loads(SINGLE_RUN), session_id=session_id)
+    service.call("read_reference_dataset", {"dataset": "tvc-backscatter"}, session_id=session_id)
+    model = service.evidence(session_id)["models_run"][0]
+    return session_id, model
+
+
+def test_a_report_whose_markers_resolve_passes(evidenced):
+    session_id, model = evidenced
+    text = (
+        "SMRT treats snow as a layered medium [smrt-v1#03]. The run gave a brightness "
+        f"temperature for the default snowpack [model:{model}], and the measured backscatter "
+        "is in the reference set [data:tvc-backscatter]."
+    )
+
+    report = service.verify_report(session_id, text)
+
+    assert report["passed"] is True, report
+    assert [check["rule"] for check in report["checks"]] == [
+        "evidence_gate",
+        "citation_integrity",
+        "abstract_depth",
+    ]
+    assert report["corrections"] == []
+
+
+def test_a_marker_for_something_never_read_or_run_fails(evidenced):
+    session_id, model = evidenced
+    text = f"See [smrt-v1#07] and [model:tau_omega@9.9] and [data:nope], unlike [model:{model}]."
+
+    report = service.verify_report(session_id, text)
+
+    assert report["passed"] is False
+    citation = next(c for c in report["checks"] if c["rule"] == "citation_integrity")
+    assert set(citation["unresolved"]) == {"smrt-v1#07", "tau_omega@9.9", "nope"}
+    assert "citation integrity" in report["corrections"][0]
+
+
+def test_an_abstract_cannot_carry_a_result_value(evidenced):
+    session_id, _ = evidenced
+
+    report = service.verify_report(session_id, "Tb was 213 K [abs:10.5194/gmd-11-2763-2018].")
+
+    failed = {c["rule"] for c in report["checks"] if not c["passed"]}
+    assert "abstract_depth" in failed
+
+
+def test_a_long_answer_with_no_evidence_behind_it_fails():
+    session_id = service.new_session()["session_id"]
+
+    report = service.verify_report(session_id, "Snow is bright at 37 GHz. " * 30)
+
+    assert report["passed"] is False
+    assert report["checks"][0]["rule"] == "evidence_gate"
+    assert report["checks"][0]["passed"] is False
+
+
+def test_verify_report_through_mcp(evidenced):
+    session_id, _ = evidenced
+
+    result, payload = _mcp(
+        "geoai_verify_report", {"session_id": session_id, "text": "As read [smrt-v1#03]."}
+    )
+
+    assert result["isError"] is False
+    assert payload["passed"] is True
+    assert service.verify_report("ses_nope", "x")["error"] == "unknown_session"

@@ -161,6 +161,24 @@ HOST_TOOLS = (
         },
     },
     {
+        "name": "geoai_verify_report",
+        "description": (
+            "Check an answer you wrote against the session's evidence before giving it to the "
+            "user. Every [paper#section], [model:name@version], [data:slug], [skill:slug], "
+            "[guideline:...] and [figure:...] marker must resolve to something this session "
+            "actually read or ran, and an [abs:doi] citation may not carry a result value. "
+            "Returns each check and, for a failure, how to fix the text."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "session_id": {"type": "string"},
+                "text": {"type": "string", "description": "The full answer, with its markers."},
+            },
+            "required": ["session_id", "text"],
+        },
+    },
+    {
         "name": "geoai_prompt_stack",
         "description": (
             "The prompt stack that makes an answer scientific: identity and style, citation and "
@@ -257,6 +275,10 @@ def _call_host_tool(name, arguments):
     if name == "geoai_decide":
         return _json_text(
             _settle(service.decide(arguments.get("session_id"), arguments.get("decision")))
+        )
+    if name == "geoai_verify_report":
+        return _json_text(
+            service.verify_report(arguments.get("session_id"), arguments.get("text", ""))
         )
     if name == "geoai_evidence":
         return _json_text(service.evidence(arguments.get("session_id")))

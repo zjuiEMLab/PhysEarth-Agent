@@ -139,3 +139,15 @@ def test_a_missing_credential_is_a_structured_refusal(bridge_url, monkeypatch):
 def test_binding_a_public_interface_needs_an_explicit_opt_in():
     with pytest.raises(SystemExit):
         bridge.serve("0.0.0.0", 0)
+
+
+def test_a_report_is_verified_against_the_session(bridge_url):
+    _, session = _post(bridge_url, "/session", {})
+
+    status, report = _post(
+        bridge_url, "/verify", {"session_id": session["session_id"], "text": "See [smrt-v1#03]."}
+    )
+
+    assert status == 200
+    assert report["passed"] is False
+    assert report["checks"][1]["unresolved"] == ["smrt-v1#03"]

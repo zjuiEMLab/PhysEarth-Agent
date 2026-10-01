@@ -37,6 +37,7 @@ def test_tools_list_offers_the_engine_catalogue_and_the_host_tools():
         "geoai_ask",
         "geoai_evidence",
         "geoai_decide",
+        "geoai_verify_report",
     ):
         assert name in names, name
     assert len(names) >= 25

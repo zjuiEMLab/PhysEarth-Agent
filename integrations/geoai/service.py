@@ -25,7 +25,7 @@ import threading
 from physearth import agent, config, paths, prompt, registry, research, tools
 from physearth import session as session_state
 from physearth.corpus import knowledge, reference
-from physearth.harness import approval
+from physearth.harness import approval, gates
 
 _LOCK = threading.Lock()
 _SESSIONS: dict = {}
@@ -460,6 +460,35 @@ def decide(session_id, decision):
     if decision == "approve":
         return _execute(session, taken["tool"], taken["arguments"], session.get(_SWITCHES))
     return _jsonable(approval.declined_result(taken["tool"], taken["arguments"]))
+
+
+def verify_report(session_id, text):
+    """Check an answer the host wrote against what this session actually read and ran.
+
+    The checks are the engine's own final-answer gates: every marker must resolve to a
+    section opened, a model run, a dataset queried, a method note or figure opened; a long
+    answer needs some evidence behind it; and an abstract-only citation may not carry a
+    result value. Model runs count over the whole session, because a report covers it.
+    """
+    session = get_session(session_id)
+    if session is None:
+        return {"status": "terminal_error", "error": "unknown_session", "summary": session_id}
+    state = session_state.new_state(session)
+    state["model_runs"] = session.get("model_runs", 0)
+    checks = gates.final_checks(text, state)
+    failed = [check for check in checks if not check["passed"]]
+    return {
+        "status": "success",
+        "session_id": session["id"],
+        "passed": not failed,
+        "summary": (
+            f"All {len(checks)} checks passed."
+            if not failed
+            else "Failed: " + ", ".join(check["rule"] for check in failed) + "."
+        ),
+        "checks": _jsonable(checks),
+        "corrections": [gates.correction(check) for check in failed],
+    }
 
 
 def evidence(session_id):

@@ -138,6 +138,8 @@ class _Handler(BaseHTTPRequestHandler):
             )
         if path == "/decide":
             return self._send(service.decide(body.get("session_id"), body.get("decision")))
+        if path == "/verify":
+            return self._send(service.verify_report(body.get("session_id"), body.get("text", "")))
         if path == "/evidence":
             return self._send(service.evidence(body.get("session_id")))
         if path == "/plan":
