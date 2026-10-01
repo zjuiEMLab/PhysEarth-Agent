@@ -1,0 +1,60 @@
+# Registering PhysEarth-Agent's MCP server with Codex — the file form.
+#
+# The primary instruction is the one-liner in codex/install-codex.md, because it writes the
+# config for you and cannot get the TOML shape wrong. This file is the alternative for a
+# managed or checked-in configuration; merge the table below into `~/.codex/config.toml`.
+#
+# Verified against codex-cli 0.155.1 (`codex mcp get <name> --json` reports the same keys).
+#
+# ── Two details that cost time if you get them wrong ──────────────────────────────────────────
+#
+# 1. The key is `mcp_servers`, NOT `mcpServers`. (The camelCase spelling appears only in a
+#    plugin's own `.mcp.json`, which is a different file.)
+# 2. `command` must be an interpreter that can import this repository's engine. On macOS and on
+#    most Linux distributions `python` does not exist at all, and `python3` is often a bare
+#    system interpreter with no PyYAML — the server then starts and offers an empty tool list
+#    with nothing in the log. Point it at the environment you actually installed into:
+#
+#      /abs/path/.venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
+#        from integrations.geoai import service; print('ok')"
+#
+#    If that prints ok, the interpreter below is the right one.
+
+[mcp_servers.geoai]
+# The file form of the server is used on purpose: `python3 /abs/.../mcp_server.py` needs neither
+# `cwd` on the module path nor PYTHONPATH, because the file bootstraps the repository root and
+# `backend/` from its own location. Nothing else in this block is load-bearing.
+command = "/absolute/path/to/PhysEarth-Agent/.venv/bin/python"
+args = ["/absolute/path/to/PhysEarth-Agent/integrations/geoai/mcp_server.py", "--stdio"]
+cwd = "/absolute/path/to/PhysEarth-Agent"
+enabled = true
+# `required = false`: a missing interpreter should leave Codex usable with this server absent,
+# rather than refusing to start the session.
+required = false
+# The default is 10 s. A scientific Python import on a cold filesystem exceeds it, and a server
+# that misses the window shows up as a server with no tools.
+startup_timeout_sec = 30
+# Engine runs are genuinely long: a sweep or a planned chart can take minutes.
+tool_timeout_sec = 300
+# Forward these from Codex's environment if you keep the module form (`-m integrations.geoai`)
+# instead of the file form. Harmless otherwise.
+env_vars = ["PATH", "PYTHONPATH", "VIRTUAL_ENV"]
+
+[mcp_servers.geoai.env]
+# Only needed for the agent turn (`geoai_ask`). Without it, the tools, resources, prompts,
+# `run_model` and the whole corpus still work; the agent turn then refuses in one line instead
+# of guessing.
+# PHYSEARTH_LLM_API_KEY = "..."
+# PHYSEARTH_LLM_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+# ── Optional: narrow the catalogue ───────────────────────────────────────────────────────────
+# The server publishes 28 tools. Keep the namespace if you want the whole engine; drop it and
+# name the ones a given project needs. `disabled_tools` is applied after `enabled_tools`.
+#
+# enabled_tools = ["geoai_health", "geoai_session_new", "list_models", "run_model", "plot"]
+# disabled_tools = ["run_raw_smrt"]
+# default_tools_approval_mode = "prompt"
+#
+# [mcp_servers.geoai.tools.run_model]
+# approval_mode = "approve"      # a physical run always wants a human, in Codex too
+# output_token_limit = 4000      # the preview, not the arrays: those stay in the session
