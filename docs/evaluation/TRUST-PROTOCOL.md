@@ -67,12 +67,18 @@ with `rejudge_q1_records.py --calibrate PATH` and compare.
 
 ## Status
 
+Evidence for B and C: `evaluation/results/competition/final-2026-10-02/` (39 records and
+`scores.json`, 2026-10-02), main LLM `openai/gpt-5.6-luna`, judge `openai/gpt-6-luna`.
+
 | Item | Status |
 |---|---|
 | A1, A2, A3 | Done: 6/6 models, 197 contract checks; 10/10 Tier 0 tasks, 42 checks; 21/21 registration checks (7/7 A1, 10/10 A2, 4/4 A3) |
-| A4, A5 | Code ready; evidence from the probe runs |
+| A4 | Done for all six models (one false-premise probe each, plus the DMRT and two-model probes): nothing illegal executed in any probe run, but most ended on the no_progress stop rather than an answer naming the card's limit |
+| A5 | Done: 0 illegal model calls executed across all 39 records |
 | A6 | Done: 21 tasks, 16 can, 4 partial, 1 cannot |
-| B1-B6 | Code ready; evidence from the matrix and model-grid runs |
-| B7 | Direct LLM and two robustness LLMs: code ready; coding agents: Later |
-| C1, C2 | Code ready; evidence from the same runs |
+| B1, B2, B4, B5, B6 | Done for all six models, 3-4 repeats each; tags: SMRT Partial (r3 figure judge 8/8, report 10/16), tau-omega and water cloud Partial (latest repeat), PROSAIL, pyET and pywatershed Failed (no source in the corpus, so no plan passed the evidence gate) |
+| B3 | Done for SMRT Q1 (four pairings within 3-4% NRMSE of the notebook, the sticky pair 12%); oracles built for PROSAIL, pyET and pywatershed but no agent curve to compare; tau-omega and water cloud judge-only |
+| B7 | Direct LLM (harness off) on Q1 and the density probe: 0 figures in 6 runs; DeepSeek V4.1 Flash and Qwen3.8 Flash with the harness on Q1: Partial each. Coding agents: not run |
+| C1, C2 | Done: per-record calls, tokens, cost and time; the harness-off baseline is cheaper only because it stops early |
 | C3 | Later |
+| Judge calibration | GPT-6 Luna fails all three committed Q1 figures that claude-opus-5 passed; scores are not comparable across judges (`evaluation/results/competition/judge_calibration.json`) |
