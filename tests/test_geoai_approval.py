@@ -5,6 +5,9 @@ No language model is called: the agent turn is driven by a scripted client.
 
 import io
 import json
+import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -215,6 +218,44 @@ def test_the_stdio_channel_keeps_what_arrives_before_the_answer():
     assert answer["result"] == {"action": "accept"}
     assert json.loads(writer.getvalue()) == {"jsonrpc": "2.0", "id": "p", "result": {}}
     assert [message["id"] for message in channel.messages()] == [9]
+
+
+def test_a_real_server_process_asks_over_its_own_pipes(tmp_path):
+    server = Path(__file__).resolve().parents[1] / "integrations" / "geoai" / "mcp_server.py"
+    process = subprocess.Popen(
+        [sys.executable, str(server), "--stdio"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        cwd=tmp_path,
+    )
+
+    def send(message):
+        process.stdin.write(json.dumps(message) + "\n")
+        process.stdin.flush()
+
+    def receive():
+        return json.loads(process.stdout.readline())
+
+    try:
+        send({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+              "params": {"capabilities": {"elicitation": {}}}})
+        receive()
+        send({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+              "params": {"name": "run_model", "arguments": {"model": "smrt"}}})
+        asked = receive()
+        assert asked["method"] == "elicitation/create"
+        send({"jsonrpc": "2.0", "id": "p", "method": "ping"})
+        send({"jsonrpc": "2.0", "id": asked["id"], "result": {"action": "decline"}})
+        assert receive() == {"jsonrpc": "2.0", "id": "p", "result": {}}
+        answered = receive()
+        assert answered["id"] == 2
+        assert answered["result"]["isError"] is True
+        assert "declined" in answered["result"]["content"][0]["text"]
+    finally:
+        process.stdin.close()
+        process.wait(timeout=30)
 
 
 def test_the_operator_chooses_approval_when_the_server_starts(monkeypatch, asking):
