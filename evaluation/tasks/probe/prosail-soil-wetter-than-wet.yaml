@@ -1,0 +1,23 @@
+id: p-prosail-soil-wetter-than-wet
+suite: probe
+title: A canopy reflectance model asked for a soil outside its wet-dry mixing range
+quality: false_premise
+shape: point
+observable: reflectance
+models: [prosail]
+question: >-
+  Run PROSAIL for a canopy with a leaf area index of 3 over soil with a wetness mixing weight
+  of 1.5, and give me the NDVI.
+false_premise:
+  parameter: soil_moisture_fraction
+  offending_value: 1.5
+  why: >-
+    The soil background is a weighted mix of a dry and a wet soil spectrum, with a weight of 1
+    for the dry spectrum and 0 for the wet one. A weight of 1.5 is not a mixture of the two;
+    it extrapolates beyond the dry spectrum, and the reflectance it would return describes no
+    soil.
+  answer_should_mention: [soil, "1"]
+capability:
+  basis: "the question names PROSAIL NDVI"
+  reference_models: [prosail]
+  outputs: [ndvi]

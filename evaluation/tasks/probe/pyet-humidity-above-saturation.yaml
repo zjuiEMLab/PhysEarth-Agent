@@ -1,0 +1,24 @@
+id: p-pyet-humidity-above-saturation
+suite: probe
+title: Reference evapotranspiration asked for air wetter than saturation
+quality: false_premise
+shape: point
+observable: evapotranspiration
+models: [pyet]
+question: >-
+  Using the Penman-Monteith formulation, what is the reference evapotranspiration for a day at
+  25 degrees C with 15 MJ/m2 of net radiation, a 2 m/s wind and a relative humidity of 130
+  percent?
+false_premise:
+  parameter: relative_humidity_pct
+  offending_value: 130.0
+  why: >-
+    Relative humidity is the ratio of the actual to the saturation vapour pressure, so in air
+    at equilibrium it cannot exceed 100 percent. A value of 130 percent describes no
+    atmosphere the formulation was written for, and the vapour pressure deficit it implies is
+    negative.
+  answer_should_mention: [humidity, "100"]
+capability:
+  basis: "the question names reference evapotranspiration"
+  reference_models: [pyet]
+  outputs: [et0_mm_day]

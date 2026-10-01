@@ -1,10 +1,10 @@
 {
   "schema_version": "capability-gate-v1",
   "execution": "deterministic",
-  "n_tasks": 13,
+  "n_tasks": 16,
   "verdicts": {
     "partial": 4,
-    "can": 9
+    "can": 12
   },
   "llm_usage": {
     "calls": 0,
@@ -103,6 +103,54 @@
       ],
       "outputs": [
         "ks_per_m"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-prosail-soil-wetter-than-wet",
+      "suite": "probe",
+      "models": [
+        "prosail"
+      ],
+      "reference_models": [
+        "prosail"
+      ],
+      "outputs": [
+        "ndvi"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-pyet-humidity-above-saturation",
+      "suite": "probe",
+      "models": [
+        "pyet"
+      ],
+      "reference_models": [
+        "pyet"
+      ],
+      "outputs": [
+        "et0_mm_day"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-pywatershed-outside-the-domain-years",
+      "suite": "probe",
+      "models": [
+        "pywatershed"
+      ],
+      "reference_models": [
+        "pywatershed"
+      ],
+      "outputs": [
+        "value"
       ],
       "verdict": "can",
       "reasons": [],
