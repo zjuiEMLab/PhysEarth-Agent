@@ -9,6 +9,7 @@ Each takes (spec, series) and returns (passed, detail). `series` maps an output 
 its list of values, which for a single point is a list of one.
 """
 
+import calendar
 import math
 
 EXACT = 1.0e-12
@@ -96,8 +97,70 @@ def near_infrared_exceeds_red_for_a_green_canopy(spec, series, run):
     return nir > red * 3.0, "nir %.4f, red %.4f, ratio %.2f" % (nir, red, nir / red if red else 0)
 
 
+def _water_year_month_lengths(spec):
+    lengths = []
+    for year in range(spec["water_year_start"], spec["water_year_end"] + 1):
+        february = 29 if calendar.isleap(year) else 28
+        lengths += [31, 30, 31, 31, february, 31, 30, 31, 30, 31, 31, 30]
+    return lengths
+
+
+def _means(values, lengths):
+    means, at = [], 0
+    for n in lengths:
+        means.append(sum(values[at:at + n]) / n)
+        at += n
+    return means
+
+
+def _mean_agreement(got, expected):
+    if len(got) != len(expected):
+        return False, f"{len(got)} values for {len(expected)} periods"
+    worst = max(abs(a - b) for a, b in zip(got, expected, strict=True))
+    scale = max(1.0, max(abs(b) for b in expected))
+    return worst <= TIGHT * scale, f"{len(got)} periods, largest difference {worst:.3g} mm"
+
+
+def monthly_values_are_the_means_of_the_daily_series(spec, series, run):
+    """PRMS steps daily; the monthly series is the adapter's own aggregate of it, so each
+    value must be the plain mean of that calendar month's daily values."""
+    daily = run(dict(spec, aggregation="daily"))["value"]
+    lengths = _water_year_month_lengths(spec)
+    if len(daily) != sum(lengths):
+        return False, f"{len(daily)} daily values for {sum(lengths)} days"
+    monthly = run(dict(spec, aggregation="monthly"))["value"]
+    return _mean_agreement(monthly, _means(daily, lengths))
+
+
+def water_year_value_is_the_mean_of_the_daily_series(spec, series, run):
+    """A water-year value is the mean of the 365 or 366 daily values from 1 October."""
+    daily = run(dict(spec, aggregation="daily"))["value"]
+    months = _water_year_month_lengths(spec)
+    years = [sum(months[n:n + 12]) for n in range(0, len(months), 12)]
+    if len(daily) != sum(years):
+        return False, f"{len(daily)} daily values for {sum(years)} days"
+    yearly = run(dict(spec, aggregation="water_year"))["value"]
+    return _mean_agreement(yearly, _means(daily, years))
+
+
+def snowmelt_never_exceeds_the_water_that_fell(spec, series, run):
+    """Mass conservation: a snowpack cannot release more water than fell on the basin plus
+    what it held at the start. The first day's store plus its melt bounds the initial one."""
+    daily = dict(spec, aggregation="daily")
+    melt = run(dict(daily, variable="snowmelt"))["value"]
+    precipitation = run(dict(daily, variable="precipitation"))["value"]
+    swe = run(dict(daily, variable="snowpack_water_equivalent"))["value"]
+    if not melt or not precipitation or not swe:
+        return False, "the runs returned no daily values"
+    budget = sum(precipitation) + swe[0] + melt[0]
+    return sum(melt) <= budget + TIGHT * max(1.0, budget), (
+        f"melt {sum(melt):.3f} mm <= precipitation {sum(precipitation):.3f} mm "
+        f"+ initial store {swe[0] + melt[0]:.3f} mm"
+    )
+
+
 REGISTRY = {
     name: value
     for name, value in list(globals().items())
-    if callable(value) and not name.startswith("_") and name not in ("math",)
+    if callable(value) and not name.startswith("_") and name not in ("calendar", "math")
 }

@@ -16,7 +16,7 @@ Evaluation, in increasing cost:
 
 ```bash
 .venv/bin/python evaluation/runners/registry_contract.py   # A1 card contract, no LLM, <1 s
-.venv/bin/python evaluation/runners/tier0.py               # A2 adapter truth, no LLM, ~10 s
+.venv/bin/python evaluation/runners/tier0.py               # A2 adapter truth, no LLM, ~20 s
 .venv/bin/python evaluation/runners/model_registration.py  # A1-A3, no LLM
 .venv/bin/python evaluation/runners/competition.py         # frozen matrix: plan only
 .venv/bin/python evaluation/runners/agent_tasks.py --dry-run
@@ -130,7 +130,7 @@ demo.
 `evaluation/results/` is committed evidence behind `REPORT.md`, not build output. Do not
 regenerate or delete records to make something pass. The registry contract, Tier 0 and the
 registration runner are deterministic in what they *assert*: `6/6 models, 191 checks`,
-`9/9 tasks, 38 checks` and `20/20 checks`. Those are the gate. Tier 0 and the registration
+`10/10 tasks, 42 checks` and `21/21 checks`. Those are the gate. Tier 0 and the registration
 runner do **not** reproduce their committed JSON byte-for-byte: re-running them shifts
 values by 1e-16 to 1e-11 through BLAS and library round-off, so a verification run leaves
 `results/tier0.json` and `results/model_registration.json` modified. Revert them; do not

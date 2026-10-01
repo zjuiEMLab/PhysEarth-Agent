@@ -29,7 +29,7 @@ def test_every_tier0_task_declares_tier_kind_and_executable_checks():
         assert task["checks"]
         assert "quality_control" in task["kind"]
         assert task["checks"][-1] == "quality_control"
-    assert len(tasks) == 9
+    assert len(tasks) == 10
 
 
 def test_scientific_question_demos_are_tier2_paper_figure_targets():
@@ -66,8 +66,8 @@ def test_tier0_records_are_versioned_replayable_and_have_no_llm_cost():
     payload = json.loads((EVALUATION / "results" / "tier0.json").read_text(encoding="utf-8"))
     assert payload["schema_version"] == "tier0-adapter-record-v2"
     assert payload["execution"] == "deterministic"
-    assert payload["n_tasks"] == payload["n_passed"] == payload["n_replayable"] == 9
-    assert payload["n_checks"] == 38
+    assert payload["n_tasks"] == payload["n_passed"] == payload["n_replayable"] == 10
+    assert payload["n_checks"] == 42
     assert payload["llm_usage"] == {"calls": 0, "tokens": None, "cost_usd": None}
     for record in payload["records"]:
         assert record["tier"] == 0
@@ -107,7 +107,7 @@ def test_dimension_a_reexecutes_schema_adapter_and_trace_checks():
     evidence = _runner("model_registration").evaluate()
 
     assert evidence["status"] == "passed"
-    assert evidence["n_passed"] == evidence["n_checks"] == 20
+    assert evidence["n_passed"] == evidence["n_checks"] == 21
     assert evidence["summary"]["A1_model_card_schema"] == {
         "passed": 7,
         "total": 7,

@@ -8,8 +8,8 @@
       "status": "passed"
     },
     "A2_adapter_truth": {
-      "passed": 9,
-      "total": 9,
+      "passed": 10,
+      "total": 10,
       "status": "passed"
     },
     "A3_trace_replay": {
@@ -18,8 +18,8 @@
       "status": "passed"
     }
   },
-  "n_checks": 20,
-  "n_passed": 20,
+  "n_checks": 21,
+  "n_passed": 21,
   "A1_model_card_schema": {
     "cards": [
       {
@@ -130,8 +130,8 @@
     ]
   },
   "A2_adapter_truth": {
-    "tasks": 9,
-    "checks": 38,
+    "tasks": 10,
+    "checks": 42,
     "records": [
       {
         "tier": 0,
@@ -350,6 +350,132 @@
         "replayable": true,
         "replay_detail": "resolved spec reproduces the complete output arrays",
         "replay_key": "pyet@1.5.0:1192824ae54ea2668b455138af3930e14f88d8078725b42cfbfa650852c6877d",
+        "passed": true
+      },
+      {
+        "tier": 0,
+        "suite": "tier0",
+        "task_id": "t0-pywatershed-sagehen",
+        "id": "t0-pywatershed-sagehen",
+        "model": "pywatershed",
+        "model_version": "3.0.0",
+        "title": "The PRMS snowpack over one Sagehen water year conserves water",
+        "path": "evaluation/tasks/tier0/pywatershed-sagehen.yaml",
+        "kind": [
+          "identity",
+          "quality_control"
+        ],
+        "resolved_spec": {
+          "variable": "snowpack_water_equivalent",
+          "water_year_start": 1981,
+          "water_year_end": 1981,
+          "aggregation": "monthly",
+          "budget_check": true
+        },
+        "spec": {
+          "variable": "snowpack_water_equivalent",
+          "water_year_start": 1981,
+          "water_year_end": 1981,
+          "aggregation": "monthly",
+          "budget_check": true
+        },
+        "axis": {
+          "name": "time_index",
+          "values": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0
+          ]
+        },
+        "outputs": {
+          "value": [
+            1.5984117774758664,
+            0.4332219634639036,
+            57.028180132631185,
+            53.292316291945525,
+            214.7936531300398,
+            169.47585462803818,
+            93.37108923553258,
+            8.113731852938432,
+            0.32235043695748755,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "time_index": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            9.0,
+            10.0,
+            11.0
+          ]
+        },
+        "values": {
+          "value": 1.5984117774758664,
+          "time_index": 0.0
+        },
+        "check_configuration": {
+          "identities": [
+            "monthly_values_are_the_means_of_the_daily_series",
+            "water_year_value_is_the_mean_of_the_daily_series",
+            "snowmelt_never_exceeds_the_water_that_fell"
+          ]
+        },
+        "declared_checks": [
+          "identity:monthly_values_are_the_means_of_the_daily_series",
+          "identity:water_year_value_is_the_mean_of_the_daily_series",
+          "identity:snowmelt_never_exceeds_the_water_that_fell",
+          "quality_control"
+        ],
+        "checks": [
+          {
+            "check": "identity",
+            "name": "monthly_values_are_the_means_of_the_daily_series",
+            "passed": true,
+            "detail": "12 periods, largest difference 0 mm"
+          },
+          {
+            "check": "identity",
+            "name": "water_year_value_is_the_mean_of_the_daily_series",
+            "passed": true,
+            "detail": "1 periods, largest difference 0 mm"
+          },
+          {
+            "check": "identity",
+            "name": "snowmelt_never_exceeds_the_water_that_fell",
+            "passed": true,
+            "detail": "melt 478.921 mm <= precipitation 688.686 mm + initial store 0.000 mm"
+          },
+          {
+            "check": "quality_control",
+            "passed": true,
+            "detail": "3 declared-output checks"
+          }
+        ],
+        "llm_usage": {
+          "calls": 0,
+          "tokens": null,
+          "cost_usd": null
+        },
+        "replayable": true,
+        "replay_detail": "resolved spec reproduces the complete output arrays",
+        "replay_key": "pywatershed@3.0.0:c8151b997c928775d53af82e0bf463bd2b1c8d6be210ed76cbc11c59bf8f3b3b",
         "passed": true
       },
       {
@@ -1440,6 +1566,37 @@
         ]
       },
       {
+        "id": "tier0:t0-pywatershed-sagehen",
+        "passed": true,
+        "detail": "4 deterministic checks",
+        "model": "pywatershed",
+        "checks": [
+          {
+            "check": "identity",
+            "name": "monthly_values_are_the_means_of_the_daily_series",
+            "passed": true,
+            "detail": "12 periods, largest difference 0 mm"
+          },
+          {
+            "check": "identity",
+            "name": "water_year_value_is_the_mean_of_the_daily_series",
+            "passed": true,
+            "detail": "1 periods, largest difference 0 mm"
+          },
+          {
+            "check": "identity",
+            "name": "snowmelt_never_exceeds_the_water_that_fell",
+            "passed": true,
+            "detail": "melt 478.921 mm <= precipitation 688.686 mm + initial store 0.000 mm"
+          },
+          {
+            "check": "quality_control",
+            "passed": true,
+            "detail": "3 declared-output checks"
+          }
+        ]
+      },
+      {
         "id": "tier0:t0-smrt-active",
         "passed": true,
         "detail": "3 deterministic checks",
@@ -1781,7 +1938,7 @@
         "sweep_parameter": "none",
         "sweep_points": 10
       },
-      "handle": "res_d8228d08affa",
+      "handle": "res_cf444b016e9a",
       "qc": {
         "passed": true,
         "checks": [
@@ -1826,7 +1983,7 @@
       "output_sha256": "7556040eb8ac50e592051a81c03a71d35b6537a53b95a59bfd2fba27f83ca4fc"
     },
     "replay": {
-      "handle": "res_f27d7f2e7e35",
+      "handle": "res_69f8d91216be",
       "output_sha256": "7556040eb8ac50e592051a81c03a71d35b6537a53b95a59bfd2fba27f83ca4fc",
       "matches": true
     },

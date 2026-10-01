@@ -1,0 +1,31 @@
+id: t0-pywatershed-sagehen
+suite: tier0
+tier: 0
+kind: [identity, quality_control]
+checks:
+  - identity:monthly_values_are_the_means_of_the_daily_series
+  - identity:water_year_value_is_the_mean_of_the_daily_series
+  - identity:snowmelt_never_exceeds_the_water_that_fell
+  - quality_control
+model: pywatershed
+title: The PRMS snowpack over one Sagehen water year conserves water
+rationale: >-
+  The pinned Sagehen domain ships no PRMS reference output, so there is no upstream series
+  to agree with. What holds whatever is underneath: the monthly and water-year series are
+  the adapter's own aggregates of the daily PRMS steps and must be their plain means, and
+  over a water year the snowpack cannot melt more water than fell on the basin plus what it
+  held at the start. The run enforces the PRMS mass budgets, so it would stop if they did
+  not close.
+source:
+  software: pywatershed 3.0.0
+  domain: test_data/sagehen_5yr at commit 41707c16f1fac09e2e4d4ecb9e3bf6bf1948885e
+parameters:
+  variable: snowpack_water_equivalent
+  water_year_start: 1981
+  water_year_end: 1981
+  aggregation: monthly
+  budget_check: true
+identities:
+  - monthly_values_are_the_means_of_the_daily_series
+  - water_year_value_is_the_mean_of_the_daily_series
+  - snowmelt_never_exceeds_the_water_that_fell
