@@ -792,3 +792,20 @@ def test_outcome_tag_is_computed_from_the_record():
         "no figure",
     ]
     assert competition_score.outcome_tag(nothing, {"quality": "false_premise"}, None) is None
+
+
+def test_b3_separates_the_agent_s_settings_from_the_model():
+    oracle = json.loads(
+        (EVAL / "results" / "competition" / "q1_figure3_oracle.json").read_text(encoding="utf-8")
+    )
+    records = json.loads(
+        (EVAL / "results" / "competition" / "scored_runs.json").read_text(encoding="utf-8")
+    )
+    record = next(item["raw"] for item in records if item["raw"].get("numeric_results"))
+    curves = {row["curve"]: row for row in figure3.numeric_error(record, oracle)["curves"]}
+    assert len(curves) == 6 and all(row["present"] for row in curves.values())
+    sticky = curves["sticky_iba"]
+    assert sticky["as_chosen"]["normalized_rmse"] > 0.1
+    assert sticky["as_chosen"]["points_compared"] == 20
+    for row in curves.values():
+        assert row["notebook_settings"]["normalized_rmse"] < 0.01

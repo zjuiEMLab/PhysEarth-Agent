@@ -141,6 +141,123 @@ def _normalised_errors(got, wanted):
     return rmse, max(errors) / scale
 
 
+def _interpolate(axis, values, targets):
+    """Linear interpolation onto `targets`; points outside the run's own axis are None."""
+    pairs = sorted(zip(axis, values, strict=True))
+    out = []
+    for target in targets:
+        value = None
+        for (x0, y0), (x1, y1) in zip(pairs, pairs[1:], strict=False):
+            if x0 <= target <= x1:
+                value = y0 if x1 == x0 else y0 + (y1 - y0) * (target - x0) / (x1 - x0)
+                break
+        out.append(value)
+    return out
+
+
+def _errors_on_overlap(got, wanted):
+    kept = [(a, b) for a, b in zip(got, wanted, strict=True) if a is not None]
+    if not kept:
+        return None, None, 0
+    nrmse, nmax = _normalised_errors([a for a, _ in kept], [b for _, b in kept])
+    return nrmse, nmax, len(kept)
+
+
+def _rerun_with_notebook_settings(item, curve, gold, axis):
+    """The agent's own curve, re-run with the notebook's frequency, stickiness and grid."""
+    from physearth import registry
+    from physearth.harness import validation
+
+    entry = registry.get("smrt")
+    spec = {
+        key: value
+        for key, value in (item.get("spec") or {}).items()
+        if not key.startswith("sweep_")
+    }
+    spec["frequency_ghz"] = float(gold["recipe"]["frequency_ghz"])
+    if curve.get("stickiness") is not None and spec.get("microstructure_model") == (
+        "sticky_hard_spheres"
+    ):
+        spec["stickiness"] = float(curve["stickiness"])
+    spec.update(
+        sweep_parameter="density_kg_m3",
+        sweep_start=axis[0],
+        sweep_stop=axis[-1],
+        sweep_points=len(axis),
+    )
+    resolved, problems = validation.resolve(entry.card, spec)
+    if problems:
+        return None
+    try:
+        result = entry.run(resolved)
+    except Exception:
+        return None
+    if "ks_per_m" not in (result.get("series") or {}):
+        return None
+    rerun_axis = [float(value) for value in result["axis"]["values"]]
+    if len(rerun_axis) != len(axis) or not all(
+        _same_number(a, b, 1.0e-6) for a, b in zip(rerun_axis, axis, strict=True)
+    ):
+        return None
+    return [float(value) for value in result["series"]["ks_per_m"]]
+
+
+def numeric_error(record, oracle):
+    """B3: normalised error of each curve against the authors' notebook.
+
+    Two numbers per curve. `as_chosen` interpolates the agent's own curve onto the
+    notebook's density grid, so it carries every choice the agent made. `notebook_settings`
+    re-runs the agent's theory and microstructure with the notebook's frequency and
+    stickiness on its grid, so what remains is the difference the configuration does not
+    explain. Points outside the agent's density range are left out and counted.
+    """
+    gold = reference()
+    axis = [float(value) for value in oracle["axis"]["values"]]
+    available = record.get("numeric_results") or []
+    used = set()
+    rows = []
+    for curve in gold["curves"]:
+        index = next(
+            (
+                n
+                for n, item in enumerate(available)
+                if n not in used and _curve_matches(item, curve)
+            ),
+            None,
+        )
+        wanted = [float(value) for value in oracle["series"][curve["id"]]]
+        if index is None:
+            rows.append({"curve": curve["id"], "present": False})
+            continue
+        used.add(index)
+        item = available[index]
+        got = _interpolate(
+            [float(value) for value in (item.get("axis") or {}).get("values") or []],
+            [float(value) for value in (item.get("series") or {}).get("ks_per_m") or []],
+            axis,
+        )
+        nrmse, nmax, compared = _errors_on_overlap(got, wanted)
+        rerun = _rerun_with_notebook_settings(item, curve, gold, axis)
+        settled = _normalised_errors(rerun, wanted) if rerun else (None, None)
+        rows.append(
+            {
+                "curve": curve["id"],
+                "present": True,
+                "as_chosen": {
+                    "normalized_rmse": nrmse,
+                    "normalized_max_absolute_error": nmax,
+                    "points_compared": compared,
+                    "points_in_reference": len(axis),
+                },
+                "notebook_settings": {
+                    "normalized_rmse": settled[0],
+                    "normalized_max_absolute_error": settled[1],
+                },
+            }
+        )
+    return {"oracle_smrt_version": oracle.get("smrt_version"), "curves": rows}
+
+
 def _plot_score(record, gold):
     figures = [item for item in record.get("figures") or [] if not item.get("preview")]
     candidates = sorted(figures, key=lambda item: len(item.get("series") or []), reverse=True)
@@ -313,6 +430,7 @@ def score(record, oracle=None):
             "status": numeric_status,
             "curves": numeric_rows,
         },
+        "numeric_b3": numeric_error(record, oracle),
         "plot": plot,
     }
 
