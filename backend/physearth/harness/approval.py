@@ -8,10 +8,11 @@ ordinary tool result it has to deal with.
 
 Two properties matter more than the feature itself.
 
-It never passes by default. Only an explicit approval runs the model. The wait is bounded
-so a worker cannot hang, and when the bound passes the call is not run: the turn ends
-saying that nothing was computed, and asking again raises a fresh request. A reviewer who
-walks away from the page gets no result, never an unapproved one.
+It never passes by default, and it never holds a worker. Asking ends the turn: the agent
+pauses with the request and everything it needs to continue stored in the session, and
+nothing has been computed. Only an explicit verdict continues it, however much later that
+comes. A new question instead of a verdict drops the request, so a reviewer who walks
+away from the page gets no result, never an unapproved one.
 
 It cannot be forged. The verdict is written by the interface into the session, never by a
 tool argument, and a verdict with no pending request is discarded.
@@ -20,7 +21,7 @@ tool argument, and a verdict with no pending request is discarded.
 import threading
 import time
 
-TIMEOUT_S = 45.0
+_LOCK = threading.Lock()
 ASK = "ask"
 ALWAYS = "always"
 
@@ -28,15 +29,15 @@ ALWAYS = "always"
 def gate(session):
     """The gate is off unless something switched it on.
 
-    A library that blocks by default is a trap: the evaluation suite, a script and a test
-    all drive the agent with nobody watching, and none of them should wait on every model
-    call only to have it refused. The interface turns it on when it starts, which is the
+    A library that asks by default is a trap: the evaluation suite, a script and a test
+    all drive the agent with nobody watching, and none of them should pause on every model
+    call with nobody there to answer. The interface turns it on when it starts, which is the
     one context where there is a person to ask.
     """
     if session is None:
         return {"mode": ALWAYS, "pending": None}
     return session.setdefault(
-        "approval", {"mode": ALWAYS, "pending": None, "verdict": None, "event": None}
+        "approval", {"mode": ALWAYS, "pending": None, "verdict": None}
     )
 
 
@@ -82,53 +83,50 @@ def describe(name, arguments):
     }
 
 
-def request(session, name, arguments):
+def request(session, name, arguments, resume=None):
+    """Hold a call for a verdict. `resume` is what the agent needs to continue from it."""
     entry = gate(session)
     entry["pending"] = {
         "tool": name,
         "arguments": arguments or {},
         "description": describe(name, arguments),
         "asked_at": time.time(),
+        "resume": resume,
     }
     entry["verdict"] = None
-    entry["event"] = threading.Event()
     return entry["pending"]
 
 
 def pending(session):
-    return gate(session).get("pending")
+    """The request still waiting for a person; a decided one is no longer on offer."""
+    entry = gate(session)
+    return entry.get("pending") if entry.get("verdict") is None else None
 
 
 def decide(session, decision, arguments=None):
-    """Called by the interface. Returns True when a request was actually waiting."""
+    """Called by the interface. Returns True only for the first verdict on a request."""
     entry = gate(session)
-    if not entry.get("pending"):
-        return False
-    if decision == ALWAYS:
-        entry["mode"] = ALWAYS
-        decision = "approve"
-    entry["verdict"] = {"decision": decision, "arguments": arguments}
-    event = entry.get("event")
-    if event is not None:
-        event.set()
+    with _LOCK:
+        if not entry.get("pending") or entry.get("verdict") is not None:
+            return False
+        if decision == ALWAYS:
+            entry["mode"] = ALWAYS
+            decision = "approve"
+        entry["verdict"] = {"decision": decision, "arguments": arguments}
     return True
 
 
-def wait(session, timeout=TIMEOUT_S):
-    """Block until the interface decides, or until the bound passes."""
+def take(session):
+    """Remove the held request and return it with its verdict, or None if nothing is held."""
     entry = gate(session)
-    event = entry.get("event")
-    answered = event.wait(timeout) if event is not None else False
-    verdict = entry.get("verdict") or {}
-    entry["pending"] = None
-    entry["event"] = None
-    entry["verdict"] = None
-    if not answered:
-        return {"decision": "timeout", "arguments": None}
-    return {
-        "decision": verdict.get("decision") or "timeout",
-        "arguments": verdict.get("arguments"),
-    }
+    with _LOCK:
+        held = entry.get("pending")
+        verdict = entry.get("verdict")
+        entry["pending"] = None
+        entry["verdict"] = None
+    if not held:
+        return None
+    return dict(held, verdict=verdict)
 
 
 def declined_result(name, arguments):

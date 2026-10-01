@@ -288,14 +288,6 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
     logged_agent_events = 0
     try:
         for answer, events, state in agent.stream(question, seen, model_id, session):
-            # A direct ``run_model`` approval resumes the original generator rather than
-            # starting the explicit research-plan continuation below.  The review click
-            # marks that resume so the remainder of the turn follows the same partial-UI
-            # contract: keep the transcript and update only the live result/trace.  Without
-            # this hand-off, basic sensitivity cases repaint the entire conversation even
-            # though the approval itself succeeded.
-            if session.pop("preserve_conversation_on_resume", False):
-                preserve_conversation = True
             # Gradio may resume a streaming generator in a fresh context, so ContextVar
             # bindings made inside agent.stream are not guaranteed to reach every event.
             # Mirror each newly visible trace event with an explicit session reference.
@@ -358,7 +350,9 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
                 if next_head != head_html:
                     head_update = next_head
                     head_html = next_head
-                next_approval = render.research_context(session)
+                # A card that ends the turn waits for the final frame, which also carries
+                # the archived turn its continuation is appended to.
+                next_approval = render.research_context(session) if running else approval_html
                 if next_approval != approval_html:
                     approval_update = next_approval
                     approval_html = next_approval
@@ -496,18 +490,15 @@ def review_click(box, action):
                     "outputs, check the result, and only then report the interpretation and conclusion."
                 )
     else:
-        # ``run_model`` approval is handled by the already-running agent generator.  Mark
-        # its next yielded frame before releasing the gate; this prevents the resumed
-        # generator from repainting history.  Research-plan approval has its own explicit
-        # continuation and does not need this flag.
-        if session and approval.pending(session):
-            session["preserve_conversation_on_resume"] = True
-            # The approval event is released before the waiting generator has a chance to
-            # clear its pending request. Hide the stale card in this click response; the
-            # resumed generator will render either the next single-run request or no card.
-            session["approval_resuming"] = True
+        # A ``run_model`` request paused its turn. The first verdict on it starts the
+        # continuation, which is appended to the paused turn; a second click finds the
+        # request already decided and starts nothing.
         decision = {"primary": "approve", "satisfied_figures": "reject"}[action]
-        approval.decide(session, decision)
+        waiting = approval.pending(session) if session else None
+        if waiting and approval.decide(session, decision):
+            described = waiting["description"]
+            verb = "Approved" if decision == "approve" else "Declined"
+            command = f"{verb} the run of {described['model']} as {described['shape']}."
     # Review actions can create or remove pseudo figures.  Refresh evidence in the same
     # click response; waiting for a later agent stream left the Figures badge at zero and
     # made a valid preview look empty to the user.
@@ -988,7 +979,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         queue=False,
     )
 
-demo.queue(default_concurrency_limit=4)
+demo.queue(default_concurrency_limit=8)
 
 
 def _bypass_proxy_for_local_server(host):

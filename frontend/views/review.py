@@ -495,13 +495,12 @@ def approval_bar(session):
         "<div class='approve__head'>Run <b>%s</b> as %s?</div>"
         "<div class='approve__params'>%s</div>"
         "<div class='approve__note'>The model cannot answer this for itself. Nothing runs "
-        "until you approve it; if nobody answers within %d seconds the call is cancelled and "
-        "nothing is computed.</div>"
+        "until you approve it, and the agent waits as long as it takes. Asking a new question "
+        "instead drops this request.</div>"
         "</div>"
         % (
             _e(described["model"]),
             _e(described["shape"]),
             rows or "<span class='approve__p'>every parameter at its declared default</span>",
-            int(gate.TIMEOUT_S),
         )
     )

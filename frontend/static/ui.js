@@ -577,6 +577,19 @@ function peBoot() {
     if (!card) {
       reviewInFlight = false;
       reviewPhaseAtClick = "";
+      if (document.querySelector(".approve:not(.approve--research):not([hidden])")) {
+        var runLabels = ["Run it", "Decline"];
+        var runButtons = [
+          document.getElementById("pe-approve-yes"),
+          document.getElementById("pe-approve-all")
+        ];
+        for (var k = 0; k < runButtons.length; k++) {
+          if (runButtons[k] && runButtons[k].textContent.trim() !== runLabels[k]) {
+            runButtons[k].textContent = runLabels[k];
+          }
+          if (runButtons[k]) runButtons[k].disabled = false;
+        }
+      }
       return;
     }
     var phase = card.getAttribute("data-research-phase");

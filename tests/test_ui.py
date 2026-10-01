@@ -165,14 +165,14 @@ def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(mo
 
     for box in sessions:
         approval.request(box, "run_model", {"model": "smrt", "parameters": {}})
-        app.review_click(box, "primary")
-        assert box.get("preserve_conversation_on_resume") is True
-        frames = list(app.respond("approved continuation", turns, box, "m"))
+        command = app.review_click(box, "primary")[3]
+        assert command.startswith("Approved the run of smrt")
+        frames = list(app.resume_after_review(command, turns, box, "m"))
         assert frames[-1][2].get("__type__") == "update"
         assert frames[-1][8][-1]["answer"].endswith("Approved run completed.")
 
 
-def test_direct_approval_hides_the_stale_card_until_the_agent_clears_it():
+def test_direct_approval_hides_the_card_and_continues_only_once():
     from physearth import session as session_state
     from physearth.harness import approval
 
@@ -183,10 +183,11 @@ def test_direct_approval_hides_the_stale_card_until_the_agent_clears_it():
     approval.set_mode(box, approval.ASK)
     approval.request(box, "run_model", {"model": "smrt", "parameters": {}})
 
-    app.review_click(box, "primary")
+    assert app.review_click(box, "primary")[3]
 
-    assert box["approval_resuming"] is True
     assert "hidden" in render.research_context(box)
+    assert app.review_click(box, "primary")[3] == ""
+    assert app.review_click(box, "satisfied_figures")[3] == ""
 
 
 def test_answer_text_is_escaped_before_anything_else():

@@ -1,7 +1,6 @@
 """The gate between deciding to run a model and running it."""
 
 import contextlib
-import threading
 import time
 
 from physearth.harness import approval
@@ -28,7 +27,8 @@ def test_a_headless_run_is_never_held_up():
     started = time.perf_counter()
     result = tools.call("run_model", {"model": "smrt"}, owner=box["id"], session=box)
     assert result["status"] == "success"
-    assert time.perf_counter() - started < approval.TIMEOUT_S / 2
+    assert time.perf_counter() - started < 10.0
+    assert approval.pending(box) is None
 
 
 def test_a_verdict_with_nothing_pending_is_discarded():
@@ -60,30 +60,32 @@ def test_the_description_is_in_the_reader_s_terms_not_the_model_s():
     assert single["shape"] == "a single point"
 
 
-def test_an_unanswered_gate_is_bounded_and_is_not_an_approval():
+def test_a_held_request_takes_one_verdict_only():
     box = _asking()
     approval.request(box, "run_model", {"model": "smrt"})
-    started = time.perf_counter()
-    verdict = approval.wait(box, timeout=0.2)
-    assert verdict["decision"] == "timeout"
-    assert time.perf_counter() - started < 2.0
+    assert approval.decide(box, "approve") is True
+    assert approval.decide(box, "reject") is False
+    assert approval.pending(box) is None
+    held = approval.take(box)
+    assert held["verdict"]["decision"] == "approve"
+    assert approval.take(box) is None
+
+
+def test_an_unanswered_request_is_taken_without_a_verdict():
+    box = _asking()
+    approval.request(box, "run_model", {"model": "smrt"})
+    assert approval.pending(box) is not None
+    held = approval.take(box)
+    assert held["verdict"] is None
     assert approval.pending(box) is None
     assert approval.decide(box, "approve") is False
-
-
-def test_a_decision_from_another_thread_releases_the_wait():
-    box = _asking()
-    approval.request(box, "run_model", {"model": "smrt"})
-    threading.Timer(0.05, lambda: approval.decide(box, "reject")).start()
-    verdict = approval.wait(box, timeout=5.0)
-    assert verdict["decision"] == "reject"
 
 
 def test_approving_everything_stops_the_gate_asking_again():
     box = _asking()
     approval.request(box, "run_model", {"model": "smrt"})
     approval.decide(box, approval.ALWAYS)
-    assert approval.wait(box, timeout=1.0)["decision"] == "approve"
+    assert approval.take(box)["verdict"]["decision"] == "approve"
     assert not approval.required(box)
 
 
@@ -601,6 +603,50 @@ def _fake_client(scripted):
     return client, sent
 
 
+def _pause(box, question):
+    answer, events, state = "", [], {}
+    for answer, events, state in agent.stream(question, session=box):
+        pass
+    return answer, events, state
+
+
+def test_asking_pauses_the_turn_without_running_anything(monkeypatch):
+    box = _asking()
+    script = [[_call_chunk("run_model", '{"model": "smrt"}')]]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+
+    started = time.perf_counter()
+    answer, events, state = _pause(box, "run smrt for me")
+
+    assert time.perf_counter() - started < 10.0
+    assert state["phase"] == "done"
+    assert box["model_runs"] == 0
+    assert "Nothing has been computed" in answer
+    assert events[-1]["kind"] == "approval_wait"
+    assert not any(e["kind"] == "tool_call" for e in events)
+    assert approval.pending(box)["description"]["model"] == "smrt"
+    assert len(sent) == 1
+
+
+def test_a_new_question_drops_an_unanswered_request(monkeypatch):
+    box = _asking()
+    script = [
+        [_call_chunk("run_model", '{"model": "smrt"}')],
+        [_Chunk(_Delta(content="Here is an answer to the new question."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+
+    _pause(box, "run smrt for me")
+    answer, events, _ = _pause(box, "something else")
+
+    assert box["model_runs"] == 0
+    assert approval.pending(box) is None
+    assert any(e["kind"] == "approval" and e["decision"] == "superseded" for e in events)
+    assert sent[-1][-1] == {"role": "user", "content": "something else"}
+
+
 def test_a_declined_call_reaches_the_model_as_a_tool_result(monkeypatch):
     box = _asking()
     script = [
@@ -610,48 +656,44 @@ def test_a_declined_call_reaches_the_model_as_a_tool_result(monkeypatch):
     client, sent = _fake_client(script)
     monkeypatch.setattr(agent.completion, "_client", lambda: client)
 
-    steps = agent.stream("run smrt for me", session=box)
-    phases = []
-    for _, _events, state in steps:
-        phases.append(state.get("phase"))
-        if state.get("phase") == "needs_approval":
-            approval.decide(box, "reject")
+    _pause(box, "run smrt for me")
+    assert approval.decide(box, "reject")
+    answer, events, _ = _pause(box, "Declined the run.")
 
-    assert "needs_approval" in phases
-    tool_messages = [m for turn in sent for m in turn if m.get("role") == "tool"]
+    assert answer == "I could not run it, so here is what I can say."
+    assert any(e["kind"] == "approval" and e["decision"] == "reject" for e in events)
+    tool_messages = [m for m in sent[-1] if m.get("role") == "tool"]
     assert tool_messages, "the model was never told what happened"
     assert "declined" in tool_messages[-1]["content"]
     assert box["model_runs"] == 0
 
 
-def test_an_unanswered_call_never_runs_the_model(monkeypatch):
+def test_an_approved_call_continues_the_paused_turn_and_runs(monkeypatch):
     box = _asking()
     script = [
         [_call_chunk("run_model", '{"model": "smrt"}')],
-        [_Chunk(_Delta(content="This must never be reached."))],
+        [_Chunk(_Delta(content="It ran [model:smrt@1.5.1]."))],
     ]
     client, sent = _fake_client(script)
     monkeypatch.setattr(agent.completion, "_client", lambda: client)
-    real_wait = approval.wait
-    monkeypatch.setattr(approval, "wait", lambda s, timeout=0.05: real_wait(s, timeout=0.05))
 
-    answer, events, state = None, [], {}
-    for answer, events, state in agent.stream("run smrt for me", session=box):
-        pass
-
+    _pause(box, "run smrt")
     assert box["model_runs"] == 0
-    assert state["phase"] == "done"
-    assert "not executed" in answer and "nothing was computed" in answer
-    assert any(
-        e["kind"] == "approval" and e["decision"] == "timeout" for e in events
-    )
-    assert any(
-        e["kind"] == "harness_stop" and e["rule"] == "human_approval_unanswered" for e in events
-    )
-    assert not any(e["kind"] == "tool_call" and e.get("name") == "run_model" for e in events)
-    assert len(sent) == 1
+    assert approval.decide(box, "approve")
+    _, events, state = _pause(box, "Approved the run.")
+
+    kinds = [e["kind"] for e in events]
+    assert "approval" in kinds and "tool_call" in kinds
+    assert box["model_runs"] == 1
+    assert state["model_calls"] == 1
+    assert len(sent) == 2
+    resumed = sent[1]
+    assert resumed[0]["role"] == "system"
+    assert "over 1 question(s)" in resumed[0]["content"]
+    assert {"role": "user", "content": "run smrt"} in resumed
+    assert not any(m.get("content") == "Approved the run." for m in resumed)
+    assert [m["role"] for m in resumed[-2:]] == ["assistant", "tool"]
     assert approval.pending(box) is None
-    assert approval.required(box)
 
 
 def test_source_figure_inspection_sends_the_image_to_the_model(monkeypatch):
@@ -679,25 +721,6 @@ def test_source_figure_inspection_sends_the_image_to_the_model(monkeypatch):
     assert tool_messages and "image_data_url" not in tool_messages[0]["content"]
 
 
-def test_an_approved_call_runs_and_the_gate_is_recorded(monkeypatch):
-    box = _asking()
-    script = [
-        [_call_chunk("run_model", '{"model": "smrt"}')],
-        [_Chunk(_Delta(content="It ran [model:smrt@1.5.1]."))],
-    ]
-    client, _ = _fake_client(script)
-    monkeypatch.setattr(agent.completion, "_client", lambda: client)
-
-    kinds = []
-    for _, events, state in agent.stream("run smrt", session=box):
-        kinds = [e["kind"] for e in events]
-        if state.get("phase") == "needs_approval":
-            approval.decide(box, "approve")
-
-    assert "approval" in kinds
-    assert box["model_runs"] == 1
-
-
 def test_the_trace_names_what_is_waiting_and_what_was_decided():
     from frontend import views as render
 
@@ -716,7 +739,7 @@ def test_the_trace_names_what_is_waiting_and_what_was_decided():
     for decision, phrase in (
         ("approve", "You approved"),
         ("reject", "You declined"),
-        ("timeout", "was not run"),
+        ("superseded", "dropped without running"),
     ):
         event = {"kind": "approval", "at": "00:00:00", "rule": "human_approval", "decision": decision}
         assert phrase in render.trace([event], session.new_state(_asking()))
@@ -733,7 +756,6 @@ def test_the_approval_bar_appears_only_while_something_waits():
     assert "smrt" in bar and "a single point" in bar
     assert "Nothing runs until you approve it" in bar and "goes ahead" not in bar
     approval.decide(box, "approve")
-    approval.wait(box, timeout=1.0)
     assert "hidden" in render.approval_bar(box)
 
 

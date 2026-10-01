@@ -35,8 +35,8 @@ APPROVAL_WORDS = {
     "approve": "You approved this call.",
     "reject": "You declined this call. The refusal went back to the model as a tool result, "
     "so it has to answer without it or propose something different.",
-    "timeout": "Nobody answered within the time limit, so the call was not run and nothing "
-    "was computed. An unanswered gate is never treated as an approval; ask again to run it.",
+    "superseded": "A new question arrived instead of an answer, so this call was dropped "
+    "without running. A request that nobody answered is never treated as an approval.",
 }
 
 
@@ -145,7 +145,7 @@ def _event_body(event, index):
         rows = [(k, v, "") for k, v in sorted(described["parameters"].items())]
         return (
             "<div class='step-card__line'>The agent wants to run <b>%s</b> as %s. Nothing "
-            "has been computed yet, and nothing runs until you approve it.</div>"
+            "has been computed yet. The turn is paused until you run it or decline it.</div>"
             "%s" % (_e(described["model"]), _e(described["shape"]), _kv(rows) if rows else "")
         )
 

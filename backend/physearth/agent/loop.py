@@ -81,7 +81,12 @@ def stream(question, history=None, model=None, session=None, switches=None):
     session["model"] = resolve_model(
         model or session.get("model"), session.get("unrestricted", False)
     )
-    session["turns"] = session.get("turns", 0) + 1
+    # A held run_model request either continues here, with the person's verdict, or is
+    # dropped because a new question arrived instead of a verdict. A continuation is the
+    # same question, so it is not counted as another.
+    held = approval.take(session)
+    resumable = bool(held and held["verdict"] and held["resume"])
+    session["turns"] = session.get("turns", 0) + (0 if resumable else 1)
     audit.bind(session, turn=session["turns"])
     audit.emit(
         "agent_turn_started",
@@ -93,7 +98,21 @@ def stream(question, history=None, model=None, session=None, switches=None):
     state["switches"] = switch_flags.resolve(switches)
     events = []
     answer = ""
-    if _requests_tool_bypass(question):
+    if held and not resumable:
+        if not held["verdict"]:
+            events.append(
+                _event(
+                    "approval",
+                    rule="human_approval",
+                    decision="superseded",
+                    name=held["tool"],
+                    arguments=held["arguments"],
+                )
+            )
+        held = None
+    resume_completion = held["resume"]["completion"] if held else None
+    resume_index = held["resume"]["index"] if held else 0
+    if not held and _requests_tool_bypass(question):
         session["tool_bypass_requested"] = True
         events.append(
             _event(
@@ -124,7 +143,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
     raw_execution = state["switches"].get("execution_access") == "raw_smrt"
     raw_reproduction = raw_execution and research.is_reproduction_question(question)
     reproduction_preflight = (
-        not raw_execution
+        not held
+        and not raw_execution
         and (research.is_reproduction_question(question) or guided_reproduction)
     )
     if reproduction_preflight:
@@ -157,14 +177,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
     segments = []
     output_tokens = MAX_OUTPUT_TOKENS
 
-    allowed, message = budget.acquire()
+    allowed, message = (True, "") if held else budget.acquire()
     if not allowed:
         events.append(_event("harness_stop", rule="global_budget", reason=message))
         state["phase"] = "done"
         yield message, events, state
         return
 
-    messages = _messages(question, history, state)
+    messages = list(held["resume"]["messages"]) if held else _messages(question, history, state)
     # Resolved through the module rather than bound at import, so a test can substitute
     # the provider client on physearth.agent.completion and have this call see it.
     client = _completion._client()
@@ -207,6 +227,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
         last_upstream = ""
         model_dead = ""
         attempt, budget_left = 0, EMPTY_RESPONSE_RETRIES
+        # A resumed turn already has the completion it paused on; it does not ask again.
+        resuming = resume_completion is not None
+        if resuming:
+            completion, budget_left, resume_completion = resume_completion, 0, None
         while attempt < budget_left:
             attempt += 1
             started = time.perf_counter()
@@ -331,24 +355,25 @@ def stream(question, history=None, model=None, session=None, switches=None):
             and "research-planning" not in set(session.get("research_guidelines_read") or ())
         ):
             forced_tool_name = "read_research_guideline"
-        session_state.bump(state, "model_calls")
-        session_state.bump(state, "prompt_tokens", completion.prompt_tokens or 0)
-        session_state.bump(state, "completion_tokens", completion.completion_tokens or 0)
-        events.append(
-            _event(
-                "model_call",
-                index=state["model_calls"],
-                elapsed_s=round(time.perf_counter() - started, 2),
-                prompt_tokens=completion.prompt_tokens,
-                completion_tokens=completion.completion_tokens,
-                cost_usd=completion.cost_usd,
-                cost_details=completion.cost_details,
-                reasoning_chars=completion.reasoning,
-                finish_reason=completion.finish_reason,
-                requested_output_tokens=output_tokens,
+        if not resuming:
+            session_state.bump(state, "model_calls")
+            session_state.bump(state, "prompt_tokens", completion.prompt_tokens or 0)
+            session_state.bump(state, "completion_tokens", completion.completion_tokens or 0)
+            events.append(
+                _event(
+                    "model_call",
+                    index=state["model_calls"],
+                    elapsed_s=round(time.perf_counter() - started, 2),
+                    prompt_tokens=completion.prompt_tokens,
+                    completion_tokens=completion.completion_tokens,
+                    cost_usd=completion.cost_usd,
+                    cost_details=completion.cost_details,
+                    reasoning_chars=completion.reasoning,
+                    finish_reason=completion.finish_reason,
+                    requested_output_tokens=output_tokens,
+                )
             )
-        )
-        yield answer, events, state
+            yield answer, events, state
 
         calls = completion.tool_calls()
         if calls:
@@ -446,25 +471,29 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 yield answer, events, state
                 continue
             # Prose the model wrote before reaching for a tool is a finished block: the next
-            # one goes underneath it rather than over it.
-            if completion.content and completion.content.strip():
+            # one goes underneath it rather than over it. A resumed call was already shown
+            # and recorded by the turn that paused on it.
+            if not resuming and completion.content and completion.content.strip():
                 segments.append(completion.content)
                 answer = transcript(segments)
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": completion.content or "",
-                    "tool_calls": [
-                        {
-                            "id": call["id"],
-                            "type": "function",
-                            "function": {"name": call["name"], "arguments": canonical},
-                        }
-                        for call, _arguments, canonical, _repair_note in parsed_calls
-                    ],
-                }
-            )
-            for call, arguments, _canonical, repair_note in parsed_calls:
+            if not resuming:
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": completion.content or "",
+                        "tool_calls": [
+                            {
+                                "id": call["id"],
+                                "type": "function",
+                                "function": {"name": call["name"], "arguments": canonical},
+                            }
+                            for call, _arguments, canonical, _repair_note in parsed_calls
+                        ],
+                    }
+                )
+            for position, (call, arguments, _canonical, repair_note) in enumerate(parsed_calls):
+                if resuming and position < resume_index:
+                    continue
                 name = call["name"]
                 if name == "research_plan":
                     plan_tool_called = True
@@ -507,24 +536,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 # model has no way past it, because there is nothing it can put in a tool
                 # call that reaches this branch.
                 declined = False
-                if (
-                    name == "run_model"
-                    and approval.required(session)
-                    and not session.get("research_required")
-                ):
-                    approval.request(session, name, arguments)
-                    state["phase"] = "needs_approval"
-                    events.append(
-                        _event("approval_wait", rule="human_approval", name=name, arguments=arguments)
-                    )
-                    yield answer, events, state
-                    verdict = approval.wait(session)
-                    session.pop("approval_resuming", None)
-                    events.pop()
-                    state["phase"] = "running_tool"
-                    if verdict["decision"] == "reject":
-                        declined = True
-                    elif verdict["decision"] == "edit" and verdict["arguments"]:
+                if resuming and position == resume_index:
+                    verdict = held["verdict"]
+                    declined = verdict["decision"] not in ("approve", "edit")
+                    if verdict["decision"] == "edit" and verdict["arguments"]:
                         arguments = verdict["arguments"]
                     events.append(
                         _event(
@@ -536,24 +551,36 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         )
                     )
                     yield answer, events, state
-                    if verdict["decision"] not in ("approve", "edit", "reject"):
-                        # Only an explicit verdict counts. No answer is never an approval.
-                        answer = (
-                            "The run of %s was not approved in time, so it was not executed "
-                            "and nothing was computed. Ask again when you are ready to "
-                            "approve it." % approval.describe(name, arguments)["model"]
-                        )
-                        events.append(
-                            _event(
-                                "harness_stop",
-                                rule="human_approval_unanswered",
-                                tool=name,
-                                reason=answer,
-                            )
-                        )
-                        state["phase"] = "done"
-                        yield answer, events, state
-                        return
+                elif (
+                    name == "run_model"
+                    and approval.required(session)
+                    and not session.get("research_required")
+                ):
+                    # Asking ends the turn rather than holding a worker for an answer. The
+                    # request carries what the turn needs to continue from this call.
+                    approval.request(
+                        session,
+                        name,
+                        arguments,
+                        resume={
+                            "messages": list(messages),
+                            "completion": completion,
+                            "index": position,
+                        },
+                    )
+                    described = approval.describe(name, arguments)
+                    answer = transcript(
+                        segments,
+                        "Waiting for your approval to run %s as %s. Nothing has been computed "
+                        "yet. Run it or decline it with the buttons under the request, and the "
+                        "agent continues from here." % (described["model"], described["shape"]),
+                    )
+                    events.append(
+                        _event("approval_wait", rule="human_approval", name=name, arguments=arguments)
+                    )
+                    state["phase"] = "done"
+                    yield answer, events, state
+                    return
                 result = (
                     approval.declined_result(name, arguments)
                     if declined
