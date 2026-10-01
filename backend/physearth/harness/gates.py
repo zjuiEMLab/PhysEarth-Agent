@@ -221,13 +221,9 @@ def check_budget(state):
     return {"rule": "budget", "passed": True, "scope": "", "reason": ""}
 
 
-def review_final(text, state):
-    if not switches.resolve(state.get("switches"))["harness"]:
-        return (
-            {"rule": "citation_integrity", "passed": True, "markers": find_markers(text), "off": True},
-            None,
-        )
-    checks = [
+def final_checks(text, state):
+    """The checks a final answer must pass, in the order the agent loop applies them."""
+    return [
         check_evidence(
             text,
             state["sections_read"],
@@ -245,12 +241,24 @@ def review_final(text, state):
         ),
         check_abstract_depth(text),
     ]
-    corrections = {
+
+
+def correction(check):
+    return {
         "evidence_gate": evidence_correction,
         "citation_integrity": citation_correction,
         "abstract_depth": abstract_depth_correction,
-    }
+    }[check["rule"]](check)
+
+
+def review_final(text, state):
+    if not switches.resolve(state.get("switches"))["harness"]:
+        return (
+            {"rule": "citation_integrity", "passed": True, "markers": find_markers(text), "off": True},
+            None,
+        )
+    checks = final_checks(text, state)
     for check in checks:
         if not check["passed"]:
-            return check, corrections[check["rule"]](check)
+            return check, correction(check)
     return checks[1], None
