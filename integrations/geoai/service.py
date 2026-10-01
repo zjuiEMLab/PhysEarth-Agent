@@ -11,16 +11,16 @@ Two facts shape the design:
 - a physical model run returns a *handle*, not a number, and the handle resolves only
   inside the session that produced it, so sessions live here and are addressed by id
   instead of being rebuilt per call;
-- a run is approved by a human in the interactive product, so a headless host must say
-  what it wants: `approve_runs=False` keeps the approval gate on (a plugin that has its
-  own consent step can then answer it), and `approve_runs=True` states plainly that the
-  host is taking that responsibility.
+- a run is approved by a human, and whether this process asks is the operator's choice,
+  made once when the server starts (`configure`). No tool argument can change it: the host's
+  model can write every argument, and the gate exists so that it cannot approve its own runs.
+  When a run needs approval the turn pauses, the result carries the pending request, and
+  `decide` records the person's verdict and continues from there.
 """
 
 from __future__ import annotations
 
 import threading
-import uuid
 
 from physearth import agent, config, paths, prompt, registry, research, tools
 from physearth import session as session_state
@@ -29,6 +29,26 @@ from physearth.harness import approval
 
 _LOCK = threading.Lock()
 _SESSIONS: dict = {}
+
+APPROVAL_MODES = (approval.ASK, approval.ALWAYS)
+DECISIONS = ("approve", "reject")
+_OPERATOR = {"approval": approval.ASK}
+_SWITCHES = "host_switches"
+
+
+def configure(approval_mode=None):
+    """Fix the operator's settings for this process; called by whatever starts the server.
+
+    `ask` (the default) pauses before every physical run until a person decides; `always`
+    records that the operator approved runs in advance. Sessions read it when they are
+    created, so it is chosen before any host request arrives.
+    """
+    if approval_mode is not None:
+        if approval_mode not in APPROVAL_MODES:
+            known = ", ".join(APPROVAL_MODES)
+            raise ValueError(f"unknown approval mode {approval_mode!r}; choose one of {known}")
+        _OPERATOR["approval"] = approval_mode
+    return dict(_OPERATOR)
 
 
 def _jsonable(value):
@@ -44,17 +64,17 @@ def _jsonable(value):
     return str(value)
 
 
-def new_session(model=None, approve_runs=False):
+def new_session(model=None):
     """Create one engine session and return the address a host keeps for later calls."""
     session = agent.new_session(model or agent.default_model())
-    approval.set_mode(session, approval.ALWAYS if approve_runs else approval.ASK)
+    approval.set_mode(session, _OPERATOR["approval"])
     session["research_required"] = False
     with _LOCK:
         _SESSIONS[session["id"]] = session
     return {
         "session_id": session["id"],
         "model": session.get("model"),
-        "approval": "always" if approve_runs else "ask",
+        "approval": approval.mode(session),
     }
 
 
@@ -65,7 +85,7 @@ def get_session(session_id):
     return None
 
 
-def resolve_session(session_id=None, model=None, approve_runs=False):
+def resolve_session(session_id=None, model=None):
     """Return the named session, or create one; unknown ids are not silently replaced."""
     session = get_session(session_id)
     if session is not None:
@@ -79,7 +99,7 @@ def resolve_session(session_id=None, model=None, approve_runs=False):
                 "session that produced them, so call new_session first." % session_id
             ),
         }
-    created = new_session(model=model, approve_runs=approve_runs)
+    created = new_session(model=model)
     return get_session(created["session_id"]), None
 
 
@@ -136,6 +156,7 @@ def health():
         "tools": len(tools.SPECS),
         "knowledge": _knowledge_counts(),
         "credentials": bool(config.has_token()),
+        "approval": _OPERATOR["approval"],
         "online": str(config.get("PHYSEARTH_ONLINE")) != "0",
     }
 
@@ -300,11 +321,27 @@ def prompt_stack(scopes=None):
     return "\n\n".join(block.strip() for block in blocks if block and block.strip())
 
 
-def call(name, arguments=None, session_id=None, switches=None, approve_runs=False):
-    """Run one tool call inside a session and report what the engine decided."""
-    session, problem = resolve_session(session_id, approve_runs=approve_runs)
+def call(name, arguments=None, session_id=None, switches=None):
+    """Run one tool call inside a session and report what the engine decided.
+
+    A `run_model` call is held for a verdict under the same condition the agent loop holds
+    it, so driving the tools directly is not a way around the gate.
+    """
+    session, problem = resolve_session(session_id)
     if problem is not None:
         return problem
+    session[_SWITCHES] = switches
+    if (
+        name == "run_model"
+        and approval.required(session)
+        and not session.get("research_required")
+    ):
+        approval.request(session, name, arguments or {})
+        return _awaiting(session, {"status": "awaiting_approval", "session_id": session["id"]})
+    return _execute(session, name, arguments or {}, switches)
+
+
+def _execute(session, name, arguments, switches):
     # A tool call is bookkept where the loop bookkeeps it.  Without this, a host that
     # drives tools directly would hold a result handle the session never registered, and
     # every later question about "what has been run here" would answer with nothing --
@@ -312,7 +349,7 @@ def call(name, arguments=None, session_id=None, switches=None, approve_runs=Fals
     state = session_state.new_state(session)
     result = tools.call(
         name,
-        arguments or {},
+        arguments,
         owner=session["id"],
         switches_in=switches,
         session=session,
@@ -322,28 +359,42 @@ def call(name, arguments=None, session_id=None, switches=None, approve_runs=Fals
     return _jsonable(result)
 
 
-def ask(question, session_id=None, model=None, switches=None, approve_runs=False):
-    """Run one agent turn and return the answer, the trace and the session address.
-
-    A host without credentials gets a structured refusal rather than a traceback: the
-    answer to a physics question must never be invented locally to fill the gap.
-    """
-    if not config.has_token() and not str(config.get("PHYSEARTH_LLM_API_BASE") or "").startswith(
+def _no_credentials():
+    """A host without credentials gets a structured refusal rather than a traceback."""
+    if config.has_token() or str(config.get("PHYSEARTH_LLM_API_BASE") or "").startswith(
         ("http://127.0.0.1", "http://localhost")
     ):
-        return {
-            "status": "terminal_error",
-            "error": "no_credentials",
-            "summary": (
-                "No inference credentials are configured (PHYSEARTH_LLM_API_KEY or "
-                "MODELSCOPE_TOKEN). Nothing was computed."
-            ),
-        }
-    session, problem = resolve_session(session_id, model=model, approve_runs=approve_runs)
+        return None
+    return {
+        "status": "terminal_error",
+        "error": "no_credentials",
+        "summary": (
+            "No inference credentials are configured (PHYSEARTH_LLM_API_KEY or "
+            "MODELSCOPE_TOKEN). Nothing was computed."
+        ),
+    }
+
+
+def ask(question, session_id=None, model=None, switches=None):
+    """Run one agent turn and return the answer, the trace and the session address.
+
+    The answer to a physics question must never be invented locally to fill a gap, so a
+    missing credential is a refusal. A turn that reaches a run needing approval ends paused:
+    the result says `awaiting_approval` and carries what the person is asked to approve.
+    """
+    refusal = _no_credentials()
+    if refusal is not None:
+        return refusal
+    session, problem = resolve_session(session_id, model=model)
     if problem is not None:
         return problem
+    session[_SWITCHES] = switches
+    return _turn(session, question, model, switches)
+
+
+def _turn(session, question, model, switches):
     answer, events, state = agent.run(question, model=model, session=session, switches=switches)
-    return {
+    result = {
         "status": "success",
         "session_id": session["id"],
         "answer": answer,
@@ -356,6 +407,59 @@ def ask(question, session_id=None, model=None, switches=None, approve_runs=False
         },
         "evidence": evidence(session["id"]),
     }
+    if approval.pending(session) is not None:
+        result["status"] = "awaiting_approval"
+        result = _awaiting(session, result)
+    return result
+
+
+def _awaiting(session, result):
+    held = approval.pending(session)
+    result["pending"] = {
+        "tool": held["tool"],
+        "description": _jsonable(held["description"]),
+    }
+    result["next_action"] = (
+        "Nothing has been computed. Show this request to the person running the host and "
+        "call geoai_decide with their verdict, approve or reject. Do not decide it yourself."
+    )
+    return result
+
+
+def decide(session_id, decision):
+    """Record a person's verdict on the held run and continue from it.
+
+    Only `approve` and `reject` are accepted: the engine's `always` would switch the gate off
+    for the rest of the session, and that is the operator's choice, not a verdict. A paused
+    agent turn resumes at the held call; a held direct call runs, or comes back declined.
+    """
+    session = get_session(session_id)
+    if session is None:
+        return {"status": "terminal_error", "error": "unknown_session", "summary": session_id}
+    if decision not in DECISIONS:
+        return {
+            "status": "terminal_error",
+            "error": "unknown_decision",
+            "summary": f"{decision!r} is not a verdict; use one of {', '.join(DECISIONS)}.",
+        }
+    held = approval.pending(session)
+    if held is None:
+        return {
+            "status": "terminal_error",
+            "error": "nothing_pending",
+            "summary": "No run is waiting for approval in this session.",
+        }
+    if held.get("resume"):
+        refusal = _no_credentials()
+        if refusal is not None:
+            return refusal
+        approval.decide(session, decision)
+        return _turn(session, "", None, session.get(_SWITCHES))
+    approval.decide(session, decision)
+    taken = approval.take(session)
+    if decision == "approve":
+        return _execute(session, taken["tool"], taken["arguments"], session.get(_SWITCHES))
+    return _jsonable(approval.declined_result(taken["tool"], taken["arguments"]))
 
 
 def evidence(session_id):

@@ -13,19 +13,23 @@ Two properties are not negotiable here:
 - **the engine decides.** Validation, the approval gate, quality control and evidence rules
   all stay in the engine; this layer only transports a call and its result, and a refusal is
   returned as a structured result with its own HTTP status so a client cannot mistake it for
-  a number.
+  a number. Whether a run waits for a person is chosen with `--approval` when the bridge
+  starts; no request body can change it. A run that waits comes back as 202 with the
+  pending request, and `/decide` carries the person's verdict.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 from integrations.geoai import service
 
 REFUSED_STATUS = 422
+AWAITING_STATUS = 202
 
 
 def _status_for(payload):
@@ -37,6 +41,8 @@ def _status_for(payload):
         return 400
     if status == "needs_input":
         return REFUSED_STATUS
+    if status == "awaiting_approval":
+        return AWAITING_STATUS
     return 200
 
 
@@ -95,11 +101,7 @@ class _Handler(BaseHTTPRequestHandler):
                 {"status": "terminal_error", "error": "bad_request", "summary": str(exc)}, 400
             )
         if path == "/session":
-            return self._send(
-                service.new_session(
-                    model=body.get("model"), approve_runs=bool(body.get("approve_runs"))
-                )
-            )
+            return self._send(service.new_session(model=body.get("model")))
         if path == "/call":
             name = body.get("name")
             if not name:
@@ -113,7 +115,6 @@ class _Handler(BaseHTTPRequestHandler):
                     body.get("arguments") or {},
                     session_id=body.get("session_id"),
                     switches=body.get("switches"),
-                    approve_runs=bool(body.get("approve_runs")),
                 )
             )
         if path == "/ask":
@@ -133,9 +134,10 @@ class _Handler(BaseHTTPRequestHandler):
                     session_id=body.get("session_id"),
                     model=body.get("model"),
                     switches=body.get("switches"),
-                    approve_runs=bool(body.get("approve_runs")),
                 )
             )
+        if path == "/decide":
+            return self._send(service.decide(body.get("session_id"), body.get("decision")))
         if path == "/evidence":
             return self._send(service.evidence(body.get("session_id")))
         if path == "/plan":
@@ -163,7 +165,13 @@ def main(argv=None):
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8799)
     parser.add_argument("--allow-remote", action="store_true")
+    parser.add_argument(
+        "--approval",
+        choices=service.APPROVAL_MODES,
+        default=os.environ.get("PHYSEARTH_GEOAI_APPROVAL") or "ask",
+    )
     args = parser.parse_args(argv)
+    service.configure(approval_mode=args.approval)
     server = serve(args.host, args.port, args.allow_remote)
     print("physearth-geoai bridge on http://%s:%d" % server.server_address[:2], flush=True)
     try:

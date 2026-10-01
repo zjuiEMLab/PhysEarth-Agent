@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from integrations.geoai import bridge, mcp_server, service
@@ -15,6 +16,15 @@ from integrations.geoai import bridge, mcp_server, service
 
 def _emit(payload):
     sys.stdout.write(json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n")
+
+
+def _approval(parser):
+    parser.add_argument(
+        "--approval",
+        choices=service.APPROVAL_MODES,
+        default=os.environ.get("PHYSEARTH_GEOAI_APPROVAL") or "ask",
+        help="operator setting: ask pauses before every physical run, always approves in advance",
+    )
 
 
 def main(argv=None):
@@ -34,26 +44,29 @@ def main(argv=None):
         ),
     )
     prompt_cmd.add_argument("--list", action="store_true", help="print the scopes and their sizes")
-    sub.add_parser("serve", help="serve MCP on stdio")
+    _approval(sub.add_parser("serve", help="serve MCP on stdio"))
 
     http = sub.add_parser("serve-http", help="serve the loopback HTTP bridge")
     http.add_argument("--host", default="127.0.0.1")
     http.add_argument("--port", type=int, default=8799)
     http.add_argument("--allow-remote", action="store_true")
+    _approval(http)
 
     call = sub.add_parser("call", help="run one declared tool")
     call.add_argument("name")
     call.add_argument("--arguments", default="{}", help="JSON object")
     call.add_argument("--session-id", default=None)
-    call.add_argument("--approve-runs", action="store_true")
+    _approval(call)
 
     ask = sub.add_parser("ask", help="run one agent turn")
     ask.add_argument("question")
     ask.add_argument("--session-id", default=None)
     ask.add_argument("--model", default=None)
-    ask.add_argument("--approve-runs", action="store_true")
+    _approval(ask)
 
     args = parser.parse_args(argv)
+    if getattr(args, "approval", None):
+        service.configure(approval_mode=args.approval)
 
     if args.command == "health":
         _emit(service.health())
@@ -85,29 +98,19 @@ def main(argv=None):
         # `argv=[]`, not `argv=None`: this subcommand has already consumed the word `serve`, and
         # leaving it in `sys.argv` made the server warn about "unrecognised argument(s): serve"
         # on every launch by a host that spells the invocation `-m integrations.geoai serve`.
-        mcp_server.main([])
+        mcp_server.main(["--approval", args.approval])
     elif args.command == "serve-http":
-        argv = ["--host", args.host, "--port", str(args.port)]
+        argv = ["--host", args.host, "--port", str(args.port), "--approval", args.approval]
         if args.allow_remote:
             argv.append("--allow-remote")
         bridge.main(argv)
     elif args.command == "call":
         _emit(
-            service.call(
-                args.name,
-                json.loads(args.arguments),
-                session_id=args.session_id,
-                approve_runs=args.approve_runs,
-            )
+            service.call(args.name, json.loads(args.arguments), session_id=args.session_id)
         )
     elif args.command == "ask":
         _emit(
-            service.ask(
-                args.question,
-                session_id=args.session_id,
-                model=args.model,
-                approve_runs=args.approve_runs,
-            )
+            service.ask(args.question, session_id=args.session_id, model=args.model)
         )
     return 0
 

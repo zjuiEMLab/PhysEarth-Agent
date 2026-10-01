@@ -15,13 +15,18 @@ kinds of thing, deliberately matching how this project itself separates them:
 
 Two design rules are inherited from the repository rather than invented here.  A missing
 credential is reported as a structured refusal, never filled in with a locally invented
-answer; and a physical run keeps its approval gate unless the host says, in that call, that
-it owns that decision (`approve_runs`).
+answer; and whether a physical run waits for a person is the operator's choice, made with
+``--approval`` when the server starts, never a tool argument the host's model could set.
+A run that waits is put to the person through MCP elicitation when the client offers it,
+and otherwise returned as a pending request that ``geoai_decide`` answers.
 """
 
 from __future__ import annotations
 
+import argparse
+import itertools
 import json
+import os
 import sys
 
 
@@ -79,13 +84,6 @@ HOST_TOOLS = (
             "type": "object",
             "properties": {
                 "model": {"type": "string", "description": "Language model id, optional."},
-                "approve_runs": {
-                    "type": "boolean",
-                    "description": (
-                        "True states that this host owns the human approval step for physical "
-                        "model runs. False (default) keeps the gate on."
-                    ),
-                },
             },
         },
     },
@@ -102,7 +100,6 @@ HOST_TOOLS = (
                 "question": {"type": "string"},
                 "session_id": {"type": "string", "description": "Continue an existing session."},
                 "model": {"type": "string"},
-                "approve_runs": {"type": "boolean"},
             },
             "required": ["question"],
         },
@@ -144,6 +141,23 @@ HOST_TOOLS = (
                 },
             },
             "required": ["session_id", "choice"],
+        },
+    },
+    {
+        "name": "geoai_decide",
+        "description": (
+            "Answer a physical run that is awaiting approval with the verdict of the person "
+            "running this host, then continue: a paused question resumes where it stopped, a "
+            "held run_model call runs or comes back declined. Ask the person first and pass "
+            "their answer; never decide on their behalf."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "session_id": {"type": "string"},
+                "decision": {"type": "string", "enum": ["approve", "reject"]},
+            },
+            "required": ["session_id", "decision"],
         },
     },
     {
@@ -229,20 +243,20 @@ def _call_host_tool(name, arguments):
     if name == "geoai_health":
         return _json_text(service.health())
     if name == "geoai_session_new":
-        return _json_text(
-            service.new_session(
-                model=arguments.get("model"),
-                approve_runs=bool(arguments.get("approve_runs")),
-            )
-        )
+        return _json_text(service.new_session(model=arguments.get("model")))
     if name == "geoai_ask":
         return _json_text(
-            service.ask(
-                arguments.get("question", ""),
-                session_id=arguments.get("session_id"),
-                model=arguments.get("model"),
-                approve_runs=bool(arguments.get("approve_runs")),
+            _settle(
+                service.ask(
+                    arguments.get("question", ""),
+                    session_id=arguments.get("session_id"),
+                    model=arguments.get("model"),
+                )
             )
+        )
+    if name == "geoai_decide":
+        return _json_text(
+            _settle(service.decide(arguments.get("session_id"), arguments.get("decision")))
         )
     if name == "geoai_evidence":
         return _json_text(service.evidence(arguments.get("session_id")))
@@ -257,7 +271,7 @@ def _call_host_tool(name, arguments):
 
 # Keys this server consumes itself; the engine validates tool arguments strictly, so they
 # must not reach a tool's handler.
-HOST_ONLY_KEYS = ("session_id", "approve_runs")
+HOST_ONLY_KEYS = ("session_id",)
 
 
 def call_tool(name, arguments=None):
@@ -267,13 +281,75 @@ def call_tool(name, arguments=None):
     if host is not None:
         return host
     engine_arguments = {k: v for k, v in arguments.items() if k not in HOST_ONLY_KEYS}
-    result = service.call(
-        name,
-        engine_arguments,
-        session_id=arguments.get("session_id"),
-        approve_runs=bool(arguments.get("approve_runs")),
-    )
+    result = _settle(service.call(name, engine_arguments, session_id=arguments.get("session_id")))
     return {"content": [{"type": "text", "text": _render(result)}], "isError": _failed(result)}
+
+
+# What the connected client declared at `initialize`, and the stdio channel `main` serves.
+# One client talks to one server process, so these are per process.
+_CLIENT = {"elicitation": False}
+_CHANNEL = {"io": None}
+_IDS = itertools.count(1)
+
+
+def _settle(result):
+    """Put a run that waits for approval to the person, when the client can ask them.
+
+    The verdict comes from the client's own prompt to its user, so the host's model never
+    sees a way to give it. A cancelled prompt, or a client without elicitation, leaves the
+    request pending for ``geoai_decide``. A resumed turn can pause at its next run, so this
+    repeats until the turn finishes or a prompt goes unanswered.
+    """
+    while (
+        isinstance(result, dict)
+        and result.get("status") == "awaiting_approval"
+        and _CLIENT["elicitation"]
+        and _CHANNEL["io"] is not None
+    ):
+        verdict = _elicit(result["pending"])
+        if verdict is None:
+            break
+        result = service.decide(result["session_id"], verdict)
+    return result
+
+
+def _elicit(pending):
+    description = pending.get("description") or {}
+    message = (
+        f"Run {description.get('model', pending.get('tool'))} as {description.get('shape')}"
+        f" with {json.dumps(description.get('parameters') or {}, sort_keys=True)}?"
+        " Nothing has been computed yet."
+    )
+    request_id = f"geoai-elicit-{next(_IDS)}"
+    channel = _CHANNEL["io"]
+    channel.send(
+        {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "elicitation/create",
+            "params": {
+                "message": message,
+                "requestedSchema": {
+                    "type": "object",
+                    "properties": {
+                        "approve": {
+                            "type": "boolean",
+                            "title": "Run it",
+                            "description": "Untick, or decline, to refuse this run.",
+                            "default": True,
+                        }
+                    },
+                },
+            },
+        }
+    )
+    response = channel.await_response(request_id)
+    answer = (response or {}).get("result") or {}
+    if answer.get("action") == "accept":
+        return "approve" if (answer.get("content") or {}).get("approve", True) else "reject"
+    if answer.get("action") == "decline":
+        return "reject"
+    return None
 
 
 def _failed(result):
@@ -406,6 +482,7 @@ def handle(request):
     params = request.get("params") or {}
     request_id = request.get("id")
     if method == "initialize":
+        _CLIENT["elicitation"] = "elicitation" in (params.get("capabilities") or {})
         return _ok(
             request_id,
             {
@@ -468,33 +545,84 @@ def _error(request_id, code, message):
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
+class _Stdio:
+    """Newline-delimited JSON-RPC on a pair of pipes, in both directions.
+
+    The server mostly answers, but an elicitation is a request of its own, sent while a tool
+    call is still open; anything the client sends before its answer is kept for the main loop.
+    """
+
+    def __init__(self, reader, writer):
+        self.reader = reader
+        self.writer = writer
+        self.backlog = []
+
+    def send(self, message):
+        self.writer.write(json.dumps(message, ensure_ascii=False) + "\n")
+        self.writer.flush()
+
+    def _next(self):
+        for line in iter(self.reader.readline, ""):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                return json.loads(line)
+            except ValueError:
+                continue
+        return None
+
+    def messages(self):
+        while True:
+            message = self.backlog.pop(0) if self.backlog else self._next()
+            if message is None:
+                return
+            yield message
+
+    def await_response(self, request_id):
+        while True:
+            message = self._next()
+            if message is None or message.get("method") == "notifications/cancelled":
+                return None
+            if message.get("id") == request_id and "method" not in message:
+                return message
+            if message.get("method") == "ping" and "id" in message:
+                self.send(_ok(message["id"], {}))
+                continue
+            self.backlog.append(message)
+
+
 def main(argv=None):
     """Serve newline-delimited JSON-RPC on stdio until the host closes the pipe.
 
     stdio is the only transport here, so an argument that names it is accepted and ignored:
     every MCP client's documentation spells the invocation as ``mcp_server.py --stdio``, and
     a host that copies that line should not get an argparse error where a server belongs.
+
+    ``--approval`` is the operator's choice and is made here, once: ``ask`` (the default, or
+    ``PHYSEARTH_GEOAI_APPROVAL``) pauses before every physical run, ``always`` approves runs
+    in advance for everything this server does.
     """
-    argv = list(sys.argv[1:] if argv is None else argv)
-    unknown = [item for item in argv if item not in ('--stdio', '--transport=stdio')]
+    parser = argparse.ArgumentParser(prog="physearth-geoai", add_help=False)
+    parser.add_argument(
+        "--approval",
+        choices=service.APPROVAL_MODES,
+        default=os.environ.get("PHYSEARTH_GEOAI_APPROVAL") or "ask",
+    )
+    args, rest = parser.parse_known_args(list(sys.argv[1:] if argv is None else argv))
+    unknown = [item for item in rest if item not in ("--stdio", "--transport=stdio")]
     if unknown:
         sys.stderr.write(
             f"physearth-geoai: ignoring unrecognised argument(s): {' '.join(unknown)}\n"
-            'this server speaks newline-delimited JSON-RPC on stdin/stdout.\n'
+            "this server speaks newline-delimited JSON-RPC on stdin/stdout.\n"
         )
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            request = json.loads(line)
-        except ValueError:
-            continue
+    service.configure(approval_mode=args.approval)
+    channel = _Stdio(sys.stdin, sys.stdout)
+    _CHANNEL["io"] = channel
+    for request in channel.messages():
         response = handle(request)
-        if response is None:
-            continue
-        sys.stdout.write(json.dumps(response, ensure_ascii=False) + "\n")
-        sys.stdout.flush()
+        if response is not None:
+            channel.send(response)
 
 
 if __name__ == "__main__":

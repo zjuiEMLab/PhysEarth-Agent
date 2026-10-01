@@ -57,8 +57,9 @@ def test_health_and_catalogues_are_readable(bridge_url):
     assert len(prompt["prompt_stack"]) > 4000
 
 
-def test_a_run_over_http_returns_a_handle_the_session_registered(bridge_url):
+def test_a_run_over_http_waits_for_a_verdict_then_returns_a_handle(bridge_url):
     _, session = _post(bridge_url, "/session", {"model": "smrt", "approve_runs": True})
+    assert session["approval"] == "ask"
 
     status, run = _post(
         bridge_url,
@@ -80,6 +81,13 @@ def test_a_run_over_http_returns_a_handle_the_session_registered(bridge_url):
         },
     )
 
+    assert status == 202
+    assert run["status"] == "awaiting_approval"
+    assert run["pending"]["description"]["model"] == "smrt"
+
+    status, run = _post(
+        bridge_url, "/decide", {"session_id": session["session_id"], "decision": "approve"}
+    )
     assert status == 200
     assert run["status"] == "success"
     handle = run["data"]["handle"]
@@ -88,8 +96,9 @@ def test_a_run_over_http_returns_a_handle_the_session_registered(bridge_url):
     assert any(item["handle"] == handle for item in evidence["handles"])
 
 
-def test_a_refusal_keeps_its_own_http_status(bridge_url):
-    _, session = _post(bridge_url, "/session", {"model": "smrt", "approve_runs": True})
+def test_a_refusal_keeps_its_own_http_status(bridge_url, monkeypatch):
+    monkeypatch.setitem(service._OPERATOR, "approval", "always")
+    _, session = _post(bridge_url, "/session", {"model": "smrt"})
 
     status, refused = _post(
         bridge_url,

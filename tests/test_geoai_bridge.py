@@ -95,25 +95,33 @@ def test_an_unknown_prompt_scope_is_an_error_rather_than_an_omission():
     assert "rules" in str(error.value)
 
 
-def test_call_runs_a_real_model_and_returns_a_handle():
+SWEEP = {
+    "model": "smrt",
+    "parameters": {
+        "output": "tb",
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 100,
+        "sweep_stop": 300,
+        "sweep_points": 3,
+    },
+}
+
+
+@pytest.fixture()
+def approved_in_advance(monkeypatch):
+    monkeypatch.setitem(service._OPERATOR, "approval", "always")
+
+
+def test_a_run_waits_for_a_verdict_and_then_returns_a_handle():
     created = service.new_session(model="smrt")
     assert created["approval"] == "ask"
 
-    result = service.call(
-        "run_model",
-        {
-            "model": "smrt",
-            "parameters": {
-                "output": "tb",
-                "sweep_parameter": "density_kg_m3",
-                "sweep_start": 100,
-                "sweep_stop": 300,
-                "sweep_points": 3,
-            },
-        },
-        session_id=created["session_id"],
-        approve_runs=True,
-    )
+    held = service.call("run_model", SWEEP, session_id=created["session_id"])
+    assert held["status"] == "awaiting_approval"
+    assert held["pending"]["description"]["model"] == "smrt"
+    assert service.evidence(created["session_id"])["counts"]["handles"] == 0
+
+    result = service.decide(created["session_id"], "approve")
 
     assert result["status"] == "success", result
     handle = (result.get("data") or {}).get("handle")
@@ -125,14 +133,46 @@ def test_call_runs_a_real_model_and_returns_a_handle():
     assert any(item["handle"] == handle for item in seen["handles"])
 
 
-def test_a_refused_call_comes_back_structured_rather_than_raising():
+def test_a_rejected_run_comes_back_declined_and_computes_nothing():
+    session_id = service.new_session()["session_id"]
+    service.call("run_model", SWEEP, session_id=session_id)
+
+    declined = service.decide(session_id, "reject")
+
+    assert declined["status"] == "needs_input"
+    assert "declined" in declined["error"]
+    assert service.evidence(session_id)["models_run"] == []
+    assert service.decide(session_id, "approve")["error"] == "nothing_pending"
+
+
+def test_no_verdict_or_argument_switches_the_gate_off():
+    session_id = service.new_session()["session_id"]
+    service.call("run_model", dict(SWEEP, approval="always"), session_id=session_id)
+
+    refused = service.decide(session_id, "always")
+
+    assert refused["error"] == "unknown_decision"
+    session = service.get_session(session_id)
+    assert service.approval.mode(session) == "ask"
+    service.decide(session_id, "approve")
+    assert service.approval.mode(session) == "ask"
+
+
+def test_the_operator_setting_is_fixed_by_configure(monkeypatch):
+    monkeypatch.setitem(service._OPERATOR, "approval", "ask")
+    assert service.configure("always") == {"approval": "always"}
+    assert service.new_session()["approval"] == "always"
+    with pytest.raises(ValueError):
+        service.configure("never")
+
+
+def test_a_refused_call_comes_back_structured_rather_than_raising(approved_in_advance):
     created = service.new_session(model="smrt")
 
     refused = service.call(
         "run_model",
         {"model": "smrt", "parameters": {"density_kg_m3": 2000.0}},
         session_id=created["session_id"],
-        approve_runs=True,
     )
 
     assert refused["status"] in ("terminal_error", "needs_input")
