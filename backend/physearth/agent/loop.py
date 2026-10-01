@@ -536,6 +536,24 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         )
                     )
                     yield answer, events, state
+                    if verdict["decision"] not in ("approve", "edit", "reject"):
+                        # Only an explicit verdict counts. No answer is never an approval.
+                        answer = (
+                            "The run of %s was not approved in time, so it was not executed "
+                            "and nothing was computed. Ask again when you are ready to "
+                            "approve it." % approval.describe(name, arguments)["model"]
+                        )
+                        events.append(
+                            _event(
+                                "harness_stop",
+                                rule="human_approval_unanswered",
+                                tool=name,
+                                reason=answer,
+                            )
+                        )
+                        state["phase"] = "done"
+                        yield answer, events, state
+                        return
                 result = (
                     approval.declined_result(name, arguments)
                     if declined

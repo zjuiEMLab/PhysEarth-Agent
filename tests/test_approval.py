@@ -60,7 +60,7 @@ def test_the_description_is_in_the_reader_s_terms_not_the_model_s():
     assert single["shape"] == "a single point"
 
 
-def test_an_unanswered_gate_lets_the_call_through_and_says_so():
+def test_an_unanswered_gate_is_bounded_and_is_not_an_approval():
     box = _asking()
     approval.request(box, "run_model", {"model": "smrt"})
     started = time.perf_counter()
@@ -68,6 +68,7 @@ def test_an_unanswered_gate_lets_the_call_through_and_says_so():
     assert verdict["decision"] == "timeout"
     assert time.perf_counter() - started < 2.0
     assert approval.pending(box) is None
+    assert approval.decide(box, "approve") is False
 
 
 def test_a_decision_from_another_thread_releases_the_wait():
@@ -623,6 +624,36 @@ def test_a_declined_call_reaches_the_model_as_a_tool_result(monkeypatch):
     assert box["model_runs"] == 0
 
 
+def test_an_unanswered_call_never_runs_the_model(monkeypatch):
+    box = _asking()
+    script = [
+        [_call_chunk("run_model", '{"model": "smrt"}')],
+        [_Chunk(_Delta(content="This must never be reached."))],
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+    real_wait = approval.wait
+    monkeypatch.setattr(approval, "wait", lambda s, timeout=0.05: real_wait(s, timeout=0.05))
+
+    answer, events, state = None, [], {}
+    for answer, events, state in agent.stream("run smrt for me", session=box):
+        pass
+
+    assert box["model_runs"] == 0
+    assert state["phase"] == "done"
+    assert "not executed" in answer and "nothing was computed" in answer
+    assert any(
+        e["kind"] == "approval" and e["decision"] == "timeout" for e in events
+    )
+    assert any(
+        e["kind"] == "harness_stop" and e["rule"] == "human_approval_unanswered" for e in events
+    )
+    assert not any(e["kind"] == "tool_call" and e.get("name") == "run_model" for e in events)
+    assert len(sent) == 1
+    assert approval.pending(box) is None
+    assert approval.required(box)
+
+
 def test_source_figure_inspection_sends_the_image_to_the_model(monkeypatch):
     box = _asking()
     script = [
@@ -685,7 +716,7 @@ def test_the_trace_names_what_is_waiting_and_what_was_decided():
     for decision, phrase in (
         ("approve", "You approved"),
         ("reject", "You declined"),
-        ("timeout", "Nobody answered"),
+        ("timeout", "was not run"),
     ):
         event = {"kind": "approval", "at": "00:00:00", "rule": "human_approval", "decision": decision}
         assert phrase in render.trace([event], session.new_state(_asking()))
@@ -700,6 +731,7 @@ def test_the_approval_bar_appears_only_while_something_waits():
     bar = render.approval_bar(box)
     assert "hidden" not in bar
     assert "smrt" in bar and "a single point" in bar
+    assert "Nothing runs until you approve it" in bar and "goes ahead" not in bar
     approval.decide(box, "approve")
     approval.wait(box, timeout=1.0)
     assert "hidden" in render.approval_bar(box)

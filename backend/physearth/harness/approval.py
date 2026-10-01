@@ -8,9 +8,10 @@ ordinary tool result it has to deal with.
 
 Two properties matter more than the feature itself.
 
-It cannot hang. The wait is bounded, and when the bound passes the call proceeds with the
-trace saying plainly that nobody answered. A reviewer who walks away from the page gets a
-slow answer, not a dead one.
+It never passes by default. Only an explicit approval runs the model. The wait is bounded
+so a worker cannot hang, and when the bound passes the call is not run: the turn ends
+saying that nothing was computed, and asking again raises a fresh request. A reviewer who
+walks away from the page gets no result, never an unapproved one.
 
 It cannot be forged. The verdict is written by the interface into the session, never by a
 tool argument, and a verdict with no pending request is discarded.
@@ -28,8 +29,8 @@ def gate(session):
     """The gate is off unless something switched it on.
 
     A library that blocks by default is a trap: the evaluation suite, a script and a test
-    all drive the agent with nobody watching, and none of them should wait 45 seconds per
-    model call to find that out. The interface turns it on when it starts, which is the
+    all drive the agent with nobody watching, and none of them should wait on every model
+    call only to have it refused. The interface turns it on when it starts, which is the
     one context where there is a person to ask.
     """
     if session is None:
@@ -125,7 +126,7 @@ def wait(session, timeout=TIMEOUT_S):
     if not answered:
         return {"decision": "timeout", "arguments": None}
     return {
-        "decision": verdict.get("decision") or "approve",
+        "decision": verdict.get("decision") or "timeout",
         "arguments": verdict.get("arguments"),
     }
 

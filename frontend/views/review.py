@@ -494,8 +494,9 @@ def approval_bar(session):
         "<div class='approve'>"
         "<div class='approve__head'>Run <b>%s</b> as %s?</div>"
         "<div class='approve__params'>%s</div>"
-        "<div class='approve__note'>The model cannot answer this for itself. If nobody "
-        "answers within %d seconds the call goes ahead and the trace says so.</div>"
+        "<div class='approve__note'>The model cannot answer this for itself. Nothing runs "
+        "until you approve it; if nobody answers within %d seconds the call is cancelled and "
+        "nothing is computed.</div>"
         "</div>"
         % (
             _e(described["model"]),
