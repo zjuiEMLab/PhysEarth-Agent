@@ -1,10 +1,11 @@
 {
   "schema_version": "capability-gate-v1",
   "execution": "deterministic",
-  "n_tasks": 16,
+  "n_tasks": 21,
   "verdicts": {
     "partial": 4,
-    "can": 12
+    "can": 16,
+    "cannot": 1
   },
   "llm_usage": {
     "calls": 0,
@@ -93,6 +94,57 @@
       "check_status": "waiting_user"
     },
     {
+      "task": "prosail-lai-benchmark",
+      "suite": "tier2",
+      "models": [
+        "prosail"
+      ],
+      "reference_models": [
+        "prosail"
+      ],
+      "outputs": [
+        "reflectance_green",
+        "reflectance_red",
+        "reflectance_nir",
+        "reflectance_swir"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "pyet-fao56-example18",
+      "suite": "tier2",
+      "models": [
+        "pyet"
+      ],
+      "reference_models": [
+        "pyet"
+      ],
+      "outputs": [
+        "et0_mm_day"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "pywatershed-sagehen-wy1981",
+      "suite": "tier2",
+      "models": [
+        "pywatershed"
+      ],
+      "reference_models": [
+        "pywatershed"
+      ],
+      "outputs": [
+        "value"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
       "task": "q1-sparse-medium",
       "suite": "tier2",
       "models": [
@@ -106,6 +158,44 @@
       ],
       "verdict": "can",
       "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "tau-omega-lv2020-fig9",
+      "suite": "tier2",
+      "models": [
+        "tau_omega"
+      ],
+      "reference_models": [
+        "cmem-sampling-density"
+      ],
+      "outputs": [
+        "tb_h",
+        "tb_v"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "water-cloud-modanesi2021-fig11",
+      "suite": "tier2",
+      "models": [
+        "water_cloud"
+      ],
+      "reference_models": [
+        "backscatter-forward-operator"
+      ],
+      "outputs": [
+        "sigma0_total_db"
+      ],
+      "verdict": "cannot",
+      "reasons": [
+        "forcing Noah-MP surface soil moisture at Faenza 2016-2017: no bundled reference dataset accompanies backscatter-forward-operator",
+        "forcing Noah-MP leaf area index at Faenza 2016-2017: no bundled reference dataset accompanies backscatter-forward-operator",
+        "measured Sentinel-1 sigma0 VV at Faenza 2016-2017: no bundled reference dataset accompanies backscatter-forward-operator",
+        "measured Sentinel-1 sigma0 VH at Faenza 2016-2017: no bundled reference dataset accompanies backscatter-forward-operator"
+      ],
       "check_status": "ready"
     },
     {

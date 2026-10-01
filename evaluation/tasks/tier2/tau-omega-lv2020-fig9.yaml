@@ -1,0 +1,32 @@
+id: tau-omega-lv2020-fig9
+suite: tier2
+tier: 2
+evaluation_kind: scientific_question_demo
+reference_fixture: evaluation/fixtures/tau_omega_lv2020_fig9_reference.yaml
+paper_figures: [fig09.png]
+title: Lv et al. (2020) Figure 9, L-band brightness temperature against soil moisture
+source:
+  paper: cmem-sampling-density
+  doi: 10.5194/hess-24-1957-2020
+  figure: fig09
+quality: underspecified
+shape: research_demo
+observable: brightness_temperature
+models: [tau_omega]
+question: >-
+  Reproduce, qualitatively, Figure 9 of Lv, Schalge, Saavedra Garfias and Simmer (2020),
+  "Required sampling density of ground-based soil moisture and brightness temperature
+  observations for calibration and validation of L-band satellite observations based on a
+  virtual reality" (Hydrology and Earth System Sciences 24, 1957-1973,
+  DOI: 10.5194/hess-24-1957-2020). Read the paper and inspect the figure, then simulate how
+  L-band brightness temperature at H and V polarization changes with soil moisture over the
+  range the figure covers, and compare your chart with the figure. Say which features of the
+  figure your simulation reproduces and which it cannot, and name every vegetation, roughness
+  or soil setting you had to choose because the figure does not state it.
+underspecified:
+  missing: [vegetation_optical_depth, single_scattering_albedo, roughness_h]
+  answer_should_mention: [vegetation, roughness]
+capability:
+  basis: "Figure 9 caption: brightness temperature at H and V against soil moisture computed by the paper's own CMEM emission chain"
+  reference_models: [cmem-sampling-density]
+  outputs: [tb_h, tb_v]

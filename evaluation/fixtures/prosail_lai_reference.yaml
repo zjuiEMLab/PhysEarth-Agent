@@ -1,0 +1,64 @@
+schema_version: reference-series-v1
+task: prosail-lai-benchmark
+scorer: reference_series
+source:
+  software: prosail 2.0.5
+  repository: https://github.com/jgomezdans/prosail
+  benchmark: tests/test_prosail.py, test_rsot_prosail5
+  benchmark_reference: tests/data/REFL_CAN.txt, canopy reflectance from the PROSAIL Fortran
+    code distributed at http://teledetection.ipgp.jussieu.fr/prosail/
+  license: GPL-3.0
+# The upstream benchmark case, swept over leaf area index. Computed by calling
+# prosail.run_prosail directly with the benchmark's own spherical leaf angle distribution
+# (Verhoef two-parameter form), which the registered adapter can only approximate.
+oracle:
+  package: prosail
+  path: evaluation/results/competition/oracles/prosail-lai-benchmark.json
+  axis: {name: leaf_area_index, upstream_name: lai, start: 0.0, stop: 8.0, points: 17}
+  recipe:
+    n: 1.5
+    cab: 40.0
+    car: 8.0
+    cbrown: 0.0
+    cw: 0.01
+    cm: 0.009
+    lai: 3.0
+    lidfa: -0.35
+    hspot: 0.01
+    tts: 30.0
+    tto: 10.0
+    psi: 0.0
+    typelidf: 1
+    lidfb: -0.15
+    rsoil: 1.0
+    psoil: 1.0
+    factor: SDR
+    prospect_version: "5"
+  bands_nm:
+    reflectance_green: 550
+    reflectance_red: 670
+    reflectance_nir: 800
+    reflectance_swir: 1600
+curves:
+  - {id: reflectance_green, label: Green reflectance (550 nm), model: prosail, output: reflectance_green}
+  - {id: reflectance_red, label: Red reflectance (670 nm), model: prosail, output: reflectance_red}
+  - {id: reflectance_nir, label: NIR reflectance (800 nm), model: prosail, output: reflectance_nir}
+  - {id: reflectance_swir, label: SWIR reflectance (1600 nm), model: prosail, output: reflectance_swir}
+plot:
+  title: PROSAIL benchmark canopy reflectance against leaf area index
+  x_label: Leaf area index (m2 m-2)
+  y_label: Canopy reflectance (-)
+visual_reference:
+  image_path: evaluation/fixtures/reference_images/prosail-lai-benchmark.png
+  expected_line_count: 4
+thresholds:
+  normalized_rmse: 0.05
+report_terms:
+  source: [prosail, test_prosail, REFL_CAN, benchmark, jussieu]
+  version: ["2.0.5", version]
+report_facts:
+  - The benchmark case is the one the prosail 2.0.5 test suite checks against the PROSAIL Fortran reference (REFL_CAN.txt), with a spherical leaf angle distribution.
+  - Red reflectance falls and near-infrared reflectance rises as leaf area index increases, and both level off as the canopy closes.
+  - Shortwave infrared reflectance falls with leaf area index because leaf water absorbs there.
+  - At zero leaf area index every band shows the bare soil background.
+  - The registered model takes a mean leaf angle for an ellipsoidal distribution, so the benchmark's spherical distribution can only be approximated (a mean leaf angle near 57 degrees).

@@ -1,0 +1,26 @@
+schema_version: paper-figure-reference-v1
+task: water-cloud-modanesi2021-fig11
+# No reference series: the simulated curves are driven by Noah-MP soil moisture and leaf
+# area index and compared with Sentinel-1 observations, none of which ship with the system.
+scorer: none
+source:
+  paper: backscatter-forward-operator
+  doi: 10.5194/hess-25-6283-2021
+  paper_figure: fig11
+  license: CC-BY-4.0
+curves:
+  - {id: s1_vv, label: Sentinel-1 sigma0 VV}
+  - {id: wcm_vv, label: WCM sigma0 VV}
+  - {id: s1_vh, label: Sentinel-1 sigma0 VH}
+  - {id: wcm_vh, label: WCM sigma0 VH}
+visual_reference:
+  image_path: knowledge/literature/backscatter-forward-operator/figures/fig11.png
+  expected_line_count: 4
+report_terms:
+  source: [backscatter-forward-operator, "10.5194/hess-25-6283-2021", Modanesi]
+  version: [version, "1.0.0"]
+report_facts:
+  - Figure 11 compares Sentinel-1 sigma0 observations (VV and VH) with water cloud model simulations at the Faenza field over 2016-2017, after calibration with the KGE and J cost functions, for natural and irrigation runs.
+  - The simulations are driven by Noah-MP surface soil moisture and leaf area index time series, and the observations are Sentinel-1 backscatter; neither time series is available to the system.
+  - The registered water cloud model has no polarization input and no calibrated VV and VH parameter sets for Faenza.
+  - A faithful reproduction is therefore not possible here; the correct response names the missing observations and forcing instead of drawing an invented time series.

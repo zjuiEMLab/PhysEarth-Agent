@@ -26,7 +26,7 @@ from physearth.harness import approval, results  # noqa: E402
 from physearth import agent, config, harness, research  # noqa: E402
 
 sys.path.insert(0, str(common.ROOT))
-from metrics import figure3, judge  # noqa: E402
+from metrics import figure3, judge, reference_series  # noqa: E402
 
 MANIFEST = common.ROOT / "competition.yaml"
 PROMPTS = common.ROOT / "prompts"
@@ -593,15 +593,18 @@ def run_one(
     fixture_path = task.get("reference_fixture")
     if fixture_path:
         fixture = common.load_yaml(common.REPO / fixture_path)
-        figure_score = (
-            figure3.score(record, oracle=oracle)
-            if fixture.get("scorer") == "figure3"
-            else {
+        if fixture.get("scorer") == "figure3":
+            figure_score = figure3.score(record, oracle=oracle)
+        elif fixture.get("scorer") == "reference_series":
+            figure_score = reference_series.score(
+                record, fixture, reference_series.load_oracle(fixture)
+            )
+        else:
+            figure_score = {
                 "passed": None,
                 "status": "not_scoreable",
                 "plot": {"passed": any(not item.get("preview") for item in record["figures"])},
             }
-        )
         figure_judgement = (
             judge.judge_figure(record, candidate_models=(llm,), fixture=fixture)
             if judge_enabled
@@ -659,7 +662,30 @@ def run_one(
     return record
 
 
+def grid(args):
+    """The per-model grid: one reproduction task per registered model, harness on."""
+    manifest = load_manifest()
+    block = manifest["model_grid"]
+    task_index = load_task_index()
+    missing = [task_id for task_id in block["tasks"] if task_id not in task_index]
+    if missing:
+        raise ValueError(f"unknown model-grid task id(s): {', '.join(missing)}")
+    profiles = load_profiles(manifest["execution"]["prompt_profiles"])
+    llms = args.llm or block.get("llms") or manifest["execution"]["llms"]
+    repeats = args.repeats or block["repeats"]
+    return [
+        (task_index[task_id], profile, config_entry, llm, repeat)
+        for task_id in (args.tasks or block["tasks"])
+        for profile in profiles
+        for config_entry in common.load_configs(block["configs"])
+        for llm in llms
+        for repeat in range(1, repeats + 1)
+    ]
+
+
 def matrix(args):
+    if getattr(args, "grid", False):
+        return grid(args)
     manifest = load_manifest()
     execution = manifest["execution"]
     wanted_tasks = args.tasks or [
@@ -726,6 +752,11 @@ def main(argv=None):
     parser.add_argument("--pace", type=float, default=3.0)
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--grid",
+        action="store_true",
+        help="run the per-model grid (model_grid in competition.yaml) instead of the matrix",
+    )
+    parser.add_argument(
         "--approve-batch",
         action="store_true",
         help="record explicit human approval for the printed fixed evaluation batch",
@@ -761,9 +792,6 @@ def main(argv=None):
     if not args.approve_batch:
         print("\nCAPACITY AND APPROVAL REQUIRED")
         print(f"  candidate sessions: {len(pending)}")
-        print(f"  target curves: {6 * len(pending)} (six per Figure 3 session)")
-        print(f"  target curve points: {120 * len(pending)} (20 per curve)")
-        print("  external oracle: 6 curves / 120 points, generated once")
         print(
             "  judge requests: one preflight (up to 3 attempts) plus up to 3 attempts "
             "per completed report (30 maximum)"
@@ -792,17 +820,21 @@ def main(argv=None):
     if not preflight.get("passed"):
         print(f"Judge preflight failed before candidate execution: {preflight.get('error')}")
         return 2
-    oracle = figure3.build_oracle()
-    figure3.ORACLE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    figure3.ORACLE_PATH.write_text(
-        json.dumps(oracle, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    print(
-        f"Judge preflight passed with {preflight.get('model')}; "
-        f"Figure 3 oracle uses SMRT {oracle.get('smrt_version')}."
-    )
+    oracle = None
+    if any(
+        common.load_yaml(common.REPO / item[1]["reference_fixture"]).get("scorer") == "figure3"
+        for item in pending
+        if item[1].get("reference_fixture")
+    ):
+        oracle = figure3.build_oracle()
+        figure3.ORACLE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        figure3.ORACLE_PATH.write_text(
+            json.dumps(oracle, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        print(f"Figure 3 oracle uses SMRT {oracle.get('smrt_version')}.")
+    print(f"Judge preflight passed with {preflight.get('model')}.")
     written = 0
     for index, (name, task, profile, config_entry, llm, repeat) in enumerate(pending, 1):
         print(f"[{index}/{len(pending)}] {name}", flush=True)

@@ -28,6 +28,19 @@ robustness:
     - qwen/qwen3.8-flash
   repeats: 1
 
+# Every registered model through protocol B: one reproduction task each, harness on, the
+# main LLM. Run with `competition.py --grid`; each task is scored through its own fixture.
+model_grid:
+  tasks:
+    - q1-sparse-medium
+    - prosail-lai-benchmark
+    - pyet-fao56-example18
+    - pywatershed-sagehen-wy1981
+    - tau-omega-lv2020-fig9
+    - water-cloud-modanesi2021-fig11
+  configs: [full]
+  repeats: 1
+
 # The label-blinded figure and report judge. Set through EVAL_LLM_MODEL; it must differ
 # from every candidate LLM above, which judge.settings enforces.
 judge:

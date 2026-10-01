@@ -6,6 +6,11 @@ not a verdict. The verdict comes from the same `research_capability_check` the a
 meets, which resolves every name against the registered cards. A correct refusal (a model
 nobody registered, an output no card declares) is a result, not a failure.
 
+A figure can also plot measurements, or a model driven by series the paper does not print.
+The task names those under `measured` and `forcing`, and they count as available only when
+a bundled reference dataset accompanies the source paper. Missing forcing means the model
+curves cannot be drawn either; missing measurements leave the model curves drawable.
+
 Deterministic: no network, no language model.
 """
 
@@ -17,9 +22,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
 from physearth import research, tools  # noqa: E402
 from physearth import session as session_state  # noqa: E402
+from physearth.corpus import reference  # noqa: E402
 
 SCHEMA_VERSION = "capability-gate-v1"
 SUITES = ("tier1", "tier2", "probe")
+
+
+def _accompanying_datasets(paper):
+    if not paper:
+        return []
+    return [
+        slug
+        for slug in reference.slugs()
+        if (reference.card(slug) or {}).get("corpus_slug") == paper
+    ]
 
 
 def verdict(task):
@@ -33,11 +49,17 @@ def verdict(task):
             "reasons": ["the task does not describe what its target compares"],
         }
     session = session_state.new_session(None)
-    # The agent reads each card and its instruction before this check will vouch for a
-    # model; do the same reads here, through the same tools.
+    # The agent reads each card and its instruction, and the source paper, before this
+    # check will vouch for a model; do the same reads here, through the same tools.
     for model in task.get("models") or []:
         for name in ("list_models", "read_model_instruction"):
             tools.call(name, {"model": model}, owner=session["id"], session=session)
+    paper = (task.get("source") or {}).get("paper")
+    if paper:
+        tools.call(
+            "read_literature", {"slug": paper, "section_id": "00"},
+            owner=session["id"], session=session,
+        )
     report = research.capability_check(
         session,
         question=task.get("question", ""),
@@ -50,9 +72,17 @@ def verdict(task):
     missing = {str(item.get("model")) for item in unavailable}
     reasons = [f"{item.get('model')}: {item.get('reason')}" for item in unavailable]
     reasons += [f"output {name}: no registered model declares it" for name in output_gaps]
-    if output_gaps or missing >= set(models):
+    accompanying = _accompanying_datasets(paper)
+    data_gaps = {}
+    for kind in ("forcing", "measured"):
+        data_gaps[kind] = [] if accompanying else list(declared.get(kind) or [])
+        reasons += [
+            f"{kind} {name}: no bundled reference dataset accompanies {paper or 'the source'}"
+            for name in data_gaps[kind]
+        ]
+    if output_gaps or missing >= set(models) or data_gaps["forcing"]:
         result = "cannot"
-    elif missing:
+    elif missing or data_gaps["measured"]:
         result = "partial"
     else:
         result = "can"

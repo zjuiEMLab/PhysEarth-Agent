@@ -1,0 +1,24 @@
+schema_version: paper-figure-reference-v1
+task: tau-omega-lv2020-fig9
+# No reference series: the figure is a joint distribution over a simulated year of a
+# 400 m virtual reality whose fields are not available, so it is judged qualitatively.
+scorer: none
+source:
+  paper: cmem-sampling-density
+  doi: 10.5194/hess-24-1957-2020
+  paper_figure: fig09
+  license: CC-BY-4.0
+curves:
+  - {id: tb_h, label: Brightness temperature H against soil moisture}
+  - {id: tb_v, label: Brightness temperature V against soil moisture}
+visual_reference:
+  image_path: knowledge/literature/cmem-sampling-density/figures/fig09.png
+  expected_line_count: 2
+report_terms:
+  source: [cmem-sampling-density, "10.5194/hess-24-1957-2020", Lv]
+  version: [version, "1.0.0"]
+report_facts:
+  - Figure 9 shows joint distributions, not single curves, of L-band brightness temperature at H and V polarization against soil moisture from a year of 400 m virtual-reality simulations.
+  - Brightness temperature falls as soil moisture rises at both polarizations, and H lies below V and spans a wider range.
+  - The relationship is non-unique; at a soil moisture of 0.4 the paper reports H from about 180 to 250 K and V from about 225 to 265 K, because vegetation, soil properties and terrain vary.
+  - The figure does not state a single vegetation optical depth, single scattering albedo or roughness, so a single-curve reproduction has to assume them and can match the trend but not the spread.

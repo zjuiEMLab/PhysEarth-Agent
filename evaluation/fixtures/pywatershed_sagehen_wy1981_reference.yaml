@@ -1,0 +1,58 @@
+schema_version: reference-series-v1
+task: pywatershed-sagehen-wy1981
+scorer: reference_series
+source:
+  software: pywatershed 3.0.0
+  repository: https://github.com/DOI-USGS/pywatershed
+  commit: 41707c16f1fac09e2e4d4ecb9e3bf6bf1948885e
+  domain: test_data/sagehen_5yr, sagehen_no_cascades_model.yaml
+  license: CC0-1.0
+# The release's own Sagehen model YAML, run directly for water year 1981 with
+# per-process parameter files, monthly means of area-weighted daily basin depths.
+oracle:
+  package: pywatershed
+  path: evaluation/results/competition/oracles/pywatershed-sagehen-wy1981.json
+  axis: {name: time_index}
+  recipe:
+    control_yaml: sagehen_no_cascades_control.yaml
+    model_yaml: sagehen_no_cascades_model.yaml
+    start_time: "1980-10-01T00:00:00"
+    end_time: "1981-09-30T00:00:00"
+  variables:
+    snowpack_water_equivalent: {process: snow, prms_name: pkwater_equiv}
+    snowmelt: {process: snow, prms_name: snowmelt}
+    surface_runoff: {process: runoff, prms_name: sroff}
+curves:
+  - id: snowpack_water_equivalent
+    label: Snow water equivalent (mm)
+    model: pywatershed
+    output: value
+    match: {variable: snowpack_water_equivalent, aggregation: monthly, water_year_start: 1981, water_year_end: 1981}
+  - id: snowmelt
+    label: Snowmelt (mm/day)
+    model: pywatershed
+    output: value
+    match: {variable: snowmelt, aggregation: monthly, water_year_start: 1981, water_year_end: 1981}
+  - id: surface_runoff
+    label: Surface runoff (mm/day)
+    model: pywatershed
+    output: value
+    match: {variable: surface_runoff, aggregation: monthly, water_year_start: 1981, water_year_end: 1981}
+plot:
+  title: Sagehen Creek water year 1981, monthly basin means
+  x_label: Month of water year 1981 (0 = October 1980)
+  y_label: Basin-mean depth (mm; fluxes in mm/day)
+visual_reference:
+  image_path: evaluation/fixtures/reference_images/pywatershed-sagehen-wy1981.png
+  expected_line_count: 3
+thresholds:
+  normalized_rmse: 0.05
+report_terms:
+  source: [sagehen, pywatershed]
+  version: ["3.0.0", version]
+report_facts:
+  - The run is the Sagehen Creek domain shipped with pywatershed 3.0.0 (test_data/sagehen_5yr), PRMS processes without cascades, water year 1981 (October 1980 to September 1981).
+  - The snowpack builds through winter, peaks in February, and is gone by June.
+  - Snowmelt is largest in April, during the spring melt.
+  - Simulated surface runoff is essentially zero all year, so water leaves the basin through the soil zone and groundwater rather than as overland flow.
+  - The values are basin means weighted by response-unit area; snowmelt and runoff are monthly means of daily rates.

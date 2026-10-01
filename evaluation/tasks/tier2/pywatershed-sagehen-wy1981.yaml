@@ -1,0 +1,24 @@
+id: pywatershed-sagehen-wy1981
+suite: tier2
+tier: 2
+evaluation_kind: model_reproduction
+reference_fixture: evaluation/fixtures/pywatershed_sagehen_wy1981_reference.yaml
+title: pywatershed Sagehen Creek example, water year 1981 snow and runoff
+source:
+  software: pywatershed 3.0.0
+  domain: test_data/sagehen_5yr at commit 41707c16f1fac09e2e4d4ecb9e3bf6bf1948885e
+quality: complete
+shape: research_demo
+observable: snowpack_and_runoff
+models: [pywatershed]
+question: >-
+  pywatershed 3.0.0, the USGS Python implementation of PRMS, ships the Sagehen Creek domain
+  (Sierra Nevada, test_data/sagehen_5yr) as its worked example. Run the example for water
+  year 1981 (1 October 1980 to 30 September 1981) and plot, on one chart, the monthly
+  basin-mean snow water equivalent, snowmelt and surface runoff. Say in which month the
+  snowpack peaks and how large it is, when melt is strongest, how much of the melt leaves as
+  surface runoff, and what that implies about how water reaches the stream in this basin.
+capability:
+  basis: "the question names pywatershed snow water equivalent, snowmelt and runoff at Sagehen Creek"
+  reference_models: [pywatershed]
+  outputs: [value]

@@ -1,0 +1,30 @@
+id: prosail-lai-benchmark
+suite: tier2
+tier: 2
+evaluation_kind: model_reproduction
+reference_fixture: evaluation/fixtures/prosail_lai_reference.yaml
+title: PROSAIL upstream benchmark case, canopy reflectance against leaf area index
+source:
+  software: prosail 2.0.5
+  benchmark: tests/test_prosail.py checked against the PROSAIL Fortran output REFL_CAN.txt
+quality: complete
+shape: research_demo
+observable: canopy_reflectance
+models: [prosail]
+question: >-
+  The prosail 2.0.5 Python package (J. Gomez-Dans) checks itself against the PROSAIL Fortran
+  reference distributed by Jussieu: its test case test_rsot_prosail5 runs PROSPECT-5 with leaf
+  structure N = 1.5, chlorophyll 40 ug/cm2, carotenoids 8 ug/cm2, no brown pigment, equivalent
+  water thickness 0.01 cm and dry matter 0.009 g/cm2, and 4SAIL with leaf area index 3, a
+  spherical leaf angle distribution, hot spot 0.01, solar zenith 30 degrees, view zenith 10
+  degrees, relative azimuth 0, soil brightness 1 and the dry soil spectrum (psoil = 1),
+  returning the bidirectional (SDR) reflectance. Reproduce this benchmark case with the
+  registered model, then sweep leaf area index from 0 to 8 and plot the green (550 nm), red
+  (670 nm), near-infrared (800 nm) and shortwave-infrared (1600 nm) reflectance against leaf
+  area index on one chart. Describe how each band responds as the canopy closes and where it
+  saturates, and state any benchmark setting the registered model cannot represent exactly
+  and what you used instead.
+capability:
+  basis: "the question names the prosail package and its PROSPECT-5 + 4SAIL benchmark"
+  reference_models: [prosail]
+  outputs: [reflectance_green, reflectance_red, reflectance_nir, reflectance_swir]

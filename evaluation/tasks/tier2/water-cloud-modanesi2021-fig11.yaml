@@ -1,0 +1,30 @@
+id: water-cloud-modanesi2021-fig11
+suite: tier2
+tier: 2
+evaluation_kind: scientific_question_demo
+reference_fixture: evaluation/fixtures/water_cloud_modanesi2021_fig11_reference.yaml
+paper_figures: [fig11.png]
+title: Modanesi et al. (2021) Figure 11, Sentinel-1 backscatter time series at Faenza
+source:
+  paper: backscatter-forward-operator
+  doi: 10.5194/hess-25-6283-2021
+  figure: fig11
+quality: complete
+shape: research_demo
+observable: backscatter
+models: [water_cloud]
+question: >-
+  Reproduce Figure 11 of Modanesi, Massari, Gruber, Lievens, Tarpanelli, Morbidelli and De
+  Lannoy (2021), "Optimizing a backscatter forward operator using Sentinel-1 data over
+  irrigated land" (Hydrology and Earth System Sciences 25, 6283-6307,
+  DOI: 10.5194/hess-25-6283-2021): the 2016-2017 time series of VV and VH backscatter at the
+  Faenza field, Sentinel-1 observations against the calibrated water cloud model, for the
+  natural and irrigation runs. Read the paper and inspect the figure first, then reproduce it
+  with the registered models and data, or explain precisely what prevents a faithful
+  reproduction.
+capability:
+  basis: "Figure 11 legend: Sentinel-1 sigma0 VV and VH observations, WCM sigma0 VV and VH simulations"
+  reference_models: [backscatter-forward-operator]
+  outputs: [sigma0_total_db]
+  measured: [Sentinel-1 sigma0 VV at Faenza 2016-2017, Sentinel-1 sigma0 VH at Faenza 2016-2017]
+  forcing: [Noah-MP surface soil moisture at Faenza 2016-2017, Noah-MP leaf area index at Faenza 2016-2017]

@@ -37,10 +37,20 @@ def test_scientific_question_demos_are_tier2_paper_figure_targets():
     manifest = yaml.safe_load((EVALUATION / "competition.yaml").read_text(encoding="utf-8"))
     core = manifest["competition_required"]["t2_paper_reconstruction"]["core_tasks"]
     assert paths
+    grid = manifest["model_grid"]["tasks"]
+    ids = []
     for path in paths:
         task = yaml.safe_load(path.read_text(encoding="utf-8"))
+        ids.append(task["id"])
         assert task["tier"] == 2
         assert task["suite"] == "tier2"
+        assert (ROOT / task["reference_fixture"]).is_file()
+        assert task["capability"]["reference_models"]
+        if task["id"] not in core:
+            # One reproduction task per other registered model, each from its documented
+            # example or a paper figure, scored through its own fixture.
+            assert task["id"] in grid
+            continue
         assert task["legacy_id"] != task["id"]
         assert task["id"].startswith("q")
         assert task["evaluation_kind"] == "scientific_question_demo"
@@ -56,10 +66,9 @@ def test_scientific_question_demos_are_tier2_paper_figure_targets():
     # The legacy Tier 1 paper-fixture files remain available for the b02b evaluation
     # dashboard and replay tests. The invariant here is about the current Tier 2 demos,
     # not about deleting those historical fixtures.
-    # Every scientific question in the default matrix has a task file, and every task file
-    # is in the matrix: a question cannot be dropped from one without the other.
-    ids = [yaml.safe_load(path.read_text(encoding="utf-8"))["id"] for path in paths]
-    assert sorted(ids) == sorted(core)
+    # Every task file is in the matrix or the model grid, and every task those name has a
+    # file: a question cannot be dropped from one without the other.
+    assert sorted(ids) == sorted(set(core) | set(grid))
 
 
 def test_tier0_records_are_versioned_replayable_and_have_no_llm_cost():

@@ -1,0 +1,31 @@
+id: pyet-fao56-example18
+suite: tier2
+tier: 2
+evaluation_kind: model_reproduction
+reference_fixture: evaluation/fixtures/pyet_fao56_example18_reference.yaml
+title: FAO-56 Example 18, reference evapotranspiration by six formulations
+source:
+  publication: FAO Irrigation and Drainage Paper 56 (Allen et al., 1998), Chapter 4, Example 18
+  url: https://www.fao.org/4/x0490e/x0490e08.htm
+quality: complete
+shape: research_demo
+observable: evapotranspiration
+models: [pyet]
+question: >-
+  FAO Irrigation and Drainage Paper 56 (Allen et al., 1998), Chapter 4, Example 18, computes
+  the daily reference evapotranspiration for Brussels (50 degrees 48 minutes N, 100 m above
+  sea level) on 6 July from: maximum and minimum air temperature 21.5 and 12.3 degrees C,
+  maximum and minimum relative humidity 84 and 63 percent, wind speed 10 km/h measured at
+  10 m height, and 9.25 hours of bright sunshine; the worked example derives an incoming
+  solar radiation of 22.07 and a net radiation of 13.28 MJ m-2 per day from the sunshine
+  hours, with soil heat flux taken as zero. Compute ET0 for that day with each of the six
+  formulations the registered pyet model offers, using every input each formulation is
+  entitled to and converting units and measurement height where needed. Then sweep the daily
+  mean air temperature from 12.9 to 20.9 degrees C in 1 degree steps, holding the other
+  inputs, and plot all six formulations on one chart. Compare the Penman-Monteith value at
+  the example's mean temperature with the value FAO-56 publishes for Example 18, if you can
+  establish it, and explain why the formulations disagree.
+capability:
+  basis: "the question names reference evapotranspiration by the pyet formulations"
+  reference_models: [pyet]
+  outputs: [et0_mm_day]

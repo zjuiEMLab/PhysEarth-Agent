@@ -36,7 +36,9 @@ Evaluation, in increasing cost:
 .venv/bin/python evaluation/runners/tier0.py               # A2 adapter truth, no LLM, ~20 s
 .venv/bin/python evaluation/runners/model_registration.py  # A1-A3, no LLM
 .venv/bin/python evaluation/runners/capability_gate.py     # A6 can/cannot per task, no LLM
+.venv/bin/python evaluation/runners/build_references.py    # B3 upstream oracles + reference images
 .venv/bin/python evaluation/runners/competition.py         # frozen matrix: plan only
+.venv/bin/python evaluation/runners/competition.py --grid  # one task per model: plan only
 .venv/bin/python evaluation/runners/agent_tasks.py --dry-run
 ```
 

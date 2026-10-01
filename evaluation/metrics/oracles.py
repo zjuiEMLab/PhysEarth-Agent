@@ -93,3 +93,194 @@ def upstream_smrt_curve(task):
         "axis": None if swept in (None, "none") else {"name": swept, "values": axis_values},
         "series": series,
     }
+
+
+def _sweep(axis):
+    values = axis.get("values")
+    if values:
+        return [float(value) for value in values]
+    start, stop, count = float(axis["start"]), float(axis["stop"]), int(axis["points"])
+    step = (stop - start) / (count - 1) if count > 1 else 0.0
+    return [start + index * step for index in range(count)]
+
+
+def _result(package, version, axis_name, axis_values, series, note):
+    return {
+        "oracle_type": "upstream_package",
+        "package": package,
+        "package_version": version,
+        "adapter_independent": True,
+        "paper_digitization": False,
+        "note": note,
+        "axis": {"name": axis_name, "values": axis_values},
+        "series": series,
+    }
+
+
+def upstream_prosail_series(oracle):
+    """PROSPECT-5 + 4SAIL called directly, with the recipe's own leaf angle distribution."""
+    import importlib.metadata
+
+    import prosail
+
+    recipe = dict(oracle["recipe"])
+    bands = {name: int(nm) for name, nm in oracle["bands_nm"].items()}
+    axis_values = _sweep(oracle["axis"])
+    series = {name: [] for name in bands}
+    for value in axis_values:
+        values = dict(recipe, **{oracle["axis"]["upstream_name"]: value})
+        args = [values.pop(name) for name in (
+            "n", "cab", "car", "cbrown", "cw", "cm", "lai", "lidfa", "hspot", "tts", "tto", "psi"
+        )]
+        spectrum = prosail.run_prosail(*args, **values)
+        for name, nm in bands.items():
+            series[name].append(float(spectrum[nm - 400]))
+    return _result(
+        "prosail", importlib.metadata.version("prosail"), oracle["axis"]["name"], axis_values,
+        series, "prosail.run_prosail evaluated directly; not a digitized curve",
+    )
+
+
+def upstream_pyet_series(oracle):
+    """Each pyet formulation called directly on a dated daily series."""
+    import importlib.metadata
+    import math
+
+    import pandas
+    import pyet
+
+    recipe = oracle["recipe"]
+    day = pandas.Timestamp(2001, 1, 1) + pandas.Timedelta(days=int(recipe["day_of_year"]) - 1)
+
+    def series(value):
+        return pandas.Series([float(value)], index=pandas.DatetimeIndex([day]))
+
+    lat = math.radians(float(recipe["latitude_deg"]))
+    axis_values = _sweep(oracle["axis"])
+    out = {name: [] for name in oracle["methods"]}
+    for tmean in axis_values:
+        common = {"tmean": series(tmean)}
+        extremes = {"tmax": series(recipe["tmax_c"]), "tmin": series(recipe["tmin_c"])}
+        for name, method in oracle["methods"].items():
+            if method == "pm":
+                value = pyet.pm(
+                    wind=series(recipe["wind_speed_m_s"]), rn=series(recipe["net_radiation"]),
+                    pressure=series(recipe["pressure_kpa"]),
+                    rhmax=series(recipe["rh_max_pct"]), rhmin=series(recipe["rh_min_pct"]),
+                    **extremes, **common,
+                )
+            elif method == "penman":
+                value = pyet.penman(
+                    wind=series(recipe["wind_speed_m_s"]), rn=series(recipe["net_radiation"]),
+                    pressure=series(recipe["pressure_kpa"]),
+                    rhmax=series(recipe["rh_max_pct"]), rhmin=series(recipe["rh_min_pct"]),
+                    **extremes, **common,
+                )
+            elif method == "priestley_taylor":
+                value = pyet.priestley_taylor(
+                    rn=series(recipe["net_radiation"]), pressure=series(recipe["pressure_kpa"]),
+                    **common,
+                )
+            elif method == "makkink":
+                value = pyet.makkink(
+                    rs=series(recipe["solar_radiation"]), pressure=series(recipe["pressure_kpa"]),
+                    **common,
+                )
+            elif method == "hargreaves":
+                value = pyet.hargreaves(lat=lat, **extremes, **common)
+            elif method == "oudin":
+                value = pyet.oudin(lat=lat, **common)
+            else:
+                raise ValueError(f"unknown pyet method {method}")
+            out[name].append(float(value.iloc[0]))
+    return _result(
+        "pyet", importlib.metadata.version("pyet"), oracle["axis"]["name"], axis_values, out,
+        "pyet formulations evaluated directly; not a digitized curve",
+    )
+
+
+def upstream_pywatershed_series(oracle):
+    """The release's own Sagehen model YAML, run directly, area-weighted over HRUs."""
+    import importlib.metadata
+    import tempfile
+    from pathlib import Path
+
+    import numpy as np
+    import pywatershed
+    import yaml
+    from pywatershed import Parameters
+
+    domain = _sagehen_domain().resolve()
+    recipe = oracle["recipe"]
+    wanted = oracle["variables"]
+    daily = {name: [] for name in wanted}
+    dates = []
+    with tempfile.TemporaryDirectory() as scratch:
+        scratch = Path(scratch)
+        control = yaml.safe_load((domain / recipe["control_yaml"]).read_text(encoding="utf-8"))
+        control.update(
+            start_time=recipe["start_time"], end_time=recipe["end_time"],
+            input_dir=str(domain), calc_method="numpy", imbalance_behavior="error",
+        )
+        (scratch / "control.yaml").write_text(yaml.safe_dump(control), encoding="utf-8")
+        model_spec = yaml.safe_load((domain / recipe["model_yaml"]).read_text(encoding="utf-8"))
+        model_spec["control"] = str(scratch / "control.yaml")
+        for key, value in model_spec.items():
+            if isinstance(value, str) and value.endswith(".nc"):
+                model_spec[key] = str(domain / value)
+            elif isinstance(value, dict) and str(value.get("parameters", "")).endswith(".nc"):
+                value["parameters"] = str(domain / value["parameters"])
+        (scratch / "model.yaml").write_text(yaml.safe_dump(model_spec), encoding="utf-8")
+        model = pywatershed.Model.from_yaml(scratch / "model.yaml")
+        area = np.asarray(
+            Parameters.from_netcdf(domain / "parameters_dis_hru.nc").parameters["hru_area"],
+            dtype=float,
+        )
+        for _ in range(model.control.n_times):
+            model.advance()
+            model.calculate()
+            for name, item in wanted.items():
+                field = np.asarray(
+                    getattr(model.processes[item["process"]], item["prms_name"]), dtype=float
+                )
+                daily[name].append(float(np.nansum(field * area) / area.sum()) * 25.4)
+            dates.append(model.control.current_time.astype("datetime64[D]").item())
+        model.finalize()
+    months = []
+    for date in dates:
+        if (date.year, date.month) not in months:
+            months.append((date.year, date.month))
+    series = {
+        name: [
+            float(np.mean([v for v, d in zip(values, dates, strict=True)
+                           if (d.year, d.month) == month]))
+            for month in months
+        ]
+        for name, values in daily.items()
+    }
+    return _result(
+        "pywatershed", importlib.metadata.version("pywatershed"), oracle["axis"]["name"],
+        [float(index) for index in range(len(months))], series,
+        "sagehen_no_cascades model YAML run directly with per-process parameter files; "
+        "monthly means of area-weighted daily basin depths",
+    )
+
+
+def _sagehen_domain():
+    """The pinned Sagehen domain files. Only the adapter's fetch helper is borrowed; the
+    run itself never goes through the adapter."""
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[2] / "models" / "bundled" / "pywatershed" / "adapter.py"
+    spec = importlib.util.spec_from_file_location("_pywatershed_fixture", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.ensure_fixture()
+
+
+UPSTREAM = {
+    "prosail": upstream_prosail_series,
+    "pyet": upstream_pyet_series,
+    "pywatershed": upstream_pywatershed_series,
+}

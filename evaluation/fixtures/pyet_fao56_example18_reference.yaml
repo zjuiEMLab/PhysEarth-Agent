@@ -1,0 +1,67 @@
+schema_version: reference-series-v1
+task: pyet-fao56-example18
+scorer: reference_series
+source:
+  publication: Allen, R. G., Pereira, L. S., Raes, D., and Smith, M. (1998), Crop
+    evapotranspiration - Guidelines for computing crop water requirements, FAO Irrigation and
+    Drainage Paper 56, Chapter 4, Example 18
+  url: https://www.fao.org/4/x0490e/x0490e08.htm
+  software: pyet 1.5.0
+# Example 18's station data, swept over the daily mean air temperature between the day's
+# minimum and maximum. Computed by calling each pyet formulation directly.
+oracle:
+  package: pyet
+  path: evaluation/results/competition/oracles/pyet-fao56-example18.json
+  axis: {name: air_temperature_c, start: 12.9, stop: 20.9, points: 9}
+  recipe:
+    latitude_deg: 50.8
+    day_of_year: 187
+    tmax_c: 21.5
+    tmin_c: 12.3
+    rh_max_pct: 84.0
+    rh_min_pct: 63.0
+    # 10 km/h measured at 10 m, reduced to 2 m with FAO-56 Eq. 47.
+    wind_speed_m_s: 2.078
+    net_radiation: 13.28
+    solar_radiation: 22.07
+    # FAO-56 Eq. 7 at 100 m above sea level.
+    pressure_kpa: 100.1
+  methods:
+    pm: pm
+    penman: penman
+    priestley_taylor: priestley_taylor
+    makkink: makkink
+    hargreaves: hargreaves
+    oudin: oudin
+curves:
+  - {id: pm, label: Penman-Monteith, model: pyet, output: et0_mm_day, match: {method: pm}}
+  - {id: penman, label: Penman, model: pyet, output: et0_mm_day, match: {method: penman}}
+  - {id: priestley_taylor, label: Priestley-Taylor, model: pyet, output: et0_mm_day, match: {method: priestley_taylor}}
+  - {id: makkink, label: Makkink, model: pyet, output: et0_mm_day, match: {method: makkink}}
+  - {id: hargreaves, label: Hargreaves, model: pyet, output: et0_mm_day, match: {method: hargreaves}}
+  - {id: oudin, label: Oudin, model: pyet, output: et0_mm_day, match: {method: oudin}}
+published:
+  - curve: pm
+    x: 16.9
+    value: 3.9
+    resolution: 0.1
+    label: FAO-56 Example 18 published ET0
+    source: FAO-56 Example 18
+plot:
+  title: Six reference ET0 formulations on the FAO-56 Example 18 day
+  x_label: Daily mean air temperature (degC)
+  y_label: Reference evapotranspiration (mm d-1)
+visual_reference:
+  image_path: evaluation/fixtures/reference_images/pyet-fao56-example18.png
+  expected_line_count: 6
+thresholds:
+  normalized_rmse: 0.05
+report_terms:
+  source: [FAO-56, FAO 56, Allen, "Example 18"]
+  version: ["1.5.0", version]
+report_facts:
+  - FAO-56 Example 18 (Brussels, 6 July) publishes a reference evapotranspiration of 3.9 mm/day from the FAO Penman-Monteith equation.
+  - Example 18 takes the saturation vapour pressure from the daily maximum and minimum temperature and the actual vapour pressure from RHmax and RHmin; a single mean humidity gives a lower value.
+  - The wind speed in Example 18 is measured at 10 m and must be reduced to 2 m (about 2.08 m/s) before use.
+  - The six formulations disagree for the same day because they use different inputs; temperature-only methods (Hargreaves, Oudin) do not see wind or humidity.
+  - The registered model has no sunshine-duration input, so net and solar radiation come from the example's own derivation.

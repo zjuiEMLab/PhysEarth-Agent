@@ -829,3 +829,86 @@ def test_report_checks_read_the_task_s_own_reference_terms():
     q1 = figure3.deterministic_report_checks(record, {"passed": None})
     assert q1["checks"]["evidence_resolved"] is False
     assert q1["checks"]["model_version_qualified"] is False
+
+
+def test_the_model_grid_runs_one_reproduction_task_per_registered_model():
+    competition = _load_runner("competition")
+    cells = competition.matrix(
+        type(
+            "Args",
+            (),
+            {"tasks": None, "profiles": None, "configs": None, "llm": None, "repeats": None,
+             "grid": True},
+        )()
+    )
+    models = sorted(model for cell in cells for model in cell[0]["models"])
+    assert models == ["prosail", "pyet", "pywatershed", "smrt", "tau_omega", "water_cloud"]
+    assert {cell[2]["name"] for cell in cells} == {"full"}
+    for task, *_ in cells:
+        assert (ROOT / task["reference_fixture"]).is_file()
+        assert task["capability"]["reference_models"]
+
+
+def _record_from_oracle(fixture, oracle, scale=1.0):
+    results = []
+    for curve in fixture["curves"]:
+        results.append(
+            {
+                "model": curve["model"],
+                "spec": dict(curve.get("match") or {}),
+                "axis": oracle["axis"],
+                "series": {curve["output"]: [v * scale for v in oracle["series"][curve["id"]]]},
+            }
+        )
+    return {"numeric_results": results, "figures": [{"title": "candidate"}]}
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        "prosail_lai_reference.yaml",
+        "pyet_fao56_example18_reference.yaml",
+        "pywatershed_sagehen_wy1981_reference.yaml",
+    ],
+)
+def test_reference_series_scores_a_run_against_the_committed_oracle(fixture_name):
+    from metrics import reference_series
+
+    fixture = reference_series.load_fixture(EVAL / "fixtures" / fixture_name)
+    oracle = reference_series.load_oracle(fixture)
+    assert oracle and oracle["adapter_independent"] and not oracle["paper_digitization"]
+    assert (ROOT / fixture["visual_reference"]["image_path"]).is_file()
+
+    exact = reference_series.score(_record_from_oracle(fixture, oracle), fixture, oracle)
+    assert exact["status"] == "pass"
+    assert all(row["normalized_rmse"] < 1e-12 for row in exact["numeric_b3"]["curves"])
+
+    off = reference_series.score(_record_from_oracle(fixture, oracle, 1.2), fixture, oracle)
+    assert off["status"] == "fail"
+
+    missing = reference_series.score({"numeric_results": [], "figures": []}, fixture, oracle)
+    assert missing["status"] == "not_scoreable"
+
+
+def test_reference_series_compares_the_published_value_without_typing_the_agent_answer():
+    from metrics import reference_series
+
+    fixture = reference_series.load_fixture(
+        EVAL / "fixtures" / "pyet_fao56_example18_reference.yaml"
+    )
+    oracle = reference_series.load_oracle(fixture)
+    scored = reference_series.score(_record_from_oracle(fixture, oracle), fixture, oracle)
+    (published,) = scored["numeric_b3"]["published"]
+    assert published["published_value"] == 3.9
+    assert abs(published["agent_minus_published"]) < 0.05
+    assert published["agent_value"] == published["oracle_value"]
+
+
+def test_capability_gate_counts_missing_forcing_as_a_correct_refusal():
+    gate = _load_runner("capability_gate")
+    tasks = {task["id"]: task for task in gate.common.load_tasks("tier2")}
+    refused = gate.verdict(tasks["water-cloud-modanesi2021-fig11"])
+    assert refused["verdict"] == "cannot"
+    assert any(reason.startswith("forcing Noah-MP") for reason in refused["reasons"])
+    assert not any("not registered" in reason for reason in refused["reasons"])
+    assert gate.verdict(tasks["tau-omega-lv2020-fig9"])["verdict"] == "can"
