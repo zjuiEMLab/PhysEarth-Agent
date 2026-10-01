@@ -752,6 +752,10 @@ def main(argv=None):
     parser.add_argument("--pace", type=float, default=3.0)
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--runs-dir",
+        help="write records here instead of the evaluation record directory (a smoke run)",
+    )
+    parser.add_argument(
         "--grid",
         action="store_true",
         help="run the per-model grid (model_grid in competition.yaml) instead of the matrix",
@@ -765,11 +769,17 @@ def main(argv=None):
 
     cells = matrix(args)
     build = agent_tasks.build_id()
-    RUNS.mkdir(parents=True, exist_ok=True)
+    runs = Path(args.runs_dir) if args.runs_dir else RUNS
+    if args.runs_dir:
+        # A smoke run keeps its figures and reports beside its records, so it can never
+        # stand in for an evaluation cell's artifacts.
+        global FIGURES, REPORTS
+        FIGURES, REPORTS = runs / "figures", runs / "reports"
+    runs.mkdir(parents=True, exist_ok=True)
     pending = []
     for task, profile, config_entry, llm, repeat in cells:
         name = key(task["id"], profile["id"], config_entry["name"], llm, repeat)
-        if not args.force and (RUNS / name).is_file():
+        if not args.force and (runs / name).is_file():
             continue
         pending.append((name, task, profile, config_entry, llm, repeat))
     pending = _balanced_pending_order(pending)
@@ -853,7 +863,7 @@ def main(argv=None):
         except Exception:
             print(traceback.format_exc())
             return 2
-        (RUNS / name).write_text(
+        (runs / name).write_text(
             json.dumps(record, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
             newline="\n",
