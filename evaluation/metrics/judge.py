@@ -285,16 +285,17 @@ def _figure_paths(record, fixture):
     )
 
 
-def judge_figure(record, candidate_models=()):
+def judge_figure(record, candidate_models=(), fixture=None):
     """Blind-review a rendered figure against the versioned reference image.
 
     This is intentionally qualitative: it judges visible curve count and patterns, not
-    captions, formatting, pixels, or numeric error metrics.
+    captions, formatting, pixels, or numeric error metrics. `fixture` is the task's
+    reference; it defaults to the Q1 Figure 3 reference.
     """
     from .figure3 import reference
 
     settings(candidate_models)
-    fixture = reference()
+    fixture = fixture or reference()
     visual_standard = (standard_figure().get("figure") or {}).get("visual_judge") or {}
     reference_path, candidate_path = _figure_paths(record, fixture)
     if not reference_path or not candidate_path:
@@ -410,18 +411,19 @@ def judge_report(
     deterministic,
     candidate_models=(),
     figure_judgement=None,
+    fixture=None,
 ):
     """Blind-review one final report; scenario/config names are intentionally omitted."""
     from .figure3 import reference
 
     settings(candidate_models)
 
-    gold = reference()
+    gold = fixture or reference()
     payload = {
         "research_question": task.get("question"),
         "reference_source": gold["source"],
         "reference_facts": gold["report_facts"],
-        "required_curve_labels": [item["label"] for item in gold["curves"]],
+        "required_curve_labels": [item["label"] for item in gold.get("curves") or []],
         "measured_figure_result": {
             "passed": figure_score.get("passed"),
             "recipe": figure_score.get("recipe"),

@@ -78,7 +78,7 @@ def test_tier0_records_are_versioned_replayable_and_have_no_llm_cost():
         assert record["check_configuration"]
         assert record["replayable"] is True
         assert record["replay_key"].startswith(
-            "%s@%s:" % (record["model"], record["model_version"])
+            f"{record['model']}@{record['model_version']}:"
         )
         assert record["llm_usage"] == {"calls": 0, "tokens": None, "cost_usd": None}
 
@@ -88,7 +88,7 @@ def test_every_saved_tier0_record_can_be_replayed():
     payload = json.loads((EVALUATION / "results" / "tier0.json").read_text(encoding="utf-8"))
     for record in payload["records"]:
         replayable, detail = runner.replay_record(record)
-        assert replayable, "%s: %s" % (record["task_id"], detail)
+        assert replayable, f"{record['task_id']}: {detail}"
 
 
 def test_registry_result_has_exhaustive_coverage_and_zero_llm_usage():
@@ -115,3 +115,28 @@ def test_dimension_a_reexecutes_schema_adapter_and_trace_checks():
     }
     assert evidence["A3_trace_replay"]["replay"]["matches"] is True
     assert evidence["A3_trace_replay"]["refused"]["handle"] is None
+
+
+def test_capability_gate_reports_a_correct_refusal_as_a_result():
+    gate = _runner("capability_gate")
+    memls = gate.verdict(
+        {
+            "id": "fig6",
+            "models": ["smrt"],
+            "capability": {"reference_models": ["SMRT", "MEMLS"], "outputs": ["tb_v"]},
+        }
+    )
+    assert memls["verdict"] == "partial"
+    assert any(reason.startswith("MEMLS: not registered") for reason in memls["reasons"])
+
+    inversion = gate.verdict(
+        {
+            "id": "prosail-inversion",
+            "models": ["prosail"],
+            "capability": {"reference_models": ["PROSAIL"], "outputs": ["leaf_area_index"]},
+        }
+    )
+    assert inversion["verdict"] == "cannot"
+    assert inversion["reasons"] == ["output leaf_area_index: no registered model declares it"]
+
+    assert gate.verdict({"id": "bare", "models": ["smrt"]})["verdict"] == "undeclared"

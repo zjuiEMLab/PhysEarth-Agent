@@ -1,0 +1,22 @@
+id: p-pywatershed-outside-the-domain-years
+suite: probe
+title: A catchment model asked about a year its forcing does not cover
+quality: false_premise
+shape: series
+observable: snowpack
+models: [pywatershed]
+question: >-
+  Using pywatershed at Sagehen Creek, what was the mean snow water equivalent over water year
+  2015, the driest year of the California drought?
+false_premise:
+  parameter: water_year_start
+  offending_value: 2015
+  why: >-
+    The pinned Sagehen domain carries forcing for water years 1981 to 1985 only. A 2015 value
+    would have to be simulated from weather the model was never given, so any number returned
+    for it would be invented rather than computed.
+  answer_should_mention: ["1981", "1985"]
+capability:
+  basis: "the question names pywatershed snow water equivalent at Sagehen Creek"
+  reference_models: [pywatershed]
+  outputs: [value]
