@@ -279,6 +279,25 @@ def test_local_run_cannot_cover_a_different_reference_model_target():
     assert any("not one of reference_models" in problem for problem in problems)
 
 
+def test_a_confirmed_partial_target_is_answered_by_the_supported_local_model():
+    target = {
+        "id": "fig09",
+        "reference_models": ["CMEM"],
+        "requested_outputs": ["tb_h"],
+        "status": "partial",
+        "availability_reason": "CMEM is not registered; tau_omega is its non-equivalent core",
+        "run_ids": ["local"],
+        "chart_ids": [],
+    }
+    runs = [{"id": "local", "model": "tau_omega", "parameters": {}}]
+    unconfirmed, _, _ = research._target_coverage([target], runs, [], {})
+    assert any("not one of reference_models" in problem for problem in unconfirmed)
+    consented = {"capability_review": {"status": "confirmed", "user_decision": "partial"}}
+    problems, _, _ = research._target_coverage([target], runs, [], consented)
+    assert not any("reference_models" in problem for problem in problems)
+    planned = dict(target, status="planned")
+    problems, _, _ = research._target_coverage([planned], runs, [], consented)
+    assert any("not one of reference_models" in problem for problem in problems)
 
 
 def test_plan_revision_preview_chart_and_execution_gate():

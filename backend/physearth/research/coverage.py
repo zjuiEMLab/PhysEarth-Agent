@@ -50,6 +50,11 @@ def _target_coverage(targets, runs, charts, session=None):
     problems = []
     linked_runs = {run_id: [] for run_id in run_ids}
     linked_charts = {chart_id: [] for chart_id in chart_ids}
+    # Once the user has confirmed a partial scope, a target marked partial is answered by
+    # the supported local model the capability check reported as non-equivalent. The
+    # target says so in its availability_reason; demanding the unregistered reference
+    # model there made every confirmed partial reproduction unplannable.
+    consented = ((session or {}).get("capability_review") or {}).get("status") == "confirmed"
     for target in targets:
         target_id = target.get("id") or "target"
         bad_runs = sorted(set(target.get("run_ids") or ()) - run_ids)
@@ -78,7 +83,10 @@ def _target_coverage(targets, runs, charts, session=None):
                 if run is None:
                     continue
                 run_model = str(run.get("model") or "").strip()
-                if not any(_same_model(run_model, ref, session) for ref in reference_models):
+                substitute = consented and target.get("status") == "partial"
+                if not substitute and not any(
+                    _same_model(run_model, ref, session) for ref in reference_models
+                ):
                     problems.append(
                         "target %s run %s uses %s, not one of reference_models: %s"
                         % (target_id, run_id, run_model, ", ".join(sorted(reference_models)))

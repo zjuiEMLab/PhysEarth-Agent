@@ -112,3 +112,29 @@ def test_a_router_fault_keeps_what_the_provider_said():
         body = {"message": "Provider returned error", "metadata": {"raw": "invalid_image"}}
 
     assert _upstream_text(Fault("HTTP 400")) == "Provider returned error: invalid_image"
+
+
+def test_compaction_never_leaves_a_tool_result_without_its_call(monkeypatch):
+    from physearth.agent import messages as compaction
+
+    monkeypatch.setattr(compaction, "MAX_KEPT_HISTORY_CHARS", 1500)
+    rounds = []
+    for n in range(6):
+        rounds += [
+            {"role": "assistant", "content": "y" * 300,
+             "tool_calls": [{"id": f"call_{n}", "type": "function",
+                             "function": {"name": "read_literature", "arguments": "{}"}}]},
+            {"role": "tool", "tool_call_id": f"call_{n}", "content": "x" * 600},
+        ]
+    sent = compaction._compact_messages(
+        [{"role": "system", "content": "s"}, {"role": "user", "content": "question"}]
+        + rounds
+        + [{"role": "user", "content": [{"type": "text", "text": "inspect the figure"}]}]
+    )
+    called = set()
+    for message in sent:
+        for call in message.get("tool_calls") or ():
+            called.add(call["id"])
+        if message.get("role") == "tool":
+            assert message["tool_call_id"] in called
+    assert any(message.get("role") == "tool" for message in sent)

@@ -59,17 +59,33 @@ def _compact_messages(messages):
     )
     history = messages[1:last_user]
     current = messages[last_user:]
-    kept_history = []
+    # A tool result is only valid next to the assistant message that called it, so history
+    # is kept or dropped in whole units: a message plus the tool results that answer it.
+    # Cutting between them left an orphaned tool result, which the provider refuses
+    # ("No tool call found for function call output").
+    units = []
+    for message in history:
+        if message.get("role") == "tool" and units:
+            units[-1].append(message)
+        else:
+            units.append([message])
+    kept_units = []
     history_chars = 0
-    for message in reversed(history):
-        content = _short_content(message.get("content", ""), 9000)
-        if history_chars + len(content) > MAX_KEPT_HISTORY_CHARS:
+    for unit in reversed(units):
+        shortened = []
+        for message in unit:
+            item = dict(message)
+            item["content"] = _short_content(message.get("content", ""), 9000)
+            shortened.append(item)
+        size = sum(len(item["content"]) for item in shortened)
+        if history_chars + size > MAX_KEPT_HISTORY_CHARS:
             break
-        item = dict(message)
-        item["content"] = content
-        kept_history.append(item)
-        history_chars += len(content)
-    kept_history.reverse()
+        kept_units.append(shortened)
+        history_chars += size
+    kept_units.reverse()
+    while kept_units and kept_units[0][0].get("role") == "tool":
+        kept_units.pop(0)
+    kept_history = [item for unit in kept_units for item in unit]
 
     compacted_current = []
     for message in current:
@@ -84,8 +100,9 @@ def _compact_messages(messages):
     while sum(len(str(message.get("content", ""))) for message in result) > MAX_REQUEST_CHARS:
         # Drop the oldest complete history item first. Never remove the system prompt or
         # the current user/tool round, since an orphaned tool message is invalid API input.
-        if len(kept_history) > 1:
-            kept_history.pop(0)
+        if len(kept_units) > 1:
+            kept_units.pop(0)
+            kept_history = [item for unit in kept_units for item in unit]
             result = [system] + kept_history + compacted_current
         else:
             break
