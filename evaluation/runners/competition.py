@@ -680,7 +680,7 @@ def matrix(args):
     configs = common.load_configs(getattr(args, "configs", None) or execution["configs"])
     llms = args.llm or execution["llms"]
     repeats = args.repeats or execution["repeats"]
-    return [
+    cells = [
         (task_index[task_id], profile, config_entry, llm, repeat)
         for task_id in wanted_tasks
         for profile in profiles
@@ -688,6 +688,23 @@ def matrix(args):
         for llm in llms
         for repeat in range(1, repeats + 1)
     ]
+    # The robustness block joins only the frozen default; an explicit narrowing on the
+    # command line means exactly the cells asked for.
+    robustness = manifest.get("robustness") or {}
+    narrowed = args.tasks or args.llm or args.repeats or getattr(args, "configs", None)
+    if robustness and not narrowed:
+        unknown = [task_id for task_id in robustness["tasks"] if task_id not in task_index]
+        if unknown:
+            raise ValueError(f"unknown robustness task id(s): {', '.join(unknown)}")
+        cells += [
+            (task_index[task_id], profile, config_entry, llm, repeat)
+            for task_id in robustness["tasks"]
+            for profile in profiles
+            for config_entry in common.load_configs(robustness["configs"])
+            for llm in robustness["llms"]
+            for repeat in range(1, robustness["repeats"] + 1)
+        ]
+    return cells
 
 
 def main(argv=None):

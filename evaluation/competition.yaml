@@ -1,4 +1,4 @@
-version: "2026-09-25"
+version: "2026-10-02"
 name: PhysEarth competition evaluation
 scope: "Paper reproduction through the harness, compared with the direct-LLM raw baseline."
 
@@ -7,18 +7,31 @@ scope: "Paper reproduction through the harness, compared with the direct-LLM raw
 execution:
   # `full` is the deployed Studio; `no-harness` is the direct-LLM raw baseline (publisher
   # PDF pages and an unassisted upstream SMRT tool, no structured corpus or gates).
+  # The main LLM, chosen 2026-10-02. Models are not limited to the ModelScope switcher:
+  # every run goes through the provider-neutral PHYSEARTH_LLM_* endpoint.
   configs: [full, no-harness]
   provider: openrouter
   llms:
-    - qwen/qwen3.5-122b-a10b
-    - deepseek/deepseek-v4-flash-0731
     - openai/gpt-5.6-luna
-    - z-ai/glm-4.7-flash
   prompt_profiles:
     - p1-reproduction-first
   repeats: 3
   approval_policy: scripted_accept_unmodified_plan
   results_dir: evaluation/results/competition/runs
+
+# Does the harness hold with other LLMs? The same core task, harness on, one repeat each.
+robustness:
+  tasks: [q1-sparse-medium]
+  configs: [full]
+  llms:
+    - deepseek/deepseek-v4.1-flash
+    - qwen/qwen3.8-flash
+  repeats: 1
+
+# The label-blinded figure and report judge. Set through EVAL_LLM_MODEL; it must differ
+# from every candidate LLM above, which judge.settings enforces.
+judge:
+  model: openai/gpt-6-luna
 
 competition_required:
   t2_paper_reconstruction:

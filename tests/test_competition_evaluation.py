@@ -23,7 +23,7 @@ def _load_runner(name):
     return module
 
 
-def test_frozen_competition_matrix_is_four_llms_one_prompt_two_conditions():
+def test_frozen_competition_matrix_is_one_main_llm_plus_a_robustness_pair():
     competition = _load_runner("competition")
     cells = competition.matrix(
         type(
@@ -32,16 +32,16 @@ def test_frozen_competition_matrix_is_four_llms_one_prompt_two_conditions():
             {"tasks": None, "profiles": None, "configs": None, "llm": None, "repeats": None},
         )()
     )
-    assert len(cells) == 2 * 1 * 2 * 4 * 3
-    assert {cell[0]["id"] for cell in cells} == {"q1-sparse-medium", "p-smrt-density-above-ice"}
+    main = [cell for cell in cells if cell[3] == "openai/gpt-5.6-luna"]
+    robustness = [cell for cell in cells if cell[3] != "openai/gpt-5.6-luna"]
+    assert len(main) == 2 * 1 * 2 * 1 * 3
+    assert {cell[0]["id"] for cell in main} == {"q1-sparse-medium", "p-smrt-density-above-ice"}
     assert {cell[1]["id"] for cell in cells} == {"p1-reproduction-first"}
-    assert {cell[2]["name"] for cell in cells} == {"full", "no-harness"}
-    assert {cell[3] for cell in cells} == {
-        "qwen/qwen3.5-122b-a10b",
-        "deepseek/deepseek-v4-flash-0731",
-        "openai/gpt-5.6-luna",
-        "z-ai/glm-4.7-flash",
-    }
+    assert {cell[2]["name"] for cell in main} == {"full", "no-harness"}
+    assert sorted((cell[0]["id"], cell[2]["name"], cell[3], cell[4]) for cell in robustness) == [
+        ("q1-sparse-medium", "full", "deepseek/deepseek-v4.1-flash", 1),
+        ("q1-sparse-medium", "full", "qwen/qwen3.8-flash", 1),
+    ]
 
 
 def test_competition_matrix_can_run_a_bounded_ablation_pair():
