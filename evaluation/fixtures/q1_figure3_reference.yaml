@@ -1,5 +1,6 @@
 schema_version: q1-figure3-reference-v2
 task: q1-sparse-medium
+scorer: figure3
 source:
   repository: https://github.com/smrt-model/smrt_v1_paper
   commit: fb60a037a290c0add016d45f354cea37816b1515
@@ -70,6 +71,11 @@ scoring_policy:
   notebook_recipe: diagnostic_only
   numeric_reference: not_scoreable
   caption: advisory
+# What a report must name to count as citing its source when it only had the raw PDF, and
+# what counts as qualifying the model version.
+report_terms:
+  source: ["10.5194/gmd-11-2763-2018", picard, soil moisture and ocean salinity]
+  version: [version, "1.5.1", "2018"]
 report_facts:
   - The notebook's AMSR-E 37V channel has an actual centre frequency of 36.5 GHz.
   - The six curves approach the same first-order behavior as density tends to zero.

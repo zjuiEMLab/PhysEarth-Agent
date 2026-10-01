@@ -809,3 +809,23 @@ def test_b3_separates_the_agent_s_settings_from_the_model():
     assert sticky["as_chosen"]["points_compared"] == 20
     for row in curves.values():
         assert row["notebook_settings"]["normalized_rmse"] < 0.01
+
+
+def test_report_checks_read_the_task_s_own_reference_terms():
+    record = {
+        "answer": "pyet release 1.5.0 reproduces the documented example [pyet-docs#ex1].",
+        "switches": {"paper_access": "raw_pdf"},
+        "evidence": {"raw_pdf_pages": ["p1"]},
+        "markers": {"literature": [], "model": [], "data": []},
+        "citation_check": {"passed": True, "unresolved": []},
+        "numeric_results": [{"handle": "result"}],
+        "reproduction_outcome": "partial",
+    }
+    fixture = {"report_terms": {"source": ["pyet-docs"], "version": ["release 1.5.0"]}}
+    own = figure3.deterministic_report_checks(record, {"passed": None}, fixture=fixture)
+    assert own["checks"]["evidence_resolved"] is True
+    assert own["checks"]["model_version_qualified"] is True
+
+    q1 = figure3.deterministic_report_checks(record, {"passed": None})
+    assert q1["checks"]["evidence_resolved"] is False
+    assert q1["checks"]["model_version_qualified"] is False

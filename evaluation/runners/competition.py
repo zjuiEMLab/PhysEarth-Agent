@@ -590,15 +590,25 @@ def run_one(
     archive_record_artifacts(record)
     for figure in record.get("figures") or []:
         figure.pop("image_path", None)
-    if task.get("id") == "q1-sparse-medium":
-        figure_score = figure3.score(record, oracle=oracle)
+    fixture_path = task.get("reference_fixture")
+    if fixture_path:
+        fixture = common.load_yaml(common.REPO / fixture_path)
+        figure_score = (
+            figure3.score(record, oracle=oracle)
+            if fixture.get("scorer") == "figure3"
+            else {
+                "passed": None,
+                "status": "not_scoreable",
+                "plot": {"passed": any(not item.get("preview") for item in record["figures"])},
+            }
+        )
         figure_judgement = (
-            judge.judge_figure(record, candidate_models=(llm,))
+            judge.judge_figure(record, candidate_models=(llm,), fixture=fixture)
             if judge_enabled
             else {"complete": False, "passed": False, "status": "not_run"}
         )
         deterministic = figure3.deterministic_report_checks(
-            record, figure_score, figure_judgement
+            record, figure_score, figure_judgement, fixture=fixture
         )
         report_judgement = (
             judge.judge_report(
@@ -608,6 +618,7 @@ def run_one(
                 deterministic,
                 candidate_models=(llm,),
                 figure_judgement=figure_judgement,
+                fixture=fixture,
             )
             if judge_enabled
             else {"complete": False, "passed": False, "status": "not_run"}

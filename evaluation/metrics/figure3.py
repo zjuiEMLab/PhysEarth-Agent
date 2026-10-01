@@ -519,7 +519,9 @@ def write_aspect_diagnostic(record, output_path):
     }
 
 
-def deterministic_report_checks(record, figure_score, figure_judgement=None):
+def deterministic_report_checks(record, figure_score, figure_judgement=None, fixture=None):
+    gold = fixture or reference()
+    report_terms = gold.get("report_terms") or {}
     answer = str(record.get("answer") or "")
     raw_mode = (record.get("switches") or {}).get("paper_access") == "raw_pdf"
     markers = record.get("markers") or {}
@@ -537,10 +539,8 @@ def deterministic_report_checks(record, figure_score, figure_judgement=None):
     source_evidence = (
         bool((record.get("evidence") or {}).get("raw_pdf_pages"))
         and citation_check.get("passed") is True
-        and (
-            "10.5194/gmd-11-2763-2018" in answer
-            or "picard" in answer.lower()
-            or "soil moisture and ocean salinity" in answer.lower()
+        and any(
+            term.lower() in answer.lower() for term in report_terms.get("source") or ()
         )
     ) if raw_mode else (
         bool(literature_markers)
@@ -553,7 +553,7 @@ def deterministic_report_checks(record, figure_score, figure_judgement=None):
         "evidence_resolved": source_evidence,
         "computed_result_identified": bool(record.get("numeric_results")),
         "model_version_qualified": any(
-            phrase in answer.lower() for phrase in ("version", "1.5.1", "2018")
+            phrase.lower() in answer.lower() for phrase in report_terms.get("version") or ()
         ),
         # Metadata/recipe checks remain audit diagnostics. A passed visual review is the
         # primary figure gate when the paper leaves execution parameters unspecified.
