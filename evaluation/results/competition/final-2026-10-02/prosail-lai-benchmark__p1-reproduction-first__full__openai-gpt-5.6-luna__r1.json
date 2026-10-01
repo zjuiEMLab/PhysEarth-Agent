@@ -1,0 +1,524 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "prosail-lai-benchmark",
+  "suite": "tier2",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "1751bc9a649f68c3a754b6dcf34abd448c43112c9e205b45abd0e4903fe9c0b4",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 1,
+  "build": "e95b21c+dirty",
+  "question": "The prosail 2.0.5 Python package (J. Gomez-Dans) checks itself against the PROSAIL Fortran reference distributed by Jussieu: its test case test_rsot_prosail5 runs PROSPECT-5 with leaf structure N = 1.5, chlorophyll 40 ug/cm2, carotenoids 8 ug/cm2, no brown pigment, equivalent water thickness 0.01 cm and dry matter 0.009 g/cm2, and 4SAIL with leaf area index 3, a spherical leaf angle distribution, hot spot 0.01, solar zenith 30 degrees, view zenith 10 degrees, relative azimuth 0, soil brightness 1 and the dry soil spectrum (psoil = 1), returning the bidirectional (SDR) reflectance. Reproduce this benchmark case with the registered model, then sweep leaf area index from 0 to 8 and plot the green (550 nm), red (670 nm), near-infrared (800 nm) and shortwave-infrared (1600 nm) reflectance against leaf area index on one chart. Describe how each band responds as the canopy closes and where it saturates, and state any benchmark setting the registered model cannot represent exactly and what you used instead.",
+  "answer": "Capability check by reproduction target\n\nbenchmark [benchmark]\nSupported: prosail@2.0.5\nUnavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant\nNot comparable: prosail is not equivalent to PROSAIL Fortran reference / test_rsot_prosail5\n\nlai_sweep [lai_sweep]\nSupported: prosail@2.0.5\nUnavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant\nNot comparable: prosail is not equivalent to PROSAIL Fortran reference / test_rsot_prosail5\n\nUnified summary\nSupported: prosail@2.0.5 (ndvi, reflectance_green, reflectance_nir, reflectance_red, reflectance_swir)\nUnavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant\nNot comparable: prosail is not an equivalent implementation of PROSAIL Fortran reference / test_rsot_prosail5\n\nExact reproduction is not possible with the currently registered models. Would you like me to generate a partial plan using only the supported components?",
+  "planning_answer": "Capability check by reproduction target\n\nbenchmark [benchmark]\nSupported: prosail@2.0.5\nUnavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant\nNot comparable: prosail is not equivalent to PROSAIL Fortran reference / test_rsot_prosail5\n\nlai_sweep [lai_sweep]\nSupported: prosail@2.0.5\nUnavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant\nNot comparable: prosail is not equivalent to PROSAIL Fortran reference / test_rsot_prosail5\n\nUnified summary\nSupported: prosail@2.0.5 (ndvi, reflectance_green, reflectance_nir, reflectance_red, reflectance_swir)\nUnavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant\nNot comparable: prosail is not an equivalent implementation of PROSAIL Fortran reference / test_rsot_prosail5\n\nExact reproduction is not possible with the currently registered models. Would you like me to generate a partial plan using only the supported components?",
+  "elapsed_s": 22.41,
+  "stop_rule": null,
+  "model_calls": 6,
+  "llm_usage": {
+    "calls": 6,
+    "prompt_tokens": 93568,
+    "completion_tokens": 676,
+    "total_tokens": 94244,
+    "cost_usd": 0.01299208,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 12736,
+        "completion_tokens": 94,
+        "cost_usd": 0.00049203,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.05
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 13244,
+        "completion_tokens": 21,
+        "cost_usd": 0.00055465,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.83
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 14372,
+        "completion_tokens": 22,
+        "cost_usd": 0.00082037,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.11
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 16399,
+        "completion_tokens": 19,
+        "cost_usd": 0.00129708,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.71
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 18175,
+        "completion_tokens": 24,
+        "cost_usd": 0.0045724,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.28
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 18642,
+        "completion_tokens": 496,
+        "cost_usd": 0.00525555,
+        "reasoning_chars": 0,
+        "elapsed_s": 8.34
+      }
+    ]
+  },
+  "tool_calls": 6,
+  "interventions": 1,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": true,
+    "approval_policy": "scripted_accept_unmodified_plan",
+    "review_actions": [],
+    "review_error": null,
+    "final_phase": null,
+    "plan_version": null
+  },
+  "research": null,
+  "successful_runs": [],
+  "numeric_results": [],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "PROSAIL PROSPECT 4SAIL benchmark test_rsot_prosail5",
+        "scenario": "vegetation",
+        "kind": "any"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "prosail"
+      },
+      "status": "success",
+      "model": null,
+      "version": "2.0.5",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "prosail",
+        "section": "usage"
+      },
+      "status": "success",
+      "model": "prosail",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 12736,
+      "completion_tokens": 94,
+      "cost_usd": 0.00049203,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.05
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "3 of 11 item(s) match.",
+      "arguments": {
+        "query": "PROSAIL PROSPECT 4SAIL benchmark test_rsot_prosail5",
+        "scenario": "vegetation",
+        "kind": "any"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13244,
+      "completion_tokens": 21,
+      "cost_usd": 0.00055465,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.83
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 14372,
+      "completion_tokens": 22,
+      "cost_usd": 0.00082037,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.11
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 16399,
+      "completion_tokens": 19,
+      "cost_usd": 0.00129708,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.71
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Capability declaration for prosail v2.0.5.",
+      "arguments": {
+        "model": "prosail"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18175,
+      "completion_tokens": 24,
+      "cost_usd": 0.0045724,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.28
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Read model instruction prosail v1.0.",
+      "arguments": {
+        "model": "prosail",
+        "section": "usage"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18642,
+      "completion_tokens": 496,
+      "cost_usd": 0.00525555,
+      "reasoning_chars": 0,
+      "elapsed_s": 8.34
+    },
+    {
+      "kind": "harness_block",
+      "turn": 1,
+      "rule": "physical_domain",
+      "tool": "research_capability_check",
+      "intervention": 1,
+      "detail": "capability review requires user confirmation",
+      "problems": []
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "capability_review",
+      "detail": "Capability review requires the user's partial-scope decision."
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "research-planning#00",
+      "research-reporting#00"
+    ],
+    "models": [
+      "prosail@2.0.5"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "prosail@1.0"
+    ],
+    "paper_figures": [],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "parameter_provenance": [],
+  "provenance_parse_error": "appendix_missing",
+  "reproduction_outcome": null,
+  "archived_report_path": "evaluation/results/competition/reports/prosail-lai-benchmark_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/prosail-lai-benchmark_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  },
+  "dashboard_metrics": {
+    "evaluation_complete": false,
+    "successful": false,
+    "figure_result_correct": "not_scoreable",
+    "report_correct": "fail",
+    "overall_correct": "not_scoreable",
+    "figure_result": {
+      "passed": null,
+      "complete": true,
+      "status": "not_scoreable",
+      "numeric": {
+        "passed": null,
+        "status": "not_scoreable",
+        "threshold_normalized_rmse": 0.05,
+        "curves": [
+          {
+            "curve": "reflectance_green",
+            "present": false
+          },
+          {
+            "curve": "reflectance_red",
+            "present": false
+          },
+          {
+            "curve": "reflectance_nir",
+            "present": false
+          },
+          {
+            "curve": "reflectance_swir",
+            "present": false
+          }
+        ]
+      },
+      "numeric_b3": {
+        "oracle_package": "prosail",
+        "oracle_package_version": "2.0.5",
+        "curves": [
+          {
+            "curve": "reflectance_green",
+            "present": false
+          },
+          {
+            "curve": "reflectance_red",
+            "present": false
+          },
+          {
+            "curve": "reflectance_nir",
+            "present": false
+          },
+          {
+            "curve": "reflectance_swir",
+            "present": false
+          }
+        ],
+        "published": []
+      },
+      "plot": {
+        "passed": false
+      }
+    },
+    "figure_judgement": {
+      "complete": false,
+      "passed": false,
+      "status": "not_scoreable",
+      "error": "reference or candidate figure image is unavailable",
+      "attempts": [],
+      "usage": {
+        "prompt_tokens": null,
+        "completion_tokens": null,
+        "total_tokens": null
+      }
+    },
+    "deterministic_report": {
+      "passed": false,
+      "checks": {
+        "report_exists": true,
+        "outcome_declared": false,
+        "evidence_resolved": false,
+        "computed_result_identified": false,
+        "model_version_qualified": true,
+        "calibrated_outcome": false
+      },
+      "unresolved_markers": [],
+      "visual_validation": "not_passed",
+      "plot_checks_are_diagnostic": true
+    },
+    "report_judgement": {
+      "complete": true,
+      "passed": false,
+      "standard": "report-judge-standard-v2",
+      "total": 1,
+      "maximum": 16,
+      "scores": {
+        "source_fidelity": 0,
+        "answer": 0,
+        "factuality": 0,
+        "technical_completeness": 0,
+        "assumed_parameters": 0,
+        "evidence": 0,
+        "calibration": 0,
+        "clarity": 1
+      },
+      "factual_errors": [
+        "The report treats the Fortran reference as the required model, although the request asks to run registered prosail@2.0.5 and notes it is checked against that reference.",
+        "It claims prosail is not comparable to the reference, but the package benchmark is specifically intended to compare its output with the Fortran reference; the spherical leaf-angle limitation could be disclosed and approximated."
+      ],
+      "summary": "The report declines a task that the registered prosail model can perform. It provides no benchmark run, LAI sweep, requested curves, response description, or disclosure of the spherical-distribution approximation, and its refusal is not supported by the request or source facts.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 860,
+          "elapsed_s": 8.596,
+          "usage": {
+            "prompt_tokens": 1941,
+            "completion_tokens": 675,
+            "total_tokens": 2616
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1941,
+        "completion_tokens": 675,
+        "total_tokens": 2616
+      }
+    },
+    "judge_usage": {
+      "prompt_tokens": 1941,
+      "completion_tokens": 675,
+      "total_tokens": 2616
+    },
+    "figure_judge_usage": {
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "total_tokens": null
+    }
+  }
+}

@@ -1,0 +1,249 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "p-smrt-density-above-ice",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": false,
+    "capability": false,
+    "figures": false,
+    "paper_access": "raw_pdf",
+    "execution_access": "raw_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "1a27a74fae6858c10bb9979423898ec3e12428c7f2a97e2462054188b882cfdc",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 3,
+  "build": "e95b21c",
+  "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the brightness temperature.",
+  "answer": "Stopped after 3 consecutive failed read_raw_paper calls with no state progress. Last error: No bundled raw PDF matches DOI '10.1029/2020WR027942'.",
+  "planning_answer": "Stopped after 3 consecutive failed read_raw_paper calls with no state progress. Last error: No bundled raw PDF matches DOI '10.1029/2020WR027942'.",
+  "elapsed_s": 6.19,
+  "stop_rule": "no_progress",
+  "model_calls": 3,
+  "llm_usage": {
+    "calls": 3,
+    "prompt_tokens": 5970,
+    "completion_tokens": 114,
+    "total_tokens": 6084,
+    "cost_usd": 0.00056338,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 1876,
+        "completion_tokens": 38,
+        "cost_usd": 0.0001067,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.08
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 1990,
+        "completion_tokens": 38,
+        "cost_usd": 0.00021409,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.88
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 2104,
+        "completion_tokens": 38,
+        "cost_usd": 0.00024259,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.21
+      }
+    ]
+  },
+  "tool_calls": 3,
+  "interventions": 0,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": false,
+    "approval_policy": "not_applicable_safe_refusal",
+    "review_actions": [],
+    "review_error": null,
+    "final_phase": null,
+    "plan_version": null
+  },
+  "research": null,
+  "successful_runs": [],
+  "numeric_results": [],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "read_raw_paper",
+      "arguments": {
+        "doi": "10.1029/2020WR027942",
+        "page": 1,
+        "include_image": true
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_raw_paper",
+      "arguments": {
+        "doi": "10.1029/2020WR027942",
+        "page": 1,
+        "include_image": true
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_raw_paper",
+      "arguments": {
+        "doi": "10.1029/2020WR027942",
+        "page": 1,
+        "include_image": true
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "quality_review": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 1876,
+      "completion_tokens": 38,
+      "cost_usd": 0.0001067,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.08
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_raw_paper",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "No bundled raw PDF matches DOI '10.1029/2020WR027942'.",
+      "arguments": {
+        "doi": "10.1029/2020WR027942",
+        "page": 1,
+        "include_image": true
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 1990,
+      "completion_tokens": 38,
+      "cost_usd": 0.00021409,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.88
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_raw_paper",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "No bundled raw PDF matches DOI '10.1029/2020WR027942'.",
+      "arguments": {
+        "doi": "10.1029/2020WR027942",
+        "page": 1,
+        "include_image": true
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 2104,
+      "completion_tokens": 38,
+      "cost_usd": 0.00024259,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.21
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_raw_paper",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "No bundled raw PDF matches DOI '10.1029/2020WR027942'.",
+      "arguments": {
+        "doi": "10.1029/2020WR027942",
+        "page": 1,
+        "include_image": true
+      }
+    },
+    {
+      "kind": "harness_stop",
+      "turn": 1,
+      "rule": "no_progress",
+      "tool": "read_raw_paper",
+      "reason": "Stopped after 3 consecutive failed read_raw_paper calls with no state progress. Last error: No bundled raw PDF matches DOI '10.1029/2020WR027942'."
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [],
+    "guidelines": [],
+    "paper_figures": [],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "parameter_provenance": [],
+  "provenance_parse_error": "appendix_missing",
+  "reproduction_outcome": null,
+  "archived_report_path": "evaluation/results/competition/reports/p-smrt-density-above-ice_p1-reproduction-first_openai-gpt-5.6-luna_r3_report_baseline.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/p-smrt-density-above-ice_p1-reproduction-first_openai-gpt-5.6-luna_r3_report_baseline.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  }
+}

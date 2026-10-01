@@ -1,11 +1,13 @@
 """Score every competition record: A4, A5, B1-B6, C1, per repeat.
 
-Reads the records under evaluation/results/competition/runs/, recomputes every score from
-the record (never from what the harness decided at the time), and writes one row per
-record plus per-condition summaries to evaluation/results/competition/scores.json. No
-language model: the judge verdicts are read from the record, where the run stored them.
+Reads the records under evaluation/results/competition/runs/, or the directory given,
+recomputes every score from the record (never from what the harness decided at the
+time), and writes one row per record plus per-condition summaries to scores.json beside
+them (evaluation/results/competition/scores.json for the default). No language model:
+the judge verdicts are read from the record, where the run stored them.
 
     python evaluation/runners/score_runs.py
+    python evaluation/runners/score_runs.py evaluation/results/competition/final-2026-10-02
 """
 
 import json
@@ -144,6 +146,8 @@ def main(argv=None):
     gates = {}
     rows = []
     for path in sorted(runs_dir.glob("*.json")):
+        if path.name == "scores.json":
+            continue
         record = json.loads(path.read_text(encoding="utf-8"), strict=False)
         task = tasks.get(record.get("task"))
         if task is None:

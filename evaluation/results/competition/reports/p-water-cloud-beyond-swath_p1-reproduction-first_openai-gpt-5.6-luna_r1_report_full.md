@@ -1,0 +1,5 @@
+# Reproduction report
+
+<!-- Generated artifact; this file is human-editable. -->
+
+Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 0 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s). Structured repair gaps: [{"field": "reproduction_targets[0].run_ids", "source": "registered_model_declaration", "actual": [], "expected": "run.model must match the paper reference_models", "allowed_values": ["Water Cloud Model / WCM as described in Modanesi et al. 2021"], "repair": "Replace only the target coverage with runs using the exact reference model identity, or mark the target partial/unavailable.", "blocking": true}]

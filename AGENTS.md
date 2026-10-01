@@ -39,6 +39,7 @@ Evaluation, in increasing cost:
 .venv/bin/python evaluation/runners/build_references.py    # B3 upstream oracles + reference images
 .venv/bin/python evaluation/runners/competition.py         # frozen matrix: plan only
 .venv/bin/python evaluation/runners/competition.py --grid  # one task per model: plan only
+.venv/bin/python evaluation/runners/score_runs.py DIR      # A4, A5, B1-B6, C1 per record, no LLM
 .venv/bin/python evaluation/runners/agent_tasks.py --dry-run
 ```
 

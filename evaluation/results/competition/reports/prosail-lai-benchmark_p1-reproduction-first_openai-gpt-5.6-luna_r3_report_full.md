@@ -1,0 +1,5 @@
+# Reproduction report
+
+<!-- Generated artifact; this file is human-editable. -->
+
+Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 4 evidence issue(s), 2 target coverage issue(s), and 0 parameter mapping issue(s). Structured repair gaps: [{"field": "literature_evidence", "source": "session.sections_read", "expected": "at least one opened paper section", "repair": "Call read_literature for the relevant paper section before proposing the plan."}, {"field": "literature_evidence", "source": "research_plan", "expected": "opened section/figure references", "repair": "Add the paper section references and explain their role in the reproduction."}, {"field": "reproduction_targets[0].evidence_refs", "source": "research-reporting#00", "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."}, {"field": "reproduction_targets[1].evidence_refs", "source": "research-reporting#00", "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."}]
