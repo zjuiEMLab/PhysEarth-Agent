@@ -60,6 +60,9 @@ def _match(available, curve, axis_name):
             continue
         if curve["output"] not in (item.get("series") or {}):
             continue
+        axis = (item.get("axis") or {}).get("values") or []
+        if len(axis) != len(item["series"][curve["output"]]):
+            continue
         spec = item.get("spec") or {}
         if all(_same(spec.get(key), value) for key, value in (curve.get("match") or {}).items()):
             return item

@@ -973,3 +973,28 @@ def test_capability_gate_counts_missing_forcing_as_a_correct_refusal():
     assert any(reason.startswith("forcing Noah-MP") for reason in refused["reasons"])
     assert not any("not registered" in reason for reason in refused["reasons"])
     assert gate.verdict(tasks["tau-omega-lv2020-fig9"])["verdict"] == "can"
+
+
+def test_a_point_run_beside_a_sweep_is_not_compared_and_does_not_crash():
+    from metrics import reference_series
+
+    gold = figure3.reference()
+    axis = [float(value) for value in gold["recipe"]["densities_kg_m3"]]
+    oracle = {"smrt_version": "test", "axis": {"name": "density_kg_m3", "values": axis},
+              "series": {curve["id"]: [0.01] * len(axis) for curve in gold["curves"]}}
+    point_run = {
+        "model": "smrt",
+        "spec": {"electromagnetic_model": "rayleigh", "microstructure_model": "independent_sphere"},
+        "axis": None,
+        "series": {"ks_per_m": [0.01]},
+    }
+    rows = figure3.numeric_error({"numeric_results": [point_run]}, oracle)["curves"]
+    assert rows[0]["present"] and rows[0]["as_chosen"]["points_compared"] == 0
+
+    fixture = reference_series.load_fixture(EVAL / "fixtures" / "prosail_lai_reference.yaml")
+    prosail_oracle = reference_series.load_oracle(fixture)
+    point = {"model": "prosail", "spec": {}, "axis": None,
+             "series": {name: [0.1] for name in prosail_oracle["series"]}}
+    scored = reference_series.score({"numeric_results": [point], "figures": []}, fixture,
+                                    prosail_oracle)
+    assert scored["status"] == "not_scoreable"

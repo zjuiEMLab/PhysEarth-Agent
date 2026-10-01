@@ -142,7 +142,13 @@ def _normalised_errors(got, wanted):
 
 
 def _interpolate(axis, values, targets):
-    """Linear interpolation onto `targets`; points outside the run's own axis are None."""
+    """Linear interpolation onto `targets`; points outside the run's own axis are None.
+
+    A run whose axis and values differ in length has no curve to interpolate (a point
+    run reports no axis); every target comes back None and the curve counts as present
+    but not compared."""
+    if len(axis) != len(values):
+        return [None for _ in targets]
     pairs = sorted(zip(axis, values, strict=True))
     out = []
     for target in targets:

@@ -460,6 +460,24 @@ def _balanced_pending_order(pending):
     return sorted(pending, key=order)
 
 
+def _figure_score(record, fixture, oracle):
+    """The task's own scorer; a scorer fault is recorded, never allowed to lose the run."""
+    plot = {"passed": any(not item.get("preview") for item in record.get("figures") or [])}
+    try:
+        if fixture.get("scorer") == "figure3":
+            return figure3.score(record, oracle=oracle)
+        if fixture.get("scorer") == "reference_series":
+            return reference_series.score(record, fixture, reference_series.load_oracle(fixture))
+    except Exception as exc:
+        return {
+            "passed": None,
+            "status": "not_scoreable",
+            "scoring_error": f"{type(exc).__name__}: {exc}",
+            "plot": plot,
+        }
+    return {"passed": None, "status": "not_scoreable", "plot": plot}
+
+
 def run_one(
     task,
     profile,
@@ -653,18 +671,7 @@ def run_one(
     fixture_path = task.get("reference_fixture")
     if fixture_path:
         fixture = common.load_yaml(common.REPO / fixture_path)
-        if fixture.get("scorer") == "figure3":
-            figure_score = figure3.score(record, oracle=oracle)
-        elif fixture.get("scorer") == "reference_series":
-            figure_score = reference_series.score(
-                record, fixture, reference_series.load_oracle(fixture)
-            )
-        else:
-            figure_score = {
-                "passed": None,
-                "status": "not_scoreable",
-                "plot": {"passed": any(not item.get("preview") for item in record["figures"])},
-            }
+        figure_score = _figure_score(record, fixture, oracle)
         figure_judgement = (
             judge.judge_figure(record, candidate_models=(llm,), fixture=fixture)
             if judge_enabled
