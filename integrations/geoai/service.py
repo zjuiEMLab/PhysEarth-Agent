@@ -153,7 +153,7 @@ def health():
         "root": str(paths.root()) if hasattr(paths, "root") else "",
         "models": len(models),
         "runnable_models": len([item for item in models if item.runnable]),
-        "tools": len(tools.SPECS),
+        "tools": len(tools.specs()),
         "knowledge": _knowledge_counts(),
         "credentials": bool(config.has_token()),
         "approval": _OPERATOR["approval"],
@@ -174,7 +174,7 @@ def _knowledge_counts():
 def tools_manifest():
     """Every tool the agent may call, as the model sees it."""
     manifest = []
-    for spec in tools.SPECS:
+    for spec in tools.specs():
         function = spec.get("function") or {}
         manifest.append(
             {

@@ -194,7 +194,7 @@ below are measurements, not expectations.
 | The card appears in 设置 → 插件 | `.geoai-card` found; full zh copy, switch, two selects, three inputs, three checkboxes, probe button |
 | The switch turns it off live, without a reload | after one click: class gone, `data-geoai-enabled=false`, `--dsw-alias-bg-base` back to `rgb(21, 21, 23)` |
 | The switch turns it back on live | after a second click: restyled again, `#05070d` |
-| The engine tools exist | 30 over stdio MCP: `run_model`, `plot`, `research_plan`, `read_literature`, `read_reference_dataset`, the `geoai_*` host tools, … |
+| The engine tools exist | 28 over stdio MCP: `run_model`, `plot`, `research_plan`, `read_literature`, `read_reference_dataset`, the `geoai_*` host tools, … |
 | The optional bridge answers when asked | started through `BridgeClient`: `{"models":6,"runnable_models":6,"tools":21,"knowledge":{"papers":8,"sections":79,"skills":3}}` |
 | The engine's own rules are in the system prompt | a one-shot headless turn reported the `## Geo-AI physics (PhysEarth-Agent)` heading and quoted the line under it: `Everything you assert must be traceable to something you did, through one of these markers.` — the engine's `10-citations` block, with `promptDepth: rules` |
 | The host is still a coding agent | in that same turn the model ran `uname -s` with its own shell tool and reported `Darwin` |

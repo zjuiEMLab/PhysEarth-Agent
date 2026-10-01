@@ -159,3 +159,23 @@ def _read_json(result):
     import json
 
     return json.loads(result["content"][0]["text"])
+
+
+def test_initialize_negotiates_the_protocol_version_and_elicitation():
+    for asked in mcp_server.PROTOCOL_VERSIONS:
+        assert _call("initialize", {"protocolVersion": asked})["protocolVersion"] == asked
+    assert _call("initialize", {"protocolVersion": "2099-01-01"})["protocolVersion"] == (
+        mcp_server.PROTOCOL_VERSION
+    )
+
+    asks = {"capabilities": {"elicitation": {}}}
+    _call("initialize", {"protocolVersion": "2025-06-18", **asks})
+    assert mcp_server._CLIENT["elicitation"] is True
+    _call("initialize", {"protocolVersion": "2024-11-05", **asks})
+    assert mcp_server._CLIENT["elicitation"] is False
+
+
+def test_only_the_tools_the_engine_offers_are_listed():
+    names = {tool["name"] for tool in _call("tools/list", {})["tools"]}
+    assert not names & {"run_raw_smrt", "read_raw_paper"}
+    assert "run_model" in names

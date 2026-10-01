@@ -61,7 +61,11 @@ from physearth import tools
 
 from integrations.geoai import service
 
-PROTOCOL_VERSION = "2024-11-05"
+# Newest first. Elicitation, which asks the person before a physical run, exists from
+# 2025-06-18 on; a client that negotiates an older version gets geoai_decide instead.
+PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
+PROTOCOL_VERSION = PROTOCOL_VERSIONS[0]
+ELICITATION_FROM = "2025-06-18"
 SERVER_NAME = "physearth-geoai"
 SERVER_VERSION = "1.0.0"
 
@@ -236,9 +240,13 @@ def _json_text(payload):
 
 
 def _engine_tools():
-    """The engine's own catalogue, mapped to MCP tool declarations."""
+    """The tools the engine offers its own agent, mapped to MCP tool declarations.
+
+    `tools.specs()` rather than the full table: the raw-baseline tools exist for the
+    evaluation's direct-LLM arm only, and the engine refuses them in every other setting.
+    """
     declared = []
-    for spec in tools.SPECS:
+    for spec in tools.specs():
         function = spec.get("function") or {}
         if not function.get("name"):
             continue
@@ -504,11 +512,15 @@ def handle(request):
     params = request.get("params") or {}
     request_id = request.get("id")
     if method == "initialize":
-        _CLIENT["elicitation"] = "elicitation" in (params.get("capabilities") or {})
+        requested = params.get("protocolVersion")
+        version = requested if requested in PROTOCOL_VERSIONS else PROTOCOL_VERSION
+        _CLIENT["elicitation"] = (
+            "elicitation" in (params.get("capabilities") or {}) and version >= ELICITATION_FROM
+        )
         return _ok(
             request_id,
             {
-                "protocolVersion": PROTOCOL_VERSION,
+                "protocolVersion": version,
                 "capabilities": {
                     "tools": {"listChanged": False},
                     "resources": {"subscribe": False, "listChanged": False},

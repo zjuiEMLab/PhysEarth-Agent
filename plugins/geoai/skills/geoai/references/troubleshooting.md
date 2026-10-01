@@ -90,8 +90,7 @@ Ignore it unless you deliberately use the HTTP surface.
 ## `read_literature` returns an index instead of text
 
 By design: called with only a slug it returns the paper's section index. Call it again with
-`section_id`. A citation `[paper#section]` must name a section you actually read this way —
-`read_raw_paper` reads a PDF page and does not give you a citable section id.
+`section_id`. A citation `[paper#section]` must name a section you actually read this way.
 
 ## A figure request returns metadata but no image
 

@@ -19,7 +19,7 @@ For Codex, four artifacts make that up, and only the first needs installing:
 
 | Artifact | Where | Why |
 |---|---|---|
-| MCP server | `integrations/geoai/mcp_server.py` | the capability: 30 tools, resources, prompts |
+| MCP server | `integrations/geoai/mcp_server.py` | the capability: 28 tools, resources, prompts |
 | Skill | `.agents/skills/geoai/` | the procedure: which tool for which question, what a valid run looks like, which refusals are results. Discovered from the repository, so nothing to install |
 | Config | `codex/config.snippet.toml` | the file form of the registration |
 | Guide | `codex/install-codex.md` | the two commands, the checks, and the honest limits |

@@ -26,7 +26,7 @@ To pre-approve runs as the operator, register the server with `--approval always
 
 | Piece | Component | What a user notices |
 |---|---|---|
-| 30 MCP tools | MCP server, registered by the installer | `run_model`, `research_plan`, `read_literature`, … as `mcp__geoai__*` |
+| 28 MCP tools | MCP server, registered by the installer | `run_model`, `research_plan`, `read_literature`, … as `mcp__geoai__*` |
 | Workflow | `skills/geoai/` | the model knows which tool answers which geophysical question, and which refusals are results |
 | Answer discipline | `output-styles/geoai-brief.md` | every unit-bearing number is sourced, every claim carries a resolvable marker |
 | Colour | `themes/geoai-night.json` + the status line | ice/amber on a near-black field, and a coloured status row |

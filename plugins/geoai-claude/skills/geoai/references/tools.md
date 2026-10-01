@@ -27,7 +27,6 @@ replacing the schema.
 | `list_models` | — | The registry. With no argument: every model, its tier and outputs. With `model`: that model's full parameter declaration, including the ranges a run is validated against. |
 | `run_model` | `model` | The core operation. Parameters you omit take the card's defaults; `sweep` runs a range. Returns a **handle**, a bounded preview, units and quality control. |
 | `run_planned_model` | `run_id` | Execute one run of an approved research plan. The backend uses the parameters stored in the plan — never reconstruct them yourself. |
-| `run_raw_smrt` | `recipe` | The escape hatch: one free-form scattering-coefficient recipe against the installed upstream SMRT. It deliberately publishes no model names, so nothing here substitutes for a registered model. |
 
 ## Evidence you may read
 
@@ -40,7 +39,6 @@ replacing the schema.
 | `read_reference_dataset` | — | Measured data. No argument lists datasets; `dataset` plus optional `filters` returns how many rows match and a preview. |
 | `discover_literature` | `query` | OpenAlex, i.e. beyond what this deployment ships. Optional `from_year`, `limit`. Metadata and abstracts only — abstracts are `[abs:doi]` evidence. |
 | `ingest_paper` | — | Take one paper's full text into the session, by `doi` or `file_path`. Afterwards it is readable with `read_literature`. |
-| `read_raw_paper` | `doi`, `page` | One page of the publisher PDF as extracted text, optionally with a rendering of the page. No section index, no figure metadata. |
 
 ## Figures
 
