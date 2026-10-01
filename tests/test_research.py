@@ -1598,3 +1598,12 @@ def test_a_card_without_output_groups_is_covered_by_its_declared_outputs():
     missing = dict(target, requested_outputs=["streamflow"])
     problems, _, _ = research._target_coverage([missing], runs, [], {})
     assert any("does not declare a requested output" in problem for problem in problems)
+
+
+def test_the_plan_tool_names_the_field_a_partial_target_is_marked_with():
+    from physearth import tools
+
+    spec = next(item for item in tools.specs() if item["function"]["name"] == "research_plan")
+    target = spec["function"]["parameters"]["properties"]["reproduction_targets"]["items"]
+    assert target["properties"]["status"]["enum"] == ["planned", "partial", "unavailable"]
+    assert "availability_reason" in target["properties"]

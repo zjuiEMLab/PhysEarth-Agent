@@ -250,7 +250,7 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
                 "actual": target.get("run_ids") or [],
                 "expected": "run.model must match the paper reference_models",
                 "allowed_values": target.get("reference_models") or [],
-                "repair": "Replace only the target coverage with runs using the exact reference model identity, or mark the target partial/unavailable.",
+                "repair": "Replace only the target coverage with runs using the exact reference model identity, or set the target's status to partial or unavailable and give its availability_reason.",
                 "blocking": True,
                 "message": problem,
             })

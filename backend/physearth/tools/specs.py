@@ -533,7 +533,24 @@ RESEARCH_PLAN_SPEC = {
                 "reproduction_targets": {
                     "type": "array",
                     "description": "Paper figures, tables, or results to reproduce. Include reference_models and requested_outputs so coverage cannot be satisfied by a different local model.",
-                    "items": {"type": "object"},
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "label": {"type": "string"},
+                            "reference_models": {"type": "array", "items": {"type": "string"}},
+                            "requested_outputs": {"type": "array", "items": {"type": "string"}},
+                            "evidence_refs": {"type": "array", "items": {"type": "string"}},
+                            "run_ids": {"type": "array", "items": {"type": "string"}},
+                            "chart_ids": {"type": "array", "items": {"type": "string"}},
+                            "status": {
+                                "type": "string",
+                                "enum": ["planned", "partial", "unavailable"],
+                                "description": "partial or unavailable when a reference model or output is missing; then availability_reason is required.",
+                            },
+                            "availability_reason": {"type": "string"},
+                        },
+                    },
                 },
                 "selected_models": {
                     "type": "array",
