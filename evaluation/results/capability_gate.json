@@ -1,0 +1,248 @@
+{
+  "schema_version": "capability-gate-v1",
+  "execution": "deterministic",
+  "n_tasks": 13,
+  "verdicts": {
+    "partial": 4,
+    "can": 9
+  },
+  "llm_usage": {
+    "calls": 0,
+    "tokens": null,
+    "cost_usd": null
+  },
+  "records": [
+    {
+      "task": "t1-smrt-fig4-active",
+      "suite": "tier1",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT",
+        "DMRT-QMS"
+      ],
+      "outputs": [
+        "sigma_vv_db"
+      ],
+      "verdict": "partial",
+      "reasons": [
+        "DMRT-QMS: not registered in the current model registry; resembles dmrt_qca_shortrange, dmrt_qcacp_shortrange, which is not the same model -- confirm which was meant"
+      ],
+      "check_status": "waiting_user"
+    },
+    {
+      "task": "t1-smrt-fig4-passive",
+      "suite": "tier1",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT",
+        "DMRT-ML",
+        "DMRT-QMS"
+      ],
+      "outputs": [
+        "tb_v",
+        "tb_h"
+      ],
+      "verdict": "partial",
+      "reasons": [
+        "DMRT-ML: not registered in the current model registry; resembles dmrt_qca_shortrange, dmrt_qcacp_shortrange, which is not the same model -- confirm which was meant",
+        "DMRT-QMS: not registered in the current model registry; resembles dmrt_qca_shortrange, dmrt_qcacp_shortrange, which is not the same model -- confirm which was meant"
+      ],
+      "check_status": "waiting_user"
+    },
+    {
+      "task": "t1-smrt-fig5-iba-shs",
+      "suite": "tier1",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT",
+        "DMRT-QMS"
+      ],
+      "outputs": [
+        "tb_v"
+      ],
+      "verdict": "partial",
+      "reasons": [
+        "DMRT-QMS: not registered in the current model registry; resembles dmrt_qca_shortrange, dmrt_qcacp_shortrange, which is not the same model -- confirm which was meant"
+      ],
+      "check_status": "waiting_user"
+    },
+    {
+      "task": "t1-smrt-fig6-memls-iba",
+      "suite": "tier1",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT",
+        "MEMLS"
+      ],
+      "outputs": [
+        "tb_v",
+        "tb_h"
+      ],
+      "verdict": "partial",
+      "reasons": [
+        "MEMLS: not registered in the current model registry"
+      ],
+      "check_status": "waiting_user"
+    },
+    {
+      "task": "q1-sparse-medium",
+      "suite": "tier2",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT"
+      ],
+      "outputs": [
+        "ks_per_m"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-smrt-arctic-underspecified",
+      "suite": "probe",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT"
+      ],
+      "outputs": [
+        "tb_v",
+        "tb_h"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-smrt-density-above-ice",
+      "suite": "probe",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT"
+      ],
+      "outputs": [
+        "tb_v",
+        "tb_h"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-smrt-dmrt-with-exponential-acf",
+      "suite": "probe",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT"
+      ],
+      "outputs": [
+        "tb_v",
+        "tb_h"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-tau-omega-frozen-soil",
+      "suite": "probe",
+      "models": [
+        "tau_omega"
+      ],
+      "reference_models": [
+        "tau_omega"
+      ],
+      "outputs": [
+        "tb_v",
+        "tb_h"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-tau-omega-vegetation-underspecified",
+      "suite": "probe",
+      "models": [
+        "tau_omega"
+      ],
+      "reference_models": [
+        "tau_omega"
+      ],
+      "outputs": [
+        "tb_v",
+        "tb_h"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-tvc-ku-model-versus-measurement",
+      "suite": "probe",
+      "models": [
+        "smrt"
+      ],
+      "reference_models": [
+        "SMRT"
+      ],
+      "outputs": [
+        "sigma_vv_db"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-two-models-not-comparable",
+      "suite": "probe",
+      "models": [
+        "tau_omega",
+        "water_cloud"
+      ],
+      "reference_models": [
+        "tau_omega",
+        "water_cloud"
+      ],
+      "outputs": [
+        "tb_h",
+        "sigma0_total_db"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    },
+    {
+      "task": "p-water-cloud-beyond-swath",
+      "suite": "probe",
+      "models": [
+        "water_cloud"
+      ],
+      "reference_models": [
+        "water_cloud"
+      ],
+      "outputs": [
+        "sigma0_total_db"
+      ],
+      "verdict": "can",
+      "reasons": [],
+      "check_status": "ready"
+    }
+  ]
+}
