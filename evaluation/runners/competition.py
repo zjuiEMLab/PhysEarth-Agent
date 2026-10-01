@@ -787,7 +787,7 @@ def main(argv=None):
 
     cells = matrix(args)
     build = agent_tasks.build_id()
-    runs = Path(args.runs_dir) if args.runs_dir else RUNS
+    runs = Path(args.runs_dir).resolve() if args.runs_dir else RUNS
     if args.runs_dir:
         # A smoke run keeps its figures and reports beside its records, so it can never
         # stand in for an evaluation cell's artifacts.
