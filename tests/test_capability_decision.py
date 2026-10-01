@@ -501,3 +501,15 @@ def test_a_run_covers_a_target_named_by_the_paper_formulation():
     unregistered = [dict(targets[0], reference_models=["DMRT-ML"])]
     still = _target_coverage(unregistered, runs, [{"id": "c1"}])[0]
     assert any("DMRT-ML" in problem for problem in still), still
+
+
+def test_confirming_twice_keeps_the_confirmation():
+    box = _confirmed_session()
+    again = capability.capability_check(box, decision="confirm_partial")
+    assert again["status"] == "confirmed" and again["user_decision"] == "partial"
+
+    multi = _multi_figure_capability_session()
+    capability.capability_check(multi, targets=_multi_figure_targets())
+    first = capability.capability_check(multi, decision="confirm_partial")
+    second = capability.capability_check(multi, decision="confirm_partial")
+    assert first["status"] == second["status"] == "confirmed"

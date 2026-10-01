@@ -195,6 +195,8 @@ def _capability_check_one(
             session["capability_review"] = report
         return report
     if decision in ("confirm_partial", "confirm"):
+        if current and current.get("status") == "confirmed":
+            return current
         if not current or current.get("status") not in ("waiting_user", "ready"):
             return {
                 "status": "error",
@@ -660,6 +662,9 @@ def capability_check(
         return report
 
     if decision in ("confirm_partial", "confirm"):
+        # Consent already given stays given; asking again must not read as a missing check.
+        if current and current.get("status") == "confirmed":
+            return current
         if (
             not current
             or current.get("status") not in ("waiting_user", "ready")
