@@ -2,6 +2,11 @@
 
 Existing report-judge results are retained by default. Pass ``--rerun-reports`` when the
 report judge must also receive the newly stored visual-figure judgement.
+
+``--calibrate PATH`` re-judges the Q1 records committed in scored_runs.json with the
+configured judge and writes the comparison with their stored verdicts to PATH; the
+committed records are not touched. The report is judged under the rubric it was first
+judged with (v1) and under the current one.
 """
 
 import argparse
@@ -207,6 +212,106 @@ def _update_scored_runs():
     return changed
 
 
+def _compact(judgement):
+    return {
+        key: judgement.get(key)
+        for key in ("judge_model", "standard", "status", "passed", "total", "maximum", "scores")
+        if key in judgement
+    } | {"complete": bool(judgement.get("complete")), "summary": judgement.get("summary")}
+
+
+def calibrate(output):
+    oracle = json.loads(figure3.ORACLE_PATH.read_text(encoding="utf-8"))
+    rows = []
+    for entry in _read_json(SCORED_RUNS):
+        record = entry.get("raw") or {}
+        metrics = record.get("dashboard_metrics") or {}
+        if record.get("task") != "q1-sparse-medium" or not metrics:
+            continue
+        candidates = (record.get("llm"),)
+        figure_score = figure3.score(record, oracle=oracle)
+        has_figure = any(item.get("archived_image_path") for item in record.get("figures") or [])
+        figure_judgement = (
+            judge.judge_figure(record, candidate_models=candidates)
+            if has_figure
+            else {"complete": False, "passed": False, "status": "not_scoreable"}
+        )
+        deterministic = figure3.deterministic_report_checks(
+            record, figure_score, figure_judgement
+        )
+        task = {"question": record.get("question")}
+        reports = {
+            name: judge.judge_report(
+                record, task, figure_score, deterministic, candidate_models=candidates,
+                figure_judgement=figure_judgement, standard_path=path,
+            )
+            for name, path in (
+                ("v1", common.ROOT / "standards" / "report_judge_v1.yaml"),
+                ("v2", common.ROOT / "standards" / "report_judge.yaml"),
+            )
+        }
+        stored_report = metrics.get("report_judgement") or {}
+        stored_figure = metrics.get("figure_judgement") or {}
+        rows.append(
+            {
+                "config": record.get("config"),
+                "repeat": record.get("repeat"),
+                "llm": record.get("llm"),
+                "stored": {
+                    "figure": _compact(stored_figure),
+                    "report": _compact(stored_report),
+                },
+                "rejudged": {
+                    "figure": _compact(figure_judgement),
+                    "report_v1": _compact(reports["v1"]),
+                    "report_v2": _compact(reports["v2"]),
+                },
+                "agreement": {
+                    "figure_status": _status(stored_figure) == _status(figure_judgement),
+                    "report_v1_pass": bool(stored_report.get("passed"))
+                    == bool(reports["v1"].get("passed")),
+                    "report_v1_total_delta": (
+                        reports["v1"].get("total") - stored_report.get("total")
+                        if isinstance(reports["v1"].get("total"), int)
+                        and isinstance(stored_report.get("total"), int)
+                        else None
+                    ),
+                },
+                "judge_usage": _usage(figure_judgement, reports["v1"], reports["v2"]),
+            }
+        )
+        print(
+            f"{record.get('config')} r{record.get('repeat')}: figure "
+            f"{_status(stored_figure)} -> {_status(figure_judgement)}; report v1 "
+            f"{stored_report.get('total')} -> {reports['v1'].get('total')}; "
+            f"v2 {reports['v2'].get('total')}/16"
+        )
+    payload = {
+        "schema_version": "judge-calibration-v1",
+        "judge_model": judge.settings()["model"],
+        "stored_judge_models": sorted(
+            {
+                str(row["stored"][kind].get("judge_model"))
+                for row in rows
+                for kind in ("figure", "report")
+                if row["stored"][kind].get("judge_model")
+            }
+        ),
+        "records": rows,
+        "summary": {
+            "records": len(rows),
+            "figure_status_agree": sum(row["agreement"]["figure_status"] for row in rows),
+            "report_v1_pass_agree": sum(row["agreement"]["report_v1_pass"] for row in rows),
+        },
+    }
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    Path(output).write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n"
+    )
+    print(f"{len(rows)} committed Q1 record(s) re-judged -> {output}")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--rerun-reports", action="store_true")
@@ -225,7 +330,17 @@ def main(argv=None):
         action="store_true",
         help="Copy updated raw Q1 records into scored_runs.json without new judges.",
     )
+    parser.add_argument(
+        "--calibrate",
+        metavar="PATH",
+        help="Re-judge the committed Q1 records and write the comparison to PATH only.",
+    )
     args = parser.parse_args(argv)
+    if args.calibrate:
+        from physearth import config
+
+        config.load_dotenv()
+        return calibrate(args.calibrate)
     oracle = json.loads(figure3.ORACLE_PATH.read_text(encoding="utf-8"))
     changed = 0
     for path in sorted(RUNS.glob("*.json")):

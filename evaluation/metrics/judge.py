@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parent.parent
 REPO = ROOT.parent
 STANDARD_PATH = ROOT / "standards" / "report_judge.yaml"
 FIGURE_STANDARD_PATH = ROOT / "standards" / "q1_figure3.yaml"
-DIMENSIONS = ("factuality", "completeness", "evidence", "calibration", "clarity")
 FIGURE_DIMENSIONS = ("line_count", "patterns", "grouping", "visual_correspondence")
 PREFLIGHT_RESPONSE_FORMAT = {
     "type": "json_schema",
@@ -30,35 +29,47 @@ PREFLIGHT_RESPONSE_FORMAT = {
         },
     },
 }
-REPORT_RESPONSE_FORMAT = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "scientific_report_score",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "scores": {
-                    "type": "object",
-                    "properties": {
-                        name: {"type": "integer", "minimum": 0, "maximum": 2}
-                        for name in DIMENSIONS
+
+
+def report_response_format(rubric):
+    """The strict JSON schema for one report score, built from the standard's dimensions."""
+    names = dimensions(rubric)
+    output = rubric.get("output") or {}
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "scientific_report_score",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "scores": {
+                        "type": "object",
+                        "properties": {
+                            name: {"type": "integer", "minimum": 0, "maximum": 2}
+                            for name in names
+                        },
+                        "required": list(names),
+                        "additionalProperties": False,
                     },
-                    "required": list(DIMENSIONS),
-                    "additionalProperties": False,
+                    "factual_errors": {
+                        "type": "array",
+                        "maxItems": int(output.get("max_factual_errors", 3)),
+                        "items": {
+                            "type": "string",
+                            "maxLength": int(output.get("max_error_characters", 240)),
+                        },
+                    },
+                    "summary": {
+                        "type": "string",
+                        "maxLength": int(output.get("max_summary_characters", 400)),
+                    },
                 },
-                "factual_errors": {
-                    "type": "array",
-                    "maxItems": 3,
-                    "items": {"type": "string", "maxLength": 240},
-                },
-                "summary": {"type": "string", "maxLength": 400},
+                "required": ["scores", "factual_errors", "summary"],
+                "additionalProperties": False,
             },
-            "required": ["scores", "factual_errors", "summary"],
-            "additionalProperties": False,
         },
-    },
-}
+    }
 FIGURE_RESPONSE_FORMAT = {
     "type": "json_schema",
     "json_schema": {
@@ -96,8 +107,31 @@ class JudgeResponseError(ValueError):
         self.meta = meta
 
 
-def standard():
-    return yaml.safe_load(STANDARD_PATH.read_text(encoding="utf-8"))
+def standard(path=None):
+    return yaml.safe_load(Path(path or STANDARD_PATH).read_text(encoding="utf-8"))
+
+
+def dimensions(rubric):
+    return tuple(rubric["dimensions"])
+
+
+def pass_rule(rubric):
+    """(minimum total, minimum score per dimension, deterministic checks required).
+
+    v1 wrote a required dimension score beside the total (`factuality: 2`); v2 lists them
+    under `required_scores`. Both read the same way.
+    """
+    rule = dict(rubric.get("pass") or {})
+    required = dict(rule.get("required_scores") or {})
+    required.update({name: rule[name] for name in dimensions(rubric) if name in rule})
+    return (
+        int(rule.get("minimum_total", 0)),
+        {name: int(value) for name, value in required.items()},
+        bool(rule.get("require_deterministic_checks", True)),
+    )
+
+
+REPORT_RESPONSE_FORMAT = report_response_format(standard())
 
 
 def standard_figure():
@@ -218,11 +252,11 @@ def preflight(candidate_models=()):
     }
 
 
-def _valid_scores(value):
+def _valid_scores(value, names):
     scores = value.get("scores")
-    if not isinstance(scores, dict) or set(scores) != set(DIMENSIONS):
-        raise ValueError(f"judge scores must contain exactly {', '.join(DIMENSIONS)}")
-    for name in DIMENSIONS:
+    if not isinstance(scores, dict) or set(scores) != set(names):
+        raise ValueError(f"judge scores must contain exactly {', '.join(names)}")
+    for name in names:
         score = scores[name]
         if not isinstance(score, int) or isinstance(score, bool) or not 0 <= score <= 2:
             raise ValueError(f"judge score {name} must be an integer from 0 to 2")
@@ -412,8 +446,13 @@ def judge_report(
     candidate_models=(),
     figure_judgement=None,
     fixture=None,
+    standard_path=None,
 ):
-    """Blind-review one final report; scenario/config names are intentionally omitted."""
+    """Blind-review one final report; scenario/config names are intentionally omitted.
+
+    Dimensions, response schema and pass rule all come from the standard file, the current
+    one unless `standard_path` names another (a calibration against an older rubric).
+    """
     from .figure3 import reference
 
     settings(candidate_models)
@@ -442,12 +481,14 @@ def judge_report(
         "deterministic_report_checks": deterministic,
         "candidate_report": record.get("answer") or "",
     }
-    rubric = standard()
-    pass_rule = rubric.get("pass") or {}
+    rubric = standard(standard_path)
+    names = dimensions(rubric)
+    minimum_total, required_scores, require_deterministic = pass_rule(rubric)
+    response_format = report_response_format(rubric)
     system = (
         "You are a label-blinded scientific report evaluator. You are not told which system "
         "produced the report. Judge only against the supplied source facts and measured run "
-        "results. Score factuality, completeness, evidence, calibration, and clarity as "
+        f"results. Score {', '.join(names)} as "
         "integers 0, 1, or 2. Manual/LLM visual figure judgement is the primary evidence for "
         "qualitative figure success. Deterministic title, caption, legend, recipe, or numeric "
         "check failures caused by unspecified parameters are diagnostics, not automatic factual "
@@ -456,8 +497,8 @@ def judge_report(
         "not waive a failed run, missing evidence, unsupported model/output, or an explicit user "
         "numeric/parameter requirement. Use the visual figure "
         "judgement and related source facts when checking claims. Return strict JSON with "
-        "exactly "
-        "three keys: scores (the five named integer fields), factual_errors (at most three "
+        "exactly three keys: "
+        f"scores (the {len(names)} named integer fields), factual_errors (at most three "
         "concise strings, each under 240 characters), and summary (under 400 characters). "
         "Use this human-maintained rubric exactly: "
         + json.dumps(rubric, ensure_ascii=False)
@@ -486,20 +527,22 @@ def judge_report(
                 messages,
                 candidate_models=candidate_models,
                 max_tokens=3000,
-                response_format=REPORT_RESPONSE_FORMAT,
+                response_format=response_format,
             )
-            scores = _valid_scores(value)
+            scores = _valid_scores(value, names)
             attempts.append({"status": "success", **meta})
             total = sum(scores.values())
             passed = bool(
-                deterministic.get("passed")
-                and scores["factuality"] >= int(pass_rule.get("factuality", 2))
-                and total >= int(pass_rule.get("minimum_total", 8))
+                (deterministic.get("passed") or not require_deterministic)
+                and all(scores[name] >= minimum for name, minimum in required_scores.items())
+                and total >= minimum_total
             )
             return {
                 "complete": True,
                 "passed": passed,
+                "standard": rubric.get("schema_version"),
                 "total": total,
+                "maximum": 2 * len(names),
                 "scores": scores,
                 "factual_errors": value["factual_errors"],
                 "summary": value["summary"],

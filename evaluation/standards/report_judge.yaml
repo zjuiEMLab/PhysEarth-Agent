@@ -1,30 +1,47 @@
-schema_version: report-judge-standard-v1
+schema_version: report-judge-standard-v2
 description: >-
-  Label-blinded review standard for the final reproduction report. The judge must use the
-  supplied source facts, measured results and deterministic checks; it must not infer a
-  successful reproduction from fluent prose. A passing manual/LLM visual figure judgement may
-  support a qualitative reproduction even when deterministic metadata, recipe, or numeric
-  checks are not scoreable because the paper left an execution parameter unspecified.
+  Label-blinded review standard for the final reproduction report, eight dimensions scored
+  0-2. The judge uses the supplied source description, reference facts, measured results and
+  deterministic checks; it must not infer a successful reproduction from fluent prose. A
+  passing visual figure judgement may support a qualitative reproduction even when a numeric
+  comparison is not scoreable because the source left an execution parameter unspecified. A
+  report that correctly declines a task the system cannot support is judged on whether its
+  reasons are true and complete, not penalised for the missing figure.
+supersedes: report_judge_v1.yaml
 dimensions:
+  source_fidelity: >-
+    Does the report reproduce the experiment the source actually describes -- its stated
+    conditions, quantities, ranges and comparison -- rather than a convenient variant, and does
+    it identify the source correctly?
+  answer: >-
+    Does the report directly answer the research question that was asked, in its own terms?
   factuality: >-
-    Are the report's scientific claims consistent with the supplied paper facts and measured
-    results, without invented values or unsupported success claims?
-  completeness: >-
-    Does the report cover the requested question, executed conditions, curves/results and
-    important limitations?
+    Are the report's scientific claims consistent with the supplied reference facts and the
+    measured results, without invented values or unsupported success claims?
+  technical_completeness: >-
+    Does the report cover every requested run, output and comparison, with units, versions and
+    the conditions actually executed?
+  assumed_parameters: >-
+    Does the report name every parameter the source did not state, the value chosen, and why,
+    and keep those choices distinct from values read from the source?
   evidence: >-
-    Are claims tied to opened source evidence, executed models or measured outputs?
+    Are claims tied to opened source evidence, executed model runs or measured outputs, with
+    markers that resolve?
   calibration: >-
-    Does the report distinguish reproduced, partial, unavailable and not-identifiable results?
+    Does the report's stated outcome (reproduced, partial, not identifiable, failed) match what
+    the evidence supports, including a correct refusal when the system lacks a model, an output
+    or the data a figure needs?
   clarity: >-
-    Is the report understandable, precise and explicit about versions and conditions?
+    Is the report understandable, precise and explicit about versions, units and conditions?
 score_scale:
   0: missing, unsupported or materially wrong
   1: partial, weak or incompletely supported
   2: correct, complete and well supported
 pass:
-  minimum_total: 8
-  factuality: 2
+  minimum_total: 12
+  required_scores:
+    factuality: 2
+  require_deterministic_checks: true
 output:
   max_factual_errors: 3
   max_error_characters: 240

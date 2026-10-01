@@ -264,7 +264,14 @@ def test_human_editable_standards_are_loaded_by_figure_and_report_evaluators():
         ]
         == 2
     )
-    assert judge.standard()["pass"] == {"minimum_total": 8, "factuality": 2}
+    assert judge.pass_rule(judge.standard()) == (12, {"factuality": 2}, True)
+    assert judge.dimensions(judge.standard()) == (
+        "source_fidelity", "answer", "factuality", "technical_completeness",
+        "assumed_parameters", "evidence", "calibration", "clarity",
+    )
+    v1 = judge.standard(EVAL / "standards" / "report_judge_v1.yaml")
+    assert judge.pass_rule(v1) == (8, {"factuality": 2}, True)
+    assert len(judge.dimensions(v1)) == 5
 
 
 def test_competition_archives_named_figures_and_editable_reports(monkeypatch, tmp_path):
@@ -424,17 +431,16 @@ def test_judge_uses_only_eval_settings_and_counts_retry_usage(monkeypatch):
     assert judge.REPORT_RESPONSE_FORMAT["type"] == "json_schema"
     assert judge.REPORT_RESPONSE_FORMAT["json_schema"]["strict"] is True
 
+    names = judge.dimensions(judge.standard())
+    assert set(judge.REPORT_RESPONSE_FORMAT["json_schema"]["schema"]["properties"]["scores"][
+        "required"
+    ]) == set(names)
     valid = {
-        "scores": {
-            "factuality": 2,
-            "completeness": 2,
-            "evidence": 2,
-            "calibration": 1,
-            "clarity": 1,
-        },
+        "scores": {name: 2 if name == "factuality" else 1 for name in names},
         "factual_errors": [],
         "summary": "accurate",
     }
+    valid["scores"].update(answer=2, evidence=2, calibration=2)
     calls = []
 
     def fake_request(messages, candidate_models=(), max_tokens=1200, response_format=None):
@@ -465,6 +471,7 @@ def test_judge_uses_only_eval_settings_and_counts_retry_usage(monkeypatch):
         candidate_models=("candidate-model",),
     )
     assert judged["passed"] is True
+    assert (judged["total"], judged["maximum"]) == (12, 16)
     assert judged["usage"]["total_tokens"] == 36
     assert "secret-scenario-label" not in json.dumps(calls)
     assert "Previous output was invalid" in calls[1][0]["content"]
@@ -472,6 +479,39 @@ def test_judge_uses_only_eval_settings_and_counts_retry_usage(monkeypatch):
     assert "judge-secret" not in judge._safe_error(
         RuntimeError("request included judge-secret"), "judge-secret"
     )
+
+
+def test_report_judge_pass_rule_comes_from_the_standard(monkeypatch):
+    monkeypatch.setattr(judge.config, "eval_llm_api_key", lambda: "judge-secret")
+    monkeypatch.setattr(judge.config, "eval_llm_api_base", lambda: "https://judge.invalid/v1")
+    monkeypatch.setattr(judge.config, "eval_llm_model", lambda: "judge-model")
+    scores = {"factuality": 1}
+    seen = {}
+
+    def fake_request(messages, candidate_models=(), max_tokens=1200, response_format=None):
+        names = response_format["json_schema"]["schema"]["properties"]["scores"]["required"]
+        seen["names"] = names
+        return {
+            "scores": {name: scores.get(name, 2) for name in names},
+            "factual_errors": ["one"],
+            "summary": "s",
+        }, {"model": "judge-model", "usage": {}}
+
+    monkeypatch.setattr(judge, "_request", fake_request)
+    args = (
+        {"answer": "report"},
+        {"question": "q"},
+        {"passed": True, "recipe": {}, "numeric": {}, "plot": {}},
+        {"passed": True},
+    )
+    current = judge.judge_report(*args, candidate_models=("c",))
+    assert len(seen["names"]) == 8 and current["total"] == 15
+    assert current["passed"] is False
+    older = judge.judge_report(
+        *args, candidate_models=("c",),
+        standard_path=EVAL / "standards" / "report_judge_v1.yaml",
+    )
+    assert len(seen["names"]) == 5 and older["maximum"] == 10 and older["passed"] is False
 
 
 def test_figure_judge_compares_images_without_text_or_numeric_matching(monkeypatch, tmp_path):
