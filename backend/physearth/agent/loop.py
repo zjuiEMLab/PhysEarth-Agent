@@ -3,7 +3,7 @@
 import json
 import time
 
-from physearth import harness, prompt, research, tools
+from physearth import config, harness, prompt, research, tools
 from physearth import session as session_state
 from physearth.agent import completion as _completion
 from physearth.agent.catalogue import CATALOGUE, new_session, new_state, resolve_model
@@ -22,6 +22,18 @@ from physearth.agent.results import _allowed_marker_correction, _record_tool_res
 from physearth.agent.trace import _event
 from physearth.harness import approval, audit, budget
 from physearth.harness import switches as switch_flags
+
+
+def _thinking_off():
+    """Request body that turns reasoning off for one forced call.
+
+    DashScope-style endpoints (ModelScope) read `enable_thinking`; OpenRouter does not
+    forward it and takes its own normalised `reasoning` switch instead.
+    """
+    body = {"enable_thinking": False}
+    if "openrouter.ai" in str(config.llm_api_base() or "").lower():
+        body["reasoning"] = {"enabled": False}
+    return body
 
 
 def _requests_tool_bypass(question):
@@ -261,7 +273,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     stream_options={"include_usage": True},
                     # Qwen3.8 rejects a forced tool_choice in thinking mode with HTTP 400,
                     # and long reasoning truncates a forced research_plan on other models.
-                    extra_body={"enable_thinking": False} if requested_tool else None,
+                    extra_body=_thinking_off() if requested_tool else None,
                 )
                 for chunk in chunks:
                     if candidate.feed(chunk) and candidate.content:

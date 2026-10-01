@@ -93,3 +93,13 @@ def test_the_deployment_budget_is_unlimited_when_cap_is_zero():
     finally:
         budget.MAX_RUNS_PER_WINDOW = original
         budget._STARTS.clear()
+
+
+def test_a_forced_call_turns_reasoning_off_in_each_provider_s_terms(monkeypatch):
+    from physearth import config
+    from physearth.agent import loop
+
+    monkeypatch.setattr(config, "llm_api_base", lambda: "https://openrouter.ai/api/v1")
+    assert loop._thinking_off() == {"enable_thinking": False, "reasoning": {"enabled": False}}
+    monkeypatch.setattr(config, "llm_api_base", lambda: "https://api-inference.modelscope.cn/v1")
+    assert loop._thinking_off() == {"enable_thinking": False}
