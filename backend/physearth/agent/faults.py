@@ -36,13 +36,15 @@ def _rate_limited(exc):
 
 
 def _dead_for_today(exc):
-    """Faults that belong to one model and will not clear by retrying.
+    """Faults that will not clear by retrying the same request.
 
-    Two are known: the free quota is per model and per day, and a model can be withdrawn
-    from the endpoint entirely, which it reports as having no provider.
+    Three are known: the free quota is per model and per day, a model can be withdrawn
+    from the endpoint entirely, which it reports as having no provider, and a provider's
+    content filter refuses an input it will refuse again however often it is sent.
     """
     status = getattr(exc, "status_code", None)
     text = _upstream_text(exc).lower()
+    code = str(getattr(exc, "body", "") or "").lower()
     exhausted = (
         "quota" in text
         or "insufficient balance" in text
@@ -53,4 +55,9 @@ def _dead_for_today(exc):
         return "quota"
     if status == 400 and "no provider" in text:
         return "withdrawn"
+    if status == 400 and any(
+        marker in text or marker in code
+        for marker in ("datainspectionfailed", "data_inspection_failed", "inappropriate content")
+    ):
+        return "content_filtered"
     return ""

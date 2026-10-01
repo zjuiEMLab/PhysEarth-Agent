@@ -599,6 +599,36 @@ def test_a_spent_daily_quota_is_not_retried():
     assert agent._fault(EmptyBalance()) == "model quota or balance exhausted (HTTP 429)"
 
 
+def test_a_content_filter_refusal_is_not_retried(monkeypatch):
+    class Filtered(Exception):
+        status_code = 400
+        body = {
+            "code": "DataInspectionFailed",
+            "message": "Input data may contain inappropriate content.",
+        }
+
+    class BadRequest(Exception):
+        status_code = 400
+        body = {"message": "invalid tool schema"}
+
+    assert agent._dead_for_today(Filtered()) == "content_filtered"
+    assert agent._dead_for_today(BadRequest()) == ""
+
+    attempts = []
+
+    def create(**_kwargs):
+        attempts.append(1)
+        raise Filtered()
+
+    completions = type("Completions", (), {"create": staticmethod(create)})()
+    client = type("C", (), {"chat": type("Chat", (), {"completions": completions})()})()
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+    answer, events, state = agent.run("anything", session=agent.new_session("m"))
+    assert len(attempts) == 1
+    assert "content filter" in answer and "Nothing was computed" in answer
+    assert events[-1]["rule"] == "content_filtered"
+
+
 def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
     from frontend import studio as app
 

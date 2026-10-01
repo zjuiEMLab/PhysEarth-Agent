@@ -331,6 +331,13 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     "started. Pick another model in the switcher at the top: %s."
                     % (model_id, others)
                 )
+            elif model_dead == "content_filtered":
+                answer = answer or (
+                    "The provider's content filter refused this request, and it refuses the "
+                    "same input every time, so it was not retried. Nothing was computed. "
+                    "Rephrase the question, or clear the conversation if an earlier turn "
+                    "carries the refused text."
+                )
             else:
                 answer = answer or (
                     "The inference endpoint refused %d times in a row: %s. This is an upstream "
