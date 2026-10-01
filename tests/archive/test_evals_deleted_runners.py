@@ -1,4 +1,4 @@
-"""Archived with reproduction_eval, model_registration and llm_robustness, and with the
+"""Archived with reproduction_eval and llm_robustness, and with the
 run records, tier0.json, the Q2 demo and the no-figures condition removed in 35eee2c."""
 
 import json
@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 from evaluation.metrics import score
-from evaluation.runners import llm_robustness, model_registration, reproduction_eval
+from evaluation.runners import llm_robustness, reproduction_eval
 from frontend.views import evaluation as evals
 
 
@@ -29,20 +29,6 @@ def test_reproduction_visual_checks_follow_each_planned_figure_target():
 
     assert candidates == ["fig05.png"]
     assert linked is True
-
-
-def test_dimension_a_reexecutes_schema_adapter_and_trace_checks():
-    evidence = model_registration.evaluate()
-
-    assert evidence["status"] == "passed"
-    assert evidence["n_passed"] == evidence["n_checks"] == 20
-    assert evidence["summary"]["A1_model_card_schema"] == {
-        "passed": 7,
-        "total": 7,
-        "status": "passed",
-    }
-    assert evidence["A3_trace_replay"]["replay"]["matches"] is True
-    assert evidence["A3_trace_replay"]["refused"]["handle"] is None
 
 
 def test_dimension_d_never_mixes_legacy_or_different_builds():

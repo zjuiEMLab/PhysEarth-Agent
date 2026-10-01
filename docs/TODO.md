@@ -161,4 +161,5 @@ Not blocking the current Q1 comparison; each can be fixed later.
 - [ ] **Add the pywatershed reproduction case** from HESS 30, 5195 (2026), with inputs from
       Zenodo record 17180693. Neither host is reachable from the cloud environment yet.
 - [ ] **Restore or retire the archived tests** in `tests/archive/` together with their
-      runners. AGENTS.md still names tier0.py and model_registration.py as the gate.
+      runners. tier0.py, model_registration.py and registry_contract.py are restored;
+      the dashboard, registration demo, robustness and reproduction runners remain.

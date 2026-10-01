@@ -12,17 +12,19 @@ uv sync --extra dev                  # the only supported way to build the envir
 .venv/bin/python -m ruff check .     # line-length 100, rules E,F,I,W,UP,B
 ```
 
-Evaluation. Both commands only print the plan and the cache state; neither calls an LLM
-until `--execute` (competition) or without `--dry-run` (agent tasks) is given:
+Evaluation, in increasing cost:
 
 ```bash
-.venv/bin/python evaluation/runners/competition.py            # frozen competition matrix
-.venv/bin/python evaluation/runners/agent_tasks.py --dry-run  # tier2 and probe task suites
+.venv/bin/python evaluation/runners/registry_contract.py   # A1 card contract, no LLM, <1 s
+.venv/bin/python evaluation/runners/tier0.py               # A2 adapter truth, no LLM, ~10 s
+.venv/bin/python evaluation/runners/model_registration.py  # A1-A3, no LLM
+.venv/bin/python evaluation/runners/competition.py         # frozen matrix: plan only
+.venv/bin/python evaluation/runners/agent_tasks.py --dry-run
 ```
 
-The deterministic runners `tier0.py` and `model_registration.py`, and `report.py`, were
-removed in `35eee2c`. Their tests are parked in `tests/archive/`, whose README says how to
-restore a runner. Until then the deterministic gate is the pytest suite above.
+`competition.py` calls an LLM only with `--execute`, `agent_tasks.py` only without
+`--dry-run`. `report.py` was removed in `35eee2c`; other archived runners and their tests
+are in `tests/archive/`, whose README says how to restore one.
 
 `uv sync` matters: the venv drifts silently otherwise, and a missing `pymupdf` makes the
 figure-inspection tests fail in a way that looks like a code defect but is not.
@@ -126,7 +128,13 @@ demo.
 ## Evidence and evaluation
 
 `evaluation/results/` is committed evidence behind `REPORT.md`, not build output. Do not
-regenerate or delete records to make something pass.
+regenerate or delete records to make something pass. The registry contract, Tier 0 and the
+registration runner are deterministic in what they *assert*: `6/6 models, 191 checks`,
+`9/9 tasks, 38 checks` and `20/20 checks`. Those are the gate. Tier 0 and the registration
+runner do **not** reproduce their committed JSON byte-for-byte: re-running them shifts
+values by 1e-16 to 1e-11 through BLAS and library round-off, so a verification run leaves
+`results/tier0.json` and `results/model_registration.json` modified. Revert them; do not
+commit the drift.
 
 Changing prompt text or tool contracts invalidates comparisons against existing records.
 Say so in the commit message. `tests/test_prompt_layers.py` pins all 48 combinations of
