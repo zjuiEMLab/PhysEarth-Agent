@@ -213,3 +213,33 @@ def test_a_reviewed_plan_is_patched_by_id_and_keeps_its_defaults():
     assert set(runs) == {"density", "angle"}
     assert runs["angle"]["parameters"]["sweep_stop"] == 80
     assert runs["angle"]["defaulted_parameters"] == defaulted
+
+
+def test_a_revision_sent_as_top_level_fields_is_applied():
+    box = _session()
+    refused = tools.call("research_plan", _plan(metrics=[]), session=box)
+    assert refused["status"] == "terminal_error"
+    revised = tools.call(
+        "research_plan", {"action": "revise_plan", "metrics": ["trend agreement"]}, session=box,
+    )
+    assert revised["status"] == "needs_input", revised["summary"]
+    assert box["research"]["plan"]["metrics"] == ["trend agreement"]
+
+
+def test_a_run_patch_drops_the_undeclared_parameter_that_refused_it():
+    box = _session()
+    plan = _plan()
+    plan["runs"][0]["parameters"]["paper_condition_set"] = "figure 3"
+    refused = tools.call("research_plan", plan, session=box)
+    assert refused["status"] == "terminal_error"
+    revised = tools.call(
+        "research_plan",
+        {"action": "revise_plan", "changes": {"runs": [
+            {"id": "density", "parameters": {"sweep_points": 12}},
+        ]}},
+        session=box,
+    )
+    assert revised["status"] == "needs_input", revised["summary"]
+    parameters = box["research"]["plan"]["runs"][0]["requested_parameters"]
+    assert "paper_condition_set" not in parameters
+    assert parameters["sweep_stop"] == 100

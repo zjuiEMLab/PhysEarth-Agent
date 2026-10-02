@@ -4,6 +4,33 @@ from physearth import registry, research
 from physearth.corpus import model_guidelines
 
 
+def _drop_refused_parameters(runs, patch):
+    """A patched run does not carry forward a parameter its model does not declare.
+
+    Such a key is what refused the draft. A patch that resends a run's parameters without
+    it means to drop it; merging key by key kept it, and one run was refused five times
+    for a parameter the model had already removed.
+    """
+    resent = {
+        str(item.get("id")): set(item["parameters"])
+        for item in patch or ()
+        if isinstance(item, dict) and isinstance(item.get("parameters"), dict)
+    }
+    cleaned = []
+    for run in runs or ():
+        if isinstance(run, dict) and str(run.get("id")) in resent:
+            entry = registry.get(str(run.get("model") or "").strip())
+            if entry is not None and isinstance(run.get("parameters"), dict):
+                declared = set(entry.card.get("parameters") or ())
+                keep = declared | resent[str(run.get("id"))]
+                run = {
+                    **run,
+                    "parameters": {k: v for k, v in run["parameters"].items() if k in keep},
+                }
+        cleaned.append(run)
+    return cleaned
+
+
 def research_plan(
     action,
     question="",
@@ -37,6 +64,27 @@ def research_plan(
 ):
     if _session is None:
         return research._fail("research_plan requires a session.")
+    if action == "revise_plan":
+        # A revision sent as top-level fields rather than inside `changes` is still the
+        # revision: one run answered "Add: metrics" five times with metrics=[...] beside an
+        # empty changes, and each time the field was dropped unread.
+        supplied = {
+            "objective": objective, "hypothesis": hypothesis, "steps": steps,
+            "parameters": parameters, "paper_conditions": paper_conditions,
+            "condition_provenance": condition_provenance,
+            "literature_evidence": literature_evidence,
+            "reproduction_targets": reproduction_targets, "selected_models": selected_models,
+            "parameter_mapping": parameter_mapping, "outputs": outputs, "runs": runs,
+            "charts": charts, "success_criteria": success_criteria,
+            "assumptions": assumptions, "limitations": limitations, "quantities": quantities,
+            "controls": controls, "metrics": metrics, "diagnostics": diagnostics,
+            "stop_conditions": stop_conditions, "baseline_run_id": baseline_run_id,
+        }
+        supplied = {
+            key: value for key, value in supplied.items() if value not in (None, "", [], {})
+        }
+        if supplied:
+            changes = {**supplied, **dict(changes or {})}
     if action in ("propose", "revise_plan"):
         # A direct research_plan call is itself the agent's generic research-mode
         # selection.  No paper/model-specific case is inferred here.
@@ -361,6 +409,8 @@ def research_plan(
                     corrected.get(key), value, research.ITEM_IDENTITY[key],
                     research.ITEM_COMPLETE.get(key, ()),
                 )
+                if key == "runs":
+                    corrected[key] = _drop_refused_parameters(corrected[key], value)
             elif value is not None:
                 corrected[key] = value
         return research_plan(action="propose", _session=_session, **corrected)
