@@ -132,6 +132,20 @@ def _trace_key(events, state, running):
     return (len(events), bool(running), state.get("phase"))
 
 
+def _unmirrored_events(events, mirrored):
+    """Trace events not yet copied into the session log, identified by object.
+
+    The trace is not purely append-only: tool_start and approval_wait are appended, shown
+    once, then popped. A high-water index cannot survive that, because the pop and the
+    next append happen between two yields and leave the list the same length -- so the
+    replacement event inherits an index already counted as mirrored and is dropped. That
+    is why a tool outcome never reached the session trace. Matching on identity is exact
+    regardless of how the list is edited.
+    """
+    seen = {id(event) for event in mirrored}
+    return [event for event in events if id(event) not in seen]
+
+
 def _metrics_key(state):
     """The counters under the trace, and nothing else on the page moves them."""
     session = state.get("session") or {}
@@ -285,21 +299,21 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
     trace_key = _trace_key(events, state, True)
     metrics_key = _metrics_key(state)
     head_key = _head_key(events, state, session)
-    logged_agent_events = 0
+    logged_agent_events = []
     try:
         for answer, events, state in agent.stream(question, seen, model_id, session):
             # Gradio may resume a streaming generator in a fresh context, so ContextVar
             # bindings made inside agent.stream are not guaranteed to reach every event.
             # Mirror each newly visible trace event with an explicit session reference.
-            for event in events[logged_agent_events:]:
+            for event in _unmirrored_events(events, logged_agent_events):
+                logged_agent_events.append(event)
                 audit.emit(
                     "agent_trace_event",
                     session=session,
                     ui_turn=index,
-                    trace_index=logged_agent_events + 1,
+                    trace_index=len(logged_agent_events),
                     agent_event=event,
                 )
-                logged_agent_events += 1
             running = state.get("phase") != "done"
             # The evidence panel is the most expensive thing on the page and the only one
             # holding scroll position, an open tab and decoded figure images. Pushing it

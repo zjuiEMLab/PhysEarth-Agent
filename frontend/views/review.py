@@ -22,13 +22,22 @@ def _revision_changes_html(summary):
         rows = []
         for item in items:
             if name == "changed":
-                text = "%s → %s" % (
+                full = "%s → %s" % (
                     _plan_cell(item.get("from"), 260), _plan_cell(item.get("to"), 260)
                 )
             else:
-                value = item.get("to") if name == "added" else item.get("from")
-                text = _plan_cell(value, 260)
-            rows.append("<li><b>%s</b><span>%s</span></li>" % (_e(item.get("field", "field")), text))
+                full = _plan_cell(item.get("to") if name == "added" else item.get("from"), 260)
+            # Lead with the short note; a reviewer who wants the literal values opens the
+            # disclosure. Quoting two 260-character run lists inline buried the point.
+            note = _e(item.get("note") or "").strip()
+            detail = (
+                "<details class='research-plan-change-detail'><summary>values</summary>"
+                "<span>%s</span></details>" % full
+            )
+            rows.append(
+                "<li><b>%s</b><span>%s</span>%s</li>"
+                % (_e(item.get("field", "field")), note or full, detail if note else "")
+            )
         groups.append(
             "<div class='research-plan-change-group'><b>%s</b><ul>%s</ul></div>"
             % (label, "".join(rows))
@@ -45,6 +54,141 @@ def _revision_changes_html(summary):
             "".join(groups) or "<p>No physical fields changed.</p>",
             _e(invalidated), _e(preserved),
         )
+    )
+
+
+_SWEEP_KEYS = ("sweep_parameter", "sweep_start", "sweep_stop", "sweep_points")
+
+
+def _run_parameters(run):
+    return run.get("resolved_parameters") or run.get("parameters") or {}
+
+
+def _run_configuration(run):
+    """What identifies the run's algorithm, with the swept axis removed."""
+    parameters = _run_parameters(run)
+    swept = str(parameters.get("sweep_parameter") or "none")
+    return {
+        key: value
+        for key, value in parameters.items()
+        if key not in _SWEEP_KEYS and key != swept
+    }
+
+
+def _algorithm_summary(runs, versions):
+    if not runs:
+        return "No model run is planned yet."
+    models = sorted({str(run.get("model") or "") for run in runs} - {""})
+    named = ", ".join(
+        "%s%s" % (model, " v%s" % versions[model] if versions.get(model) else "")
+        for model in models
+    )
+    configurations = [_run_configuration(run) for run in runs]
+    shared_keys = sorted(
+        key
+        for key in set().union(*configurations)
+        if all(item.get(key) == configurations[0].get(key) for item in configurations)
+    )
+    varying_keys = sorted(set().union(*configurations) - set(shared_keys))
+    text = "Run %s: %d run(s)." % (named or "the selected model", len(runs))
+    if varying_keys:
+        variants = "; ".join(
+            "%s = %s"
+            % (
+                run.get("id") or run.get("label") or "run",
+                " + ".join("%s" % _run_configuration(run).get(key) for key in varying_keys),
+            )
+            for run in runs
+        )
+        text += (
+            " Compared by %s -- %s." % (", ".join(varying_keys), variants)
+            if len(runs) > 1
+            else " Configuration: %s." % variants
+        )
+    elif len(runs) > 1:
+        text += " Every run uses the same configuration."
+    return text
+
+
+def _changing_variables(runs):
+    sweeps = []
+    for run in runs:
+        parameters = _run_parameters(run)
+        swept = str(parameters.get("sweep_parameter") or "none")
+        if swept in ("", "none"):
+            continue
+        descriptor = "%s from %s to %s over %s point(s)" % (
+            swept,
+            parameters.get("sweep_start"),
+            parameters.get("sweep_stop"),
+            parameters.get("sweep_points"),
+        )
+        if descriptor not in sweeps:
+            sweeps.append(descriptor)
+    if not sweeps:
+        return "No variable is swept; every run holds its conditions fixed."
+    return "; ".join(sweeps)
+
+
+def _key_output(plan, runs):
+    outputs = [str(item) for item in plan.get("outputs") or [] if item]
+    quantities = [str(item) for item in plan.get("quantities") or [] if item]
+    requested = sorted(
+        {str(_run_parameters(run).get("output") or "") for run in runs} - {""}
+    )
+    named = outputs or quantities
+    text = ", ".join(named) if named else "not declared"
+    if requested:
+        text += " (model output group: %s)" % ", ".join(requested)
+    return text
+
+
+def _figure_descriptions(charts):
+    if not charts:
+        return ["No figure is planned yet."]
+    described = []
+    for chart in charts:
+        ys = ", ".join(chart.get("ys") or [chart.get("y") or ""]) or "not declared"
+        described.append(
+            "%s: %s against %s (%s, %s)"
+            % (
+                chart.get("label") or chart.get("id") or "figure",
+                ys,
+                chart.get("x") or "not declared",
+                chart.get("kind") or "chart",
+                "required" if chart.get("required", True) else "optional",
+            )
+        )
+    return described
+
+
+def _execution_steps_html(plan):
+    """Describe the execution the current plan actually specifies.
+
+    This used to print the free-text steps the model wrote when it first proposed. Those
+    are authored once, so a revision that changed the runs left the steps describing the
+    superseded plan, and they never said which model would run. Deriving them from the
+    plan keeps them true after every revision by construction.
+    """
+    runs = [run for run in plan.get("runs") or [] if isinstance(run, dict)]
+    charts = [chart for chart in plan.get("charts") or [] if isinstance(chart, dict)]
+    versions = {
+        str(item.get("model") or ""): str(item.get("version") or "")
+        for item in plan.get("selected_models") or []
+        if isinstance(item, dict)
+    }
+    figures = _figure_descriptions(charts)
+    items = [
+        ("Model run", _algorithm_summary(runs, versions)),
+        ("Changing variables", _changing_variables(runs)),
+        ("Key output", _key_output(plan, runs)),
+        (
+            "Figures",
+            figures[0] if len(figures) == 1 else "%d figures -- %s" % (len(figures), "; ".join(figures)),
+        ),
+    ]
+    return "<ol class='research-steps'>%s</ol>" % "".join(
+        "<li><b>%s.</b> %s</li>" % (_e(label), _e(text)) for label, text in items
     )
 
 
@@ -136,9 +280,7 @@ def _structured_approval_bar(session, project, research):
         )
         for item in plan.get("charts") or []
     ) or "none"
-    steps_html = "<ol class='research-steps'>%s</ol>" % "".join(
-        "<li>%s</li>" % _e(step) for step in (plan.get("steps") or [])
-    )
+    steps_html = _execution_steps_html(plan)
     pseudo = project.get("pseudo") or {}
     pseudo_html = ""
     if pseudo.get("points"):

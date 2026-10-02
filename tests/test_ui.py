@@ -990,3 +990,90 @@ def test_local_proxy_bypass_still_exempts_loopback_when_a_proxy_is_configured(mo
     assert resolved.get("http") == "http://127.0.0.1:8888"
     for host in ("127.0.0.1", "localhost", "::1"):
         assert host in resolved.get("no", "")
+
+
+def test_popped_transient_events_do_not_hide_the_next_trace_event():
+    """tool_start is shown then popped; the tool outcome that follows must still be logged."""
+    from frontend.studio import _unmirrored_events
+
+    events = []
+    mirrored = []
+
+    def mirror():
+        for event in _unmirrored_events(events, mirrored):
+            mirrored.append(event)
+
+    events.append({"kind": "model_call"})
+    mirror()
+    events.append({"kind": "tool_start"})
+    mirror()
+    # The transient event is popped and the outcome takes its index in the same gap
+    # between two yields, so the list length never changes.
+    events.pop()
+    events.append({"kind": "tool_end", "status": "terminal_error"})
+    mirror()
+
+    assert [event["kind"] for event in mirrored] == ["model_call", "tool_start", "tool_end"]
+    # Mirroring again must not duplicate anything.
+    mirror()
+    assert len(mirrored) == 3
+
+
+def test_execution_steps_follow_the_plan_and_name_the_model():
+    """The steps must describe the current plan, not the prose written at propose time.
+
+    They used to render plan["steps"], authored once, so a revision that changed the runs
+    left them describing the superseded plan and they never said which model would run.
+    """
+    from frontend.views.review import _execution_steps_html
+
+    def plan_with(sweep_start, runs=2):
+        return {
+            "selected_models": [{"model": "smrt", "version": "1.5.1"}],
+            "steps": ["stale prose written when the plan was first proposed"],
+            "runs": [
+                {
+                    "id": "run_%d" % index,
+                    "label": "run %d" % index,
+                    "model": "smrt",
+                    "parameters": {
+                        "electromagnetic_model": "iba" if index % 2 else "rayleigh",
+                        "output": "coefficients",
+                        "sweep_parameter": "density_kg_m3",
+                        "sweep_start": sweep_start,
+                        "sweep_stop": 100.0,
+                        "sweep_points": 20,
+                    },
+                }
+                for index in range(1, runs + 1)
+            ],
+            "charts": [{
+                "id": "chart_01", "label": "Scattering vs density", "x": "density_kg_m3",
+                "ys": ["ks_per_m"], "kind": "line", "required": True,
+            }],
+            "outputs": ["ks_per_m"],
+        }
+
+    before = _execution_steps_html(plan_with(0.0))
+    after = _execution_steps_html(plan_with(1.0))
+
+    # The four-part schema, in order.
+    for heading in ("Model run", "Changing variables", "Key output", "Figures"):
+        assert heading in before
+    assert before.index("Model run") < before.index("Changing variables")
+    assert before.index("Changing variables") < before.index("Key output")
+    assert before.index("Key output") < before.index("Figures")
+
+    # Which model runs, and at which version.
+    assert "smrt" in before and "1.5.1" in before
+    # The algorithms being compared.
+    assert "electromagnetic_model" in before and "rayleigh" in before and "iba" in before
+    # The swept variable and its range, the output, and the figure.
+    assert "density_kg_m3" in before and "20 point" in before
+    assert "ks_per_m" in before
+    assert "Scattering vs density" in before
+
+    # A revised range changes the rendered steps; the authored prose never would have.
+    assert before != after
+    assert "0.0 to 100.0" in before and "1.0 to 100.0" in after
+    assert "stale prose" not in before
