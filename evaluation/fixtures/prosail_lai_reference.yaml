@@ -2,6 +2,7 @@ schema_version: reference-series-v1
 task: prosail-lai-benchmark
 scorer: reference_series
 source:
+  documentation: prosail-docs
   software: prosail 2.0.5
   repository: https://github.com/jgomezdans/prosail
   benchmark: tests/test_prosail.py, test_rsot_prosail5
@@ -54,7 +55,7 @@ visual_reference:
 thresholds:
   normalized_rmse: 0.05
 report_terms:
-  source: [prosail, test_prosail, REFL_CAN, benchmark, jussieu]
+  source: [prosail-docs, prosail, test_prosail, REFL_CAN, benchmark, jussieu]
   version: ["2.0.5", version]
 report_facts:
   - The benchmark case is the one the prosail 2.0.5 test suite checks against the PROSAIL Fortran reference (REFL_CAN.txt), with a spherical leaf angle distribution.

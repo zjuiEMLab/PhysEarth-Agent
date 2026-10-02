@@ -99,3 +99,19 @@ def test_the_bundled_corpus_still_matches_its_declared_section_sizes():
             body = section["text"].split("\n\n---\n\n")[0]
             body = body.split("\n\n", 1)[1] if "\n\n" in body else body
             assert len(body) == declared["chars"], "%s#%s" % (slug, declared["id"])
+
+
+def test_software_documentation_is_never_presented_as_a_paper():
+    from physearth import prompt
+    from physearth.corpus import knowledge
+
+    documentation = [e for e in knowledge.catalogue() if e["source_type"] == "documentation"]
+    assert {e["slug"] for e in documentation} >= {"pyet-docs", "prosail-docs"}
+    block = knowledge.catalogue_block()
+    for entry in documentation:
+        assert "; software documentation, %s" % entry["year"] in block
+        assert knowledge.card(entry["slug"])["license"]
+    papers = len(knowledge.catalogue()) - len(documentation)
+    assert "(%d papers, %d software documentation sources)" % (
+        papers, len(documentation)
+    ) in prompt.catalogue_section()

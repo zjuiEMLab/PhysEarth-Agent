@@ -94,9 +94,11 @@ def skills_section():
 
 
 def catalogue_section():
-    return "Literature corpus (%d papers). Slug, title, coverage, and what each is for:\n\n%s" % (
-        len(knowledge.slugs()),
-        knowledge.catalogue_block(),
+    kinds = [entry["source_type"] for entry in knowledge.catalogue()]
+    return (
+        "Literature corpus (%d papers, %d software documentation sources). Slug, title, "
+        "coverage, and what each is for:\n\n%s"
+        % (kinds.count("paper"), kinds.count("documentation"), knowledge.catalogue_block())
     )
 
 

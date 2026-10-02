@@ -49,6 +49,7 @@ def catalogue():
                 "outputs": item.get("outputs", []),
                 "description": item["description"],
                 "license": item["license"],
+                "source_type": item.get("source_type", "paper"),
             }
         )
     return entries
@@ -58,10 +59,11 @@ def catalogue_block():
     lines = []
     for entry in catalogue():
         lines.append(
-            "- %s (%s, %s | scenarios: %s | outputs: %s)\n  %s"
+            "- %s (%s%s, %s | scenarios: %s | outputs: %s)\n  %s"
             % (
                 entry["slug"],
                 entry["title"],
+                "; software documentation" if entry["source_type"] == "documentation" else "",
                 entry["year"],
                 ", ".join(entry["scenarios"]) or "-",
                 ", ".join(entry["outputs"]) or "-",
