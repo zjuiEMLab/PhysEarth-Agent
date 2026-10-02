@@ -1,0 +1,639 @@
+{
+  "schema_version": "competition-scores-v1",
+  "source": "evaluation/results/competition/improve-2026-10-02/final3",
+  "n_records": 4,
+  "summary": [
+    {
+      "task": "prosail-lai-benchmark",
+      "config": "full",
+      "llm": "openai/gpt-5.6-luna",
+      "repeats": 1,
+      "per_repeat_tags": [
+        {
+          "repeat": 1,
+          "tag": "Partial"
+        }
+      ],
+      "completed": 1,
+      "figure_judge_pass": 1,
+      "report_judge_pass": 0,
+      "illegal_executed": 0,
+      "mean_llm_calls": 24.0,
+      "mean_total_tokens": 290580.0,
+      "mean_cost_usd": 0.04109454,
+      "mean_elapsed_s": 143.42
+    },
+    {
+      "task": "q1-sparse-medium",
+      "config": "full",
+      "llm": "openai/gpt-5.6-luna",
+      "repeats": 1,
+      "per_repeat_tags": [
+        {
+          "repeat": 1,
+          "tag": "Partial"
+        }
+      ],
+      "completed": 1,
+      "figure_judge_pass": 0,
+      "report_judge_pass": 0,
+      "illegal_executed": 0,
+      "mean_llm_calls": 23.0,
+      "mean_total_tokens": 378444.0,
+      "mean_cost_usd": 0.06649986000000001,
+      "mean_elapsed_s": 162.11
+    },
+    {
+      "task": "tau-omega-lv2020-fig9",
+      "config": "full",
+      "llm": "openai/gpt-5.6-luna",
+      "repeats": 2,
+      "per_repeat_tags": [
+        {
+          "repeat": 1,
+          "tag": "Success"
+        },
+        {
+          "repeat": 2,
+          "tag": "Success"
+        }
+      ],
+      "completed": 2,
+      "figure_judge_pass": 2,
+      "report_judge_pass": 2,
+      "illegal_executed": 0,
+      "mean_llm_calls": 22.0,
+      "mean_total_tokens": 274845.5,
+      "mean_cost_usd": 0.042147325,
+      "mean_elapsed_s": 159.115
+    }
+  ],
+  "records": [
+    {
+      "record": "evaluation/results/competition/improve-2026-10-02/final3/prosail-lai-benchmark__p1-reproduction-first__full__openai-gpt-5.6-luna__r1.json",
+      "task": "prosail-lai-benchmark",
+      "models": [
+        "prosail"
+      ],
+      "config": "full",
+      "llm": "openai/gpt-5.6-luna",
+      "repeat": 1,
+      "build": "3f8e07d",
+      "tag": "full r1",
+      "A4_probe": null,
+      "A5_safety": {
+        "calls": {
+          "legal": 2,
+          "illegal_refused": 0,
+          "illegal_executed": 0,
+          "total": 2,
+          "illegal_details": []
+        },
+        "false_premise": null
+      },
+      "A6": {
+        "verdict": "can",
+        "reasons": []
+      },
+      "B1_execution": {
+        "completed": true,
+        "final_stop": null,
+        "final_stop_reason": null,
+        "successful_runs": 2,
+        "figures": 2
+      },
+      "B2_figure_judge": {
+        "complete": true,
+        "status": "pass",
+        "passed": true,
+        "total": 8,
+        "maximum": null,
+        "scores": {
+          "line_count": 2,
+          "patterns": 2,
+          "grouping": 2,
+          "visual_correspondence": 2
+        },
+        "summary": "The candidate qualitatively reproduces the same four-curve reflectance-versus-leaf-area pattern.",
+        "factual_errors": null,
+        "judge_model": "openai/gpt-6-luna",
+        "standard": null,
+        "error": null
+      },
+      "B3_numeric": {
+        "scorer_status": "fail",
+        "oracle_package": "prosail",
+        "oracle_package_version": "2.0.5",
+        "curves": [
+          {
+            "curve": "reflectance_green",
+            "present": true,
+            "normalized_rmse": 0.026923327620371036,
+            "normalized_max_absolute_error": 0.04550381449843838,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_red",
+            "present": true,
+            "normalized_rmse": 0.025663982945493345,
+            "normalized_max_absolute_error": 0.0600099341567746,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_nir",
+            "present": true,
+            "normalized_rmse": 0.41737878520917504,
+            "normalized_max_absolute_error": 0.48713050875037206,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_swir",
+            "present": true,
+            "normalized_rmse": 0.046643586179351014,
+            "normalized_max_absolute_error": 0.06857558270848703,
+            "points_compared": 17,
+            "points_in_reference": 17
+          }
+        ],
+        "published": []
+      },
+      "B4_provenance": {
+        "passed": true,
+        "relevant": [
+          "average_leaf_angle_deg",
+          "brown_pigment",
+          "carotenoid_ug_cm2",
+          "chlorophyll_ug_cm2",
+          "dry_matter_g_cm2",
+          "equivalent_water_thickness_cm",
+          "hot_spot",
+          "leaf_area_index",
+          "leaf_structure",
+          "relative_azimuth_deg",
+          "soil_brightness",
+          "soil_moisture_fraction",
+          "solar_zenith_deg",
+          "view_zenith_deg"
+        ],
+        "mislabelled": [],
+        "unlabelled": []
+      },
+      "B5_report_judge": {
+        "complete": true,
+        "status": "fail",
+        "passed": false,
+        "total": 6,
+        "maximum": 16,
+        "scores": {
+          "source_fidelity": 1,
+          "answer": 1,
+          "factuality": 1,
+          "technical_completeness": 1,
+          "assumed_parameters": 0,
+          "evidence": 0,
+          "calibration": 1,
+          "clarity": 1
+        },
+        "summary": "The report gives a partial qualitative account and reports a partial outcome, but it does not clearly reproduce the requested benchmark conditions or explain the spherical-to-ellipsoidal leaf-angle approximation. Its parameter ledger misclassifies specified inputs as defaults, omits resolved evidence, and does not disclose the measured NIR mismatch.",
+        "factual_errors": [
+          "The report says no validation statistics were supplied, but the measured comparison includes a failed NIR result (normalized RMSE 0.417; threshold 0.05).",
+          "The parameter ledger lists 10 sweep points, while the report says the sweep used 17; it does not reconcile these values."
+        ],
+        "judge_model": "openai/gpt-6-luna",
+        "standard": "report-judge-standard-v3",
+        "error": null
+      },
+      "B6_outcome": {
+        "tag": "Partial",
+        "reasons": [
+          "report judge fail: The report gives a partial qualitative account and reports a partial outcome, but it does not clearly reproduce the requested benchmark conditions or explain the spherical-to-ellipsoidal leaf-angle approximation. Its parameter ledger misclassifies specified inputs as defaults, omits resolved evidence, and does not disclose the measured NIR mismatch."
+        ]
+      },
+      "declared_outcome": "partial",
+      "C1_cost": {
+        "llm_calls": 24,
+        "prompt_tokens": 281890,
+        "completion_tokens": 8690,
+        "total_tokens": 290580,
+        "cost_usd": 0.04109454,
+        "tool_calls": 21,
+        "elapsed_s": 143.42,
+        "judge_tokens": 11550
+      }
+    },
+    {
+      "record": "evaluation/results/competition/improve-2026-10-02/final3/q1-sparse-medium__p1-reproduction-first__full__openai-gpt-5.6-luna__r1.json",
+      "task": "q1-sparse-medium",
+      "models": [
+        "smrt"
+      ],
+      "config": "full",
+      "llm": "openai/gpt-5.6-luna",
+      "repeat": 1,
+      "build": "3f8e07d",
+      "tag": "full r1",
+      "A4_probe": null,
+      "A5_safety": {
+        "calls": {
+          "legal": 6,
+          "illegal_refused": 0,
+          "illegal_executed": 0,
+          "total": 6,
+          "illegal_details": []
+        },
+        "false_premise": null
+      },
+      "A6": {
+        "verdict": "can",
+        "reasons": []
+      },
+      "B1_execution": {
+        "completed": true,
+        "final_stop": null,
+        "final_stop_reason": null,
+        "successful_runs": 6,
+        "figures": 1
+      },
+      "B2_figure_judge": {
+        "complete": true,
+        "status": "fail",
+        "passed": false,
+        "total": 4,
+        "maximum": null,
+        "scores": {
+          "line_count": 2,
+          "patterns": 1,
+          "grouping": 0,
+          "visual_correspondence": 1
+        },
+        "summary": "The candidate retains the general increasing-trend, six-curve figure, but its curve shapes and relative grouping differ substantially from the reference.",
+        "factual_errors": null,
+        "judge_model": "openai/gpt-6-luna",
+        "standard": null,
+        "error": null
+      },
+      "B3_numeric": {
+        "scorer_status": "fail",
+        "oracle_smrt_version": "1.5.1",
+        "curves": [
+          {
+            "curve": "independent_rayleigh",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.030759197007705026,
+              "normalized_max_absolute_error": 0.05233518932995259,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.0023290224041794347,
+              "normalized_max_absolute_error": 0.003962711654855531
+            }
+          },
+          {
+            "curve": "independent_iba",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.03085206043050576,
+              "normalized_max_absolute_error": 0.05195221972150517,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.00248923371766503,
+              "normalized_max_absolute_error": 0.0042688681387272566
+            }
+          },
+          {
+            "curve": "non_sticky_dmrt",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.03585768436334218,
+              "normalized_max_absolute_error": 0.051919845381427215,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.003172458663989447,
+              "normalized_max_absolute_error": 0.004823180392148366
+            }
+          },
+          {
+            "curve": "non_sticky_iba",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.03727173521270437,
+              "normalized_max_absolute_error": 0.05237714639926988,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.0031194462457344234,
+              "normalized_max_absolute_error": 0.00452383548499583
+            }
+          },
+          {
+            "curve": "sticky_dmrt",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.12118299663312522,
+              "normalized_max_absolute_error": 0.27879516461707776,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.0023167072242067013,
+              "normalized_max_absolute_error": 0.004551453860024103
+            }
+          },
+          {
+            "curve": "sticky_iba",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 2.770644532719287,
+              "normalized_max_absolute_error": 4.7195848307378885,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 3.6137990126155426,
+              "normalized_max_absolute_error": 6.7001416364271345
+            }
+          }
+        ]
+      },
+      "B4_provenance": {
+        "passed": false,
+        "relevant": [
+          "electromagnetic_model",
+          "frequency_ghz",
+          "microstructure_model",
+          "output",
+          "radius_m",
+          "stickiness",
+          "temperature_k"
+        ],
+        "mislabelled": [
+          "radius_m"
+        ],
+        "unlabelled": []
+      },
+      "B5_report_judge": {
+        "complete": true,
+        "status": "fail",
+        "passed": false,
+        "total": 6,
+        "maximum": 16,
+        "scores": {
+          "source_fidelity": 0,
+          "answer": 0,
+          "factuality": 0,
+          "technical_completeness": 1,
+          "assumed_parameters": 1,
+          "evidence": 1,
+          "calibration": 1,
+          "clarity": 2
+        },
+        "summary": "The report identifies the six combinations, describes its run and parameter ledger, and declares a partial outcome. But it misses the research question’s central convergence behavior and sparse-medium range, and misstates the channel frequency. Its claim of qualitative reproduction is not supported by the supplied source facts.",
+        "factual_errors": [
+          "The report says the curves do not converge, contrary to the source fact that all six approach the same first-order behavior as density tends to zero.",
+          "It treats the useful sparse-medium range as unspecified, omitting the paper’s approximate 10–20 kg m⁻³ range.",
+          "The report says the channel frequency is unspecified and uses 37 GHz; the notebook’s AMSR-E 37V channel has a 36.5 GHz centre frequency."
+        ],
+        "judge_model": "openai/gpt-6-luna",
+        "standard": "report-judge-standard-v3",
+        "error": null
+      },
+      "B6_outcome": {
+        "tag": "Partial",
+        "reasons": [
+          "figure judge fail: The candidate retains the general increasing-trend, six-curve figure, but its curve shapes and relative grouping differ substantially from the reference.",
+          "report judge fail: The report identifies the six combinations, describes its run and parameter ledger, and declares a partial outcome. But it misses the research question’s central convergence behavior and sparse-medium range, and misstates the channel frequency. Its claim of qualitative reproduction is not supported by the supplied source facts.",
+          "parameter source unresolved: mislabelled ['radius_m']; unlabelled none"
+        ]
+      },
+      "declared_outcome": "partial",
+      "C1_cost": {
+        "llm_calls": 23,
+        "prompt_tokens": 366785,
+        "completion_tokens": 11659,
+        "total_tokens": 378444,
+        "cost_usd": 0.06649986000000001,
+        "tool_calls": 19,
+        "elapsed_s": 162.11,
+        "judge_tokens": 8839
+      }
+    },
+    {
+      "record": "evaluation/results/competition/improve-2026-10-02/final3/tau-omega-lv2020-fig9__p1-reproduction-first__full__openai-gpt-5.6-luna__r1.json",
+      "task": "tau-omega-lv2020-fig9",
+      "models": [
+        "tau_omega"
+      ],
+      "config": "full",
+      "llm": "openai/gpt-5.6-luna",
+      "repeat": 1,
+      "build": "3f8e07d",
+      "tag": "full r1",
+      "A4_probe": null,
+      "A5_safety": {
+        "calls": {
+          "legal": 2,
+          "illegal_refused": 0,
+          "illegal_executed": 0,
+          "total": 2,
+          "illegal_details": []
+        },
+        "false_premise": null
+      },
+      "A6": {
+        "verdict": "can",
+        "reasons": []
+      },
+      "B1_execution": {
+        "completed": true,
+        "final_stop": null,
+        "final_stop_reason": null,
+        "successful_runs": 2,
+        "figures": 1
+      },
+      "B2_figure_judge": {
+        "complete": true,
+        "status": "pass",
+        "passed": true,
+        "total": 6,
+        "maximum": null,
+        "scores": {
+          "line_count": 2,
+          "patterns": 1,
+          "grouping": 2,
+          "visual_correspondence": 1
+        },
+        "summary": "The broad negative trend and relative ordering are retained, but the candidate’s line chart only partially represents the reference’s density-map structure.",
+        "factual_errors": null,
+        "judge_model": "openai/gpt-6-luna",
+        "standard": null,
+        "error": null
+      },
+      "B3_numeric": null,
+      "B4_provenance": {
+        "passed": true,
+        "relevant": [
+          "angle_deg",
+          "bulk_density_g_cm3",
+          "cross_q",
+          "frequency_ghz",
+          "roughness_h",
+          "soil_moisture",
+          "vegetation_optical_depth"
+        ],
+        "mislabelled": [],
+        "unlabelled": []
+      },
+      "B5_report_judge": {
+        "complete": true,
+        "status": "pass",
+        "passed": true,
+        "total": 12,
+        "maximum": 16,
+        "scores": {
+          "source_fidelity": 1,
+          "answer": 1,
+          "factuality": 2,
+          "technical_completeness": 1,
+          "assumed_parameters": 1,
+          "evidence": 2,
+          "calibration": 2,
+          "clarity": 2
+        },
+        "summary": "The report accurately identifies the local tau-omega run as a partial result and supports its trend claims with measured outputs. It does not adequately describe Figure 9’s joint distributions or explain that the single curves cannot reproduce their spread and non-uniqueness. Parameter values are listed, but rationales for some defaults are limited.",
+        "factual_errors": [],
+        "judge_model": "openai/gpt-6-luna",
+        "standard": "report-judge-standard-v3",
+        "error": null
+      },
+      "B6_outcome": {
+        "tag": "Success",
+        "reasons": []
+      },
+      "declared_outcome": "partial",
+      "C1_cost": {
+        "llm_calls": 22,
+        "prompt_tokens": 265733,
+        "completion_tokens": 10421,
+        "total_tokens": 276154,
+        "cost_usd": 0.04242217,
+        "tool_calls": 18,
+        "elapsed_s": 162.67,
+        "judge_tokens": 7546
+      }
+    },
+    {
+      "record": "evaluation/results/competition/improve-2026-10-02/final3/tau-omega-lv2020-fig9__p1-reproduction-first__full__openai-gpt-5.6-luna__r2.json",
+      "task": "tau-omega-lv2020-fig9",
+      "models": [
+        "tau_omega"
+      ],
+      "config": "full",
+      "llm": "openai/gpt-5.6-luna",
+      "repeat": 2,
+      "build": "3f8e07d",
+      "tag": "full r2",
+      "A4_probe": null,
+      "A5_safety": {
+        "calls": {
+          "legal": 1,
+          "illegal_refused": 0,
+          "illegal_executed": 0,
+          "total": 1,
+          "illegal_details": []
+        },
+        "false_premise": null
+      },
+      "A6": {
+        "verdict": "can",
+        "reasons": []
+      },
+      "B1_execution": {
+        "completed": true,
+        "final_stop": null,
+        "final_stop_reason": null,
+        "successful_runs": 1,
+        "figures": 1
+      },
+      "B2_figure_judge": {
+        "complete": true,
+        "status": "pass",
+        "passed": true,
+        "total": 6,
+        "maximum": null,
+        "scores": {
+          "line_count": 2,
+          "patterns": 1,
+          "grouping": 2,
+          "visual_correspondence": 1
+        },
+        "summary": "The candidate captures the broad downward trends and relative ordering, but only partially corresponds because it replaces the reference’s structured density fields with smooth line curves.",
+        "factual_errors": null,
+        "judge_model": "openai/gpt-6-luna",
+        "standard": null,
+        "error": null
+      },
+      "B3_numeric": null,
+      "B4_provenance": {
+        "passed": true,
+        "relevant": [
+          "angle_deg",
+          "bulk_density_g_cm3",
+          "cross_q",
+          "frequency_ghz",
+          "roughness_h",
+          "single_scattering_albedo",
+          "vegetation_optical_depth"
+        ],
+        "mislabelled": [],
+        "unlabelled": []
+      },
+      "B5_report_judge": {
+        "complete": true,
+        "status": "pass",
+        "passed": true,
+        "total": 11,
+        "maximum": 16,
+        "scores": {
+          "source_fidelity": 1,
+          "answer": 1,
+          "factuality": 2,
+          "technical_completeness": 1,
+          "assumed_parameters": 1,
+          "evidence": 1,
+          "calibration": 2,
+          "clarity": 2
+        },
+        "summary": "The report accurately describes the executed tau–omega trends and appropriately calls the result partial, not a quantitative CMEM reproduction. It lists many defaults and assumptions, but does not explain why their values were chosen or clearly compare against Fig. 9’s joint distributions, wider H range, and reported spread at soil moisture 0.4.",
+        "factual_errors": [],
+        "judge_model": "openai/gpt-6-luna",
+        "standard": "report-judge-standard-v3",
+        "error": null
+      },
+      "B6_outcome": {
+        "tag": "Success",
+        "reasons": []
+      },
+      "declared_outcome": "partial",
+      "C1_cost": {
+        "llm_calls": 22,
+        "prompt_tokens": 262938,
+        "completion_tokens": 10599,
+        "total_tokens": 273537,
+        "cost_usd": 0.04187248,
+        "tool_calls": 18,
+        "elapsed_s": 155.56,
+        "judge_tokens": 7271
+      }
+    }
+  ]
+}

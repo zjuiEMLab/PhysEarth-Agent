@@ -1,0 +1,5 @@
+# Reproduction report
+
+<!-- Generated artifact; this file is human-editable. -->
+
+Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 0 evidence issue(s), 0 target coverage issue(s), and 1 parameter mapping issue(s). Mapping fields: parameter_mapping[3].model_input (actual='all remaining declared parameters'). Structured repair gaps: [{"field": "parameter_mapping[3].model_input", "source": "registered_model_declaration", "actual": "all remaining declared parameters", "expected": "an exact registered model input", "allowed_values": ["anthocyanin_ug_cm2", "average_leaf_angle_deg", "brown_pigment", "carotenoid_ug_cm2", "chlorophyll_ug_cm2", "dry_matter_g_cm2", "equivalent_water_thickness_cm", "hot_spot", "leaf_area_index", "leaf_structure", "relative_azimuth_deg", "soil_brightness", "soil_moisture_fraction", "solar_zenith_deg", "sweep_parameter", "sweep_points", "sweep_start", "sweep_stop", "view_zenith_deg"], "repair": "Replace the unknown input with an exact parameter returned by list_models.", "blocking": true}]

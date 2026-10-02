@@ -1,0 +1,3656 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "tau-omega-lv2020-fig9",
+  "suite": "tier2",
+  "quality": "underspecified",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "2b8b029ffd6911cd5c93e10fe05c6298174539025e005921b2719800e0f33770",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 1,
+  "build": "f551e39",
+  "question": "Reproduce, qualitatively, Figure 9 of Lv, Schalge, Saavedra Garfias and Simmer (2020), \"Required sampling density of ground-based soil moisture and brightness temperature observations for calibration and validation of L-band satellite observations based on a virtual reality\" (Hydrology and Earth System Sciences 24, 1957-1973, DOI: 10.5194/hess-24-1957-2020). Read the paper and inspect the figure, then simulate how L-band brightness temperature at H and V polarization changes with soil moisture over the range the figure covers, and compare your chart with the figure. Say which features of the figure your simulation reproduces and which it cannot, and name every vegetation, roughness or soil setting you had to choose because the figure does not state it.",
+  "answer": "## Research result and conclusion\n\nThe generated figures show two monotonic, downward-sloping tau-omega brightness-temperature curves as soil moisture increases: the V-polarized curve remains above the H-polarized curve throughout the sweep. This is the same qualitative soil-moisture sensitivity pattern represented by the source Figure 9, but it is not a quantitative reproduction of CMEM because CMEM was unavailable. [cmem-sampling-density#fig-fig09] [model:tau_omega@1.0.0]\n\nThe reproduction outcome is therefore **partial**. Both approved figures were rendered successfully, with one series each, but direct CMEM comparison and associated agreement statistics are not identifiable.\n\n## Supporting results\n\nThe generated figures are:\n\n- **Figure 1:** Tau-omega H-polarized brightness temperature; soil moisture versus brightness temperature (K).\n- **Figure 2:** Tau-omega V-polarized brightness temperature; soil moisture versus brightness temperature (K).\n\nThe executed tau-omega run used 51 soil-moisture points from **0.01 to 0.6**. H-polarized brightness temperature decreased from **247.7603316371689 K** to **148.6866773514669 K**. V-polarized brightness temperature decreased from **277.7138183794178 K** to **185.1768689420164 K**. [model:tau_omega@1.0.0]\n\nThe result arrays show monotonic decrease for both polarizations, with V polarization higher than H polarization at both ends and throughout the recorded sweep. No RMSE, bias, correlation, or other model-to-CMEM statistic was supplied; quantitative agreement is **not scoreable**.\n\n## Source/generated-image conclusion\n\nThe source figure presents a soil-moisture sensitivity experiment in a CMEM comparison context. [cmem-sampling-density#02] [cmem-sampling-density#03] [cmem-sampling-density#06] [cmem-sampling-density#fig-fig09]\n\nThe generated images contain the expected two polarization-specific tau-omega outputs as separate figures. Their axes, units, series counts, ordering, and decreasing shape are clear. The generated figures should therefore be regarded as a qualitative tau-omega reproduction of the sensitivity pattern, not as evidence that tau-omega numerically reproduces CMEM.\n\n## Comparison\n\n| Aspect | Source/generated-image reading | Actual result-array reading | Assessment |\n|---|---|---|---|\n| Soil-moisture response | The source presents brightness-temperature sensitivity to soil moisture. [cmem-sampling-density#fig-fig09] | Both tau-omega outputs decrease monotonically over **0.01 to 0.6** soil moisture. [model:tau_omega@1.0.0] | Same qualitative pattern. |\n| Polarization ordering | The generated figures provide separate H and V curves. | V remains above H throughout the returned array. [model:tau_omega@1.0.0] | Ordering is supported for tau-omega only. |\n| Numerical agreement with CMEM | The source comparison context is CMEM-based. [cmem-sampling-density#06] | CMEM was unavailable and was not run. | Not identifiable; no validation statistic is available. |\n| Rendering | Both selected figures were rendered and passed the automatic legibility check. | Each contains 51 plotted points. | The charts are usable; this does not establish source-figure agreement. |\n\n## Assumed parameters\n\nThe authoritative ledger classifies frequency, incidence angle, soil temperature, and vegetation optical depth as **user_specified**, the soil-moisture base value as **backend_default**, and bulk density, canopy temperature, single-scattering albedo, roughness, cross-polarization, and all sweep-construction fields as **model_assumption**.\n\nThe recorded configuration values were frequency **1.4 GHz**, incidence angle **40.0 degrees**, soil-moisture base value **0.25** with a sweep from **0.01** to **0.6** using **51** points, soil temperature **293.15 K**, vegetation optical depth **0.0**, bulk density **1.3 g cm⁻³**, canopy temperature **293.15 K**, single-scattering albedo **0.0**, roughness **0.5**, cross-polarization **0.0**, and the sweep parameter **soil_moisture**. [model:tau_omega@1.0.0]\n\n## Limitations\n\nThe submitted tau-omega configuration differs from the paper comparison condition, and the ledger contains no paper-explicit numerical value for the mapped frequency, angle, soil moisture, soil temperature, or vegetation condition. CMEM was unavailable, so the requested model-to-CMEM comparison is not identifiable. The result supports the direction and polarization ordering of the generated tau-omega sensitivity curves, but not quantitative reproduction of the paper’s CMEM result.\n\n<parameter_provenance>\n[{\"field\":\"frequency_ghz\",\"value\":1.4,\"source_kind\":\"user\",\"source_ref\":\"cmem-sampling-density#06; submitted experiment differs from paper condition\",\"reason\":\"User-specified run configuration\",\"sensitivity_checked\":false},{\"field\":\"angle_deg\",\"value\":40.0,\"source_kind\":\"user\",\"source_ref\":\"cmem-sampling-density#fig09; submitted experiment differs from paper condition\",\"reason\":\"User-specified run configuration\",\"sensitivity_checked\":false},{\"field\":\"soil_moisture\",\"value\":{\"base\":0.25,\"sweep_start\":0.01,\"sweep_stop\":0.6,\"sweep_points\":51},\"source_kind\":\"model_default\",\"source_ref\":\"cmem-sampling-density#fig09; submitted experiment differs from paper condition\",\"reason\":\"Backend-default base value with the approved soil-moisture sweep\",\"sensitivity_checked\":false},{\"field\":\"soil_temperature_k\",\"value\":293.15,\"source_kind\":\"user\",\"source_ref\":\"cmem-sampling-density#03; submitted experiment differs from paper condition\",\"reason\":\"User-specified run configuration\",\"sensitivity_checked\":false},{\"field\":\"vegetation_optical_depth\",\"value\":0.0,\"source_kind\":\"user\",\"source_ref\":\"cmem-sampling-density#06; submitted experiment differs from paper condition\",\"reason\":\"User-specified vegetation condition\",\"sensitivity_checked\":false},{\"field\":\"bulk_density_g_cm3\",\"value\":1.3,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Retained model assumption\",\"sensitivity_checked\":false},{\"field\":\"canopy_temperature_k\",\"value\":293.15,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Retained model assumption\",\"sensitivity_checked\":false},{\"field\":\"single_scattering_albedo\",\"value\":0.0,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Retained model assumption\",\"sensitivity_checked\":false},{\"field\":\"roughness_h\",\"value\":0.5,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Retained model assumption\",\"sensitivity_checked\":false},{\"field\":\"cross_q\",\"value\":0.0,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Retained model assumption\",\"sensitivity_checked\":false},{\"field\":\"sweep_parameter\",\"value\":\"soil_moisture\",\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Approved sweep design\",\"sensitivity_checked\":false},{\"field\":\"sweep_start\",\"value\":0.01,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Approved sweep lower bound\",\"sensitivity_checked\":false},{\"field\":\"sweep_stop\",\"value\":0.6,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Approved sweep upper bound\",\"sensitivity_checked\":false},{\"field\":\"sweep_points\",\"value\":51,\"source_kind\":\"assumption\",\"source_ref\":\"no paper or user evidence recorded\",\"reason\":\"Approved sweep resolution\",\"sensitivity_checked\":false}]\n</parameter_provenance>\n<reproduction_outcome>partial</reproduction_outcome>\n\n**Parameter sources** (from the approved plan's parameter ledger)\n\n| Model | Input | Value | Source | Evidence |\n| --- | --- | --- | --- | --- |\n| tau_omega | frequency_ghz | Figure 9 frequency | user_specified | cmem-sampling-density#06 |\n| tau_omega | angle_deg | Figure 9 incidence angle | user_specified | cmem-sampling-density#fig09 |\n| tau_omega | soil_moisture | Figure 9 soil-moisture range | backend_default | cmem-sampling-density#fig09 |\n| tau_omega | soil_temperature_k | Figure 9 soil temperature | user_specified | cmem-sampling-density#03 |\n| tau_omega | vegetation_optical_depth | Figure 9 vegetation condition | user_specified | cmem-sampling-density#06 |\n| tau_omega | bulk_density_g_cm3 | 1.3 | model_assumption | - |\n| tau_omega | canopy_temperature_k | 293.15 | model_assumption | - |\n| tau_omega | single_scattering_albedo | 0.0 | model_assumption | - |\n| tau_omega | roughness_h | 0.5 | model_assumption | - |\n| tau_omega | cross_q | 0.0 | model_assumption | - |\n| tau_omega | sweep_parameter | soil_moisture | model_assumption | - |\n| tau_omega | sweep_start | 0.01 | model_assumption | - |\n| tau_omega | sweep_stop | 0.6 | model_assumption | - |\n| tau_omega | sweep_points | 51 | model_assumption | - |",
+  "planning_answer": "Research is paused at the human-review stage (plan_review). No formal physical result has been computed yet. Click Approve plan, or describe the changes you want in Conversation.",
+  "elapsed_s": 160.6,
+  "stop_rule": null,
+  "model_calls": 25,
+  "llm_usage": {
+    "calls": 25,
+    "prompt_tokens": 303584,
+    "completion_tokens": 8922,
+    "total_tokens": 312506,
+    "cost_usd": 0.0451627,
+    "cost_complete": true,
+    "failed_attempts": 0,
+    "failed_attempt_faults": [],
+    "cached_prompt_tokens": 180045,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 7736,
+        "cached_prompt_tokens": 7733,
+        "completion_tokens": 80,
+        "cost_usd": 0.00025126,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.71,
+        "first_token_s": 3.43,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 8148,
+        "cached_prompt_tokens": 7072,
+        "completion_tokens": 21,
+        "cost_usd": 0.00042904,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.87,
+        "first_token_s": 2.25,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 9862,
+        "cached_prompt_tokens": 7072,
+        "completion_tokens": 21,
+        "cost_usd": 0.00085754,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.46,
+        "first_token_s": 2.09,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 9933,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 63,
+        "cost_usd": 0.00090247,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.65,
+        "first_token_s": 4.49,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 10363,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 81,
+        "cost_usd": 0.00103157,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.71,
+        "first_token_s": 4.51,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 12254,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 61,
+        "cost_usd": 0.00148032,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.83,
+        "first_token_s": 4.62,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 7,
+        "prompt_tokens": 14453,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 59,
+        "cost_usd": 0.00202767,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.45,
+        "first_token_s": 5.26,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 8,
+        "prompt_tokens": 15762,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 61,
+        "cost_usd": 0.00235732,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.61,
+        "first_token_s": 5.4,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 9,
+        "prompt_tokens": 16056,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 88,
+        "cost_usd": 0.00246322,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.47,
+        "first_token_s": 4.29,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 10,
+        "prompt_tokens": 17065,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 87,
+        "cost_usd": 0.00271427,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.54,
+        "first_token_s": 5.34,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 11,
+        "prompt_tokens": 18468,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 69,
+        "cost_usd": 0.00304342,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.27,
+        "first_token_s": 5.04,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 12,
+        "prompt_tokens": 18869,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 237,
+        "cost_usd": 0.00334527,
+        "reasoning_chars": 0,
+        "elapsed_s": 7.78,
+        "first_token_s": 7.15,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 1,
+        "prompt_tokens": 7600,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 207,
+        "cost_usd": 0.00049202,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.16,
+        "first_token_s": 4.66,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 2,
+        "prompt_tokens": 8931,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 2218,
+        "cost_usd": 0.00323797,
+        "reasoning_chars": 0,
+        "elapsed_s": 21.22,
+        "first_token_s": 11.73,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 3,
+        "prompt_tokens": 14289,
+        "cached_prompt_tokens": 7074,
+        "completion_tokens": 149,
+        "cost_usd": 0.00211753,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.61,
+        "first_token_s": 2.13,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 4,
+        "prompt_tokens": 11805,
+        "cached_prompt_tokens": 7074,
+        "completion_tokens": 94,
+        "cost_usd": 0.00143053,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.65,
+        "first_token_s": 2.02,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 5,
+        "prompt_tokens": 14292,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 224,
+        "cost_usd": 0.00218542,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.74,
+        "first_token_s": 4.3,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 1,
+        "prompt_tokens": 8081,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 58,
+        "cost_usd": 0.00043347,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.73,
+        "first_token_s": 3.65,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 2,
+        "prompt_tokens": 9767,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 44,
+        "cost_usd": 0.00083817,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.14,
+        "first_token_s": 4.9,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 3,
+        "prompt_tokens": 9968,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 133,
+        "cost_usd": 0.00099522,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.87,
+        "first_token_s": 3.58,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 4,
+        "prompt_tokens": 10225,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 80,
+        "cost_usd": 0.00099587,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.3,
+        "first_token_s": 5.08,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 5,
+        "prompt_tokens": 10408,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 88,
+        "cost_usd": 0.00105122,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.31,
+        "first_token_s": 4.09,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 6,
+        "prompt_tokens": 10591,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 120,
+        "cost_usd": 0.00113537,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.99,
+        "first_token_s": 2.84,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 7,
+        "prompt_tokens": 12636,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 2419,
+        "cost_usd": 0.00440542,
+        "reasoning_chars": 0,
+        "elapsed_s": 20.55,
+        "first_token_s": 6.76,
+        "attempt": 1
+      },
+      {
+        "turn": 3,
+        "index": 8,
+        "prompt_tokens": 16022,
+        "cached_prompt_tokens": 7201,
+        "completion_tokens": 2160,
+        "cost_usd": 0.00494112,
+        "reasoning_chars": 0,
+        "elapsed_s": 18.29,
+        "first_token_s": 10.69,
+        "attempt": 1
+      }
+    ]
+  },
+  "tool_calls": 22,
+  "interventions": 1,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": true,
+    "approval_policy": "scripted_accept_unmodified_plan",
+    "review_actions": [
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "confirm_reported_partial_scope",
+        "before": "capability waiting_user",
+        "summary": "Yes. I confirm the partial scope exactly as your capability check reported it. Generate the research plan for the supported components only, and name everything outside that scope as unavailable in the report.",
+        "after": "capability confirmed"
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_review",
+        "after": "plan_approved",
+        "status": "needs_input",
+        "summary": "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_approved",
+        "after": "pseudo_preview",
+        "status": "needs_input",
+        "summary": "Pseudo-data preview v001 is ready for layout review only. It is not model output and must not support a scientific conclusion. Confirm the figure package, or revise the plan in chat."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "pseudo_preview",
+        "after": "chart_selected",
+        "status": "needs_input",
+        "summary": "2 chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "chart_selected",
+        "after": "approved",
+        "status": "success",
+        "summary": "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs."
+      }
+    ],
+    "review_error": null,
+    "final_phase": "completed",
+    "plan_version": 1
+  },
+  "research": {
+    "question": "Reproduce the supported component of CMEM paper Figure 9 with tau-omega only; explicitly report CMEM as unavailable and tau-omega versus CMEM as not comparable.",
+    "plan_version": 1,
+    "phase": "completed",
+    "plan": {
+      "plan_version": 1,
+      "title": "Generate a tau-omega brightness-temperature sensitivity curve for the Figure 9 soil-moisture experiment, while preserving the paper's comparison context without claiming equivalence to CMEM.",
+      "question": "Reproduce the supported component of CMEM paper Figure 9 with tau-omega only; explicitly report CMEM as unavailable and tau-omega versus CMEM as not comparable.",
+      "objective": "Generate a tau-omega brightness-temperature sensitivity curve for the Figure 9 soil-moisture experiment, while preserving the paper's comparison context without claiming equivalence to CMEM.",
+      "hypothesis": "Tau-omega produces physically structured TB_h and TB_v responses across the paper's soil-moisture range, but this is a local-model sensitivity result rather than a CMEM reproduction or validation.",
+      "steps": [
+        "Use the opened Figure 9 evidence to retain its frequency, incidence angle, polarization, temperature, vegetation, and soil-moisture comparison context.",
+        "Run tau-omega over the Figure 9 soil-moisture axis with the mapped paper conditions.",
+        "Render separate H- and V-polarization brightness-temperature curves.",
+        "Report CMEM output as unavailable and do not quantify tau-omega-minus-CMEM agreement."
+      ],
+      "parameters": {},
+      "paper_conditions": {
+        "figure": "Figure 9",
+        "comparison_reference_model": "CMEM",
+        "target_outputs": [
+          "tb_h",
+          "tb_v"
+        ],
+        "scope": "partial: tau-omega sensitivity only",
+        "frequency_ghz": "Figure 9 frequency",
+        "angle_deg": "Figure 9 incidence angle",
+        "soil_moisture": "Figure 9 soil-moisture range",
+        "soil_temperature_k": "Figure 9 soil temperature",
+        "vegetation_optical_depth": "Figure 9 vegetation condition"
+      },
+      "condition_provenance": {
+        "frequency_ghz": "cmem-sampling-density#06",
+        "angle_deg": "cmem-sampling-density#fig09",
+        "soil_moisture_range": "paper_explicit",
+        "soil_temperature_k": "cmem-sampling-density#03",
+        "vegetation_optical_depth": "cmem-sampling-density#06",
+        "single_scattering_albedo": "model_assumption_if_not_explicit",
+        "roughness_h": "model_assumption_if_not_explicit",
+        "bulk_density_g_cm3": "model_assumption_if_not_explicit",
+        "canopy_temperature_k": "model_assumption_if_not_explicit",
+        "cross_q": "model_assumption_if_not_explicit",
+        "soil_moisture": "cmem-sampling-density#fig09"
+      },
+      "literature_evidence": [
+        {
+          "evidence_ref": "cmem-sampling-density#02",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "bundled",
+          "title": "Methodology and data - Virtual reality"
+        },
+        {
+          "evidence_ref": "cmem-sampling-density#03",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "bundled",
+          "title": "Methodology and data - Generation of L-band passive microwave observations"
+        },
+        {
+          "evidence_ref": "cmem-sampling-density#06",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "bundled",
+          "title": "Results - Brightness temperature"
+        },
+        {
+          "evidence_ref": "cmem-sampling-density#fig09",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "https://hess.copernicus.org/articles/24/1957/2020/hess-24-1957-2020-f09.png",
+          "title": ""
+        }
+      ],
+      "reproduction_targets": [
+        {
+          "id": "fig09",
+          "label": "Figure 9 supported partial reproduction",
+          "reference_models": [
+            "CMEM"
+          ],
+          "requested_outputs": [
+            "tb_h",
+            "tb_v"
+          ],
+          "evidence_refs": [
+            "cmem-sampling-density#02",
+            "cmem-sampling-density#03",
+            "cmem-sampling-density#06",
+            "cmem-sampling-density#fig09",
+            "cmem-sampling-density#fig09"
+          ],
+          "status": "partial",
+          "availability_reason": "CMEM is unavailable; tau-omega is retained only as a non-equivalent local sensitivity model.",
+          "source_type": "result",
+          "source_id": "cmem-sampling-density#fig09",
+          "target_quantity": "tb_h, tb_v",
+          "expected_comparison": "Compare the planned tb_h, tb_v against cmem-sampling-density#fig09: axes, trend and legend series.",
+          "run_ids": [],
+          "chart_ids": []
+        }
+      ],
+      "selected_models": [
+        {
+          "model": "tau_omega",
+          "version": "1.0.0",
+          "role": "supported local candidate",
+          "outputs": [
+            "tb_h",
+            "tb_v",
+            "emissivity_h",
+            "emissivity_v"
+          ],
+          "capability_status": "runnable",
+          "instruction_ref": "guideline:tau_omega@1.0"
+        }
+      ],
+      "parameter_mapping": [
+        {
+          "model": "tau_omega",
+          "paper_concept": "frequency",
+          "model_input": "frequency_ghz",
+          "mapped_value": "Figure 9 frequency",
+          "units": "GHz",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "evidence_ref": "cmem-sampling-density#06",
+          "rationale": "The submitted experiment differs from the paper condition; the paper value remains comparison context.",
+          "paper_value": null,
+          "confidence_basis": "directly specified by the user"
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "incidence angle",
+          "model_input": "angle_deg",
+          "mapped_value": "Figure 9 incidence angle",
+          "units": "deg",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "evidence_ref": "cmem-sampling-density#fig09",
+          "rationale": "The submitted experiment differs from the paper condition; the paper value remains comparison context.",
+          "paper_value": null,
+          "confidence_basis": "directly specified by the user"
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "soil moisture axis",
+          "model_input": "soil_moisture",
+          "mapped_value": "Figure 9 soil-moisture range",
+          "units": "volumetric fraction",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "evidence_ref": "cmem-sampling-density#fig09",
+          "rationale": "The submitted experiment differs from the paper condition; the paper value remains comparison context.",
+          "paper_value": null,
+          "confidence_basis": "provided by the registered model backend, not by the paper"
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "soil temperature",
+          "model_input": "soil_temperature_k",
+          "mapped_value": "Figure 9 soil temperature",
+          "units": "K",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "evidence_ref": "cmem-sampling-density#03",
+          "rationale": "The submitted experiment differs from the paper condition; the paper value remains comparison context.",
+          "paper_value": null,
+          "confidence_basis": "directly specified by the user"
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "vegetation optical depth",
+          "model_input": "vegetation_optical_depth",
+          "mapped_value": "Figure 9 vegetation condition",
+          "units": "1",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "evidence_ref": "cmem-sampling-density#06",
+          "rationale": "The submitted experiment differs from the paper condition; the paper value remains comparison context.",
+          "paper_value": null,
+          "confidence_basis": "directly specified by the user"
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "bulk_density_g_cm3",
+          "paper_value": null,
+          "model_input": "bulk_density_g_cm3",
+          "mapped_value": 1.3,
+          "units": "g cm-3",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "canopy_temperature_k",
+          "paper_value": null,
+          "model_input": "canopy_temperature_k",
+          "mapped_value": 293.15,
+          "units": "K",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "single_scattering_albedo",
+          "paper_value": null,
+          "model_input": "single_scattering_albedo",
+          "mapped_value": 0.0,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "roughness_h",
+          "paper_value": null,
+          "model_input": "roughness_h",
+          "mapped_value": 0.5,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "cross_q",
+          "paper_value": null,
+          "model_input": "cross_q",
+          "mapped_value": 0.0,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep_parameter",
+          "paper_value": null,
+          "model_input": "sweep_parameter",
+          "mapped_value": "soil_moisture",
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep_start",
+          "paper_value": null,
+          "model_input": "sweep_start",
+          "mapped_value": 0.01,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep_stop",
+          "paper_value": null,
+          "model_input": "sweep_stop",
+          "mapped_value": 0.6,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep_points",
+          "paper_value": null,
+          "model_input": "sweep_points",
+          "mapped_value": 51,
+          "units": "count",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        }
+      ],
+      "parameter_resolution": [
+        {
+          "run_id": "fig09_tauomega_sweep",
+          "model": "tau_omega",
+          "requested_parameters": {
+            "frequency_ghz": 1.4,
+            "angle_deg": 40.0,
+            "soil_temperature_k": 293.15,
+            "canopy_temperature_k": 293.15,
+            "vegetation_optical_depth": 0.0,
+            "single_scattering_albedo": 0.0,
+            "roughness_h": 0.5,
+            "bulk_density_g_cm3": 1.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.01,
+            "sweep_stop": 0.6,
+            "sweep_points": 51
+          },
+          "resolved_parameters": {
+            "frequency_ghz": 1.4,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.15,
+            "canopy_temperature_k": 293.15,
+            "vegetation_optical_depth": 0.0,
+            "single_scattering_albedo": 0.0,
+            "roughness_h": 0.5,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.01,
+            "sweep_stop": 0.6,
+            "sweep_points": 51
+          },
+          "defaulted_parameters": [
+            "soil_moisture"
+          ]
+        }
+      ],
+      "outputs": [
+        "tb_h",
+        "tb_v",
+        "emissivity_h",
+        "emissivity_v"
+      ],
+      "runs": [
+        {
+          "id": "fig09_tauomega_sweep",
+          "label": "Tau-omega Figure 9 soil-moisture sensitivity",
+          "model": "tau_omega",
+          "parameters": {
+            "frequency_ghz": 1.4,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.15,
+            "canopy_temperature_k": 293.15,
+            "vegetation_optical_depth": 0.0,
+            "single_scattering_albedo": 0.0,
+            "roughness_h": 0.5,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.01,
+            "sweep_stop": 0.6,
+            "sweep_points": 51
+          },
+          "requested_parameters": {
+            "frequency_ghz": 1.4,
+            "angle_deg": 40.0,
+            "soil_temperature_k": 293.15,
+            "canopy_temperature_k": 293.15,
+            "vegetation_optical_depth": 0.0,
+            "single_scattering_albedo": 0.0,
+            "roughness_h": 0.5,
+            "bulk_density_g_cm3": 1.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.01,
+            "sweep_stop": 0.6,
+            "sweep_points": 51
+          },
+          "resolved_parameters": {
+            "frequency_ghz": 1.4,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.15,
+            "canopy_temperature_k": 293.15,
+            "vegetation_optical_depth": 0.0,
+            "single_scattering_albedo": 0.0,
+            "roughness_h": 0.5,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.01,
+            "sweep_stop": 0.6,
+            "sweep_points": 51
+          },
+          "defaulted_parameters": [
+            "soil_moisture"
+          ],
+          "stage": "main",
+          "target_ids": []
+        }
+      ],
+      "charts": [
+        {
+          "id": "fig09_tb_h",
+          "label": "Tau-omega H-polarized brightness temperature",
+          "kind": "line",
+          "x": "soil_moisture",
+          "y": "tb_h",
+          "ys": [
+            "tb_h"
+          ],
+          "required": true,
+          "purpose": "Supported local-model reproduction of the paper's independent-variable layout; not a CMEM comparison.",
+          "x_label": "Soil moisture",
+          "y_label": "Brightness temperature (K)",
+          "target_ids": []
+        },
+        {
+          "id": "fig09_tb_v",
+          "label": "Tau-omega V-polarized brightness temperature",
+          "kind": "line",
+          "x": "soil_moisture",
+          "y": "tb_v",
+          "ys": [
+            "tb_v"
+          ],
+          "required": true,
+          "purpose": "Supported local-model reproduction of the paper's independent-variable layout; not a CMEM comparison.",
+          "x_label": "Soil moisture",
+          "y_label": "Brightness temperature (K)",
+          "target_ids": []
+        }
+      ],
+      "quantities": [
+        "tb_h",
+        "tb_v"
+      ],
+      "controls": [
+        "Fixed Figure 9 frequency, incidence angle, temperatures, vegetation condition, and non-swept model parameters."
+      ],
+      "metrics": [
+        "For the supported tau_omega sweep, accept the plan if it produces tb_h and tb_v across the declared soil_moisture range, with finite outputs and no model validation errors; compare only qualitative axis/trend/legend structure with the opened Figure 9 because CMEM is unavailable and tau_omega is not equivalent to CMEM."
+      ],
+      "diagnostics": [
+        "Check that the sweep varies only soil_moisture.",
+        "Check that both polarization outputs share the same soil-moisture index.",
+        "Check declared validity and legal combinations."
+      ],
+      "success_criteria": [
+        "The planned tau-omega run completes within declared parameter limits.",
+        "Both requested polarization outputs are produced and plotted against soil moisture.",
+        "The report labels CMEM unavailable and states that tau-omega is not equivalent to CMEM.",
+        "No numerical agreement, bias, RMSE, or visual claim against CMEM is reported."
+      ],
+      "stop_conditions": [
+        "Stop the reproduction claim if any Figure 9 condition cannot be mapped to a declared tau-omega input.",
+        "Stop any CMEM comparison because CMEM is unavailable and non-comparable."
+      ],
+      "assumptions": [
+        "Any tau-omega input not explicit in Figure 9 is reported as a model assumption rather than a paper fact.",
+        "The output is a partial, non-equivalent sensitivity result."
+      ],
+      "limitations": [
+        "CMEM is unavailable in the registry.",
+        "Tau-omega is not an equivalent implementation of CMEM.",
+        "The source figure is not digitized automatically; no curve-value agreement with the paper is claimed."
+      ],
+      "baseline_run_id": "fig09_tauomega_sweep",
+      "automatic_repairs": [
+        {
+          "field": "literature_evidence",
+          "from": [],
+          "to": [
+            {
+              "evidence_ref": "cmem-sampling-density#02",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "bundled",
+              "title": "Methodology and data - Virtual reality"
+            },
+            {
+              "evidence_ref": "cmem-sampling-density#03",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "bundled",
+              "title": "Methodology and data - Generation of L-band passive microwave observations"
+            },
+            {
+              "evidence_ref": "cmem-sampling-density#06",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "bundled",
+              "title": "Results - Brightness temperature"
+            },
+            {
+              "evidence_ref": "cmem-sampling-density#fig09",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "https://hess.copernicus.org/articles/24/1957/2020/hess-24-1957-2020-f09.png",
+              "title": ""
+            }
+          ],
+          "reason": "bind the proposal to paper sections or figures opened in this session",
+          "provenance": "session_evidence_ledger"
+        },
+        {
+          "field": "reproduction_targets[0].source_id",
+          "from": null,
+          "to": "cmem-sampling-density#fig09",
+          "reason": "identify the target by its opened source figure or checked target",
+          "provenance": "session_evidence_ledger"
+        },
+        {
+          "field": "reproduction_targets[0].target_quantity",
+          "from": null,
+          "to": "tb_h, tb_v",
+          "reason": "name the quantity by the target's requested outputs",
+          "provenance": "submitted_plan_fields"
+        },
+        {
+          "field": "reproduction_targets[0].expected_comparison",
+          "from": null,
+          "to": "Compare the planned tb_h, tb_v against cmem-sampling-density#fig09: axes, trend and legend series.",
+          "reason": "state the comparison implied by the target's quantity and source",
+          "provenance": "submitted_plan_fields"
+        },
+        {
+          "field": "paper_conditions.frequency_ghz",
+          "from": null,
+          "to": "Figure 9 frequency",
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "paper_conditions.angle_deg",
+          "from": null,
+          "to": "Figure 9 incidence angle",
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "paper_conditions.soil_moisture",
+          "from": null,
+          "to": "Figure 9 soil-moisture range",
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "paper_conditions.soil_temperature_k",
+          "from": null,
+          "to": "Figure 9 soil temperature",
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "paper_conditions.vegetation_optical_depth",
+          "from": null,
+          "to": "Figure 9 vegetation condition",
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_inferred"
+        },
+        {
+          "field": "parameter_mapping[0].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[1].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[2].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[3].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[4].confidence_basis",
+          "from": "",
+          "to": "inferred from opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_inferred",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.bulk_density_g_cm3",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "bulk_density_g_cm3",
+            "paper_value": null,
+            "model_input": "bulk_density_g_cm3",
+            "mapped_value": 1.3,
+            "units": "g cm-3",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.canopy_temperature_k",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "canopy_temperature_k",
+            "paper_value": null,
+            "model_input": "canopy_temperature_k",
+            "mapped_value": 293.15,
+            "units": "K",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.single_scattering_albedo",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "single_scattering_albedo",
+            "paper_value": null,
+            "model_input": "single_scattering_albedo",
+            "mapped_value": 0.0,
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.roughness_h",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "roughness_h",
+            "paper_value": null,
+            "model_input": "roughness_h",
+            "mapped_value": 0.5,
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.cross_q",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "cross_q",
+            "paper_value": null,
+            "model_input": "cross_q",
+            "mapped_value": 0.0,
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.sweep_parameter",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "sweep_parameter",
+            "paper_value": null,
+            "model_input": "sweep_parameter",
+            "mapped_value": "soil_moisture",
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.sweep_start",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "sweep_start",
+            "paper_value": null,
+            "model_input": "sweep_start",
+            "mapped_value": 0.01,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.sweep_stop",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "sweep_stop",
+            "paper_value": null,
+            "model_input": "sweep_stop",
+            "mapped_value": 0.6,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.tau_omega.sweep_points",
+          "from": null,
+          "to": {
+            "model": "tau_omega",
+            "paper_concept": "sweep_points",
+            "paper_value": null,
+            "model_input": "sweep_points",
+            "mapped_value": 51,
+            "units": "count",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "baseline_run_id",
+          "from": null,
+          "to": "fig09_tauomega_sweep",
+          "reason": "name a planned run as the baseline; change it at review if another run is the reference",
+          "provenance": "submitted_runs"
+        }
+      ],
+      "validation_warnings": [
+        {
+          "code": "paper_context_difference",
+          "field": "runs[fig09_tauomega_sweep].parameters.frequency_ghz",
+          "source": "paper_conditions.frequency_ghz",
+          "expected": "Figure 9 frequency",
+          "actual": 1.4,
+          "repair": "none",
+          "provenance": "cmem-sampling-density#06",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[fig09_tauomega_sweep].parameters.angle_deg",
+          "source": "paper_conditions.angle_deg",
+          "expected": "Figure 9 incidence angle",
+          "actual": 40.0,
+          "repair": "none",
+          "provenance": "cmem-sampling-density#fig09",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[fig09_tauomega_sweep].parameters.soil_moisture",
+          "source": "paper_conditions.soil_moisture",
+          "expected": "Figure 9 soil-moisture range",
+          "actual": 0.25,
+          "repair": "none",
+          "provenance": "cmem-sampling-density#fig09",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[fig09_tauomega_sweep].parameters.soil_temperature_k",
+          "source": "paper_conditions.soil_temperature_k",
+          "expected": "Figure 9 soil temperature",
+          "actual": 293.15,
+          "repair": "none",
+          "provenance": "cmem-sampling-density#03",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[fig09_tauomega_sweep].parameters.vegetation_optical_depth",
+          "source": "paper_conditions.vegetation_optical_depth",
+          "expected": "Figure 9 vegetation condition",
+          "actual": 0.0,
+          "repair": "none",
+          "provenance": "cmem-sampling-density#06",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        }
+      ],
+      "capability_gaps": [
+        "CMEM"
+      ],
+      "capability_review": {
+        "status": "confirmed",
+        "supported": [
+          {
+            "model": "tau_omega",
+            "version": "1.0.0",
+            "runnable_here": true,
+            "parameters": [
+              "angle_deg",
+              "bulk_density_g_cm3",
+              "canopy_temperature_k",
+              "cross_q",
+              "frequency_ghz",
+              "roughness_h",
+              "single_scattering_albedo",
+              "soil_moisture",
+              "soil_temperature_k",
+              "sweep_parameter",
+              "sweep_points",
+              "sweep_start",
+              "sweep_stop",
+              "vegetation_optical_depth"
+            ],
+            "combinations": [
+              {
+                "when": {
+                  "vegetation_optical_depth": [
+                    0.0
+                  ]
+                },
+                "allow": {
+                  "single_scattering_albedo": [
+                    0.0
+                  ]
+                },
+                "reason": "With no vegetation layer there is nothing to scatter, so a non-zero single scattering albedo is meaningless. Set both to zero for a bare soil surface."
+              }
+            ],
+            "outputs": [
+              "emissivity_h",
+              "emissivity_v",
+              "tb_h",
+              "tb_v"
+            ],
+            "reference_model": false,
+            "role": "local_candidate",
+            "source": "list_models + read_model_instruction",
+            "target_ids": [
+              "fig09"
+            ]
+          }
+        ],
+        "unavailable": [
+          {
+            "model": "CMEM",
+            "reason": "not registered in the current model registry",
+            "resembles": [],
+            "certainty": "unregistered",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "fig09"
+            ]
+          }
+        ],
+        "not_comparable": [
+          {
+            "reference_model": "CMEM",
+            "local_model": "tau_omega",
+            "reason": "a local model/configuration is not an equivalent reference implementation",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "fig09"
+            ]
+          }
+        ],
+        "requested_models": [
+          "CMEM"
+        ],
+        "requested_outputs": [
+          "tb_h",
+          "tb_v"
+        ],
+        "supported_outputs": [
+          "emissivity_h",
+          "emissivity_v",
+          "tb_h",
+          "tb_v"
+        ],
+        "unavailable_outputs": [],
+        "resource_gaps": [],
+        "resolved_names": [],
+        "evidence": [
+          "research-planning#00",
+          "cmem-sampling-density#02",
+          "cmem-sampling-density#03",
+          "cmem-sampling-density#06",
+          "cmem-sampling-density#fig09",
+          "cmem-sampling-density#fig-fig09"
+        ],
+        "targets": [
+          "fig09"
+        ],
+        "target_reports": [
+          {
+            "status": "waiting_user",
+            "supported": [
+              {
+                "model": "tau_omega",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "bulk_density_g_cm3",
+                  "canopy_temperature_k",
+                  "cross_q",
+                  "frequency_ghz",
+                  "roughness_h",
+                  "single_scattering_albedo",
+                  "soil_moisture",
+                  "soil_temperature_k",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_optical_depth"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_optical_depth": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "single_scattering_albedo": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation layer there is nothing to scatter, so a non-zero single scattering albedo is meaningless. Set both to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "emissivity_h",
+                  "emissivity_v",
+                  "tb_h",
+                  "tb_v"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              }
+            ],
+            "unavailable": [
+              {
+                "model": "CMEM",
+                "reason": "not registered in the current model registry",
+                "resembles": [],
+                "certainty": "unregistered",
+                "source": "registered_model_registry"
+              }
+            ],
+            "not_comparable": [
+              {
+                "reference_model": "CMEM",
+                "local_model": "tau_omega",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              }
+            ],
+            "requested_models": [
+              "CMEM"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v"
+            ],
+            "supported_outputs": [
+              "emissivity_h",
+              "emissivity_v",
+              "tb_h",
+              "tb_v"
+            ],
+            "unavailable_outputs": [],
+            "resource_gaps": [],
+            "resolved_names": [],
+            "evidence": [
+              "research-planning#00",
+              "cmem-sampling-density#02",
+              "cmem-sampling-density#03",
+              "cmem-sampling-density#06",
+              "cmem-sampling-density#fig09",
+              "cmem-sampling-density#fig-fig09"
+            ],
+            "targets": [
+              "fig09"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "fig09",
+            "label": "fig09",
+            "target_key": "figure:9"
+          }
+        ],
+        "target_check_complete": true,
+        "missing_targets": [],
+        "user_decision": "partial",
+        "confirmed_scope": {
+          "unavailable": [
+            "CMEM"
+          ],
+          "not_comparable": [
+            "CMEM/tau_omega"
+          ],
+          "outputs": []
+        }
+      },
+      "reference_sections": [
+        "cmem-sampling-density#02",
+        "cmem-sampling-density#03",
+        "cmem-sampling-density#06",
+        "cmem-sampling-density#fig-fig09",
+        "research-planning#00"
+      ],
+      "reference_paper_sections": [
+        "Results - Brightness temperature"
+      ],
+      "approval_state": "plan_review",
+      "outcome_scope": "partial"
+    },
+    "selected_chart": {
+      "id": "fig09_tb_h",
+      "label": "Tau-omega H-polarized brightness temperature",
+      "kind": "line",
+      "x": "soil_moisture",
+      "y": "tb_h",
+      "ys": [
+        "tb_h"
+      ],
+      "required": true,
+      "purpose": "Supported local-model reproduction of the paper's independent-variable layout; not a CMEM comparison.",
+      "x_label": "Soil moisture",
+      "y_label": "Brightness temperature (K)",
+      "target_ids": []
+    },
+    "selected_charts": [
+      "fig09_tb_h",
+      "fig09_tb_v"
+    ],
+    "pseudo": {
+      "label": "PSEUDO-DATA - layout demonstration only - preview v001",
+      "points": [
+        {
+          "soil_moisture": 0.01,
+          "1_tb_h": 0.22103677
+        },
+        {
+          "soil_moisture": 0.04105263,
+          "1_tb_h": 0.2516798
+        },
+        {
+          "soil_moisture": 0.07210526,
+          "1_tb_h": 0.26142274
+        },
+        {
+          "soil_moisture": 0.10315789,
+          "1_tb_h": 0.26792204
+        },
+        {
+          "soil_moisture": 0.13421053,
+          "1_tb_h": 0.29181637
+        },
+        {
+          "soil_moisture": 0.16526316,
+          "1_tb_h": 0.33775145
+        },
+        {
+          "soil_moisture": 0.19631579,
+          "1_tb_h": 0.39010888
+        },
+        {
+          "soil_moisture": 0.22736842,
+          "1_tb_h": 0.42736554
+        },
+        {
+          "soil_moisture": 0.25842105,
+          "1_tb_h": 0.44188191
+        },
+        {
+          "soil_moisture": 0.28947368,
+          "1_tb_h": 0.44692579
+        },
+        {
+          "soil_moisture": 0.32052632,
+          "1_tb_h": 0.46447393
+        },
+        {
+          "soil_moisture": 0.35157895,
+          "1_tb_h": 0.50500673
+        },
+        {
+          "soil_moisture": 0.38263158,
+          "1_tb_h": 0.5578726
+        },
+        {
+          "soil_moisture": 0.41368421,
+          "1_tb_h": 0.60108097
+        },
+        {
+          "soil_moisture": 0.44473684,
+          "1_tb_h": 0.62152035
+        },
+        {
+          "soil_moisture": 0.47578947,
+          "1_tb_h": 0.62701294
+        },
+        {
+          "soil_moisture": 0.50684211,
+          "1_tb_h": 0.63912296
+        },
+        {
+          "soil_moisture": 0.53789474,
+          "1_tb_h": 0.67333058
+        },
+        {
+          "soil_moisture": 0.56894737,
+          "1_tb_h": 0.72479956
+        },
+        {
+          "soil_moisture": 0.6,
+          "1_tb_h": 0.77282363
+        }
+      ]
+    },
+    "preview_version": 1,
+    "plan_card_expanded": true,
+    "review_log": [],
+    "execution_resume_sent": false,
+    "proposed_by": "llm"
+  },
+  "successful_runs": [
+    {
+      "model": "tau_omega",
+      "spec": {
+        "frequency_ghz": 1.4,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.15,
+        "canopy_temperature_k": 293.15,
+        "vegetation_optical_depth": 0.0,
+        "single_scattering_albedo": 0.0,
+        "roughness_h": 0.5,
+        "cross_q": 0.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.01,
+        "sweep_stop": 0.6,
+        "sweep_points": 51
+      },
+      "handle": "res_8396a57e717c",
+      "planned_run_id": "fig09_tauomega_sweep"
+    }
+  ],
+  "numeric_results": [
+    {
+      "handle": "res_8396a57e717c",
+      "planned_run_id": "fig09_tauomega_sweep",
+      "model": "tau_omega",
+      "version": "1.0.0",
+      "spec": {
+        "frequency_ghz": 1.4,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.15,
+        "canopy_temperature_k": 293.15,
+        "vegetation_optical_depth": 0.0,
+        "single_scattering_albedo": 0.0,
+        "roughness_h": 0.5,
+        "cross_q": 0.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.01,
+        "sweep_stop": 0.6,
+        "sweep_points": 51
+      },
+      "axis": {
+        "name": "soil_moisture",
+        "values": [
+          0.01,
+          0.0218,
+          0.0336,
+          0.0454,
+          0.0572,
+          0.06899999999999999,
+          0.0808,
+          0.09259999999999999,
+          0.10439999999999999,
+          0.1162,
+          0.128,
+          0.1398,
+          0.1516,
+          0.16340000000000002,
+          0.1752,
+          0.187,
+          0.1988,
+          0.2106,
+          0.22240000000000001,
+          0.2342,
+          0.246,
+          0.2578,
+          0.2696,
+          0.2814,
+          0.2932,
+          0.305,
+          0.3168,
+          0.3286,
+          0.3404,
+          0.3522,
+          0.364,
+          0.3758,
+          0.3876,
+          0.3994,
+          0.4112,
+          0.423,
+          0.4348,
+          0.4466,
+          0.4584,
+          0.4702,
+          0.482,
+          0.4938,
+          0.5055999999999999,
+          0.5174,
+          0.5292,
+          0.541,
+          0.5528,
+          0.5646,
+          0.5764,
+          0.5882,
+          0.6
+        ]
+      },
+      "series": {
+        "tb_h": [
+          247.7603316371689,
+          235.06903521503116,
+          226.16360235335438,
+          219.21476284393862,
+          213.501508311715,
+          208.64996366922819,
+          204.43730486773794,
+          200.71867985677537,
+          197.39408479104523,
+          194.3913400574611,
+          191.65652856217494,
+          189.14825573840764,
+          186.83401994616756,
+          184.68781927945574,
+          182.68851824407443,
+          180.81870029086556,
+          179.06384153262272,
+          177.41170292394506,
+          175.85187474658971,
+          174.37542959344276,
+          172.97465413025228,
+          171.64283903294051,
+          170.37411254317814,
+          169.16330717794966,
+          168.0058519535471,
+          166.89768446765308,
+          165.8351785975196,
+          164.81508459538733,
+          163.83447911215464,
+          162.8907232365432,
+          161.98142705421833,
+          161.10441954748367,
+          160.2577228980671,
+          159.43953044223267,
+          158.64818767279542,
+          157.8821757966212,
+          157.1400974462861,
+          156.42066421624466,
+          155.72268575125688,
+          155.0450601610679,
+          154.38676557281153,
+          153.7468526631407,
+          153.1244380370983,
+          152.51869834132197,
+          151.9288650162005,
+          151.35421960573294,
+          150.7940895556348,
+          150.24784444011286,
+          149.7148925660319,
+          149.1946779102041,
+          148.6866773514669
+        ],
+        "tb_v": [
+          277.7138183794178,
+          269.91591995445106,
+          263.66697320776984,
+          258.36333686747275,
+          253.72942868703103,
+          249.60466966398235,
+          245.88397832891528,
+          242.49360055588872,
+          239.3792399568953,
+          236.49950063345716,
+          233.82195874954363,
+          231.32066429288983,
+          228.9744775349939,
+          226.76591987725098,
+          224.68035579091773,
+          222.70539562140098,
+          220.8304501989378,
+          219.04639248089921,
+          217.34529633339642,
+          215.7202319847624,
+          214.16510382383692,
+          212.67452031693293,
+          211.24368861690616,
+          209.86832838651458,
+          208.54460073871314,
+          207.26904918996078,
+          206.03855024783206,
+          204.8502717905944,
+          203.70163779788035,
+          202.59029829539708,
+          201.51410360888045,
+          200.47108220173394,
+          199.45942151032145,
+          198.4774513003902,
+          197.52362915469638,
+          196.59652777087783,
+          195.69482380391995,
+          194.8172880321793,
+          193.9627766621456,
+          193.1302236166802,
+          192.31863367572106,
+          191.52707635844618,
+          190.75468045245609,
+          190.0006291093298,
+          189.2641554374358,
+          188.5445385325582,
+          187.84109989504833,
+          187.15320018911044,
+          186.48023630568153,
+          185.82163869534992,
+          185.1768689420164
+        ],
+        "emissivity_h": [
+          0.8451657227943677,
+          0.8018728815112781,
+          0.7714944647905659,
+          0.7477904241648938,
+          0.7283012393372507,
+          0.7117515390388136,
+          0.6973812207666312,
+          0.6846961618856401,
+          0.6733552269863389,
+          0.6631121953179638,
+          0.6537831436540166,
+          0.645226865899395,
+          0.6373324917147112,
+          0.6300113228021686,
+          0.6231912612794626,
+          0.6168128954148578,
+          0.6108266809913789,
+          0.6051908678967937,
+          0.5998699462616057,
+          0.5948334627100214,
+          0.5900551053394245,
+          0.5855119871497204,
+          0.5811840782642953,
+          0.5770537512466303,
+          0.5731054134523184,
+          0.5693252071214501,
+          0.5657007627409845,
+          0.5622209946968697,
+          0.5588759307936368,
+          0.5556565691166407,
+          0.5525547571353175,
+          0.5495630890243346,
+          0.5466748180046636,
+          0.5438837811435534,
+          0.541184334548168,
+          0.538571297276552,
+          0.5360399025969166,
+          0.5335857554707306,
+          0.5312047953309121,
+          0.5288932633841649,
+          0.5266476737943426,
+          0.5244647882078823,
+          0.5223415931676558,
+          0.5202752800317993,
+          0.5182632270721491,
+          0.5163029834751252,
+          0.5143922550081351,
+          0.5125288911482615,
+          0.5107108734983179,
+          0.5089363053392602,
+          0.5072034021881866
+        ],
+        "emissivity_v": [
+          0.9473437434058257,
+          0.9207433735440937,
+          0.8994268231545962,
+          0.8813349372931018,
+          0.8655276434829645,
+          0.8514571709499654,
+          0.8387650633768218,
+          0.8271997289984265,
+          0.8165759507313503,
+          0.8067525179377697,
+          0.7976188256849519,
+          0.789086352696196,
+          0.7810829866450415,
+          0.7735491041352583,
+          0.766434780115701,
+          0.7596977507126079,
+          0.7533018939073437,
+          0.7472160753228696,
+          0.74141325714957,
+          0.7358698003914802,
+          0.7305649115600782,
+          0.7254801989320585,
+          0.7205993130373739,
+          0.7159076526915047,
+          0.7113921225949622,
+          0.7070409319118567,
+          0.7028434257132256,
+          0.6987899430004927,
+          0.6948716963939293,
+          0.6910806696073584,
+          0.6874095296226521,
+          0.6838515510889782,
+          0.6804005509477109,
+          0.6770508316574798,
+          0.6737971316892253,
+          0.6706345821964108,
+          0.6675586689541871,
+          0.6645651988135062,
+          0.6616502700397258,
+          0.6588102460060727,
+          0.6560417317950574,
+          0.65334155332917,
+          0.6507067387087023,
+          0.6481345014815958,
+          0.6456222256095371,
+          0.6431674519275395,
+          0.6407678659220479,
+          0.6384212866761401,
+          0.6361256568503549,
+          0.6338790335846833,
+          0.6316795802217855
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "emissivity_v": "none",
+        "emissivity_h": "none"
+      }
+    }
+  ],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "Lv Schalge Saavedra Garfias Simmer 2020 sampling density brightness temperature Figure 9",
+        "scenario": "soil",
+        "kind": "paper"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": ""
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "02"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "03"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "06"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_paper_figure",
+      "arguments": {
+        "paper": "cmem-sampling-density",
+        "figure_id": "fig09"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "inspect_paper_figure",
+      "arguments": {
+        "paper": "cmem-sampling-density",
+        "figure_id": "fig09",
+        "focus": "Read the plotted axes, units, panel labels, visible point-cloud shape, ranges, and whether the figure contains H and V polarization separately."
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "tau_omega"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "tau_omega",
+        "section": "01"
+      },
+      "status": "success",
+      "model": "tau_omega",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    },
+    {
+      "turn": 2,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Reproduce the supported CMEM comparison components using tau-omega only; treat CMEM and the non-comparable target as unavailable.",
+        "reference_models": [
+          "CMEM"
+        ],
+        "requested_outputs": [
+          "brightness temperature (tb_h, tb_v)"
+        ],
+        "local_models": [
+          "tau_omega"
+        ],
+        "targets": [
+          {
+            "id": "fig09",
+            "reference_models": [
+              "CMEM"
+            ],
+            "requested_outputs": [
+              "brightness temperature (tb_h, tb_v)"
+            ],
+            "evidence_refs": [
+              "cmem-sampling-density#02",
+              "cmem-sampling-density#03",
+              "cmem-sampling-density#06",
+              "cmem-sampling-density#fig09",
+              "cmem-sampling-density#fig-fig09"
+            ]
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Reproduce the supported component of CMEM paper Figure 9 with tau-omega only; explicitly report CMEM as unavailable and tau-omega versus CMEM as not comparable.",
+        "objective": "Generate a tau-omega brightness-temperature sensitivity curve for the Figure 9 soil-moisture experiment, while preserving the paper's comparison context without claiming equivalence to CMEM.",
+        "hypothesis": "Tau-omega produces physically structured TB_h and TB_v responses across the paper's soil-moisture range, but this is a local-model sensitivity result rather than a CMEM reproduction or validation.",
+        "steps": [
+          "Use the opened Figure 9 evidence to retain its frequency, incidence angle, polarization, temperature, vegetation, and soil-moisture comparison context.",
+          "Run tau-omega over the Figure 9 soil-moisture axis with the mapped paper conditions.",
+          "Render separate H- and V-polarization brightness-temperature curves.",
+          "Report CMEM output as unavailable and do not quantify tau-omega-minus-CMEM agreement."
+        ],
+        "paper_conditions": {
+          "figure": "Figure 9",
+          "comparison_reference_model": "CMEM",
+          "target_outputs": [
+            "tb_h",
+            "tb_v"
+          ],
+          "scope": "partial: tau-omega sensitivity only"
+        },
+        "condition_provenance": {
+          "frequency_ghz": "paper_explicit",
+          "angle_deg": "paper_explicit",
+          "soil_moisture_range": "paper_explicit",
+          "soil_temperature_k": "paper_explicit_or_inferred_from_opened_evidence",
+          "vegetation_optical_depth": "paper_explicit_or_inferred_from_opened_evidence",
+          "single_scattering_albedo": "model_assumption_if_not_explicit",
+          "roughness_h": "model_assumption_if_not_explicit",
+          "bulk_density_g_cm3": "model_assumption_if_not_explicit",
+          "canopy_temperature_k": "model_assumption_if_not_explicit",
+          "cross_q": "model_assumption_if_not_explicit"
+        },
+        "literature_evidence": [
+          {
+            "ref": "cmem-sampling-density#02",
+            "role": "paper method and experiment context"
+          },
+          {
+            "ref": "cmem-sampling-density#03",
+            "role": "paper model/comparison context"
+          },
+          {
+            "ref": "cmem-sampling-density#06",
+            "role": "paper Figure 9 interpretation"
+          },
+          {
+            "ref": "cmem-sampling-density#fig09",
+            "role": "source figure target"
+          },
+          {
+            "ref": "cmem-sampling-density#fig-fig09",
+            "role": "opened figure evidence"
+          }
+        ],
+        "reproduction_targets": [
+          {
+            "id": "fig09",
+            "label": "Figure 9 supported partial reproduction",
+            "reference_models": [
+              "CMEM"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v"
+            ],
+            "evidence_refs": [
+              "cmem-sampling-density#02",
+              "cmem-sampling-density#03",
+              "cmem-sampling-density#06",
+              "cmem-sampling-density#fig09",
+              "cmem-sampling-density#fig-fig09"
+            ],
+            "status": "partial",
+            "availability_reason": "CMEM is unavailable; tau-omega is retained only as a non-equivalent local sensitivity model."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "tau_omega",
+            "version": "1.0.0",
+            "role": "supported local candidate",
+            "outputs": [
+              "tb_h",
+              "tb_v",
+              "emissivity_h",
+              "emissivity_v"
+            ]
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "tau_omega",
+            "paper_concept": "frequency",
+            "model_input": "frequency_ghz",
+            "mapped_value": "Figure 9 frequency",
+            "units": "GHz",
+            "provenance_class": "paper_explicit",
+            "confidence": "high",
+            "evidence_ref": "cmem-sampling-density#06",
+            "rationale": "Use the frequency shown for the Figure 9 experiment."
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "incidence angle",
+            "model_input": "angle_deg",
+            "mapped_value": "Figure 9 incidence angle",
+            "units": "deg",
+            "provenance_class": "paper_explicit",
+            "confidence": "high",
+            "evidence_ref": "cmem-sampling-density#fig-fig09",
+            "rationale": "Use the angle shown in the source figure."
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "soil moisture axis",
+            "model_input": "soil_moisture",
+            "mapped_value": "Figure 9 soil-moisture range",
+            "units": "volumetric fraction",
+            "provenance_class": "paper_explicit",
+            "confidence": "high",
+            "evidence_ref": "cmem-sampling-density#fig-fig09",
+            "rationale": "Sweep the source figure's independent variable."
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "soil temperature",
+            "model_input": "soil_temperature_k",
+            "mapped_value": "Figure 9 soil temperature",
+            "units": "K",
+            "provenance_class": "paper_explicit",
+            "confidence": "medium",
+            "evidence_ref": "cmem-sampling-density#03",
+            "rationale": "Hold fixed at the paper condition."
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "vegetation optical depth",
+            "model_input": "vegetation_optical_depth",
+            "mapped_value": "Figure 9 vegetation condition",
+            "units": "1",
+            "provenance_class": "paper_inferred",
+            "confidence": "medium",
+            "evidence_ref": "cmem-sampling-density#06",
+            "rationale": "Translate the stated canopy condition into the registered tau-omega input."
+          }
+        ],
+        "outputs": [
+          "tb_h",
+          "tb_v",
+          "emissivity_h",
+          "emissivity_v"
+        ],
+        "runs": [
+          {
+            "id": "fig09_tauomega_sweep",
+            "label": "Tau-omega Figure 9 soil-moisture sensitivity",
+            "model": "tau_omega",
+            "parameters": {
+              "frequency_ghz": "mapped Figure 9 value",
+              "angle_deg": "mapped Figure 9 value",
+              "soil_temperature_k": "mapped Figure 9 value",
+              "canopy_temperature_k": "mapped Figure 9 value",
+              "vegetation_optical_depth": "mapped Figure 9 value",
+              "single_scattering_albedo": "mapped Figure 9 or declared model value",
+              "roughness_h": "mapped Figure 9 or declared model value",
+              "bulk_density_g_cm3": "mapped Figure 9 or declared model value",
+              "cross_q": "mapped Figure 9 or declared model value",
+              "sweep_parameter": "soil_moisture",
+              "sweep_start": "Figure 9 lower bound",
+              "sweep_stop": "Figure 9 upper bound",
+              "sweep_points": 51
+            },
+            "stage": "main"
+          }
+        ],
+        "charts": [
+          {
+            "id": "fig09_tb_h",
+            "label": "Tau-omega H-polarized brightness temperature",
+            "kind": "line",
+            "x": "soil_moisture",
+            "y": "tb_h",
+            "required": true,
+            "purpose": "Supported local-model reproduction of the paper's independent-variable layout; not a CMEM comparison.",
+            "x_label": "Soil moisture",
+            "y_label": "Brightness temperature (K)"
+          },
+          {
+            "id": "fig09_tb_v",
+            "label": "Tau-omega V-polarized brightness temperature",
+            "kind": "line",
+            "x": "soil_moisture",
+            "y": "tb_v",
+            "required": true,
+            "purpose": "Supported local-model reproduction of the paper's independent-variable layout; not a CMEM comparison.",
+            "x_label": "Soil moisture",
+            "y_label": "Brightness temperature (K)"
+          }
+        ],
+        "success_criteria": [
+          "The planned tau-omega run completes within declared parameter limits.",
+          "Both requested polarization outputs are produced and plotted against soil moisture.",
+          "The report labels CMEM unavailable and states that tau-omega is not equivalent to CMEM.",
+          "No numerical agreement, bias, RMSE, or visual claim against CMEM is reported."
+        ],
+        "quantities": [
+          "tb_h",
+          "tb_v"
+        ],
+        "controls": [
+          "Fixed Figure 9 frequency, incidence angle, temperatures, vegetation condition, and non-swept model parameters."
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "Check that the sweep varies only soil_moisture.",
+          "Check that both polarization outputs share the same soil-moisture index.",
+          "Check declared validity and legal combinations."
+        ],
+        "stop_conditions": [
+          "Stop the reproduction claim if any Figure 9 condition cannot be mapped to a declared tau-omega input.",
+          "Stop any CMEM comparison because CMEM is unavailable and non-comparable."
+        ],
+        "assumptions": [
+          "Any tau-omega input not explicit in Figure 9 is reported as a model assumption rather than a paper fact.",
+          "The output is a partial, non-equivalent sensitivity result."
+        ],
+        "limitations": [
+          "CMEM is unavailable in the registry.",
+          "Tau-omega is not an equivalent implementation of CMEM.",
+          "The source figure is not digitized automatically; no curve-value agreement with the paper is claimed."
+        ]
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "fig09_tauomega_sweep",
+              "parameters": {
+                "frequency_ghz": 1.4,
+                "angle_deg": 40.0,
+                "bulk_density_g_cm3": 1.3,
+                "soil_temperature_k": 293.15,
+                "canopy_temperature_k": 293.15,
+                "vegetation_optical_depth": 0.0,
+                "single_scattering_albedo": 0.0,
+                "roughness_h": 0.5,
+                "cross_q": 0.0,
+                "sweep_parameter": "soil_moisture",
+                "sweep_start": 0.01,
+                "sweep_stop": 0.6,
+                "sweep_points": 51
+              }
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "fig09_tauomega_sweep"
+      },
+      "status": "success",
+      "model": "tau_omega",
+      "version": "1.0.0",
+      "spec": {
+        "frequency_ghz": 1.4,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.15,
+        "canopy_temperature_k": 293.15,
+        "vegetation_optical_depth": 0.0,
+        "single_scattering_albedo": 0.0,
+        "roughness_h": 0.5,
+        "cross_q": 0.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.01,
+        "sweep_stop": 0.6,
+        "sweep_points": 51
+      },
+      "handle": "res_8396a57e717c",
+      "planned_run_id": "fig09_tauomega_sweep",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "fig09_tb_h",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "fig09_tb_h",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "fig09_tb_v",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "fig09_tb_v",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "fig09_tb_h",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 1,
+        "point_counts": [
+          51
+        ],
+        "redrawn": true
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "fig09_tb_v",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 1,
+        "point_counts": [
+          51
+        ],
+        "redrawn": true
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "research-reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 7736,
+      "cached_prompt_tokens": 7733,
+      "completion_tokens": 80,
+      "first_token_s": 3.43,
+      "attempt": 1,
+      "cost_usd": 0.00025126,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.71
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "2 of 10 item(s) match.",
+      "arguments": {
+        "query": "Lv Schalge Saavedra Garfias Simmer 2020 sampling density brightness temperature Figure 9",
+        "scenario": "soil",
+        "kind": "paper"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 8148,
+      "cached_prompt_tokens": 7072,
+      "completion_tokens": 21,
+      "first_token_s": 2.25,
+      "attempt": 1,
+      "cost_usd": 0.00042904,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.87
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 9862,
+      "cached_prompt_tokens": 7072,
+      "completion_tokens": 21,
+      "first_token_s": 2.09,
+      "attempt": 1,
+      "cost_usd": 0.00085754,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.46
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 9933,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 63,
+      "first_token_s": 4.49,
+      "attempt": 1,
+      "cost_usd": 0.00090247,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.65
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Section index for cmem-sampling-density (bundled). Call again with a section_id to read one.",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": ""
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 10363,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 81,
+      "first_token_s": 4.51,
+      "attempt": 1,
+      "cost_usd": 0.00103157,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.71
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "cmem-sampling-density section 02: Methodology and data - Virtual reality (6697 chars, bundled)",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "02"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 12254,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 61,
+      "first_token_s": 4.62,
+      "attempt": 1,
+      "cost_usd": 0.00148032,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.83
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "cmem-sampling-density section 03: Methodology and data - Generation of L-band passive microwave observations (7966 chars, bundled)",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "03"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 14453,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 59,
+      "first_token_s": 5.26,
+      "attempt": 1,
+      "cost_usd": 0.00202767,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.45
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "cmem-sampling-density section 06: Results - Brightness temperature (4441 chars, bundled)",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "06"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 15762,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 61,
+      "first_token_s": 5.4,
+      "attempt": 1,
+      "cost_usd": 0.00235732,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.61
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_paper_figure",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Source-paper figure fig09 is available. It is not model output and has not been digitized.",
+      "arguments": {
+        "paper": "cmem-sampling-density",
+        "figure_id": "fig09"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 16056,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 88,
+      "first_token_s": 4.29,
+      "attempt": 1,
+      "cost_usd": 0.00246322,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.47
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "inspect_paper_figure",
+      "status": "success",
+      "elapsed_s": 0.017,
+      "summary": "Inspected source-paper figure fig09. The source image is attached for visual review; extracted axes and legend text are included as an audit aid. Numeric curve digitization was not performed.",
+      "arguments": {
+        "paper": "cmem-sampling-density",
+        "figure_id": "fig09",
+        "focus": "Read the plotted axes, units, panel labels, visible point-cloud shape, ranges, and whether the figure contains H and V polarization separately."
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 17065,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 87,
+      "first_token_s": 5.34,
+      "attempt": 1,
+      "cost_usd": 0.00271427,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.54
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for tau_omega v1.0.0.",
+      "arguments": {
+        "model": "tau_omega"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18468,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 69,
+      "first_token_s": 5.04,
+      "attempt": 1,
+      "cost_usd": 0.00304342,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.27
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction tau_omega v1.0.",
+      "arguments": {
+        "model": "tau_omega",
+        "section": "01"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18869,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 237,
+      "first_token_s": 7.15,
+      "attempt": 1,
+      "cost_usd": 0.00334527,
+      "reasoning_chars": 0,
+      "elapsed_s": 7.78
+    },
+    {
+      "kind": "harness_block",
+      "turn": 1,
+      "rule": "physical_domain",
+      "tool": "research_capability_check",
+      "intervention": 1,
+      "detail": "capability review requires user confirmation",
+      "problems": []
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "capability_review",
+      "detail": "Capability review requires the user's partial-scope decision."
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 2,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 7600,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 207,
+      "first_token_s": 4.66,
+      "attempt": 1,
+      "cost_usd": 0.00049202,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.16
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability check by reproduction target\n\nfig09 [fig09]\nSupported: tau_omega@1.0.0\nUnavailable: CMEM: not registered in the current model registry\nNot comparable: tau_omega is not equivalent to CMEM\n\nUnified summary\nSupported: tau_omega@1.0.0 (emissivity_h, emissivity_v, tb_h, tb_v)\nUnavailable: CMEM: not registered in the current model registry\nNot comparable: tau_omega is not an equivalent implementation of CMEM\nOutputs no registered model declares: none\n\nThe capability checkpoint is complete; a research plan may now be proposed.",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Reproduce the supported CMEM comparison components using tau-omega only; treat CMEM and the non-comparable target as unavailable.",
+        "reference_models": [
+          "CMEM"
+        ],
+        "requested_outputs": [
+          "brightness temperature (tb_h, tb_v)"
+        ],
+        "local_models": [
+          "tau_omega"
+        ],
+        "targets": [
+          {
+            "id": "fig09",
+            "reference_models": [
+              "CMEM"
+            ],
+            "requested_outputs": [
+              "brightness temperature (tb_h, tb_v)"
+            ],
+            "evidence_refs": [
+              "cmem-sampling-density#02",
+              "cmem-sampling-density#03",
+              "cmem-sampling-density#06",
+              "cmem-sampling-density#fig09",
+              "cmem-sampling-density#fig-fig09"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 8931,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 2218,
+      "first_token_s": 11.73,
+      "attempt": 1,
+      "cost_usd": 0.00323797,
+      "reasoning_chars": 0,
+      "elapsed_s": 21.22
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "error_code": "run_validation",
+      "problems": [
+        "{\"field\": \"runs[0].parameters.frequency_ghz\", \"source\": \"registered_model_declaration\", \"expected\": \"0.5 to 20.0 GHz\", \"actual\": \"mapped Figure 9 value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"frequency_ghz must be a number, got 'mapped Figure 9 value'\"}",
+        "{\"field\": \"runs[0].parameters.angle_deg\", \"source\": \"registered_model_declaration\", \"expected\": \"0.0 to 70.0 degree\", \"actual\": \"mapped Figure 9 value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"angle_deg must be a number, got 'mapped Figure 9 value'\"}",
+        "{\"field\": \"runs[0].parameters.bulk_density_g_cm3\", \"source\": \"registered_model_declaration\", \"expected\": \"0.8 to 2.0 g cm-3\", \"actual\": \"mapped Figure 9 or declared model value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"bulk_density_g_cm3 must be a number, got 'mapped Figure 9 or declared model value'\"}",
+        "{\"field\": \"runs[0].parameters.soil_temperature_k\", \"source\": \"registered_model_declaration\", \"expected\": \"273.15 to 320.0 K\", \"actual\": \"mapped Figure 9 value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"soil_temperature_k must be a number, got 'mapped Figure 9 value'\"}",
+        "{\"field\": \"runs[0].parameters.canopy_temperature_k\", \"source\": \"registered_model_declaration\", \"expected\": \"273.15 to 320.0 K\", \"actual\": \"mapped Figure 9 value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"canopy_temperature_k must be a number, got 'mapped Figure 9 value'\"}",
+        "{\"field\": \"runs[0].parameters.vegetation_optical_depth\", \"source\": \"registered_model_declaration\", \"expected\": \"0.0 to 2.0 none\", \"actual\": \"mapped Figure 9 value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"vegetation_optical_depth must be a number, got 'mapped Figure 9 value'\"}",
+        "{\"field\": \"runs[0].parameters.single_scattering_albedo\", \"source\": \"registered_model_declaration\", \"expected\": \"0.0 to 0.3 none\", \"actual\": \"mapped Figure 9 or declared model value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"single_scattering_albedo must be a number, got 'mapped Figure 9 or declared model value'\"}",
+        "{\"field\": \"runs[0].parameters.roughness_h\", \"source\": \"registered_model_declaration\", \"expected\": \"0.0 to 3.0 none\", \"actual\": \"mapped Figure 9 or declared model value\", \"repair\": \"Use a value accepted by the registered model declaration; do not infer a limit from paper text.\", \"provenance\": \"registered_model_declaration\", \"blocking\": true, \"message\": \"roughness_h must be a number, got 'mapped Figure 9 or declared model value'\"}"
+      ],
+      "summary": "The proposed execution plan is invalid: planned run 1: frequency_ghz must be a number, got 'mapped Figure 9 value'; planned run 1: angle_deg must be a number, got 'mapped Figure 9 value'; planned run 1: bulk_density_g_cm3 must be a number, got 'mapped Figure 9 or declared model value'; planned run 1: soil_temperature_k must be a number, got 'mapped Figure 9 value'; planned run 1: canopy_temperature_k must be a number, got 'mapped Figure 9 value'; planned run 1: vegetation_optical_depth must be a number, got 'mapped Figure 9 value'; planned run 1: single_scattering_albedo must be a number, got 'mapped Figure 9 or declared model value'; planned run 1: roughness_h must be a number, got 'mapped Figure 9 or declared model value'; planned run 1: cross_q must be a number, got 'mapped Figure 9 or ",
+      "arguments": {
+        "_truncated": "{\"action\": \"propose\", \"question\": \"Reproduce the supported component of CMEM paper Figure 9 with tau-omega only; explicitly report CMEM as unavailable and tau-omega versus CMEM as not comparable.\", \"objective\": \"Generate a tau-omega brightness-temperature sensitivity curve for the Figure 9 soil-moisture experiment, while preserving the paper's comparison context without claiming equivalence to CMEM.\", \"hypothesis\": \"Tau-omega produces physically structured TB_h and TB_v responses across the paper's soil-moisture range, but this is a local-model sensitivity result rather than a CMEM reproduction or validation.\", \"steps\": [\"Use the opened Figure 9 evidence to retain its frequency, incidence angle, polarization, temperature, vegetation, and soil-moisture comparison context.\", \"Run tau-omega over the Figure 9 soil-moisture axis with the mapped paper conditions.\", \"Render separate H- and V-polarization brightness-temperature curves.\", \"Report CMEM output as unavailable and do not quantify tau-omega-minus-CMEM agreement.\"], \"paper_conditions\": {\"figure\": \"Figure 9\", \"comparison_reference_model\": \"CMEM\", \"target_outputs\": [\"tb_h\", \"tb_v\"], \"scope\": \"partial: tau-omega sensitivity only\"}, \"condition_provenance\": {\"frequency_ghz\": \"paper_explicit\", \"angle_deg\": \"paper_explicit\", \"soil_moisture_range\": \"paper_explicit\", \"soil_temperature_k\": \"paper_explicit_or_inferred_from_opened_evidence\", \"vegetation_optical_depth\": \"paper_explicit_or_inferred_from_opened_evidence\", \"single_scattering_albedo\": \"model_assumption_if_not_explicit\", \"roughness_h\": \"model_assumption_if_not_explicit\", \"bulk_density_g_cm3\": \"model_assumption_if_not_explicit\", \"canopy_temperature_k\": \"model_assumption_if_not_explicit\", \"cross_q\": \"model_assumption_if_not_explicit\"}, \"literature_evidence\": [{\"ref\": \"cmem-sampling-density#02\", \"role\": \"paper method and experiment context\"}, {\"ref\": \"cmem-sampling-density#03\", \"role\": \"paper model/comparison context\"}, {\"ref\": \"cmem-sampling-density#06\", \"role\": \"paper Figure 9 interpretation\"}, {\"ref\": \"cmem-sampling-density#fig09\", \"role\": \"source figure target\"}, {\"ref\": \"cmem-sampling-density#fig-fig09\", \"role\": \"opened figure evidence\"}], \"reproduction_targets\": [{\"id\": \"fig09\", \"label\": \"Figure 9 supported partial reproduction\", \"reference_models\": [\"CMEM\"], \"requested_outputs\": [\"tb_h\", \"tb_v\"], \"evidence_refs\": [\"cmem-sampling-density#02\", \"cmem-sampling-density#03\", \"cmem-sampling-density#06\", \"cmem-sampling-density#fig09\", \"cmem-sampling-density#fig-fig09\"], \"status\": \"partial\", \"availability_reason\": \"CMEM is unavailable; tau-omega is retained only as a non-equivalent local sensitivity model.\"}], \"selected_models\": [{\"model\": \"tau_omega\", \"version\": \"1.0.0\", \"role\": \"supported local candidate\", \"outputs\": [\"tb_h\", \"tb_v\", \"emissivity_h\", \"emissivity_v\"]}], \"parameter_mapping\": [{\"model\": \"tau_omega\", \"paper_concept\": \"frequency\", \"model_input\": \"frequency_ghz\", \"mapped_value\": \"Figure 9 frequency\", \"units\": \"GHz\", \"provenance_class\": \"paper_explicit\", \"confidence\": \"high\", \"evidence_ref\": \"cmem-sampling-density#06\", \"rationale\": \"Use the frequency shown for the Figure 9 experiment.\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"incidence angle\", \"model_input\": \"angle_deg\", \"mapped_value\": \"Figure 9 incidence angle\", \"units\": \"deg\", \"provenance_class\": \"paper_explicit\", \"confidence\": \"high\", \"evidence_ref\": \"cmem-sampling-density#fig-fig09\", \"rationale\": \"Use the angle shown in the source figure.\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"soil moisture axis\", \"model_input\": \"soil_moisture\", \"mapped_value\": \"Figure 9 soil-moisture range\", \"units\": \"volumetric fraction\", \"provenance_class\": \"paper_explicit\", \"confidence\": \"high\", \"evidence_ref\": \"cmem-sampling-density#fig-fig09\", \"rationale\": \"Sweep the source figure's independent variable.\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"soil temperature\", \"model_input\": \"soil_temperature_k\", \"mapped_value\": \"Figure 9 soil temperature\", \"units\": \"K\", \"provenance_class\": \"paper_explicit\", \"confidence\": \"medium\", \"evidence_ref\": \"cmem-sampling-density#03\", \"rationale\": \"Hold fixed at the paper condition.\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"vegetation optical depth\", \"model_input\": \"vegetation_optical_depth\", \"mapped_value\": \"Figure 9 vegetation condition\", \"units\": \"1\", \"provenance_class\": \"paper_inferred\", \"confidence\": \"medium\", \"evidence_ref\": \"cmem-sampling-density#06\", \"rationale\": \"Translate the stated canopy condition into the registered tau-omega input.\"}], \"outputs\": [\"tb_h\", \"tb_v\", \"emissivity_h\", \"emissivity_v\"], \"runs\": [{\"id\": \"fig09_tauomega_sweep\", \"label\": \"Tau-omega Figure 9 soil-moisture sensitivity\", \"model\": \"tau_omega\", \"parameters\": {\"frequency_ghz\": \"mapped Figure 9 value\", \"angle_deg\": \"mapped Figure 9 value\", \"soil_temperature_k\": \"mapped Figure 9 value\", \"canopy_temperature_k\": \"mapped Figure 9 value\", \"vegetation_optical_depth\": \"mapped Figure 9 value\", \"single_scattering_albedo\": \"mapped Figure 9 or declared model value\", \"roughness_h\": \"mapped Figure 9 or declared model value\", \"bulk_density_g_cm3\": \"mapped Figure 9 or declared model value\", \"cross_q\": \"mapped Figure 9 or declared model value\", \"sweep_parameter\": \"soil_moisture\", \"sweep_start\": \"Figure 9 lower bound\", \"sweep_stop\": \"Figure 9 upper bound\", \"sweep_points\": 51}, \"stage\": \"main\"}], \"charts\": [{\"id\": \"fig09_tb_h\", \"label\": \"Tau-omega H-polarized brightness temperature\", \"kind\": \"line\", \"x\": \"soil_moisture\", \"y\": \"tb_h\", \"required\": true, \"purpose\": \"Supported local-model reproduction of the paper's independent-variable layout; not a CMEM comparison.\", \"x_label\": \"Soil moisture\", \"y_label\": \"Brightness temperature (K)\"}, {\"id\": \"fig09_tb_v\", \"label\": \"Tau-omega V-polarized brightness temperature\", \"kind\": \"line\", \"x\": \"soil_moisture\", \"y\": \"tb_v\", \"required\": true, \"purpose\": \"Supported local-model reproduction of the paper's independent-variable layout; not a CMEM comparison.\", \"x_label\": \"Soil moisture\", \"y_label\": \"Brightness temperature"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 14289,
+      "cached_prompt_tokens": 7074,
+      "completion_tokens": 149,
+      "first_token_s": 2.13,
+      "attempt": 1,
+      "cost_usd": 0.00211753,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.61
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.005,
+      "error_code": "plan_quality",
+      "problems": [
+        "metrics (acceptance metrics)"
+      ],
+      "summary": "The proposal is a computation checklist, not yet a scientific protocol. Add: metrics (acceptance metrics).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "fig09_tauomega_sweep",
+              "parameters": {
+                "frequency_ghz": 1.4,
+                "angle_deg": 40.0,
+                "bulk_density_g_cm3": 1.3,
+                "soil_temperature_k": 293.15,
+                "canopy_temperature_k": 293.15,
+                "vegetation_optical_depth": 0.0,
+                "single_scattering_albedo": 0.0,
+                "roughness_h": 0.5,
+                "cross_q": 0.0,
+                "sweep_parameter": "soil_moisture",
+                "sweep_start": 0.01,
+                "sweep_stop": 0.6,
+                "sweep_points": 51
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 11805,
+      "cached_prompt_tokens": 7074,
+      "completion_tokens": 94,
+      "first_token_s": 2.02,
+      "attempt": 1,
+      "cost_usd": 0.00143053,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.65
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review",
+      "detail": "LLM-authored research plan v001 is ready for human review. Backend applied 24 auditable reference/presentation repair(s); review them explicitly."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 14292,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 224,
+      "first_token_s": 4.3,
+      "attempt": 1,
+      "cost_usd": 0.00218542,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.74
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review"
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 3,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 8081,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 58,
+      "first_token_s": 3.65,
+      "attempt": 1,
+      "cost_usd": 0.00043347,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.73
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.002,
+      "summary": "Approved run fig09_tauomega_sweep: tau_omega ran in 0.00s: 51 point(s) over soil_moisture. Quality control passed.",
+      "arguments": {
+        "run_id": "fig09_tauomega_sweep"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 9767,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 44,
+      "first_token_s": 4.9,
+      "attempt": 1,
+      "cost_usd": 0.00083817,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.14
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.055,
+      "summary": "Approved chart fig09_tb_h: Drew a line chart with 1 series over 51 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "fig09_tb_h",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 9968,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 133,
+      "first_token_s": 3.58,
+      "attempt": 1,
+      "cost_usd": 0.00099522,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.87
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.047,
+      "summary": "Approved chart fig09_tb_v: Drew a line chart with 1 series over 51 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "fig09_tb_v",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 10225,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 80,
+      "first_token_s": 5.08,
+      "attempt": 1,
+      "cost_usd": 0.00099587,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.3
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.052,
+      "summary": "Figure 1 render check (Render QA) redrawn with a publication layout and passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 1 series; point counts [51].",
+      "arguments": {
+        "chart_id": "fig09_tb_h",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 10408,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 88,
+      "first_token_s": 4.09,
+      "attempt": 1,
+      "cost_usd": 0.00105122,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.31
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.057,
+      "summary": "Figure 2 render check (Render QA) redrawn with a publication layout and passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 1 series; point counts [51].",
+      "arguments": {
+        "chart_id": "fig09_tb_v",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 10591,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 120,
+      "first_token_s": 2.84,
+      "attempt": 1,
+      "cost_usd": 0.00113537,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.99
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "research-reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 12636,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 2419,
+      "first_token_s": 6.76,
+      "attempt": 1,
+      "cost_usd": 0.00440542,
+      "reasoning_chars": 0,
+      "elapsed_s": 20.55
+    },
+    {
+      "kind": "research_block",
+      "turn": 3,
+      "rule": "research_reporting_contract",
+      "detail": "The final report is being checked against the recorded provenance ledger and result state."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 16022,
+      "cached_prompt_tokens": 7201,
+      "completion_tokens": 2160,
+      "first_token_s": 10.69,
+      "attempt": 1,
+      "cost_usd": 0.00494112,
+      "reasoning_chars": 0,
+      "elapsed_s": 18.29
+    },
+    {
+      "kind": "harness_warning",
+      "turn": 3,
+      "rule": "report_completeness",
+      "detail": "The report must give a separate conclusion based on each generated figure, covering its visible curves, axes, units, legend and qualitative patterns. The report must give a separate conclusion from the actual executed result arrays and conditions, not only describe the chart."
+    },
+    {
+      "kind": "research_complete",
+      "turn": 3,
+      "detail": "A registered model run, figure and validated report are complete."
+    },
+    {
+      "kind": "harness_pass",
+      "turn": 3,
+      "rule": "citation_integrity",
+      "markers": [
+        "cmem-sampling-density#02",
+        "cmem-sampling-density#03",
+        "cmem-sampling-density#06",
+        "cmem-sampling-density#06",
+        "model:tau_omega@1.0.0",
+        "model:tau_omega@1.0.0",
+        "model:tau_omega@1.0.0",
+        "model:tau_omega@1.0.0"
+      ]
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "cmem-sampling-density#02",
+      "cmem-sampling-density#03",
+      "cmem-sampling-density#06",
+      "cmem-sampling-density#fig-fig09",
+      "research-planning#00",
+      "research-reporting#00"
+    ],
+    "models": [
+      "tau_omega@1.0.0"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "tau_omega@1.0"
+    ],
+    "paper_figures": [
+      "cmem-sampling-density#fig09"
+    ],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [
+      "cmem-sampling-density#02",
+      "cmem-sampling-density#03",
+      "cmem-sampling-density#06",
+      "cmem-sampling-density#06",
+      "model:tau_omega@1.0.0",
+      "model:tau_omega@1.0.0",
+      "model:tau_omega@1.0.0",
+      "model:tau_omega@1.0.0",
+      "model:tau_omega@1.0.0"
+    ],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [
+    {
+      "planned_chart_id": "fig09_tb_h",
+      "figure_number": 1,
+      "title": "Figure 1. Tau-omega H-polarized brightness temperature",
+      "subtitle": "f 1.4 GHz · angle 40 °",
+      "x_label": "Soil moisture",
+      "y_label": "Brightness temperature (K)",
+      "kind": "line",
+      "series": [
+        {
+          "label": "Tau-omega Figure 9 soil-moisture sensitivity · tb_h",
+          "source": "model_run",
+          "origin": "tau_omega@1.0.0",
+          "n_points": 51,
+          "handle": "res_8396a57e717c",
+          "x": "soil_moisture",
+          "y": "tb_h"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 1,
+        "point_counts": [
+          51
+        ],
+        "redrawn": true
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/improve-2026-10-02/final2/figures/7b37b972e59a1dba2dd00f9c_tau-omega-lv2020-fig9_p1-reproduction-first_openai-gpt-5.6-luna_r1_full.png"
+    },
+    {
+      "planned_chart_id": "fig09_tb_v",
+      "figure_number": 2,
+      "title": "Figure 2. Tau-omega V-polarized brightness temperature",
+      "subtitle": "f 1.4 GHz · angle 40 °",
+      "x_label": "Soil moisture",
+      "y_label": "Brightness temperature (K)",
+      "kind": "line",
+      "series": [
+        {
+          "label": "Tau-omega Figure 9 soil-moisture sensitivity · tb_v",
+          "source": "model_run",
+          "origin": "tau_omega@1.0.0",
+          "n_points": 51,
+          "handle": "res_8396a57e717c",
+          "x": "soil_moisture",
+          "y": "tb_v"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 1,
+        "point_counts": [
+          51
+        ],
+        "redrawn": true
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/improve-2026-10-02/final2/figures/1b670f4e4fa10016e0b1842c_tau-omega-lv2020-fig9_p1-reproduction-first_openai-gpt-5.6-luna_r1_full.png"
+    }
+  ],
+  "markers": {
+    "literature": [
+      "cmem-sampling-density#02",
+      "cmem-sampling-density#03",
+      "cmem-sampling-density#06",
+      "cmem-sampling-density#06"
+    ],
+    "model": [
+      "tau_omega@1.0.0",
+      "tau_omega@1.0.0",
+      "tau_omega@1.0.0",
+      "tau_omega@1.0.0",
+      "tau_omega@1.0.0"
+    ],
+    "data": []
+  },
+  "parameter_provenance": [
+    {
+      "field": "frequency_ghz",
+      "value": 1.4,
+      "source_kind": "user",
+      "source_ref": "cmem-sampling-density#06; submitted experiment differs from paper condition",
+      "reason": "User-specified run configuration",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "angle_deg",
+      "value": 40.0,
+      "source_kind": "user",
+      "source_ref": "cmem-sampling-density#fig09; submitted experiment differs from paper condition",
+      "reason": "User-specified run configuration",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "soil_moisture",
+      "value": {
+        "base": 0.25,
+        "sweep_start": 0.01,
+        "sweep_stop": 0.6,
+        "sweep_points": 51
+      },
+      "source_kind": "model_default",
+      "source_ref": "cmem-sampling-density#fig09; submitted experiment differs from paper condition",
+      "reason": "Backend-default base value with the approved soil-moisture sweep",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "soil_temperature_k",
+      "value": 293.15,
+      "source_kind": "user",
+      "source_ref": "cmem-sampling-density#03; submitted experiment differs from paper condition",
+      "reason": "User-specified run configuration",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "vegetation_optical_depth",
+      "value": 0.0,
+      "source_kind": "user",
+      "source_ref": "cmem-sampling-density#06; submitted experiment differs from paper condition",
+      "reason": "User-specified vegetation condition",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "bulk_density_g_cm3",
+      "value": 1.3,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Retained model assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "canopy_temperature_k",
+      "value": 293.15,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Retained model assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "single_scattering_albedo",
+      "value": 0.0,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Retained model assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "roughness_h",
+      "value": 0.5,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Retained model assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "cross_q",
+      "value": 0.0,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Retained model assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_parameter",
+      "value": "soil_moisture",
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Approved sweep design",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_start",
+      "value": 0.01,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Approved sweep lower bound",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_stop",
+      "value": 0.6,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Approved sweep upper bound",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_points",
+      "value": 51,
+      "source_kind": "assumption",
+      "source_ref": "no paper or user evidence recorded",
+      "reason": "Approved sweep resolution",
+      "sensitivity_checked": false
+    }
+  ],
+  "provenance_parse_error": null,
+  "reproduction_outcome": "partial",
+  "archived_report_path": "evaluation/results/competition/improve-2026-10-02/final2/reports/4643a34628e01357b329f921_tau-omega-lv2020-fig9_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/improve-2026-10-02/final2/reports/4643a34628e01357b329f921_tau-omega-lv2020-fig9_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  },
+  "dashboard_metrics": {
+    "evaluation_complete": true,
+    "successful": true,
+    "figure_result_correct": "fail",
+    "report_correct": "pass",
+    "overall_correct": "fail",
+    "figure_result": {
+      "passed": null,
+      "status": "not_scoreable",
+      "plot": {
+        "passed": true
+      }
+    },
+    "figure_judgement": {
+      "complete": true,
+      "passed": false,
+      "status": "fail",
+      "total": 2,
+      "scores": {
+        "line_count": 0,
+        "patterns": 1,
+        "grouping": 0,
+        "visual_correspondence": 1
+      },
+      "observations": [
+        "The reference shows two distinct density distributions, both generally slanting toward lower brightness temperatures at higher soil moisture; the candidate shows one steadily declining curve.",
+        "The candidate retains the broad inverse relationship but omits the two separate H/V distributions and their internal variation."
+      ],
+      "summary": "The candidate partially preserves the overall downward trend, but does not reproduce the reference’s two distinct distributions.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 561,
+          "elapsed_s": 7.171,
+          "usage": {
+            "prompt_tokens": 2116,
+            "completion_tokens": 349,
+            "total_tokens": 2465,
+            "cost_usd": 0.000438925
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2116,
+        "completion_tokens": 349,
+        "total_tokens": 2465,
+        "cost_usd": 0.000438925
+      }
+    },
+    "deterministic_report": {
+      "passed": true,
+      "checks": {
+        "report_exists": true,
+        "outcome_declared": true,
+        "evidence_resolved": true,
+        "computed_result_identified": true,
+        "model_version_qualified": true,
+        "calibrated_outcome": true
+      },
+      "unresolved_markers": [],
+      "visual_validation": "not_passed",
+      "plot_checks_are_diagnostic": true
+    },
+    "report_judgement": {
+      "complete": true,
+      "passed": true,
+      "standard": "report-judge-standard-v3",
+      "total": 12,
+      "maximum": 16,
+      "scores": {
+        "source_fidelity": 1,
+        "answer": 1,
+        "factuality": 2,
+        "technical_completeness": 1,
+        "assumed_parameters": 1,
+        "evidence": 2,
+        "calibration": 2,
+        "clarity": 2
+      },
+      "factual_errors": [],
+      "summary": "The report supports a partial result with measured H/V trends, run conditions, and resolved evidence, and it correctly avoids claiming a CMEM validation. It does not adequately compare against Figure 9’s distinct, non-unique H/V distributions or explain that a single-curve simulation cannot reproduce their spread. Assumption provenance is also unclear for some settings.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 554,
+          "elapsed_s": 17.654,
+          "usage": {
+            "prompt_tokens": 3771,
+            "completion_tokens": 1607,
+            "total_tokens": 5378,
+            "cost_usd": 0.0012748
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3771,
+        "completion_tokens": 1607,
+        "total_tokens": 5378,
+        "cost_usd": 0.0012748
+      }
+    },
+    "judge_usage": {
+      "prompt_tokens": 5887,
+      "completion_tokens": 1956,
+      "total_tokens": 7843,
+      "cost_usd": 0.001713725
+    },
+    "figure_judge_usage": {
+      "prompt_tokens": 2116,
+      "completion_tokens": 349,
+      "total_tokens": 2465,
+      "cost_usd": 0.000438925
+    }
+  }
+}
