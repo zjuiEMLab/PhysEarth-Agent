@@ -1,0 +1,3096 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "prosail-lai-benchmark",
+  "suite": "tier2",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "1751bc9a649f68c3a754b6dcf34abd448c43112c9e205b45abd0e4903fe9c0b4",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 2,
+  "build": "7ce2ee6",
+  "question": "The prosail 2.0.5 Python package (J. Gomez-Dans) checks itself against the PROSAIL Fortran reference distributed by Jussieu: its test case test_rsot_prosail5 runs PROSPECT-5 with leaf structure N = 1.5, chlorophyll 40 ug/cm2, carotenoids 8 ug/cm2, no brown pigment, equivalent water thickness 0.01 cm and dry matter 0.009 g/cm2, and 4SAIL with leaf area index 3, a spherical leaf angle distribution, hot spot 0.01, solar zenith 30 degrees, view zenith 10 degrees, relative azimuth 0, soil brightness 1 and the dry soil spectrum (psoil = 1), returning the bidirectional (SDR) reflectance. Reproduce this benchmark case with the registered model, then sweep leaf area index from 0 to 8 and plot the green (550 nm), red (670 nm), near-infrared (800 nm) and shortwave-infrared (1600 nm) reflectance against leaf area index on one chart. Describe how each band responds as the canopy closes and where it saturates, and state any benchmark setting the registered model cannot represent exactly and what you used instead.",
+  "answer": "## Research result and conclusion\n\nThe generated LAI figure shows a clear canopy-response pattern: NDVI and NIR reflectance increase with LAI, while green, red, and SWIR reflectances decrease rapidly at low LAI and then level off. The response is therefore convergent or saturating at high LAI rather than continuously diverging. The plotted range is LAI **0–8 m² m⁻²** across 17 points. [model:prosail@2.0.5]\n\nThe registered-model experiment supports this qualitative conclusion, but it is only a partial reproduction of the documented benchmark because the PROSPECT-5 + 4SAIL Jussieu Fortran reference was unavailable. [prosail-docs#00]\n\n## Conclusion supported by the generated image\n\nFigure 1 contains five curves on shared LAI axes: green, red, NIR, and SWIR reflectance plus NDVI. The visible grouping shows:\n\n- NDVI rising toward a high-LAI plateau.\n- NIR reflectance increasing with LAI.\n- Green, red, and SWIR reflectance decreasing strongly at low LAI.\n- Small reversals or flattening at high LAI, indicating saturation-like behavior rather than strict monotonicity for every reflectance band.\n\nThe generated chart was legible after rendering. This establishes chart usability, not agreement with the unavailable Jussieu reference figure.\n\n## Conclusion supported by result arrays\n\nThe actual PROSAIL result arrays give:\n\n| Quantity | LAI = 0 | LAI = 8 |\n|---|---:|---:|\n| Green reflectance | 0.2587 | 0.0535 |\n| Red reflectance | 0.3210 | 0.0168 |\n| NIR reflectance | 0.3857 | 0.4859 |\n| SWIR reflectance | 0.5095 | 0.2121 |\n| NDVI | 0.0916 | 0.9333 |\n\nAt the baseline LAI of 3, the model produced green reflectance **0.0583**, red reflectance **0.0233**, NIR reflectance **0.4465**, SWIR reflectance **0.2344**, and NDVI **0.9006**. [model:prosail@2.0.5]\n\nThe arrays show that NIR reflectance and NDVI are increasing over the sweep. Green, red, and SWIR reflectances are not strictly monotonic: each decreases to a minimum and then changes slightly at high LAI. [model:prosail@2.0.5]\n\n## Image–array comparison\n\n| Aspect | Generated image | Result arrays | Assessment |\n|---|---|---|---|\n| LAI response | Curves rise or fall and then flatten | Same qualitative behavior, with numerical endpoint values | Agreement |\n| High-LAI behavior | Visible saturation-like grouping | Small high-LAI reversals in several reflectances | Agreement with qualification |\n| Low-LAI behavior | Strong separation near LAI 0 | Large changes between LAI 0 and 0.5 | Agreement |\n| Reference-model agreement | Not established from the unavailable Jussieu implementation | No reference-array comparison supplied | Not scoreable |\n| Numerical validation statistics | Not shown | No bias, RMSE, correlation, or percent error calculated | N/A |\n\nThe figure and arrays support the same qualitative pattern. Exact numerical agreement with the original reference implementation is not identifiable, and no quantitative validation statistic was supplied.\n\n## Assumed parameters\n\nAll entries below use the authoritative ledger’s provenance classes. `backend_default` is represented as the permitted XML value `model_default`.\n\nThe baseline used the registered defaults, including LAI = 3.0. The sensitivity run used the approved LAI sweep from 0 to 8 with 17 points; the ledger separately records the retained submitted-run sweep fields.\n\n<parameter_provenance>\n[\n  {\"field\":\"leaf_structure\",\"value\":1.5,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"chlorophyll_ug_cm2\",\"value\":40.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"carotenoid_ug_cm2\",\"value\":8.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"equivalent_water_thickness_cm\",\"value\":0.01,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"dry_matter_g_cm2\",\"value\":0.009,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"leaf_area_index\",\"value\":3.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The baseline uses the registered default; the sensitivity run maps LAI to the declared sweep input.\",\"sensitivity_checked\":false},\n  {\"field\":\"average_leaf_angle_deg\",\"value\":50.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"hot_spot\",\"value\":0.01,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"solar_zenith_deg\",\"value\":30.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"view_zenith_deg\",\"value\":10.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"relative_azimuth_deg\",\"value\":0.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"anthocyanin_ug_cm2\",\"value\":0.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"brown_pigment\",\"value\":0.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"soil_brightness\",\"value\":1.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"soil_moisture_fraction\",\"value\":1.0,\"source_kind\":\"model_default\",\"source_ref\":\"prosail-docs#00\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_parameter\",\"value\":\"none\",\"source_kind\":\"assumption\",\"source_ref\":\"none\",\"reason\":\"The submitted run retained this value without attached paper or user evidence; it was confirmed during plan review.\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_points\",\"value\":10,\"source_kind\":\"model_default\",\"source_ref\":\"none\",\"reason\":\"The registered model inserted this value during parameter resolution; it is not paper evidence.\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_start\",\"value\":0.0,\"source_kind\":\"assumption\",\"source_ref\":\"none\",\"reason\":\"The submitted run retained this value without attached paper or user evidence; it was confirmed during plan review.\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_stop\",\"value\":8.0,\"source_kind\":\"assumption\",\"source_ref\":\"none\",\"reason\":\"The submitted run retained this value without attached paper or user evidence; it was confirmed during plan review.\",\"sensitivity_checked\":false},\n  {\"field\":\"approved_lai_sweep\",\"value\":\"leaf_area_index from 0.0 to 8.0, 17 points\",\"source_kind\":\"user\",\"source_ref\":\"approved research plan\",\"reason\":\"This was the approved sensitivity-run configuration.\",\"sensitivity_checked\":false}\n]\n</parameter_provenance>\n<reproduction_outcome>partial</reproduction_outcome>",
+  "planning_answer": "Research is paused at the human-review stage (plan_review). No formal physical result has been computed yet. Click Approve plan, or describe the changes you want in Conversation.",
+  "elapsed_s": 144.55,
+  "stop_rule": null,
+  "model_calls": 19,
+  "llm_usage": {
+    "calls": 19,
+    "prompt_tokens": 342284,
+    "completion_tokens": 11363,
+    "total_tokens": 353647,
+    "cost_usd": 0.07889873,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 13157,
+        "completion_tokens": 105,
+        "cost_usd": 0.00038968,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.57
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 13651,
+        "completion_tokens": 21,
+        "cost_usd": 0.00032198,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.09
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 14779,
+        "completion_tokens": 22,
+        "cost_usd": 0.00034574,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.01
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 16823,
+        "completion_tokens": 28,
+        "cost_usd": 0.0003706,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.47
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 19709,
+        "completion_tokens": 42,
+        "cost_usd": 0.0049775,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.26
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 21485,
+        "completion_tokens": 26,
+        "cost_usd": 0.0054023,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.24
+      },
+      {
+        "turn": 1,
+        "index": 7,
+        "prompt_tokens": 21954,
+        "completion_tokens": 530,
+        "cost_usd": 0.00318817,
+        "reasoning_chars": 0,
+        "elapsed_s": 6.57
+      },
+      {
+        "turn": 2,
+        "index": 1,
+        "prompt_tokens": 12881,
+        "completion_tokens": 284,
+        "cost_usd": 0.0035609,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.07
+      },
+      {
+        "turn": 2,
+        "index": 2,
+        "prompt_tokens": 15512,
+        "completion_tokens": 2540,
+        "cost_usd": 0.00692585,
+        "reasoning_chars": 0,
+        "elapsed_s": 23.52
+      },
+      {
+        "turn": 2,
+        "index": 3,
+        "prompt_tokens": 20723,
+        "completion_tokens": 26,
+        "cost_usd": 0.00520545,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.54
+      },
+      {
+        "turn": 2,
+        "index": 4,
+        "prompt_tokens": 21180,
+        "completion_tokens": 67,
+        "cost_usd": 0.00537525,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.63
+      },
+      {
+        "turn": 2,
+        "index": 5,
+        "prompt_tokens": 22975,
+        "completion_tokens": 2724,
+        "cost_usd": 0.0090124,
+        "reasoning_chars": 0,
+        "elapsed_s": 25.67
+      },
+      {
+        "turn": 2,
+        "index": 6,
+        "prompt_tokens": 29107,
+        "completion_tokens": 320,
+        "cost_usd": 0.0076606,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.85
+      },
+      {
+        "turn": 3,
+        "index": 1,
+        "prompt_tokens": 13356,
+        "completion_tokens": 53,
+        "cost_usd": 0.00340245,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.78
+      },
+      {
+        "turn": 3,
+        "index": 2,
+        "prompt_tokens": 14200,
+        "completion_tokens": 93,
+        "cost_usd": 0.00366145,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.45
+      },
+      {
+        "turn": 3,
+        "index": 3,
+        "prompt_tokens": 16231,
+        "completion_tokens": 100,
+        "cost_usd": 0.0041776,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.37
+      },
+      {
+        "turn": 3,
+        "index": 4,
+        "prompt_tokens": 16760,
+        "completion_tokens": 67,
+        "cost_usd": 0.00427025,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.87
+      },
+      {
+        "turn": 3,
+        "index": 5,
+        "prompt_tokens": 17296,
+        "completion_tokens": 1901,
+        "cost_usd": 0.00660505,
+        "reasoning_chars": 0,
+        "elapsed_s": 18.85
+      },
+      {
+        "turn": 3,
+        "index": 6,
+        "prompt_tokens": 20505,
+        "completion_tokens": 2414,
+        "cost_usd": 0.00404551,
+        "reasoning_chars": 0,
+        "elapsed_s": 21.3
+      }
+    ]
+  },
+  "tool_calls": 16,
+  "interventions": 1,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": true,
+    "approval_policy": "scripted_accept_unmodified_plan",
+    "review_actions": [
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "confirm_reported_partial_scope",
+        "before": "capability waiting_user",
+        "summary": "Yes. I confirm the partial scope exactly as your capability check reported it. Generate the research plan for the supported components only, and name everything outside that scope as unavailable in the report.",
+        "after": "capability confirmed"
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_review",
+        "after": "plan_approved",
+        "status": "needs_input",
+        "summary": "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_approved",
+        "after": "pseudo_preview",
+        "status": "needs_input",
+        "summary": "Pseudo-data preview v001 is ready for layout review only. It is not model output and must not support a scientific conclusion. Confirm the figure package, or revise the plan in chat."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "pseudo_preview",
+        "after": "chart_selected",
+        "status": "needs_input",
+        "summary": "1 chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "chart_selected",
+        "after": "approved",
+        "status": "success",
+        "summary": "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs."
+      }
+    ],
+    "review_error": null,
+    "final_phase": "completed",
+    "plan_version": 1
+  },
+  "research": {
+    "question": "Supported local PROSAIL benchmark and LAI sensitivity only; no equivalence claim against unavailable Jussieu Fortran reference.",
+    "plan_version": 1,
+    "phase": "completed",
+    "plan": {
+      "plan_version": 1,
+      "title": "Compute auditable outputs from prosail@2.0.5 for the documented benchmark context and a fixed-parameter LAI sweep.",
+      "question": "Supported local PROSAIL benchmark and LAI sensitivity only; no equivalence claim against unavailable Jussieu Fortran reference.",
+      "objective": "Compute auditable outputs from prosail@2.0.5 for the documented benchmark context and a fixed-parameter LAI sweep.",
+      "hypothesis": "The local PROSAIL outputs vary with LAI, while direct reference comparison is unavailable and non-comparable.",
+      "steps": [
+        "Run the registered PROSAIL baseline using declared defaults.",
+        "Sweep LAI from 0 to 8 with all other inputs fixed.",
+        "Plot the five registered outputs against LAI.",
+        "Report unavailable reference components explicitly."
+      ],
+      "parameters": {},
+      "paper_conditions": {
+        "benchmark": "test_rsot_prosail5 benchmark SDR reflectance",
+        "sensitivity": "Reflectance versus leaf area index",
+        "reference": "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+      },
+      "condition_provenance": {
+        "benchmark": "prosail-docs#00",
+        "sensitivity": "prosail-docs#00",
+        "reference": "prosail-docs#00"
+      },
+      "literature_evidence": [
+        {
+          "evidence_ref": "prosail-docs#00",
+          "purpose": "Opened documentation defining the benchmark context, model arguments, outputs, and benchmark reference."
+        }
+      ],
+      "reproduction_targets": [
+        {
+          "id": "benchmark",
+          "source_id": "test_rsot_prosail5",
+          "target_quantity": "registered green/red/NIR/SWIR reflectance and NDVI outputs",
+          "expected_comparison": "Compare only against the documented target definition; no numerical or visual comparison to the unavailable Jussieu reference.",
+          "label": "Supported local PROSAIL benchmark outputs",
+          "reference_models": [
+            "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+          ],
+          "requested_outputs": [
+            "reflectance_green",
+            "reflectance_red",
+            "reflectance_nir",
+            "reflectance_swir",
+            "ndvi"
+          ],
+          "evidence_refs": [
+            "prosail-docs#00"
+          ],
+          "run_ids": [
+            "baseline"
+          ],
+          "status": "partial",
+          "availability_reason": "Local prosail@2.0.5 is available, but the Jussieu Fortran reference is unavailable and not comparable.",
+          "source_type": "result",
+          "chart_ids": []
+        },
+        {
+          "id": "lai_sweep",
+          "source_id": "lai_sweep",
+          "target_quantity": "registered reflectance and NDVI as a function of leaf area index",
+          "expected_comparison": "Assess local LAI response only; no reference-model comparison or exact paper reproduction claim.",
+          "label": "Registered PROSAIL response versus LAI",
+          "reference_models": [
+            "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+          ],
+          "requested_outputs": [
+            "reflectance_green",
+            "reflectance_red",
+            "reflectance_nir",
+            "reflectance_swir",
+            "ndvi"
+          ],
+          "evidence_refs": [
+            "prosail-docs#00"
+          ],
+          "run_ids": [
+            "lai_sweep"
+          ],
+          "chart_ids": [
+            "lai_response"
+          ],
+          "status": "partial",
+          "availability_reason": "Local LAI sensitivity is supported; reference implementation comparison is unavailable and non-comparable.",
+          "source_type": "result"
+        }
+      ],
+      "selected_models": [
+        {
+          "model": "prosail",
+          "version": "2.0.5",
+          "purpose": "Supported local optical canopy forward model",
+          "capability_status": "supported",
+          "instruction_provenance": "prosail@1.0",
+          "outputs": [
+            "reflectance_green",
+            "reflectance_red",
+            "reflectance_nir",
+            "reflectance_swir",
+            "ndvi"
+          ],
+          "instruction_ref": "guideline:prosail@1.0"
+        }
+      ],
+      "parameter_mapping": [
+        {
+          "model": "prosail",
+          "paper_concept": "leaf structure",
+          "model_input": "leaf_structure",
+          "mapped_value": 1.5,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default; no distinct paper value opened.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "chlorophyll",
+          "model_input": "chlorophyll_ug_cm2",
+          "mapped_value": 40.0,
+          "units": "ug cm-2",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default; no distinct paper value opened.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "carotenoid",
+          "model_input": "carotenoid_ug_cm2",
+          "mapped_value": 8.0,
+          "units": "ug cm-2",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default; no distinct paper value opened.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "equivalent water thickness",
+          "model_input": "equivalent_water_thickness_cm",
+          "mapped_value": 0.01,
+          "units": "cm",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "dry matter",
+          "model_input": "dry_matter_g_cm2",
+          "mapped_value": 0.009,
+          "units": "g cm-2",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "leaf area index",
+          "model_input": "leaf_area_index",
+          "mapped_value": 3.0,
+          "units": "m2 m-2",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Baseline default; varied in sweep.",
+          "rationale": "The baseline uses the registered default; the sensitivity run maps LAI to the declared sweep input.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "average leaf angle",
+          "model_input": "average_leaf_angle_deg",
+          "mapped_value": 50.0,
+          "units": "degree",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "hot spot",
+          "model_input": "hot_spot",
+          "mapped_value": 0.01,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "solar zenith",
+          "model_input": "solar_zenith_deg",
+          "mapped_value": 30.0,
+          "units": "degree",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "view zenith",
+          "model_input": "view_zenith_deg",
+          "mapped_value": 10.0,
+          "units": "degree",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "relative azimuth",
+          "model_input": "relative_azimuth_deg",
+          "mapped_value": 0.0,
+          "units": "degree",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "anthocyanin",
+          "model_input": "anthocyanin_ug_cm2",
+          "mapped_value": 0.0,
+          "units": "ug cm-2",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "brown pigment",
+          "model_input": "brown_pigment",
+          "mapped_value": 0.0,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "soil brightness",
+          "model_input": "soil_brightness",
+          "mapped_value": 1.0,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "soil moisture fraction",
+          "model_input": "soil_moisture_fraction",
+          "mapped_value": 1.0,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default.",
+          "rationale": "The registered backend supplied this default; it is not paper evidence.",
+          "evidence_ref": "prosail-docs#00",
+          "paper_value": null
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "sweep_parameter",
+          "paper_value": null,
+          "model_input": "sweep_parameter",
+          "mapped_value": "none",
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "sweep_points",
+          "paper_value": null,
+          "model_input": "sweep_points",
+          "mapped_value": 10,
+          "units": "count",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "sweep_start",
+          "paper_value": null,
+          "model_input": "sweep_start",
+          "mapped_value": 0.0,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "prosail",
+          "paper_concept": "sweep_stop",
+          "paper_value": null,
+          "model_input": "sweep_stop",
+          "mapped_value": 8.0,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        }
+      ],
+      "parameter_resolution": [
+        {
+          "run_id": "baseline",
+          "model": "prosail",
+          "requested_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "none"
+          },
+          "resolved_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_points"
+          ]
+        },
+        {
+          "run_id": "lai_sweep",
+          "model": "prosail",
+          "requested_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "leaf_area_index",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "resolved_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "leaf_area_index",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "defaulted_parameters": [
+            "leaf_area_index"
+          ]
+        }
+      ],
+      "outputs": [
+        "reflectance_green",
+        "reflectance_red",
+        "reflectance_nir",
+        "reflectance_swir",
+        "ndvi"
+      ],
+      "runs": [
+        {
+          "id": "baseline",
+          "label": "Supported PROSAIL benchmark baseline",
+          "model": "prosail",
+          "parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "requested_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "none"
+          },
+          "resolved_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_points"
+          ],
+          "stage": "baseline",
+          "target_ids": [
+            "benchmark"
+          ]
+        },
+        {
+          "id": "lai_sweep",
+          "label": "PROSAIL LAI sensitivity",
+          "model": "prosail",
+          "parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "leaf_area_index",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "requested_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "leaf_area_index",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "resolved_parameters": {
+            "leaf_structure": 1.5,
+            "chlorophyll_ug_cm2": 40.0,
+            "carotenoid_ug_cm2": 8.0,
+            "anthocyanin_ug_cm2": 0.0,
+            "brown_pigment": 0.0,
+            "equivalent_water_thickness_cm": 0.01,
+            "dry_matter_g_cm2": 0.009,
+            "leaf_area_index": 3.0,
+            "average_leaf_angle_deg": 50.0,
+            "hot_spot": 0.01,
+            "solar_zenith_deg": 30.0,
+            "view_zenith_deg": 10.0,
+            "relative_azimuth_deg": 0.0,
+            "soil_brightness": 1.0,
+            "soil_moisture_fraction": 1.0,
+            "sweep_parameter": "leaf_area_index",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "defaulted_parameters": [
+            "leaf_area_index"
+          ],
+          "stage": "main",
+          "target_ids": [
+            "lai_sweep"
+          ]
+        }
+      ],
+      "charts": [
+        {
+          "id": "lai_response",
+          "label": "Registered PROSAIL response versus LAI",
+          "kind": "line",
+          "x": "leaf_area_index",
+          "y": "reflectance_green",
+          "ys": [
+            "reflectance_green",
+            "reflectance_red",
+            "reflectance_nir",
+            "reflectance_swir",
+            "ndvi"
+          ],
+          "required": true,
+          "purpose": "result",
+          "x_label": "Leaf area index (m2 m-2)",
+          "y_label": "Reflectance / NDVI",
+          "target_ids": [
+            "lai_sweep"
+          ]
+        }
+      ],
+      "quantities": [
+        "reflectance_green",
+        "reflectance_red",
+        "reflectance_nir",
+        "reflectance_swir",
+        "ndvi"
+      ],
+      "controls": [
+        "Hold all non-LAI parameters fixed in the sweep.",
+        "Do not compute reference residuals or claim equivalence."
+      ],
+      "metrics": [
+        "LAI response range"
+      ],
+      "diagnostics": [
+        "quality-control status",
+        "output availability",
+        "parameter provenance"
+      ],
+      "success_criteria": [
+        "Both runs pass quality control.",
+        "All five registered outputs are returned.",
+        "Report local outputs as computed, not as a Jussieu-reference reproduction.",
+        "Explicitly list the unavailable Jussieu reference, bidirectional SDR reflectance, and exact-wavelength targets as unavailable."
+      ],
+      "stop_conditions": [
+        "Stop if outputs are missing or model quality control fails."
+      ],
+      "assumptions": [
+        "Undocumented values use registered defaults.",
+        "Declared band names are retained.",
+        "The local implementation is not equivalent to the unavailable reference."
+      ],
+      "limitations": [
+        "No Jussieu Fortran reference is registered.",
+        "No direct benchmark agreement metric is possible.",
+        "No separate reference-model comparison is possible.",
+        "The local LAI sweep is not a paper reproduction."
+      ],
+      "baseline_run_id": "baseline",
+      "automatic_repairs": [
+        {
+          "field": "parameter_mapping.prosail.sweep_parameter",
+          "from": null,
+          "to": {
+            "model": "prosail",
+            "paper_concept": "sweep_parameter",
+            "paper_value": null,
+            "model_input": "sweep_parameter",
+            "mapped_value": "none",
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.prosail.sweep_points",
+          "from": null,
+          "to": {
+            "model": "prosail",
+            "paper_concept": "sweep_points",
+            "paper_value": null,
+            "model_input": "sweep_points",
+            "mapped_value": 10,
+            "units": "count",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.prosail.sweep_start",
+          "from": null,
+          "to": {
+            "model": "prosail",
+            "paper_concept": "sweep_start",
+            "paper_value": null,
+            "model_input": "sweep_start",
+            "mapped_value": 0.0,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.prosail.sweep_stop",
+          "from": null,
+          "to": {
+            "model": "prosail",
+            "paper_concept": "sweep_stop",
+            "paper_value": null,
+            "model_input": "sweep_stop",
+            "mapped_value": 8.0,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        }
+      ],
+      "validation_warnings": [],
+      "capability_gaps": [
+        "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+      ],
+      "capability_review": {
+        "status": "confirmed",
+        "supported": [
+          {
+            "model": "prosail",
+            "version": "2.0.5",
+            "runnable_here": true,
+            "parameters": [
+              "anthocyanin_ug_cm2",
+              "average_leaf_angle_deg",
+              "brown_pigment",
+              "carotenoid_ug_cm2",
+              "chlorophyll_ug_cm2",
+              "dry_matter_g_cm2",
+              "equivalent_water_thickness_cm",
+              "hot_spot",
+              "leaf_area_index",
+              "leaf_structure",
+              "relative_azimuth_deg",
+              "soil_brightness",
+              "soil_moisture_fraction",
+              "solar_zenith_deg",
+              "sweep_parameter",
+              "sweep_points",
+              "sweep_start",
+              "sweep_stop",
+              "view_zenith_deg"
+            ],
+            "combinations": [
+              {
+                "when": {
+                  "leaf_area_index": [
+                    0.0
+                  ]
+                },
+                "allow": {
+                  "hot_spot": [
+                    0.001
+                  ]
+                },
+                "reason": "With no leaves there is no canopy for a hot spot to form in, so the parameter has nothing to act on and a non-default value would be misleading."
+              }
+            ],
+            "outputs": [
+              "ndvi",
+              "reflectance_green",
+              "reflectance_nir",
+              "reflectance_red",
+              "reflectance_swir"
+            ],
+            "reference_model": false,
+            "role": "local_candidate",
+            "source": "list_models + read_model_instruction",
+            "target_ids": [
+              "benchmark"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": []
+          }
+        ],
+        "unavailable": [
+          {
+            "model": "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)",
+            "reason": "not registered in the current model registry",
+            "resembles": [],
+            "certainty": "unregistered",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "benchmark"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          }
+        ],
+        "not_comparable": [
+          {
+            "reference_model": "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)",
+            "local_model": "prosail@2.0.5",
+            "reason": "a local model/configuration is not an equivalent reference implementation",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "benchmark"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          }
+        ],
+        "requested_models": [
+          "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+        ],
+        "requested_outputs": [
+          "bidirectional SDR reflectance",
+          "green 550 nm",
+          "red 670 nm",
+          "near-infrared 800 nm",
+          "shortwave-infrared 1600 nm"
+        ],
+        "supported_outputs": [
+          "ndvi",
+          "reflectance_green",
+          "reflectance_nir",
+          "reflectance_red",
+          "reflectance_swir"
+        ],
+        "unavailable_outputs": [
+          "bidirectional SDR reflectance",
+          "green 550 nm",
+          "near-infrared 800 nm",
+          "red 670 nm",
+          "shortwave-infrared 1600 nm"
+        ],
+        "resource_gaps": [],
+        "resolved_names": [
+          {
+            "asked": "prosail@2.0.5",
+            "registered": "prosail"
+          }
+        ],
+        "evidence": [
+          "research-planning#00",
+          "research-reporting#00",
+          "prosail-docs#00"
+        ],
+        "targets": [
+          "benchmark",
+          "lai_sweep"
+        ],
+        "target_reports": [
+          {
+            "status": "waiting_user",
+            "supported": [
+              {
+                "model": "prosail",
+                "version": "2.0.5",
+                "runnable_here": true,
+                "parameters": [
+                  "anthocyanin_ug_cm2",
+                  "average_leaf_angle_deg",
+                  "brown_pigment",
+                  "carotenoid_ug_cm2",
+                  "chlorophyll_ug_cm2",
+                  "dry_matter_g_cm2",
+                  "equivalent_water_thickness_cm",
+                  "hot_spot",
+                  "leaf_area_index",
+                  "leaf_structure",
+                  "relative_azimuth_deg",
+                  "soil_brightness",
+                  "soil_moisture_fraction",
+                  "solar_zenith_deg",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "view_zenith_deg"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "leaf_area_index": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "hot_spot": [
+                        0.001
+                      ]
+                    },
+                    "reason": "With no leaves there is no canopy for a hot spot to form in, so the parameter has nothing to act on and a non-default value would be misleading."
+                  }
+                ],
+                "outputs": [
+                  "ndvi",
+                  "reflectance_green",
+                  "reflectance_nir",
+                  "reflectance_red",
+                  "reflectance_swir"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              }
+            ],
+            "unavailable": [
+              {
+                "model": "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)",
+                "reason": "not registered in the current model registry",
+                "resembles": [],
+                "certainty": "unregistered",
+                "source": "registered_model_registry"
+              }
+            ],
+            "not_comparable": [
+              {
+                "reference_model": "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)",
+                "local_model": "prosail@2.0.5",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              }
+            ],
+            "requested_models": [
+              "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+            ],
+            "requested_outputs": [
+              "bidirectional SDR reflectance"
+            ],
+            "supported_outputs": [
+              "ndvi",
+              "reflectance_green",
+              "reflectance_nir",
+              "reflectance_red",
+              "reflectance_swir"
+            ],
+            "unavailable_outputs": [
+              "bidirectional SDR reflectance"
+            ],
+            "resource_gaps": [],
+            "resolved_names": [
+              {
+                "asked": "prosail@2.0.5",
+                "registered": "prosail"
+              }
+            ],
+            "evidence": [
+              "research-planning#00",
+              "research-reporting#00",
+              "prosail-docs#00"
+            ],
+            "targets": [
+              "benchmark"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "benchmark",
+            "label": "test_rsot_prosail5 benchmark SDR reflectance",
+            "target_key": "target:benchmark"
+          },
+          {
+            "status": "waiting_user",
+            "supported": [
+              {
+                "model": "prosail",
+                "version": "2.0.5",
+                "runnable_here": true,
+                "parameters": [
+                  "anthocyanin_ug_cm2",
+                  "average_leaf_angle_deg",
+                  "brown_pigment",
+                  "carotenoid_ug_cm2",
+                  "chlorophyll_ug_cm2",
+                  "dry_matter_g_cm2",
+                  "equivalent_water_thickness_cm",
+                  "hot_spot",
+                  "leaf_area_index",
+                  "leaf_structure",
+                  "relative_azimuth_deg",
+                  "soil_brightness",
+                  "soil_moisture_fraction",
+                  "solar_zenith_deg",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "view_zenith_deg"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "leaf_area_index": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "hot_spot": [
+                        0.001
+                      ]
+                    },
+                    "reason": "With no leaves there is no canopy for a hot spot to form in, so the parameter has nothing to act on and a non-default value would be misleading."
+                  }
+                ],
+                "outputs": [
+                  "ndvi",
+                  "reflectance_green",
+                  "reflectance_nir",
+                  "reflectance_red",
+                  "reflectance_swir"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              }
+            ],
+            "unavailable": [
+              {
+                "model": "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)",
+                "reason": "not registered in the current model registry",
+                "resembles": [],
+                "certainty": "unregistered",
+                "source": "registered_model_registry"
+              }
+            ],
+            "not_comparable": [
+              {
+                "reference_model": "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)",
+                "local_model": "prosail@2.0.5",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              }
+            ],
+            "requested_models": [
+              "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+            ],
+            "requested_outputs": [
+              "green 550 nm",
+              "red 670 nm",
+              "near-infrared 800 nm",
+              "shortwave-infrared 1600 nm"
+            ],
+            "supported_outputs": [
+              "ndvi",
+              "reflectance_green",
+              "reflectance_nir",
+              "reflectance_red",
+              "reflectance_swir"
+            ],
+            "unavailable_outputs": [
+              "green 550 nm",
+              "red 670 nm",
+              "near-infrared 800 nm",
+              "shortwave-infrared 1600 nm"
+            ],
+            "resource_gaps": [],
+            "resolved_names": [
+              {
+                "asked": "prosail@2.0.5",
+                "registered": "prosail"
+              }
+            ],
+            "evidence": [
+              "research-planning#00",
+              "research-reporting#00",
+              "prosail-docs#00"
+            ],
+            "targets": [
+              "lai_sweep"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "lai_sweep",
+            "label": "Reflectance versus leaf area index",
+            "target_key": "target:laisweep"
+          }
+        ],
+        "target_check_complete": true,
+        "missing_targets": [],
+        "user_decision": "partial",
+        "confirmed_scope": {
+          "unavailable": [
+            "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+          ],
+          "not_comparable": [
+            "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)/prosail@2.0.5"
+          ],
+          "outputs": [
+            "bidirectional SDR reflectance",
+            "green 550 nm",
+            "near-infrared 800 nm",
+            "red 670 nm",
+            "shortwave-infrared 1600 nm"
+          ]
+        }
+      },
+      "reference_sections": [
+        "prosail-docs#00",
+        "research-planning#00",
+        "research-reporting#00"
+      ],
+      "reference_paper_sections": [
+        "Overview and usage"
+      ],
+      "approval_state": "plan_review",
+      "outcome_scope": "partial"
+    },
+    "selected_chart": {
+      "id": "lai_response",
+      "label": "Registered PROSAIL response versus LAI",
+      "kind": "line",
+      "x": "leaf_area_index",
+      "y": "reflectance_green",
+      "ys": [
+        "reflectance_green",
+        "reflectance_red",
+        "reflectance_nir",
+        "reflectance_swir",
+        "ndvi"
+      ],
+      "required": true,
+      "purpose": "result",
+      "x_label": "Leaf area index (m2 m-2)",
+      "y_label": "Reflectance / NDVI",
+      "target_ids": [
+        "lai_sweep"
+      ]
+    },
+    "selected_charts": [
+      "lai_response"
+    ],
+    "pseudo": {
+      "label": "PSEUDO-DATA - layout demonstration only - preview v001",
+      "points": [
+        {
+          "leaf_area_index": 0.0,
+          "1_reflectance_green": 0.22103677,
+          "2_reflectance_red": 0.29103677,
+          "3_reflectance_nir": 0.36103677,
+          "4_reflectance_swir": 0.43103677,
+          "5_ndvi": 0.50103677
+        },
+        {
+          "leaf_area_index": 0.5,
+          "1_reflectance_green": 0.25710744,
+          "2_reflectance_red": 0.32710744,
+          "3_reflectance_nir": 0.39710744,
+          "4_reflectance_swir": 0.46710744,
+          "5_ndvi": 0.53710744
+        },
+        {
+          "leaf_area_index": 1.0,
+          "1_reflectance_green": 0.272278,
+          "2_reflectance_red": 0.342278,
+          "3_reflectance_nir": 0.412278,
+          "4_reflectance_swir": 0.482278,
+          "5_ndvi": 0.552278
+        },
+        {
+          "leaf_area_index": 1.5,
+          "1_reflectance_green": 0.28420494,
+          "2_reflectance_red": 0.35420494,
+          "3_reflectance_nir": 0.42420494,
+          "4_reflectance_swir": 0.49420494,
+          "5_ndvi": 0.56420494
+        },
+        {
+          "leaf_area_index": 2.0,
+          "1_reflectance_green": 0.31352689,
+          "2_reflectance_red": 0.38352689,
+          "3_reflectance_nir": 0.45352689,
+          "4_reflectance_swir": 0.52352689,
+          "5_ndvi": 0.59352689
+        },
+        {
+          "leaf_area_index": 2.5,
+          "1_reflectance_green": 0.36488961,
+          "2_reflectance_red": 0.43488961,
+          "3_reflectance_nir": 0.50488961,
+          "4_reflectance_swir": 0.57488961,
+          "5_ndvi": 0.64488961
+        },
+        {
+          "leaf_area_index": 3.0,
+          "1_reflectance_green": 0.42267466,
+          "2_reflectance_red": 0.49267466,
+          "3_reflectance_nir": 0.56267466,
+          "4_reflectance_swir": 0.63267466,
+          "5_ndvi": 0.70267466
+        },
+        {
+          "leaf_area_index": 3.5,
+          "1_reflectance_green": 0.46535896,
+          "2_reflectance_red": 0.53535896,
+          "3_reflectance_nir": 0.60535896,
+          "4_reflectance_swir": 0.67535896,
+          "5_ndvi": 0.74535896
+        },
+        {
+          "leaf_area_index": 4.0,
+          "1_reflectance_green": 0.48530296,
+          "2_reflectance_red": 0.55530296,
+          "3_reflectance_nir": 0.62530296,
+          "4_reflectance_swir": 0.69530296,
+          "5_ndvi": 0.76530296
+        },
+        {
+          "leaf_area_index": 4.5,
+          "1_reflectance_green": 0.49577447,
+          "2_reflectance_red": 0.56577447,
+          "3_reflectance_nir": 0.63577447,
+          "4_reflectance_swir": 0.70577447,
+          "5_ndvi": 0.77577447
+        },
+        {
+          "leaf_area_index": 5.0,
+          "1_reflectance_green": 0.51875024,
+          "2_reflectance_red": 0.58875024,
+          "3_reflectance_nir": 0.65875024,
+          "4_reflectance_swir": 0.72875024,
+          "5_ndvi": 0.79875024
+        },
+        {
+          "leaf_area_index": 5.5,
+          "1_reflectance_green": 0.56471068,
+          "2_reflectance_red": 0.63471068,
+          "3_reflectance_nir": 0.70471068,
+          "4_reflectance_swir": 0.77471068,
+          "5_ndvi": 0.84471068
+        },
+        {
+          "leaf_area_index": 6.0,
+          "1_reflectance_green": 0.62300418,
+          "2_reflectance_red": 0.69300418,
+          "3_reflectance_nir": 0.76300418,
+          "4_reflectance_swir": 0.83300418,
+          "5_ndvi": 0.90300418
+        },
+        {
+          "leaf_area_index": 6.5,
+          "1_reflectance_green": 0.67164018,
+          "2_reflectance_red": 0.74164018,
+          "3_reflectance_nir": 0.81164018,
+          "4_reflectance_swir": 0.88164018,
+          "5_ndvi": 0.95164018
+        },
+        {
+          "leaf_area_index": 7.0,
+          "1_reflectance_green": 0.6975072,
+          "2_reflectance_red": 0.7675072,
+          "3_reflectance_nir": 0.8375072,
+          "4_reflectance_swir": 0.9075072,
+          "5_ndvi": 0.9775072
+        },
+        {
+          "leaf_area_index": 7.5,
+          "1_reflectance_green": 0.70842742,
+          "2_reflectance_red": 0.77842742,
+          "3_reflectance_nir": 0.84842742,
+          "4_reflectance_swir": 0.91842742,
+          "5_ndvi": 0.98842742
+        },
+        {
+          "leaf_area_index": 8.0,
+          "1_reflectance_green": 0.72596506,
+          "2_reflectance_red": 0.79596506,
+          "3_reflectance_nir": 0.86596506,
+          "4_reflectance_swir": 0.93596506,
+          "5_ndvi": 1.00596506
+        }
+      ]
+    },
+    "preview_version": 1,
+    "plan_card_expanded": true,
+    "review_log": [],
+    "execution_resume_sent": false,
+    "proposed_by": "llm"
+  },
+  "successful_runs": [
+    {
+      "model": "prosail",
+      "spec": {
+        "leaf_structure": 1.5,
+        "chlorophyll_ug_cm2": 40.0,
+        "carotenoid_ug_cm2": 8.0,
+        "anthocyanin_ug_cm2": 0.0,
+        "brown_pigment": 0.0,
+        "equivalent_water_thickness_cm": 0.01,
+        "dry_matter_g_cm2": 0.009,
+        "leaf_area_index": 3.0,
+        "average_leaf_angle_deg": 50.0,
+        "hot_spot": 0.01,
+        "solar_zenith_deg": 30.0,
+        "view_zenith_deg": 10.0,
+        "relative_azimuth_deg": 0.0,
+        "soil_brightness": 1.0,
+        "soil_moisture_fraction": 1.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_6a703af611a0",
+      "planned_run_id": "baseline"
+    },
+    {
+      "model": "prosail",
+      "spec": {
+        "leaf_structure": 1.5,
+        "chlorophyll_ug_cm2": 40.0,
+        "carotenoid_ug_cm2": 8.0,
+        "anthocyanin_ug_cm2": 0.0,
+        "brown_pigment": 0.0,
+        "equivalent_water_thickness_cm": 0.01,
+        "dry_matter_g_cm2": 0.009,
+        "leaf_area_index": 3.0,
+        "average_leaf_angle_deg": 50.0,
+        "hot_spot": 0.01,
+        "solar_zenith_deg": 30.0,
+        "view_zenith_deg": 10.0,
+        "relative_azimuth_deg": 0.0,
+        "soil_brightness": 1.0,
+        "soil_moisture_fraction": 1.0,
+        "sweep_parameter": "leaf_area_index",
+        "sweep_start": 0.0,
+        "sweep_stop": 8.0,
+        "sweep_points": 17
+      },
+      "handle": "res_7020c79eb39f",
+      "planned_run_id": "lai_sweep"
+    }
+  ],
+  "numeric_results": [
+    {
+      "handle": "res_6a703af611a0",
+      "planned_run_id": "baseline",
+      "model": "prosail",
+      "version": "2.0.5",
+      "spec": {
+        "leaf_structure": 1.5,
+        "chlorophyll_ug_cm2": 40.0,
+        "carotenoid_ug_cm2": 8.0,
+        "anthocyanin_ug_cm2": 0.0,
+        "brown_pigment": 0.0,
+        "equivalent_water_thickness_cm": 0.01,
+        "dry_matter_g_cm2": 0.009,
+        "leaf_area_index": 3.0,
+        "average_leaf_angle_deg": 50.0,
+        "hot_spot": 0.01,
+        "solar_zenith_deg": 30.0,
+        "view_zenith_deg": 10.0,
+        "relative_azimuth_deg": 0.0,
+        "soil_brightness": 1.0,
+        "soil_moisture_fraction": 1.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "axis": null,
+      "series": {
+        "reflectance_green": [
+          0.05833952322187055
+        ],
+        "reflectance_red": [
+          0.023343884754454473
+        ],
+        "reflectance_nir": [
+          0.44648578316204524
+        ],
+        "reflectance_swir": [
+          0.23441951953774764
+        ],
+        "ndvi": [
+          0.9006283070289071
+        ]
+      },
+      "units": {
+        "reflectance_green": "none",
+        "reflectance_red": "none",
+        "reflectance_nir": "none",
+        "reflectance_swir": "none",
+        "ndvi": "none"
+      }
+    },
+    {
+      "handle": "res_7020c79eb39f",
+      "planned_run_id": "lai_sweep",
+      "model": "prosail",
+      "version": "2.0.5",
+      "spec": {
+        "leaf_structure": 1.5,
+        "chlorophyll_ug_cm2": 40.0,
+        "carotenoid_ug_cm2": 8.0,
+        "anthocyanin_ug_cm2": 0.0,
+        "brown_pigment": 0.0,
+        "equivalent_water_thickness_cm": 0.01,
+        "dry_matter_g_cm2": 0.009,
+        "leaf_area_index": 3.0,
+        "average_leaf_angle_deg": 50.0,
+        "hot_spot": 0.01,
+        "solar_zenith_deg": 30.0,
+        "view_zenith_deg": 10.0,
+        "relative_azimuth_deg": 0.0,
+        "soil_brightness": 1.0,
+        "soil_moisture_fraction": 1.0,
+        "sweep_parameter": "leaf_area_index",
+        "sweep_start": 0.0,
+        "sweep_stop": 8.0,
+        "sweep_points": 17
+      },
+      "axis": {
+        "name": "leaf_area_index",
+        "values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0,
+          2.5,
+          3.0,
+          3.5,
+          4.0,
+          4.5,
+          5.0,
+          5.5,
+          6.0,
+          6.5,
+          7.0,
+          7.5,
+          8.0
+        ]
+      },
+      "series": {
+        "reflectance_green": [
+          0.25870001316070557,
+          0.17151572631850023,
+          0.1198580207672342,
+          0.08999920400642986,
+          0.07304338242253182,
+          0.06355991345437145,
+          0.05833952322187055,
+          0.05552411703956095,
+          0.05405329947395213,
+          0.05332849658582399,
+          0.05301475277098436,
+          0.052925964778420806,
+          0.052959350266797774,
+          0.05305843386667022,
+          0.05319232286296812,
+          0.05334418677487286,
+          0.053504891660616984
+        ],
+        "reflectance_red": [
+          0.32100000977516174,
+          0.18027454110157295,
+          0.1041764303165196,
+          0.06325033155715172,
+          0.04131340609501535,
+          0.029588735586432147,
+          0.023343884754454473,
+          0.020035026825220834,
+          0.018297379909063785,
+          0.017399709088112877,
+          0.01695062919257974,
+          0.016740829236857924,
+          0.016658447936158415,
+          0.01664373922784722,
+          0.01666480939811323,
+          0.016704641906281154,
+          0.016754163108499146
+        ],
+        "reflectance_nir": [
+          0.385699987411499,
+          0.3970346486845519,
+          0.40742819216231185,
+          0.4178561180029936,
+          0.428106362777528,
+          0.4377561261270266,
+          0.44648578316204524,
+          0.45413748061772347,
+          0.46068778145435474,
+          0.4662017215596933,
+          0.4707921604909969,
+          0.4745904714520735,
+          0.47772796640652626,
+          0.48032552528255973,
+          0.4824888140562079,
+          0.48430698765090296,
+          0.485853373251835
+        ],
+        "reflectance_swir": [
+          0.5095000267028809,
+          0.4251527859549717,
+          0.35737412067892926,
+          0.30755117843863355,
+          0.27286193060538383,
+          0.24959126840138632,
+          0.23441951953774764,
+          0.22477116789356927,
+          0.21878889191655765,
+          0.2151915767838539,
+          0.21312163063249456,
+          0.2120172703945701,
+          0.21151651543886588,
+          0.21138916609025182,
+          0.2114903957356832,
+          0.21172991227863583,
+          0.21205186295868386
+        ],
+        "ndvi": [
+          0.09155225398882812,
+          0.3754662344163997,
+          0.5927463289453369,
+          0.7370630486663451,
+          0.8239809704041982,
+          0.8733751539368639,
+          0.9006283070289071,
+          0.9154947766446303,
+          0.9235993872671097,
+          0.9280411182208241,
+          0.9304935734526124,
+          0.9318552300112596,
+          0.9326096047428538,
+          0.933019039943068,
+          0.9332277334469224,
+          0.933316350676149,
+          0.9333310310870961
+        ]
+      },
+      "units": {
+        "reflectance_green": "none",
+        "reflectance_red": "none",
+        "reflectance_nir": "none",
+        "reflectance_swir": "none",
+        "ndvi": "none"
+      }
+    }
+  ],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "prosail 2.0.5 benchmark test_rsot_prosail5 PROSPECT-5 4SAIL",
+        "scenario": "vegetation",
+        "kind": "any"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "prosail-docs",
+        "section_id": "00"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "prosail"
+      },
+      "status": "success",
+      "model": null,
+      "version": "2.0.5",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "prosail",
+        "section": "1.0"
+      },
+      "status": "success",
+      "model": "prosail",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    },
+    {
+      "turn": 2,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Reproduce the supported PROSAIL benchmark components only; explicitly leave the PROSPECT-5 + 4SAIL Jussieu Fortran reference unavailable.",
+        "reference_models": [
+          "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+        ],
+        "requested_outputs": [
+          "reflectance_green",
+          "reflectance_red",
+          "reflectance_nir",
+          "reflectance_swir",
+          "ndvi"
+        ],
+        "local_models": [
+          "prosail@2.0.5"
+        ],
+        "targets": [
+          {
+            "id": "prosail-benchmark",
+            "reference_models": [
+              "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+            ],
+            "requested_outputs": [
+              "reflectance_green",
+              "reflectance_red",
+              "reflectance_nir",
+              "reflectance_swir",
+              "ndvi"
+            ],
+            "evidence_refs": [
+              "prosail-docs#00"
+            ],
+            "status": "partial",
+            "availability_reason": "The registered PROSAIL adapter is available, but the paper's Jussieu Fortran reference implementation is unavailable; no equivalence is assumed."
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "prosail",
+        "section": "1.0"
+      },
+      "status": "success",
+      "model": "prosail",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "list_models",
+      "arguments": {
+        "model": "prosail"
+      },
+      "status": "success",
+      "model": null,
+      "version": "2.0.5",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "baseline"
+      },
+      "status": "success",
+      "model": "prosail",
+      "version": "2.0.5",
+      "spec": {
+        "leaf_structure": 1.5,
+        "chlorophyll_ug_cm2": 40.0,
+        "carotenoid_ug_cm2": 8.0,
+        "anthocyanin_ug_cm2": 0.0,
+        "brown_pigment": 0.0,
+        "equivalent_water_thickness_cm": 0.01,
+        "dry_matter_g_cm2": 0.009,
+        "leaf_area_index": 3.0,
+        "average_leaf_angle_deg": 50.0,
+        "hot_spot": 0.01,
+        "solar_zenith_deg": 30.0,
+        "view_zenith_deg": 10.0,
+        "relative_azimuth_deg": 0.0,
+        "soil_brightness": 1.0,
+        "soil_moisture_fraction": 1.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_6a703af611a0",
+      "planned_run_id": "baseline",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "lai_sweep"
+      },
+      "status": "success",
+      "model": "prosail",
+      "version": "2.0.5",
+      "spec": {
+        "leaf_structure": 1.5,
+        "chlorophyll_ug_cm2": 40.0,
+        "carotenoid_ug_cm2": 8.0,
+        "anthocyanin_ug_cm2": 0.0,
+        "brown_pigment": 0.0,
+        "equivalent_water_thickness_cm": 0.01,
+        "dry_matter_g_cm2": 0.009,
+        "leaf_area_index": 3.0,
+        "average_leaf_angle_deg": 50.0,
+        "hot_spot": 0.01,
+        "solar_zenith_deg": 30.0,
+        "view_zenith_deg": 10.0,
+        "relative_azimuth_deg": 0.0,
+        "soil_brightness": 1.0,
+        "soil_moisture_fraction": 1.0,
+        "sweep_parameter": "leaf_area_index",
+        "sweep_start": 0.0,
+        "sweep_stop": 8.0,
+        "sweep_points": 17
+      },
+      "handle": "res_7020c79eb39f",
+      "planned_run_id": "lai_sweep",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "lai_response",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "lai_response",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "lai_response",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "PROSAIL LAI sensitivity · reflectance_green has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation",
+          "PROSAIL LAI sensitivity · reflectance_red has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation",
+          "PROSAIL LAI sensitivity · reflectance_swir has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation",
+          "PROSAIL LAI sensitivity · ndvi has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation"
+        ],
+        "redraw_reasons": [
+          "crowded legend with 5 series"
+        ],
+        "n_series": 5,
+        "point_counts": [
+          17,
+          17,
+          17,
+          17,
+          17
+        ],
+        "redrawn": true
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13157,
+      "completion_tokens": 105,
+      "cost_usd": 0.00038968,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.57
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "2 of 13 item(s) match.",
+      "arguments": {
+        "query": "prosail 2.0.5 benchmark test_rsot_prosail5 PROSPECT-5 4SAIL",
+        "scenario": "vegetation",
+        "kind": "any"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13651,
+      "completion_tokens": 21,
+      "cost_usd": 0.00032198,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.09
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 14779,
+      "completion_tokens": 22,
+      "cost_usd": 0.00034574,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.01
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 16823,
+      "completion_tokens": 28,
+      "cost_usd": 0.0003706,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.47
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.004,
+      "summary": "prosail-docs section 00: Overview and usage (9506 chars, bundled)",
+      "arguments": {
+        "slug": "prosail-docs",
+        "section_id": "00"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19709,
+      "completion_tokens": 42,
+      "cost_usd": 0.0049775,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.26
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Capability declaration for prosail v2.0.5.",
+      "arguments": {
+        "model": "prosail"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 21485,
+      "completion_tokens": 26,
+      "cost_usd": 0.0054023,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.24
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction prosail v1.0.",
+      "arguments": {
+        "model": "prosail",
+        "section": "1.0"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 21954,
+      "completion_tokens": 530,
+      "cost_usd": 0.00318817,
+      "reasoning_chars": 0,
+      "elapsed_s": 6.57
+    },
+    {
+      "kind": "harness_block",
+      "turn": 1,
+      "rule": "physical_domain",
+      "tool": "research_capability_check",
+      "intervention": 1,
+      "detail": "capability review requires user confirmation",
+      "problems": []
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "capability_review",
+      "detail": "Capability review requires the user's partial-scope decision."
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 2,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 12881,
+      "completion_tokens": 284,
+      "cost_usd": 0.0035609,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.07
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability check by reproduction target\n\ntest_rsot_prosail5 benchmark SDR reflectance [benchmark]\nSupported: prosail@2.0.5\nUnavailable: PROSPECT-5 + 4SAIL (Jussieu Fortran reference): not registered in the current model registry\nNot comparable: prosail@2.0.5 is not equivalent to PROSPECT-5 + 4SAIL (Jussieu Fortran reference)\n\nReflectance versus leaf area index [lai_sweep]\nSupported: prosail@2.0.5\nUnavailable: PROSPECT-5 + 4SAIL (Jussieu Fortran reference): not registered in the current model registry\nNot comparable: prosail@2.0.5 is not equivalent to PROSPECT-5 + 4SAIL (Jussieu Fortran reference)\n\nUnified summary\nSupported: prosail@2.0.5 (ndvi, reflectance_green, reflectance_nir, reflectance_red, reflectance_swir)\nUnavailable: PROSPECT-5 + 4SAIL (Jussieu Fortran reference): not registered ",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Reproduce the supported PROSAIL benchmark components only; explicitly leave the PROSPECT-5 + 4SAIL Jussieu Fortran reference unavailable.",
+        "reference_models": [
+          "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+        ],
+        "requested_outputs": [
+          "reflectance_green",
+          "reflectance_red",
+          "reflectance_nir",
+          "reflectance_swir",
+          "ndvi"
+        ],
+        "local_models": [
+          "prosail@2.0.5"
+        ],
+        "targets": [
+          {
+            "id": "prosail-benchmark",
+            "reference_models": [
+              "PROSPECT-5 + 4SAIL (Jussieu Fortran reference)"
+            ],
+            "requested_outputs": [
+              "reflectance_green",
+              "reflectance_red",
+              "reflectance_nir",
+              "reflectance_swir",
+              "ndvi"
+            ],
+            "evidence_refs": [
+              "prosail-docs#00"
+            ],
+            "status": "partial",
+            "availability_reason": "The registered PROSAIL adapter is available, but the paper's Jussieu Fortran reference implementation is unavailable; no equivalence is assumed."
+          }
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 15512,
+      "completion_tokens": 2540,
+      "cost_usd": 0.00692585,
+      "reasoning_chars": 0,
+      "elapsed_s": 23.52
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "review",
+      "detail": "Read every selected model instruction before proposing: prosail@2.0.5@? (call list_models first), prosail@2.0.5@?."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 20723,
+      "completion_tokens": 26,
+      "cost_usd": 0.00520545,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.54
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Read model instruction prosail v1.0.",
+      "arguments": {
+        "model": "prosail",
+        "section": "1.0"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 21180,
+      "completion_tokens": 67,
+      "cost_usd": 0.00537525,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.63
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for prosail v2.0.5.",
+      "arguments": {
+        "model": "prosail"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 22975,
+      "completion_tokens": 2724,
+      "cost_usd": 0.0090124,
+      "reasoning_chars": 0,
+      "elapsed_s": 25.67
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review",
+      "detail": "LLM-authored research plan v001 is ready for human review. Backend applied 4 auditable reference/presentation repair(s); review them explicitly."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 29107,
+      "completion_tokens": 320,
+      "cost_usd": 0.0076606,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.85
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review"
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 3,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 13356,
+      "completion_tokens": 53,
+      "cost_usd": 0.00340245,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.78
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.684,
+      "summary": "Approved run baseline: prosail ran in 0.68s: 1 point(s). Quality control passed.",
+      "arguments": {
+        "run_id": "baseline"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 14200,
+      "completion_tokens": 93,
+      "cost_usd": 0.00366145,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.45
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.028,
+      "summary": "Approved run lai_sweep: prosail ran in 0.03s: 17 point(s) over leaf_area_index. Quality control passed.",
+      "arguments": {
+        "run_id": "lai_sweep"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 16231,
+      "completion_tokens": 100,
+      "cost_usd": 0.0041776,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.37
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.085,
+      "summary": "Approved chart lai_response: Drew a line chart with 5 series over 85 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "lai_response",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 16760,
+      "completion_tokens": 67,
+      "cost_usd": 0.00427025,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.87
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.085,
+      "summary": "Figure 1 render check (Render QA) redrawn with a publication layout and passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 5 series; point counts [17, 17, 17, 17, 17]. Warnings: PROSAIL LAI sensitivity · reflectance_green has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation; PROSAIL LAI sensitivity · reflectance_red has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation; PROSAIL LAI sensitivity · reflectance_swir has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation; PROSAIL LAI sensitivity · ndvi has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should",
+      "arguments": {
+        "chart_id": "lai_response",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 17296,
+      "completion_tokens": 1901,
+      "cost_usd": 0.00660505,
+      "reasoning_chars": 0,
+      "elapsed_s": 18.85
+    },
+    {
+      "kind": "research_block",
+      "turn": 3,
+      "rule": "research_reporting_contract",
+      "detail": "The final report is being checked against the recorded provenance ledger and result state."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 20505,
+      "completion_tokens": 2414,
+      "cost_usd": 0.00404551,
+      "reasoning_chars": 0,
+      "elapsed_s": 21.3
+    },
+    {
+      "kind": "harness_warning",
+      "turn": 3,
+      "rule": "report_completeness",
+      "detail": "The report must give a separate conclusion based on each generated figure, covering its visible curves, axes, units, legend and qualitative patterns. The report must give a separate conclusion from the actual executed result arrays and conditions, not only describe the chart."
+    },
+    {
+      "kind": "research_complete",
+      "turn": 3,
+      "detail": "A registered model run, figure and validated report are complete."
+    },
+    {
+      "kind": "harness_pass",
+      "turn": 3,
+      "rule": "citation_integrity",
+      "markers": [
+        "prosail-docs#00",
+        "model:prosail@2.0.5",
+        "model:prosail@2.0.5",
+        "model:prosail@2.0.5"
+      ]
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "prosail-docs#00",
+      "research-planning#00",
+      "research-reporting#00"
+    ],
+    "models": [
+      "prosail@2.0.5"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "prosail@1.0"
+    ],
+    "paper_figures": [],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [
+      "prosail-docs#00",
+      "model:prosail@2.0.5",
+      "model:prosail@2.0.5",
+      "model:prosail@2.0.5"
+    ],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [
+    {
+      "planned_chart_id": "lai_response",
+      "figure_number": 1,
+      "title": "Figure 1. Registered PROSAIL response versus LAI",
+      "subtitle": "",
+      "x_label": "Leaf area index (m2 m-2)",
+      "y_label": "Reflectance / NDVI",
+      "kind": "line",
+      "series": [
+        {
+          "label": "PROSAIL LAI sensitivity · reflectance_green",
+          "source": "model_run",
+          "origin": "prosail@2.0.5",
+          "n_points": 17,
+          "handle": "res_7020c79eb39f",
+          "x": "leaf_area_index",
+          "y": "reflectance_green"
+        },
+        {
+          "label": "PROSAIL LAI sensitivity · reflectance_red",
+          "source": "model_run",
+          "origin": "prosail@2.0.5",
+          "n_points": 17,
+          "handle": "res_7020c79eb39f",
+          "x": "leaf_area_index",
+          "y": "reflectance_red"
+        },
+        {
+          "label": "PROSAIL LAI sensitivity · reflectance_nir",
+          "source": "model_run",
+          "origin": "prosail@2.0.5",
+          "n_points": 17,
+          "handle": "res_7020c79eb39f",
+          "x": "leaf_area_index",
+          "y": "reflectance_nir"
+        },
+        {
+          "label": "PROSAIL LAI sensitivity · reflectance_swir",
+          "source": "model_run",
+          "origin": "prosail@2.0.5",
+          "n_points": 17,
+          "handle": "res_7020c79eb39f",
+          "x": "leaf_area_index",
+          "y": "reflectance_swir"
+        },
+        {
+          "label": "PROSAIL LAI sensitivity · ndvi",
+          "source": "model_run",
+          "origin": "prosail@2.0.5",
+          "n_points": 17,
+          "handle": "res_7020c79eb39f",
+          "x": "leaf_area_index",
+          "y": "ndvi"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "PROSAIL LAI sensitivity · reflectance_green has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation",
+          "PROSAIL LAI sensitivity · reflectance_red has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation",
+          "PROSAIL LAI sensitivity · reflectance_swir has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation",
+          "PROSAIL LAI sensitivity · ndvi has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation"
+        ],
+        "redraw_reasons": [
+          "crowded legend with 5 series"
+        ],
+        "n_series": 5,
+        "point_counts": [
+          17,
+          17,
+          17,
+          17,
+          17
+        ],
+        "redrawn": true
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/figures/447edf548a5cbb324ab57074_prosail-lai-benchmark_p1-reproduction-first_openai-gpt-5.6-luna_r2_full.png"
+    }
+  ],
+  "markers": {
+    "literature": [
+      "prosail-docs#00"
+    ],
+    "model": [
+      "prosail@2.0.5",
+      "prosail@2.0.5",
+      "prosail@2.0.5"
+    ],
+    "data": []
+  },
+  "parameter_provenance": [
+    {
+      "field": "leaf_structure",
+      "value": 1.5,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "chlorophyll_ug_cm2",
+      "value": 40.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "carotenoid_ug_cm2",
+      "value": 8.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "equivalent_water_thickness_cm",
+      "value": 0.01,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "dry_matter_g_cm2",
+      "value": 0.009,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "leaf_area_index",
+      "value": 3.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The baseline uses the registered default; the sensitivity run maps LAI to the declared sweep input.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "average_leaf_angle_deg",
+      "value": 50.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "hot_spot",
+      "value": 0.01,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "solar_zenith_deg",
+      "value": 30.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "view_zenith_deg",
+      "value": 10.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "relative_azimuth_deg",
+      "value": 0.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "anthocyanin_ug_cm2",
+      "value": 0.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "brown_pigment",
+      "value": 0.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "soil_brightness",
+      "value": 1.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "soil_moisture_fraction",
+      "value": 1.0,
+      "source_kind": "model_default",
+      "source_ref": "prosail-docs#00",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_parameter",
+      "value": "none",
+      "source_kind": "assumption",
+      "source_ref": "none",
+      "reason": "The submitted run retained this value without attached paper or user evidence; it was confirmed during plan review.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_points",
+      "value": 10,
+      "source_kind": "model_default",
+      "source_ref": "none",
+      "reason": "The registered model inserted this value during parameter resolution; it is not paper evidence.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_start",
+      "value": 0.0,
+      "source_kind": "assumption",
+      "source_ref": "none",
+      "reason": "The submitted run retained this value without attached paper or user evidence; it was confirmed during plan review.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_stop",
+      "value": 8.0,
+      "source_kind": "assumption",
+      "source_ref": "none",
+      "reason": "The submitted run retained this value without attached paper or user evidence; it was confirmed during plan review.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "approved_lai_sweep",
+      "value": "leaf_area_index from 0.0 to 8.0, 17 points",
+      "source_kind": "user",
+      "source_ref": "approved research plan",
+      "reason": "This was the approved sensitivity-run configuration.",
+      "sensitivity_checked": false
+    }
+  ],
+  "provenance_parse_error": null,
+  "reproduction_outcome": "partial",
+  "archived_report_path": "evaluation/results/competition/reports/b7e988d1e1ad4b3c0bf64966_prosail-lai-benchmark_p1-reproduction-first_openai-gpt-5.6-luna_r2_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/b7e988d1e1ad4b3c0bf64966_prosail-lai-benchmark_p1-reproduction-first_openai-gpt-5.6-luna_r2_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  },
+  "dashboard_metrics": {
+    "evaluation_complete": true,
+    "successful": true,
+    "figure_result_correct": "pass",
+    "report_correct": "pass",
+    "overall_correct": "pass",
+    "figure_result": {
+      "passed": false,
+      "complete": true,
+      "status": "fail",
+      "numeric": {
+        "passed": false,
+        "status": "fail",
+        "threshold_normalized_rmse": 0.05,
+        "curves": [
+          {
+            "curve": "reflectance_green",
+            "present": true,
+            "normalized_rmse": 0.026923327620371036,
+            "normalized_max_absolute_error": 0.04550381449843838,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_red",
+            "present": true,
+            "normalized_rmse": 0.025663982945493345,
+            "normalized_max_absolute_error": 0.0600099341567746,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_nir",
+            "present": true,
+            "normalized_rmse": 0.41737878520917504,
+            "normalized_max_absolute_error": 0.48713050875037206,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_swir",
+            "present": true,
+            "normalized_rmse": 0.046643586179351014,
+            "normalized_max_absolute_error": 0.06857558270848703,
+            "points_compared": 17,
+            "points_in_reference": 17
+          }
+        ]
+      },
+      "numeric_b3": {
+        "oracle_package": "prosail",
+        "oracle_package_version": "2.0.5",
+        "curves": [
+          {
+            "curve": "reflectance_green",
+            "present": true,
+            "normalized_rmse": 0.026923327620371036,
+            "normalized_max_absolute_error": 0.04550381449843838,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_red",
+            "present": true,
+            "normalized_rmse": 0.025663982945493345,
+            "normalized_max_absolute_error": 0.0600099341567746,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_nir",
+            "present": true,
+            "normalized_rmse": 0.41737878520917504,
+            "normalized_max_absolute_error": 0.48713050875037206,
+            "points_compared": 17,
+            "points_in_reference": 17
+          },
+          {
+            "curve": "reflectance_swir",
+            "present": true,
+            "normalized_rmse": 0.046643586179351014,
+            "normalized_max_absolute_error": 0.06857558270848703,
+            "points_compared": 17,
+            "points_in_reference": 17
+          }
+        ],
+        "published": []
+      },
+      "plot": {
+        "passed": true
+      }
+    },
+    "figure_judgement": {
+      "complete": true,
+      "passed": true,
+      "status": "pass",
+      "total": 5,
+      "scores": {
+        "line_count": 1,
+        "patterns": 2,
+        "grouping": 1,
+        "visual_correspondence": 1
+      },
+      "observations": [
+        "The candidate has five distinct curves rather than the reference’s four, including an additional strongly increasing curve.",
+        "The four remaining curves broadly match the reference’s qualitative trends: one rises gradually and three decline toward plateaus.",
+        "The relative ordering of the corresponding curves is broadly similar at higher LAI, but the extra increasing curve changes the overall grouping."
+      ],
+      "summary": "The candidate preserves the general reflectance-versus-LAI pattern but adds a prominent rising series, so the figure is only a partial qualitative match.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 668,
+          "elapsed_s": 16.137,
+          "usage": {
+            "prompt_tokens": 5036,
+            "completion_tokens": 646,
+            "total_tokens": 5682
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 5036,
+        "completion_tokens": 646,
+        "total_tokens": 5682
+      }
+    },
+    "deterministic_report": {
+      "passed": true,
+      "checks": {
+        "report_exists": true,
+        "outcome_declared": true,
+        "evidence_resolved": true,
+        "computed_result_identified": true,
+        "model_version_qualified": true,
+        "calibrated_outcome": true
+      },
+      "unresolved_markers": [],
+      "visual_validation": "pass",
+      "plot_checks_are_diagnostic": true
+    },
+    "report_judgement": {
+      "complete": true,
+      "passed": true,
+      "standard": "report-judge-standard-v3",
+      "total": 9,
+      "maximum": 16,
+      "scores": {
+        "source_fidelity": 1,
+        "answer": 1,
+        "factuality": 1,
+        "technical_completeness": 1,
+        "assumed_parameters": 1,
+        "evidence": 2,
+        "calibration": 1,
+        "clarity": 1
+      },
+      "factual_errors": [
+        "The report says no reference-array comparison was supplied and numerical agreement is not scoreable; the measured comparison reports NIR normalized RMSE 0.417 against a 0.05 threshold."
+      ],
+      "summary": "The report gives a partial qualitative answer and documents many run settings, but it does not explain that the spherical leaf-angle distribution was approximated with a mean angle, or justify the chosen 50° rather than the stated near-57° approximation. It adds NDVI beyond the four requested bands and omits the measured NIR mismatch.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 704,
+          "elapsed_s": 25.427,
+          "usage": {
+            "prompt_tokens": 4146,
+            "completion_tokens": 1981,
+            "total_tokens": 6127
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4146,
+        "completion_tokens": 1981,
+        "total_tokens": 6127
+      }
+    },
+    "judge_usage": {
+      "prompt_tokens": 9182,
+      "completion_tokens": 2627,
+      "total_tokens": 11809
+    },
+    "figure_judge_usage": {
+      "prompt_tokens": 5036,
+      "completion_tokens": 646,
+      "total_tokens": 5682
+    }
+  }
+}

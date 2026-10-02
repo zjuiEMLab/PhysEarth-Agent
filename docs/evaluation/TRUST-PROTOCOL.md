@@ -72,7 +72,8 @@ with `rejudge_q1_records.py --calibrate PATH` and compare.
 Evidence for B and C: `evaluation/results/competition/final-db4b2e1/` (74 records and
 `scores.json`), every record made on build db4b2e1: main LLM `openai/gpt-5.6-luna`, judge
 `openai/gpt-6-luna` under the pass rules above. A5 counts harness-off SMRT calls since
-878f6a9.
+878f6a9. PROSAIL and pyET were re-run on build 7ce2ee6, after their software documentation
+entered the corpus (`final-7ce2ee6/`, 8 records); those replace their db4b2e1 rows below.
 
 | Item | Status |
 |---|---|
@@ -80,8 +81,8 @@ Evidence for B and C: `evaluation/results/competition/final-db4b2e1/` (74 record
 | A4 | Done for all six models: eight false-premise probes, three repeats each, harness on and off. Harness on: no illegal value executed in 24 runs; 4 of 24 ended with an answer naming the card's limit. Harness off: none of the 24 runs reached a model call (each stopped after failing to open a raw paper), so the harness-off rate is empty rather than safe |
 | A5 | Done across 74 records: harness on, 0 illegal model calls executed; harness off, 3 of 5 Q1 runs executed an SMRT recipe with stickiness 0.0, below the card's minimum of 0.05 |
 | A6 | Done: 21 tasks, 16 can, 4 partial, 1 cannot |
-| B1, B2, B4, B5, B6 | Done for all six models: SMRT 5 repeats (Success r1, r3, r5; Partial r2, three parameter sources unlabelled; Failed r4, the planned chart was never completed); tau-omega 5 repeats (Success r1-r3 and r5, Partial r4 on the report judge); water cloud Partial (figure 0/8); PROSAIL, pyET and pywatershed Failed (no source in the corpus, so no plan passed the evidence gate) |
-| B3 | Done for SMRT Q1 (every main-LLM repeat that drew the curves: four pairings within 3-4% NRMSE of the notebook, the sticky pair 12%); oracles built for PROSAIL, pyET and pywatershed but no agent curve to compare; tau-omega and water cloud judge-only |
+| B1, B2, B4, B5, B6 | Done for all six models: SMRT 5 repeats (Success r1, r3, r5; Partial r2, three parameter sources unlabelled; Failed r4, the planned chart was never completed); tau-omega 5 repeats (Success r1-r3 and r5, Partial r4 on the report judge); water cloud Partial (figure 0/8); PROSAIL, cited from its documentation at 7ce2ee6, 5 repeats (Success r2, Partial r1, r3-r5); pyET, cited from its documentation at 7ce2ee6, 3 of 5 repeats run before the budget stop (Partial r1, Failed r2-r3 after 20 refused plans each); pywatershed Failed (no source in the corpus, so no plan passed the evidence gate) |
+| B3 | Done for SMRT Q1 (every main-LLM repeat that drew the curves: four pairings within 3-4% NRMSE of the notebook, the sticky pair 12%); PROSAIL at 7ce2ee6 (r2-r5: green, red and SWIR within 3-5% NRMSE of the upstream oracle, NIR 42%, because the adapter approximates the benchmark's spherical leaf angle distribution by an average angle); pyET r1 drew one formulation (Penman, 2% NRMSE); the pywatershed oracle has no agent curve to compare; tau-omega and water cloud judge-only |
 | B7 | Harness off, SMRT Q1 and tau-omega, 5 runs each: 0 of 10 drew a figure (the harness-off tool set can run only SMRT, so tau-omega had no model to run); harness on: 9 of 10 passed the figure judge. DeepSeek V4.1 Flash and Qwen3.8 Flash with the harness on Q1: Partial each. Coding agents: not run |
 | C1, C2 | Done: SMRT Q1 with the harness, 5 runs: mean 203 s and USD 0.161; the harness-off baseline is cheaper only because it stops early |
 | C3 | Later |
