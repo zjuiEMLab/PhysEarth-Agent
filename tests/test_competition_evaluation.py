@@ -329,6 +329,13 @@ def test_competition_archives_named_figures_and_editable_reports(monkeypatch, tm
     assert baseline["figures"][0]["archived_image_path"].endswith("_baseline.png")
     assert baseline["archived_report_path"].endswith("_baseline.md")
 
+    rerun = dict(full, answer="A later run of the same cell", figures=[])
+    competition.archive_record_artifacts(rerun)
+    assert rerun["archived_report_path"] != full["archived_report_path"]
+    later = tmp_path / rerun["archived_report_path"]
+    assert later.read_text(encoding="utf-8").endswith("A later run of the same cell\n")
+    assert report.read_text(encoding="utf-8").endswith("Full report\n")
+
 
 def test_figure3_score_separates_structural_checks_from_diagnostic_recipe(tmp_path):
     record, oracle = _perfect_figure3_record(tmp_path)

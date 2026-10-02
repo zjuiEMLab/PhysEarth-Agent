@@ -369,7 +369,10 @@ def _archive_figure(figure, config_name, artifact_tag):
 
 def _archive_report(answer, config_name, artifact_tag):
     REPORTS.mkdir(parents=True, exist_ok=True)
-    target = REPORTS / f"{artifact_tag}_report_{_artifact_suffix(config_name)}.md"
+    # Named by the report's own digest, as a figure is by its source file: a rerun of the
+    # same cell writes its own report instead of inheriting an older run's file.
+    digest = hashlib.sha256(str(answer or "").encode("utf-8")).hexdigest()[:24]
+    target = REPORTS / f"{digest}_{artifact_tag}_report_{_artifact_suffix(config_name)}.md"
     if not target.exists():
         target.write_text(
             "# Reproduction report\n\n<!-- Generated artifact; this file is human-editable. -->\n\n"
