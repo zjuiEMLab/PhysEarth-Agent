@@ -17,11 +17,40 @@ from physearth.agent.constants import (
     RETRY_BACKOFF_S,
 )
 from physearth.agent.faults import _dead_for_today, _fault, _rate_limited, _upstream_text
-from physearth.agent.messages import _compact_messages, _messages, transcript
+from physearth.agent.messages import _compact_messages, _messages, prune_superseded, transcript
+from physearth.agent.messages import request as _request
 from physearth.agent.results import _allowed_marker_correction, _record_tool_result
 from physearth.agent.trace import _event
 from physearth.harness import approval, audit, budget
 from physearth.harness import switches as switch_flags
+
+
+def _plan_result_for_model(payload):
+    """A research_plan result as the model needs it: the plan once, its repairs by field.
+
+    An accepted plan came back as about 80,000 characters -- the plan, the protocol document
+    and its YAML restating it, every automatic repair with the full value it wrote, a copy of
+    the capability review -- and history kept only its first 9,000 to 12,000, so what the
+    model saw of its own plan was wherever the cut fell. The interface renders all of it from
+    the session; the model gets the plan and the names of the fields that were repaired.
+    """
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        return payload
+    data = {k: v for k, v in data.items() if k not in ("protocol", "protocol_yaml")}
+    plan = data.get("plan")
+    if isinstance(plan, dict):
+        plan = {
+            k: v for k, v in plan.items() if k not in ("capability_review", "parameter_resolution")
+        }
+        repairs = plan.get("automatic_repairs")
+        if isinstance(repairs, list):
+            plan["automatic_repairs"] = sorted({
+                str(item.get("field") or item.get("run_id") or "") for item in repairs
+                if isinstance(item, dict)
+            } - {""})
+        data["plan"] = plan
+    return {**payload, "data": data}
 
 
 def _thinking_off():
@@ -232,7 +261,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
         state["phase"] = "calling_model"
         yield answer, events, state
 
-        messages = _compact_messages(messages)
+        messages = _compact_messages(prune_superseded(messages))
 
         completion = None
         requested_tool = forced_tool_name
@@ -262,7 +291,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
             try:
                 chunks = client.chat.completions.create(
                     model=model_id,
-                    messages=messages,
+                    messages=_request(messages, state),
                     tools=offered_specs,
                     tool_choice=(
                         {"type": "function", "function": {"name": requested_tool}}
@@ -886,6 +915,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     return
 
                 payload = {k: v for k, v in result.items() if k not in ("qc", "ui")}
+                if name == "research_plan":
+                    payload = _plan_result_for_model(payload)
                 tool_content = json.dumps(payload, ensure_ascii=False)
                 # A figure inspection carries one bounded image part for a configured
                 # multimodal endpoint. Keep the base64 out of the tool transcript and send
@@ -1004,7 +1035,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             ),
                         }
                     )
-                messages[0] = {"role": "system", "content": prompt.build(state)}
+                messages[0] = {"role": "system", "content": prompt.build(state, tail=False)}
             continue
 
         if raw_reproduction:

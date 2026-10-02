@@ -688,7 +688,8 @@ def test_a_new_question_drops_an_unanswered_request(monkeypatch):
     assert box["model_runs"] == 0
     assert approval.pending(box) is None
     assert any(e["kind"] == "approval" and e["decision"] == "superseded" for e in events)
-    assert sent[-1][-1] == {"role": "user", "content": "something else"}
+    assert sent[-1][-2] == {"role": "user", "content": "something else"}
+    assert sent[-1][-1]["content"].startswith("PhysEarth run state")
 
 
 def test_a_declined_call_reaches_the_model_as_a_tool_result(monkeypatch):
@@ -733,10 +734,12 @@ def test_an_approved_call_continues_the_paused_turn_and_runs(monkeypatch):
     assert len(sent) == 2
     resumed = sent[1]
     assert resumed[0]["role"] == "system"
-    assert "over 1 question(s)" in resumed[0]["content"]
+    # The run state follows the conversation, so the system prompt stays a cacheable prefix.
+    assert "Run status" not in resumed[0]["content"]
+    assert "over 1 question(s)" in resumed[-1]["content"]
     assert {"role": "user", "content": "run smrt"} in resumed
     assert not any(m.get("content") == "Approved the run." for m in resumed)
-    assert [m["role"] for m in resumed[-2:]] == ["assistant", "tool"]
+    assert [m["role"] for m in resumed[-3:-1]] == ["assistant", "tool"]
     assert approval.pending(box) is None
 
 
