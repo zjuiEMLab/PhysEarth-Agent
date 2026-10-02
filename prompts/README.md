@@ -4,8 +4,8 @@ What the agent is told, before it is told anything about your question.
 
 Every file here is plain text. Edit one and the change takes effect on the next turn —
 there is no build step and no Python to open. What you must not do casually is edit one
-and then compare against the numbers in `evaluation/REPORT.md`: those runs were produced
-against the wording as it stands, and changing it invalidates the comparison. The suite
+and then compare against the committed records in `evaluation/results/`: those runs were
+produced against the wording as it stands, and changing it invalidates the comparison. The suite
 will tell you, loudly, in `tests/test_prompt_layers.py`.
 
 ## The levels
@@ -61,5 +61,5 @@ pinned by digest in `tests/fixtures/prompts/digests.json`.
 3. Read the failure. It names every case whose prompt moved.
 4. If the change is what you meant, regenerate:
    `PHYSEARTH_UPDATE_PROMPT_FIXTURES=1 .venv/bin/python -m pytest tests/test_prompt_layers.py`
-5. Say in the commit message that the prompt changed, so the next person reading
-   `REPORT.md` knows the records above that commit and below it are not comparable.
+5. Say in the commit message that the prompt changed, so the next person reading the
+   evaluation records knows the records above that commit and below it are not comparable.

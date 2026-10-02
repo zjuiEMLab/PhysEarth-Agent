@@ -102,8 +102,8 @@ Two things the older revision of this file got wrong, both of which produce a se
   dependence on getting `cwd` and `PYTHONPATH` right.
 
 The skill in `.agents/skills/geoai/` needs no install step: Codex discovers it from the
-repository. `AGENTS.snippet.md` remains for a project that is *not* this one — here the rules
-already live in this repository's own `AGENTS.md`.
+repository. `AGENTS.snippet.md` holds the same rules in `AGENTS.md` form, for a project where you
+want them unconditional rather than skill-triggered; this repository ships no `AGENTS.md`.
 
 ## Verify
 

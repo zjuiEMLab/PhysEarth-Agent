@@ -67,8 +67,9 @@ a URL: every address is constructed here, only over HTTPS, only to an allowed ho
 
 ## Evaluation
 
-`evaluation/` holds a reproducible task set, four ablation configurations and the runners
-that produce [`evaluation/REPORT.md`](evaluation/REPORT.md). Tier 0 costs nothing to re-run
+`evaluation/` holds a reproducible task set, the ablation configurations, the runners and
+the committed result records; [`docs/evaluation/TRUST-PROTOCOL.md`](docs/evaluation/TRUST-PROTOCOL.md)
+states what each evaluation measures and its current status. Tier 0 costs nothing to re-run
 and pins the bundled models against the upstream packages they wrap. The agent task set
 reproduces figures from the SMRT paper and probes what happens when the harness, the corpus
 or the capability declarations are removed. See [`evaluation/README.md`](evaluation/README.md).
@@ -97,8 +98,8 @@ answer what the water in it is doing. `pywatershed` runs
 the PRMS process chain over the official five-year Sagehen Creek domain and answers what the
 water in that surface is doing, which is why the harness is not written around any one
 physics: the same parameter validation, quality control and citation rules apply to a
-hydrologic model that never emits a photon. See
-[`docs/pywatershed-prms-3.0.0.md`](docs/pywatershed-prms-3.0.0.md).
+hydrologic model that never emits a photon. Its card is
+[`models/bundled/pywatershed/model_card.yaml`](models/bundled/pywatershed/model_card.yaml).
 
 Its pinned Sagehen domain is fetched once into the state directory and checksummed on first
 use; it is not redistributed here.

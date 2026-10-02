@@ -76,10 +76,10 @@ Two notes on it:
 
 ## 5. Rules for the whole repository (optional)
 
-`integrations/geoai/AGENTS.snippet.md` is the same rules in `AGENTS.md` form, for a project that
-is not this one. This repository already has its own `AGENTS.md`; if you want the Geo-AI rules to
-be unconditional rather than skill-triggered, append the snippet to it — or to a global
-`~/.codex/AGENTS.md`.
+`integrations/geoai/AGENTS.snippet.md` is the same rules in `AGENTS.md` form. This repository
+ships no `AGENTS.md`; if you want the Geo-AI rules to be unconditional rather than
+skill-triggered, put the snippet in an `AGENTS.md` at the root of the project you work in — or in
+a global `~/.codex/AGENTS.md`.
 
 Nothing here writes that file for you. It is the user's own instructions, and a tool that
 silently edits it is a tool that has decided what your agent should believe.
