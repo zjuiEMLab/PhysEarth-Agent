@@ -149,6 +149,10 @@ parameters:
     default: 10
     required: false
 
+# The parameter that selects the scattering theory: a question that compares formulations
+# is answered by runs that differ in it.
+formulation_parameters: [electromagnetic_model]
+
 combinations:
   - when: {electromagnetic_model: [dmrt_qca_shortrange, dmrt_qcacp_shortrange]}
     allow: {microstructure_model: [sticky_hard_spheres, non_sticky_hard_spheres]}

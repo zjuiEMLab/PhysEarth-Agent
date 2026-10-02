@@ -266,16 +266,20 @@ def _question_coverage_problems(question, runs, charts):
         if not has_stream_sweep:
             problems.append("DORT attribution requires a dort_streams convergence run")
     if any(word in text for word in ("formulation", "theory", "solver")):
-        configurations = {
-            (
-                (run.get("parameters") or {}).get("electromagnetic_model"),
-                (run.get("parameters") or {}).get("output"),
+        # Which parameter selects a model's formulation is the card's declaration, not a
+        # name this check knows: SMRT's is electromagnetic_model, pyet's is method.
+        formulations = set()
+        for run in runs:
+            entry = registry.get(run.get("model"))
+            declared = (entry.card.get("formulation_parameters") or ()) if entry else ()
+            choice = tuple((run.get("parameters") or {}).get(name) for name in declared)
+            if any(value is not None for value in choice):
+                formulations.add((run.get("model"), choice))
+        if len(formulations) < 2 and ("compare" in text or "difference" in text or "versus" in text):
+            problems.append(
+                "formulation attribution requires at least two executable runs that differ in "
+                "a formulation parameter the model card declares"
             )
-            for run in runs
-        }
-        electromagnetic_models = {item[0] for item in configurations if item[0]}
-        if len(electromagnetic_models) < 2 and ("compare" in text or "difference" in text or "versus" in text):
-            problems.append("formulation attribution requires at least two executable electromagnetic configurations")
     return problems
 
 

@@ -1607,3 +1607,24 @@ def test_the_plan_tool_names_the_field_a_partial_target_is_marked_with():
     target = spec["function"]["parameters"]["properties"]["reproduction_targets"]["items"]
     assert target["properties"]["status"]["enum"] == ["planned", "partial", "unavailable"]
     assert "availability_reason" in target["properties"]
+
+
+def test_formulation_attribution_reads_the_formulation_parameter_from_the_card():
+    from physearth.research import charts as research_charts
+
+    question = "Compare the six formulations and explain why they disagree."
+    chart = [{"id": "c", "x": "air_temperature_c", "y": "et0_mm_day", "required": True}]
+
+    def runs(model, name, values):
+        return [{"model": model, "parameters": {name: value}} for value in values]
+
+    def problems(planned):
+        return [
+            item for item in research_charts._question_coverage_problems(question, planned, chart)
+            if item.startswith("formulation attribution")
+        ]
+
+    assert problems(runs("pyet", "method", ["pm", "hargreaves"])) == []
+    assert problems(runs("pyet", "method", ["pm"]))
+    assert problems(runs("smrt", "electromagnetic_model", ["iba", "dmrt_qca_shortrange"])) == []
+    assert problems(runs("smrt", "microstructure_model", ["exponential", "sticky_hard_spheres"]))
