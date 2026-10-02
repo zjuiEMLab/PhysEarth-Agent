@@ -2,13 +2,11 @@ import re
 import urllib.request
 from pathlib import Path
 
+from apps.studio import studio, theme
+from apps.studio import views as render
 from physearth import agent, prompt
 from physearth.corpus import knowledge
 from physearth.harness import budget
-
-from apps.studio import studio
-from apps.studio import theme
-from apps.studio import views as render
 
 
 def test_optimistic_ui_never_replaces_gradio_managed_html():
@@ -60,9 +58,8 @@ def test_other_routine_trace_rows_use_the_same_separate_summary_layout():
 
 def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypatch):
     """A tool lifecycle event must not remount the unchanged streamed transcript."""
-    from physearth import session as session_state
-
     from apps.studio import studio as app
+    from physearth import session as session_state
 
     box = session_state.new_session(agent.default_model())
     state = session_state.new_state(box)
@@ -85,9 +82,8 @@ def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypat
 
 
 def test_execution_continuation_preserves_conversation_and_only_removes_plan_card(monkeypatch):
-    from physearth import session as session_state
-
     from apps.studio import studio as app
+    from physearth import session as session_state
 
     box = session_state.new_session("m")
     turns = [{
@@ -136,11 +132,10 @@ def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
 
 def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(monkeypatch):
     """All user-facing case starters share the same direct-tool approval route."""
+    from apps.studio import studio as app
     from apps.studio.views import evaluation as evals
     from physearth import session as session_state
     from physearth.harness import approval
-
-    from apps.studio import studio as app
 
     state = session_state.new_state(None)
     state["phase"] = "done"
@@ -173,11 +168,10 @@ def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(mo
 
 
 def test_direct_approval_hides_the_card_and_continues_only_once():
-    from physearth import session as session_state
-    from physearth.harness import approval
-
     from apps.studio import studio as app
     from apps.studio import views as render
+    from physearth import session as session_state
+    from physearth.harness import approval
 
     box = session_state.new_session("m")
     approval.set_mode(box, approval.ASK)
@@ -319,8 +313,9 @@ def test_revised_plan_card_is_collapsed_while_revision_summary_remains_visible()
 def test_plan_review_exposes_only_the_two_review_controls():
     from pathlib import Path
 
-    app_source = (Path(__file__).parents[1] / "apps" / "studio" / "studio.py").read_text(encoding="utf-8")
-    js_source = (Path(__file__).parents[1] / "apps" / "studio" / "static" / "ui.js").read_text(encoding="utf-8")
+    studio_dir = Path(__file__).parents[1] / "apps" / "studio"
+    app_source = (studio_dir / "studio.py").read_text(encoding="utf-8")
+    js_source = (studio_dir / "static" / "ui.js").read_text(encoding="utf-8")
     assert "Revise / Regenerate" not in app_source
     assert 'gr.Button("Pause"' not in app_source
     assert "pe-approve-no" not in app_source and "pe-approve-no" not in js_source
@@ -365,9 +360,8 @@ def test_guided_research_context_shows_live_capability_and_agent_paper_session()
 
 
 def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
-    from apps.studio.views import evaluation as evals
-
     from apps.studio import studio as app
+    from apps.studio.views import evaluation as evals
 
     question = evals.guided_demo()["question"]
     result = app.start_guided_demo(question, agent.default_model())
@@ -552,7 +546,7 @@ def test_the_layout_has_resizable_and_hideable_panel_controls():
 
 
 def test_upload_workbench_is_separate_and_the_chat_context_has_one_scroll_surface():
-    source = (Path(__file__).parents[1] / "apps" / "studio" / "studio.py").read_text(encoding="utf-8")
+    source = (Path(__file__).parents[1] / "apps/studio/studio.py").read_text(encoding="utf-8")
     css = theme.css()
     js = theme.js()
 
@@ -693,9 +687,8 @@ def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
 
 def test_clearing_the_session_starts_in_normal_q_and_a_mode():
     """Research is selected by the agent, while ordinary model calls retain approval."""
-    from physearth.harness import approval
-
     from apps.studio import studio as app
+    from physearth.harness import approval
 
     first = app._session(None, agent.default_model())
     assert approval.required(first)
@@ -764,9 +757,8 @@ def test_only_one_route_reaches_the_agent():
 
 
 def test_chart_click_records_the_human_choice_without_an_llm_turn():
-    from physearth import research, session
-
     from apps.studio import studio as app
+    from physearth import research, session
 
     box = session.new_session("m")
     research.propose(
@@ -897,7 +889,8 @@ def test_the_optimistic_acknowledgement_leaves_output_slots_to_gradio():
 
 def test_clear_is_wired_as_a_cancellation_boundary_for_streaming_send():
     """A reset must cancel the active generator before its next frame repaints the UI."""
-    source = Path(__file__).resolve().parents[1].joinpath("apps", "studio", "studio.py").read_text(encoding="utf-8")
+    studio = Path(__file__).resolve().parents[1].joinpath("apps", "studio", "studio.py")
+    source = studio.read_text(encoding="utf-8")
     assert "send_event = send.click(respond, inputs, outputs)" in source
     assert "active_stream_events = [send_event]" in source
     assert "active_stream_events.append(resume_event)" in source
@@ -917,9 +910,8 @@ def test_the_run_trace_is_rebuilt_per_checkpoint_not_per_token(monkeypatch):
     renders the trace a fixed number of times outside the streaming loop: once for the
     pending layout, once to seed the comparison, once for the final frame.
     """
-    from physearth import session as session_state
-
     from apps.studio import studio as app
+    from physearth import session as session_state
 
     def renders_for(content_chunks):
         box = session_state.new_session(agent.default_model())

@@ -23,11 +23,11 @@ from functools import lru_cache
 from pathlib import Path
 
 import yaml
-from physearth.api import knowledge, paths
 
+from apps.studio.views.text import _inline
 from evaluation.metrics import competition_score
 from evaluation.metrics import score as scoring
-from apps.studio.views.text import _inline
+from physearth.api import knowledge, paths
 
 REPO = paths.root()
 EVALUATION = paths.evaluation()

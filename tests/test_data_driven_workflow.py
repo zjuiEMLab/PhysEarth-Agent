@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from physearth.corpus import live
-
 from apps.studio.views import evaluation as evals
 from physearth import harness, prompt, research, session, tools
+from physearth.corpus import live
 from physearth.ingest import jats
 
 FIXTURE = Path(__file__).parent / "fixtures" / "jats_sample.xml"
@@ -752,9 +751,8 @@ def test_reading_a_section_says_what_the_paper_figures_are_called():
     proposed, was refused for missing figure evidence, read another section, and gave up
     after five consecutive failures. The requirement was satisfiable only by luck.
     """
-    from physearth.tools import literature
-
     from physearth import session as session_state
+    from physearth.tools import literature
 
     box = session_state.new_session("m")
     result = literature.read_literature("smrt-v1", "03", _session=box)
@@ -786,10 +784,9 @@ def test_a_plan_thinner_than_the_figure_legend_is_flagged_at_review():
     extracts it. A plan with one run against a legend of six is reproducing one line of
     that figure. Advisory, not blocking: a legend entry is not always a run.
     """
+    from physearth import session as session_state
     from physearth.research import evidence
     from physearth.tools import literature
-
-    from physearth import session as session_state
 
     box = session_state.new_session("m")
     literature.read_literature("smrt-v1", "03", _session=box)

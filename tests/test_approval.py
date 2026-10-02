@@ -3,9 +3,8 @@
 import contextlib
 import time
 
-from physearth.harness import approval
-
 from physearth import agent, harness, session, tools
+from physearth.harness import approval
 
 
 def _asking():

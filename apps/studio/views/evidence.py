@@ -1,9 +1,8 @@
 """The evidence panel: what was read, run, queried, and what was refused."""
 
+from apps.studio.views.text import SECTION_PREVIEW_CHARS, _e, _svg
 from physearth.api import knowledge, reference, registry
 from physearth.api import live as literature
-
-from apps.studio.views.text import SECTION_PREVIEW_CHARS, _e, _svg
 
 
 def _agreement_row(values):

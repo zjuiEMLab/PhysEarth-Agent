@@ -99,10 +99,10 @@ def test_the_server_runs_as_a_file_from_an_unrelated_directory(tmp_path):
 
 
 def test_the_studio_launcher_is_here_and_does_not_reimplement_the_search():
-    for name in ("scripts/studio.sh", "start-local.command"):
+    for name in ("apps/studio/run.sh", "apps/studio/start-local.command"):
         path = ROOT / name
         assert path.is_file(), name
         assert os.access(path, os.X_OK), name
-    studio = (ROOT / "scripts" / "studio.sh").read_text()
+    studio = (ROOT / "apps" / "studio" / "run.sh").read_text()
     assert "integrations/lib/find-python.sh" in studio
     assert "physearth_find_python_for_studio" in studio

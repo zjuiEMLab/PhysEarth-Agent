@@ -20,7 +20,6 @@ from apps.studio.views.context import (
 # The remaining names the single-module version exposed, kept reachable at the same
 # address so nothing outside this package has to know the split happened.
 from apps.studio.views.conversation import (
-    next_step,
     PLACEHOLDER,
     _message,
     _plan_run_rows,
@@ -31,6 +30,7 @@ from apps.studio.views.conversation import (
     history,
     live,
     live_result,
+    next_step,
 )
 from apps.studio.views.evidence import (
     SOURCE_BADGE,

@@ -8,14 +8,13 @@ model calling something that is not there. None of those produce an error a user
 
 from __future__ import annotations
 
-
 import json
 import os
 import plistlib
 import re
-import tomllib
 from pathlib import Path
 
+import tomllib
 import yaml
 
 from integrations.geoai import mcp_server
@@ -192,7 +191,7 @@ def test_the_shell_scripts_share_one_interpreter_search():
     assert library.is_file() and os.access(library, os.X_OK)
     for name, probe in (
         ("integrations/codex/doctor.sh", "physearth_find_python_for_engine"),
-        ("scripts/studio.sh", "physearth_find_python_for_studio"),
+        ("apps/studio/run.sh", "physearth_find_python_for_studio"),
         ("integrations/codex/theme-install.sh", '"import plistlib"'),
     ):
         body = (ROOT / name).read_text()

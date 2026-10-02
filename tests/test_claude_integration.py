@@ -237,15 +237,15 @@ def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
     # "The plugin must carry the whole project" includes the way the project is started. The
     # launcher that existed only on the Codex branch failed on `python app.py` for the two reasons
     # its header names, so it belongs on every branch and must not re-implement the search.
-    launcher = ROOT / "scripts" / "studio.sh"
+    launcher = ROOT / "apps" / "studio" / "run.sh"
     assert launcher.is_file() and os.access(launcher, os.X_OK)
     body = launcher.read_text()
     assert "integrations/lib/find-python.sh" in body
     assert "physearth_find_python_for_studio" in body
     assert "PYTHONPATH=src" in body, "the package lives under src/"
-    wrapper = ROOT / "start-local.command"
+    wrapper = ROOT / "apps" / "studio" / "start-local.command"
     assert wrapper.is_file() and os.access(wrapper, os.X_OK)
-    assert "scripts/studio.sh" in wrapper.read_text(), "one implementation, not a second copy"
+    assert "apps/studio/run.sh" in wrapper.read_text(), "one implementation, not a second copy"
 
 
 def test_the_settings_half_resolves_its_interpreter_before_the_read_only_path():

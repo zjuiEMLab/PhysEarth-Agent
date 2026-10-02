@@ -1,7 +1,5 @@
 """The approval bar: what the human is being asked to approve, and in what words."""
 
-from physearth.api import research
-
 from apps.studio.views.parts import (
     _mapping_text,
     _plan_cell,
@@ -9,6 +7,7 @@ from apps.studio.views.parts import (
     _plan_table,
 )
 from apps.studio.views.text import _e
+from physearth.api import research
 
 
 def _revision_changes_html(summary):

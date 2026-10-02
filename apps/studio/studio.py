@@ -5,6 +5,10 @@ import urllib.request
 from pathlib import Path
 
 import gradio as gr
+
+from apps.studio import theme
+from apps.studio import views as render
+from apps.studio.views import evaluation as evals
 from physearth.api import (
     agent,
     approval,
@@ -14,11 +18,6 @@ from physearth.api import (
     evaluation,
     research,
 )
-
-from apps.studio.views import evaluation as evals
-
-from apps.studio import theme
-from apps.studio import views as render
 
 config.load_dotenv()
 audit.configure()

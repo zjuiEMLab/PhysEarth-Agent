@@ -57,9 +57,8 @@ def _bootstrap_path() -> None:
 if __package__ in (None, ""):  # executed as a script rather than imported as a module
     _bootstrap_path()
 
-from physearth import tools
-
 from integrations.geoai import service
+from physearth import tools
 
 # Newest first. Elicitation, which asks the person before a physical run, exists from
 # 2025-06-18 on; a client that negotiates an older version gets geoai_decide instead.

@@ -1,7 +1,6 @@
+from apps.studio import views as render
 from physearth import agent, harness, session, tools
 from physearth.harness import results
-
-from apps.studio import views as render
 
 
 def test_evidence_read_in_the_first_turn_still_resolves_in_the_third():

@@ -15,17 +15,17 @@
 #      and in the DSH installer.
 #
 # Usage:
-#   scripts/studio.sh              # start, print the URL
-#   scripts/studio.sh --open       # and open it in the default browser
-#   PHYSEARTH_PORT=8000 scripts/studio.sh
-#   PHYSEARTH_PYTHON=/abs/py scripts/studio.sh
+#   apps/studio/run.sh              # start, print the URL
+#   apps/studio/run.sh --open       # and open it in the default browser
+#   PHYSEARTH_PORT=8000 apps/studio/run.sh
+#   PHYSEARTH_PYTHON=/abs/py apps/studio/run.sh
 #
 # Environment is the same one `src/physearth/config.py` reads, so anything the app
 # understands can be set here too (see `.env.example`).
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=integrations/lib/find-python.sh
 . "$ROOT/integrations/lib/find-python.sh"
 OPEN=0
@@ -49,7 +49,7 @@ python3 and python — none of them satisfied \`import gradio, physearth\`.
   # or:  pip install -e backend  plus gradio
 
 Then re-run, or name the one you built:
-  PHYSEARTH_PYTHON=/path/to/env/bin/python scripts/studio.sh
+  PHYSEARTH_PYTHON=/path/to/env/bin/python apps/studio/run.sh
 MESSAGE
   exit 1
 fi

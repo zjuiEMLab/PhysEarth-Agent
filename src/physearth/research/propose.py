@@ -2,6 +2,7 @@
 
 import copy
 
+from physearth.research import evidence
 from physearth.research.charts import (
     _capability_gaps,
     _output_dependency_problems,
@@ -13,7 +14,6 @@ from physearth.research.charts import (
 )
 from physearth.research.common import _clean_list, _fail, _needs, _public
 from physearth.research.coverage import _target_coverage
-from physearth.research import evidence
 from physearth.research.evidence import _evidence_plan_problems, _evidence_problem_summary
 from physearth.research.mapping import _is_paper_context_problem, _repair_item
 from physearth.research.metadata import _repair_reproduction_metadata

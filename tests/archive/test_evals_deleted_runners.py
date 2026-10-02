@@ -6,9 +6,9 @@ from pathlib import Path
 
 import yaml
 
+from apps.studio.views import evaluation as evals
 from evaluation.metrics import score
 from evaluation.runners import llm_robustness, reproduction_eval
-from apps.studio.views import evaluation as evals
 
 
 def test_reproduction_visual_checks_follow_each_planned_figure_target():

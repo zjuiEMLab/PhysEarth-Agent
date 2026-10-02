@@ -61,7 +61,9 @@ def catalog():
     if override:
         candidate = Path(override).expanduser().resolve()
         if not candidate.is_dir():
-            raise RuntimeError("%s points at %s, which is not a directory" % (CATALOG_ENV, candidate))
+            raise RuntimeError(
+                "%s points at %s, which is not a directory" % (CATALOG_ENV, candidate)
+            )
         return candidate
     return root() / "catalog"
 

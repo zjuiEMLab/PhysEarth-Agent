@@ -1,11 +1,13 @@
 import copy
 
 import pytest
+
 from physearth import registry, tools
 from physearth.harness import validation
 from physearth.registry import contract
 
-EXAMPLE = __import__("pathlib").Path(__file__).resolve().parent.parent / "catalog" / "models" / "examples" / "toy_model"
+_CATALOG = __import__("pathlib").Path(__file__).resolve().parent.parent / "catalog"
+EXAMPLE = _CATALOG / "models" / "examples" / "toy_model"
 
 
 @pytest.fixture

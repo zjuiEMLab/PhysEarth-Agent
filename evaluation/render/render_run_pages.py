@@ -23,10 +23,10 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "evaluation" / "runners"))
 
 import competition  # noqa: E402
-from physearth.api import agent  # noqa: E402
 
 from apps.studio import theme  # noqa: E402
 from apps.studio import views as render  # noqa: E402
+from physearth.api import agent  # noqa: E402
 
 PAGE_CSS = """
 html, body { margin: 0; height: 100%; background: var(--paper); }

@@ -11,7 +11,17 @@ single-module `tools` is re-exported here, so this split changes no import elsew
 from physearth import registry
 from physearth.harness import switches
 from physearth.ingest import http
-from physearth.tools import charts, common, figures, literature, planning, raw, registration, runs, specs
+from physearth.tools import (
+    charts,
+    common,
+    figures,
+    literature,
+    planning,
+    raw,
+    registration,
+    runs,
+    specs,
+)
 from physearth.tools.charts import plot, plot_planned_chart
 from physearth.tools.common import _fail, _ledger, _ok
 from physearth.tools.literature import (
@@ -164,11 +174,11 @@ from physearth.tools.specs import (
     PAPER_FIGURE_SPEC,
     PLOT_PLANNED_CHART_SPEC,
     PLOT_SPEC,
+    RAW_PAPER_SPEC,
+    RAW_SMRT_SPEC,
     READ_REFERENCE_SPEC,
     RESEARCH_GUIDELINE_SPEC,
     RESEARCH_PLAN_SPEC,
     RUN_MODEL_SPEC,
     RUN_PLANNED_MODEL_SPEC,
-    RAW_PAPER_SPEC,
-    RAW_SMRT_SPEC,
 )

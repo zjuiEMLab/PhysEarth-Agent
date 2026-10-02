@@ -2,9 +2,9 @@ import copy
 from pathlib import Path
 
 import pytest
-from physearth import agent, research, session, tools
 
 from apps.studio import views as render
+from physearth import agent, research, session, tools
 
 
 def _proposal(box, question="How does snow density affect microwave scattering?"):

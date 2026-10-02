@@ -127,6 +127,18 @@ Licence - Canada. The agent can run a model at the configuration a measurement w
 and compare the two. `onboarding/build_reference.py` regenerates the tables from the published
 files.
 
+## Repository layout
+
+```
+src/physearth/   the library: agent, harness, registry, and its package data (prompts, fonts, model templates)
+apps/studio/     the Gradio Studio (app.py at the root is the ModelScope entry shim)
+catalog/         what is registered: models/ (bundled, examples) and knowledge/ (papers, method notes, datasets)
+onboarding/      bringing a model or paper in: corpus builders and the literature card template
+integrations/    geoai/ (the MCP engine adapter), claude-code/, codex/, dsh/ and their installers
+evaluation/      tasks, fixtures, scorers, runners and the committed result records
+tests/  docs/    docs/reorganisation/ records why the layout is this way
+```
+
 ## Running it
 
 ```bash
@@ -401,7 +413,7 @@ You wrote a card and a function. Without writing anything else, your model now:
 If a card is broken, that model alone is rejected and the reason is listed under "Registered
 models" in the interface. The rest of the application starts normally.
 
-A finished example is in `examples/toy_model/`.
+A finished example is in `catalog/models/examples/toy_model/`.
 
 ## Licence
 
