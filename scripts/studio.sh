@@ -11,7 +11,7 @@
 #   2. The interpreter that can actually import the app is not necessarily `python3`. On macOS
 #      that is frequently a bare system Python with no Gradio, so candidates are *proved* by
 #      importing the frontend rather than found on PATH. The search itself lives in
-#      `scripts/lib/find-python.sh`, because the same mistake was made here, in the Codex doctor
+#      `integrations/lib/find-python.sh`, because the same mistake was made here, in the Codex doctor
 #      and in the DSH installer.
 #
 # Usage:
@@ -26,8 +26,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=scripts/lib/find-python.sh
-. "$ROOT/scripts/lib/find-python.sh"
+# shellcheck source=integrations/lib/find-python.sh
+. "$ROOT/integrations/lib/find-python.sh"
 OPEN=0
 for argument in "$@"; do
   case "$argument" in

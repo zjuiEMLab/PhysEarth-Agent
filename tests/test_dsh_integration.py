@@ -24,7 +24,7 @@ def test_the_installer_uses_the_shared_interpreter_search():
     body = (PLUGIN / "scripts" / "install.sh").read_text()
 
     # Sourced after the checkout is known, because the library lives in the checkout.
-    assert '. "$CHECKOUT/scripts/lib/find-python.sh"' in body
+    assert '. "$CHECKOUT/integrations/lib/find-python.sh"' in body
     assert "physearth_find_python_for_engine" in body
     # The private copy is gone rather than left as a fallback beside the shared one.
     assert "resolve_python" not in body
@@ -32,7 +32,7 @@ def test_the_installer_uses_the_shared_interpreter_search():
 
 
 def test_the_shared_library_answers_the_probe_this_branch_needs():
-    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    library = ROOT / "integrations" / "lib" / "find-python.sh"
     assert library.is_file() and os.access(library, os.X_OK)
 
     # The engine, not `physearth`: that package's `__init__` is lazy, so an interpreter with no
@@ -104,5 +104,5 @@ def test_the_studio_launcher_is_here_and_does_not_reimplement_the_search():
         assert path.is_file(), name
         assert os.access(path, os.X_OK), name
     studio = (ROOT / "scripts" / "studio.sh").read_text()
-    assert "scripts/lib/find-python.sh" in studio
+    assert "integrations/lib/find-python.sh" in studio
     assert "physearth_find_python_for_studio" in studio

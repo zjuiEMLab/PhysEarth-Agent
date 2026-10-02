@@ -1,6 +1,6 @@
 """Golden-file pin for the JATS extractor.
 
-Written before the parser moved out of `scripts/build_corpus.py`, against a fixture that
+Written before the parser moved out of `onboarding/build_corpus.py`, against a fixture that
 exercises every construct the real Copernicus articles use: nested sections, two kinds of
 cross-reference, inline and display maths, lists, and the figure and table blocks that
 must be dropped. The expected strings below are what the original script produced. If a

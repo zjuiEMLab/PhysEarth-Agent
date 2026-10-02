@@ -6,7 +6,7 @@ Modanesi, S., Massari, C., Gruber, A., Lievens, H., Tarpanelli, A., Morbidelli, 
 https://doi.org/10.5194/hess-25-6283-2021.
 
 The publisher serves this article's figures as PNG only; no vector PDF is available, so
-`scripts/extract_figure_metadata.py` finds no axis or legend text to extract and the card
+`onboarding/extract_figure_metadata.py` finds no axis or legend text to extract and the card
 carries the caption alone. The article and its figures are distributed under the CC BY 4.0
 license: https://creativecommons.org/licenses/by/4.0/.
 

@@ -8,7 +8,7 @@
 #
 # Four things happen, and each one exists because a live boot said so.
 #
-# 1. RESOLVE THE INTERPRETER. The search is `scripts/lib/find-python.sh`, shared with the Codex
+# 1. RESOLVE THE INTERPRETER. The search is `integrations/lib/find-python.sh`, shared with the Codex
 #    and Claude integrations — every one of them had written the same wrong candidate list. A
 #    candidate is accepted only after it imports `integrations.geoai.service`, and not
 #    `physearth`: that package's `__init__` is lazy, so `import physearth` succeeds on an
@@ -57,12 +57,12 @@ echo "checkout:  $CHECKOUT"
 echo "profile:   $PROFILE_DIR"
 
 # ── 1. The interpreter ──────────────────────────────────────────────────────────────────────
-# The search itself is `scripts/lib/find-python.sh`, shared with the Codex and Claude
+# The search itself is `integrations/lib/find-python.sh`, shared with the Codex and Claude
 # integrations. It has to be sourced after the checkout is known, which is why the root is
 # resolved with git rather than assumed to be two directories up: this script also ships inside
 # the plugin bundle.
-# shellcheck source=scripts/lib/find-python.sh
-. "$CHECKOUT/scripts/lib/find-python.sh"
+# shellcheck source=integrations/lib/find-python.sh
+. "$CHECKOUT/integrations/lib/find-python.sh"
 
 if PYTHON="$(physearth_find_python_for_engine "$CHECKOUT" || true)" && [ -n "$PYTHON" ]; then
   echo "python:    $PYTHON (imports the bridge service)"

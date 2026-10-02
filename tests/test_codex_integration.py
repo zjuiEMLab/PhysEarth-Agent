@@ -23,7 +23,7 @@ from integrations.geoai import mcp_server
 ROOT = Path(__file__).resolve().parent.parent
 SKILL_DIR = ROOT / ".agents" / "skills" / "geoai"
 SKILL = SKILL_DIR / "SKILL.md"
-CODEX_DIR = ROOT / "codex"
+CODEX_DIR = ROOT / "integrations" / "codex"
 
 # Every key Codex 0.155.1 documents for `mcp_servers.<name>`. A key outside this set is a typo
 # the client silently ignores, which is exactly the failure this test is for.
@@ -161,7 +161,7 @@ def test_the_config_snippet_does_not_promise_a_python_that_does_not_exist():
 
 
 def test_the_install_guide_keeps_the_cli_command_primary():
-    guide = (CODEX_DIR / "install-codex.md").read_text()
+    guide = (CODEX_DIR / "README.md").read_text()
 
     # A hand-edited config is the thing users get wrong; the guide has to lead with the command
     # that writes it, and mention the file form as the alternative.
@@ -174,7 +174,7 @@ def test_the_install_guide_keeps_the_cli_command_primary():
 
 
 def test_the_doctor_script_is_executable_and_checks_the_engine_before_the_registration():
-    script = ROOT / "scripts" / "codex-doctor.sh"
+    script = ROOT / "integrations" / "codex" / "doctor.sh"
 
     assert script.is_file()
     assert os.access(script, os.X_OK), "the guide tells the reader to run it directly"
@@ -188,15 +188,15 @@ def test_the_shell_scripts_share_one_interpreter_search():
     # This script and `studio.sh` each carried their own candidate list, and both lists were the
     # same wrong shape: `python3` before the conda environments, proved against `import physearth`
     # — whose `__init__` is lazy, so a PyYAML-less interpreter passes and then offers no tools.
-    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    library = ROOT / "integrations" / "lib" / "find-python.sh"
     assert library.is_file() and os.access(library, os.X_OK)
     for name, probe in (
-        ("codex-doctor.sh", "physearth_find_python_for_engine"),
-        ("studio.sh", "physearth_find_python_for_studio"),
-        ("codex-theme-install.sh", '"import plistlib"'),
+        ("integrations/codex/doctor.sh", "physearth_find_python_for_engine"),
+        ("scripts/studio.sh", "physearth_find_python_for_studio"),
+        ("integrations/codex/theme-install.sh", '"import plistlib"'),
     ):
-        body = (ROOT / "scripts" / name).read_text()
-        assert "scripts/lib/find-python.sh" in body, name
+        body = (ROOT / name).read_text()
+        assert "integrations/lib/find-python.sh" in body, name
         assert probe in body, name
         # The duplicate is gone, not merely bypassed: no script keeps a fallback `python3` loop.
         assert 'for candidate in "${PHYSEARTH_PYTHON:-}"' not in body, name
@@ -215,7 +215,7 @@ def test_the_agents_md_snippet_matches_the_skill_on_the_rules_that_matter():
 
 # ── the installable bundle (repo marketplace) ────────────────────────────────────────────────
 
-PLUGIN = ROOT / "plugins" / "geoai"
+PLUGIN = ROOT / "integrations" / "codex" / "geoai"
 MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -303,8 +303,8 @@ def test_the_repository_marketplace_points_at_the_plugin_it_catalogues():
 
 # ── text and colour: the only surface a CLI plugin has ───────────────────────────────────────
 
-THEME = ROOT / "codex" / "geoai.tmTheme"
-THEME_SNIPPET = ROOT / "codex" / "config-theme.snippet.toml"
+THEME = ROOT / "integrations" / "codex" / "geoai.tmTheme"
+THEME_SNIPPET = ROOT / "integrations" / "codex" / "config-theme.snippet.toml"
 
 # Every scope Codex names in its own theme scope list, plus the markdown ones an answer here
 # actually uses. A colour scheme that misses one of these leaves that construct at the terminal
@@ -393,9 +393,9 @@ def test_the_theme_snippet_writes_only_keys_that_were_probed():
 
 
 def test_the_theme_installer_probes_the_theme_before_claiming_success():
-    script = (ROOT / "scripts" / "codex-theme-install.sh").read_text()
+    script = (ROOT / "integrations" / "codex" / "theme-install.sh").read_text()
 
-    assert os.access(ROOT / "scripts" / "codex-theme-install.sh", os.X_OK)
+    assert os.access(ROOT / "integrations" / "codex" / "theme-install.sh", os.X_OK)
     # It must validate, must not touch config.toml without being asked, and must say how to undo.
     assert "plistlib" in script
     assert "--write-config" in script
@@ -418,7 +418,7 @@ def test_the_marketplace_entry_carries_what_the_cli_needs_to_install_it():
     entry, = catalog["plugins"]
     manifest = _plugin_manifest()
 
-    assert entry["source"] == {"source": "local", "path": "./plugins/geoai"}
+    assert entry["source"] == {"source": "local", "path": "./integrations/codex/geoai"}
     assert (ROOT / entry["source"]["path"]).resolve() == PLUGIN.resolve()
     # The version the CLI printed in `plugin list` is the manifest's, not the catalogue's.
     assert manifest["version"] == "1.0.0"

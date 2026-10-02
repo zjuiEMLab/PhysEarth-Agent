@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-PLUGIN = ROOT / "plugins" / "geoai-claude"
+PLUGIN = ROOT / "integrations" / "claude-code" / "geoai-claude"
 MANIFEST = PLUGIN / ".claude-plugin" / "plugin.json"
 MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 STATUSLINE = PLUGIN / "scripts" / "statusline.py"
@@ -208,9 +208,9 @@ def test_the_marketplace_points_at_the_plugin_it_catalogues():
 
 
 def test_the_installer_proves_the_interpreter_and_is_reversible():
-    script = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    script = (ROOT / "integrations" / "claude-code" / "install.sh").read_text()
 
-    assert os.access(ROOT / "scripts" / "claude-plugin-install.sh", os.X_OK)
+    assert os.access(ROOT / "integrations" / "claude-code" / "install.sh", os.X_OK)
     # It must prove the engine imports, register the server by absolute path, back the settings up
     # before writing them, and offer a read-only mode.
     assert "physearth_find_python_for_engine" in script
@@ -223,14 +223,14 @@ def test_the_installer_proves_the_interpreter_and_is_reversible():
 def test_every_script_sources_the_shared_interpreter_search():
     # The same discovery bug was written three times — PATH finds a python3 without the scientific
     # stack, and the failure is always silent. One implementation, sourced, is the fix.
-    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    library = ROOT / "integrations" / "lib" / "find-python.sh"
     assert library.is_file()
     body = library.read_text()
     assert "physearth_find_python_for_engine" in body
     assert "conda info --base" in body, "asking conda beats guessing a home directory"
-    for script in ("claude-plugin-install.sh",):
-        text = (ROOT / "scripts" / script).read_text()
-        assert "scripts/lib/find-python.sh" in text, script
+    for script in ("integrations/claude-code/install.sh",):
+        text = (ROOT / script).read_text()
+        assert "integrations/lib/find-python.sh" in text, script
 
 
 def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
@@ -240,7 +240,7 @@ def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
     launcher = ROOT / "scripts" / "studio.sh"
     assert launcher.is_file() and os.access(launcher, os.X_OK)
     body = launcher.read_text()
-    assert "scripts/lib/find-python.sh" in body
+    assert "integrations/lib/find-python.sh" in body
     assert "physearth_find_python_for_studio" in body
     assert "PYTHONPATH=backend" in body, "the package lives under backend/"
     wrapper = ROOT / "start-local.command"
@@ -252,7 +252,7 @@ def test_the_settings_half_resolves_its_interpreter_before_the_read_only_path():
     # `--check` reads the settings file with PYTHON_BIN. When that assignment sat below the branch,
     # `set -u` turned the report into "unbound variable" — a crash in the one mode that exists to
     # keep working on a broken install. Order is the assertion, so it is asserted positionally.
-    script = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    script = (ROOT / "integrations" / "claude-code" / "install.sh").read_text()
     assignment = script.index('PYTHON_BIN=')
     read_only = script.index('if [ "$CHECK" = "1" ]; then')
     assert assignment < read_only
@@ -297,7 +297,7 @@ def test_the_theme_id_is_the_prefixed_form_claude_code_resolves():
     # A plugin *supplies* a theme; it cannot activate one, and the id a session resolves is
     # `custom:<plugin-name>:<slug>`. The installer builds that from the manifest name rather than
     # from a literal, so renaming the plugin cannot leave a theme id pointing at nothing.
-    installer = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    installer = (ROOT / "integrations" / "claude-code" / "install.sh").read_text()
 
     assert 'PLUGIN_NAME="geoai-claude"' in installer
     assert 'f"custom:{plugin}:geoai-night"' in installer

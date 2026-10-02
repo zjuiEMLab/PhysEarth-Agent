@@ -11,8 +11,8 @@ whose plugins are not Python. Each host adds only its own packaging:
 
 | Host | Packaging | Guide |
 |---|---|---|
-| Claude Code | `plugins/geoai-claude/`, `.claude-plugin/marketplace.json` | `claude/install-claude-code.md` |
-| Codex | `plugins/geoai/`, `.agents/`, `codex/` | `codex/install-codex.md` |
+| Claude Code | `integrations/claude-code/geoai-claude/`, `.claude-plugin/marketplace.json` | `integrations/claude-code/README.md` |
+| Codex | `integrations/codex/geoai/`, `.agents/` | `integrations/codex/README.md` |
 | DeepSeek Harness | `integrations/dsh/` | `integrations/dsh/README.md` |
 
 For Codex, four artifacts make that up, and only the first needs installing:
@@ -21,8 +21,8 @@ For Codex, four artifacts make that up, and only the first needs installing:
 |---|---|---|
 | MCP server | `integrations/geoai/mcp_server.py` | the capability: 28 tools, resources, prompts |
 | Skill | `.agents/skills/geoai/` | the procedure: which tool for which question, what a valid run looks like, which refusals are results. Discovered from the repository, so nothing to install |
-| Config | `codex/config.snippet.toml` | the file form of the registration |
-| Guide | `codex/install-codex.md` | the two commands, the checks, and the honest limits |
+| Config | `integrations/codex/config.snippet.toml` | the file form of the registration |
+| Guide | `integrations/codex/README.md` | the two commands, the checks, and the honest limits |
 
 ## What ships
 
@@ -74,13 +74,13 @@ a person's answer and nothing else.
 ## Install
 
 The server is stdio JSON-RPC and has no third-party dependency; it only needs this checkout
-importable. **`codex/install-codex.md` is the authoritative guide** — this is the short form.
+importable. **`integrations/codex/README.md` is the authoritative guide** — this is the short form.
 
 ```bash
 # from the repository root
 .venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
   from integrations.geoai import service; print('ok')"    # which interpreter to register
-scripts/codex-doctor.sh                                   # checks the interpreter, then the tools
+integrations/codex/doctor.sh                                   # checks the interpreter, then the tools
 ```
 
 Register it with Codex (`codex.toml.example` has the same thing in file form):

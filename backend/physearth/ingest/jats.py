@@ -1,6 +1,6 @@
 """JATS XML to titled sections.
 
-Lifted unchanged out of `scripts/build_corpus.py`, which now imports it, so the bundled
+Lifted unchanged out of `onboarding/build_corpus.py`, which now imports it, so the bundled
 corpus and anything ingested during a conversation go through exactly one parser. The
 only behavioural difference is that the reference labels travel as an argument instead of
 a module global: one process serves every visitor, so nothing here may keep state between

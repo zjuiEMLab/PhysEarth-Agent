@@ -1,0 +1,61 @@
+# PhysEarth Geo-AI in Codex: text and colour.
+#
+# The capability half is `config.snippet.toml` (the MCP server) plus `.agents/skills/geoai/`
+# (the workflow). This file is the half a terminal can show, and it exists because a Codex plugin
+# has no panel, no widget and no status-line API of its own: colour and text are the whole surface
+# available to a third party.
+#
+# ── How these keys were verified ────────────────────────────────────────────────────────────
+#
+# Each key below was probed against codex-cli 0.155.1 by writing a config containing that one key
+# with a value of the wrong type, then reading the error. A key that does not exist cannot produce
+# `in \`tui.<key>\``, so the error is the proof of existence, and its wording is the proof of type:
+#
+#   tui.theme                  accepts a string; rejects a boolean
+#   tui.status_line            accepts a sequence; rejects a boolean
+#   tui.status_line_use_colors accepts a boolean; rejects a sequence ("expected a boolean")
+#   tui.terminal_title         accepts a sequence; rejects a boolean
+#
+# An earlier attempt at this list was wrong, because the probes shared one config file and a stale
+# invalid key from the previous probe masked the next one. The rule that came out of it: one
+# probe, one fresh config, and read the key name out of the error rather than trusting the label.
+
+[tui]
+# ── Colour ──────────────────────────────────────────────────────────────────────────────────
+#
+# Codex reads custom schemes (TextMate/Sublime `.tmTheme`, parsed with the `two-face` crate) from
+# $CODEX_HOME/themes/, offers them under `/theme`, and persists the choice here. The value is the
+# file's stem, not its display name. Install it with:
+#
+#   integrations/codex/theme-install.sh
+theme = "geoai"
+
+# Apply the active theme's colours to the status line. Without this the theme still colours the
+# conversation, but the status line keeps the terminal default and the two look unrelated.
+status_line_use_colors = true
+
+# ── Text ────────────────────────────────────────────────────────────────────────────────────
+#
+# Both remaining keys are lists of *item ids*, and the ids are deliberately NOT pinned here. The
+# config layer accepts any string and filters unknown ids later, so a wrong id is not an error —
+# it is a silently empty slot, which is the worst possible failure for documentation. Codex's own
+# pickers write the correct ids and save them:
+#
+#   /statusline     (in the TUI)  — choose the status-line items
+#   /theme                        — and the theme, once the file is installed
+#
+# The status line's picker offers, verbatim from the binary: project name, current machine
+# hostname, open pull request number for the current branch, committed branch changes against the
+# default branch, active permission profile or sandbox mode, active command approval mode, total
+# context window size in tokens, estimated current-thread cost, whether raw scrollback mode is
+# active, and the workspace notification headline. The terminal-title picker draws from a larger
+# shared catalogue that also includes the current model, reasoning level, branch and thread name.
+#
+# A deliberately short status line, if you set one yourself — this project's answers are read for
+# their numbers, and a status line competing with them is a cost, not a feature:
+#
+# status_line = ["project-name", "permission-profile", "context-window"]
+
+# ── What is not ours to set ─────────────────────────────────────────────────────────────────
+# Switching back to `dark` or `light` is the user's call in `/theme`; a plugin cannot force a
+# theme, and pretending otherwise would mean fighting the preference store every session.
