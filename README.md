@@ -390,7 +390,8 @@ registered: ['my_model', 'smrt', 'tau_omega', 'water_cloud']
 
 You wrote a card and a function. Without writing anything else, your model now:
 
-- appears in the agent's capability table with its parameters, units and ranges;
+- appears in the agent's model list, and list_models gives the agent its parameters, units
+  and ranges;
 - refuses out-of-range and illegal calls with your wording, before your code runs;
 - has its output checked against your declared bounds after every call;
 - shows up in the run trace, refusals included;

@@ -18,7 +18,8 @@ The levels, and where each one lives:
     L2  workflow   prompts/20-workflow.md, 21-research.md, 22-triggers.md,
                    23-workflow-no-corpus.md
     L3  context    generated below: models_section, reference_section,
-                   catalogue_section, skills_section, status_block
+                   catalogue_section, skills_section; status_block and the held
+                   state go out through state_note(), after the conversation
     L4  methods    knowledge/skills/ -- not prompt text. Those are cited evidence, read
                    through the tools and carrying [skill:slug] markers; only a listing of
                    them reaches the prompt, through skills_section()

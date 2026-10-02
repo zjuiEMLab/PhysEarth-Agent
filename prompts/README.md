@@ -17,14 +17,17 @@ The prompt is a stack. Lower levels change almost never; higher ones change per 
 | **L0** identity | who the agent is, and how it writes | `00-role.md`, `01-style.md` | almost never |
 | **L1** policy | citation rules, evidence tiers, the untrusted-text boundary, the online layer | `10-citations.md`, `11-abstract-only.md`, `12-online.md`, `13-citations-no-corpus.md` | with a scientific decision |
 | **L2** workflow | explore → plan → approve → run → report, and the triggers that open a method note | `20-workflow.md`, `21-research.md`, `22-triggers.md`, `23-workflow-no-corpus.md` | with a UX decision |
-| **L3** context | the registered models, the reference datasets, the corpus catalogue, the run status | generated per turn in `backend/physearth/prompt.py` | every turn |
+| **L3** context | the registered models, the reference datasets, the corpus catalogue; the run status, sent after the conversation | generated in `backend/physearth/prompt.py` | the run status every call |
 | **L4** methods | the three method notes the agent opens before acting | `knowledge/skills/` | per method |
 | **L5** profiles | per-experiment instructions for the robustness study | `evaluation/prompts/*.yaml` | per experiment |
 
-**L3 is not a file** and cannot be: it is different on every call. It is the only part of
-the prompt still written in Python, and that is deliberate — `models_section` renders what
-the registry actually holds, so a newly registered model appears in the prompt without
-anyone editing it.
+**L3 is not a file** and cannot be: it follows the registry and the session. It is the only
+part of the prompt still written in Python, and that is deliberate — `models_section` renders
+what the registry actually holds, so a newly registered model appears in the prompt without
+anyone editing it. It lists each model by name, description, outputs and sweepable
+parameters; the full declaration comes from `list_models`. The run status and the held
+state change on every call, so `state_note` sends them as the last message of each request
+rather than in the system prompt, which keeps everything before them a cacheable prefix.
 
 **L4 and L5 are not in this directory**, and the table says where they are rather than
 moving them here, because both would be misfiled:
@@ -44,8 +47,8 @@ Not every block is sent every turn. The ablation switches decide, in `prompt.bui
 - **literature off** — the corpus catalogue, the method-note listing and `20-workflow.md`
   drop out; `23-workflow-no-corpus.md` and `13-citations-no-corpus.md` take their place,
   and `read_literature` is rewritten out of the research workflow.
-- **capability off** — the registered-model table still appears, but without the declared
-  parameter ranges and legal combinations.
+- **capability off** — the registered-model table lists parameter names only, and
+  `list_models` withholds the declared ranges and legal combinations.
 - **online layer available** — `12-online.md` is appended, and `11-abstract-only.md` is
   spliced into the citation rules, because `[abs:doi]` only exists when a search can
   return one.
