@@ -115,3 +115,13 @@ def test_software_documentation_is_never_presented_as_a_paper():
     assert "(%d papers, %d software documentation sources)" % (
         papers, len(documentation)
     ) in prompt.catalogue_section()
+
+
+def test_every_corpus_scenario_is_one_the_literature_tool_can_filter_by():
+    from physearth import tools
+    from physearth.corpus import knowledge
+
+    spec = next(s for s in tools.specs() if s["function"]["name"] == "list_literature")
+    allowed = set(spec["function"]["parameters"]["properties"]["scenario"]["enum"])
+    for entry in knowledge.catalogue():
+        assert set(entry["scenarios"]) <= allowed, entry["slug"]
