@@ -7,7 +7,7 @@ figures, success and stop criteria, and approval state. Sixteen rules that JSON 
 express (for example "every assumed parameter has a sensitivity run" or "runs drawn on one figure
 share a sweep") are listed in its `x-validator-rules`.
 
-**Status.** Written on 14 August 2026 as "new, intentionally dead" (see
+**Status.** The live plan is documented in [../research-plan.md](../research-plan.md). This draft was written on 14 August 2026 as "new, intentionally dead" (see
 `docs/reorganisation/audit-before-execution.html`). Nothing loads it. The plan the agent actually
 produces today (`src/physearth/research/`) uses `charts`, `runs` and `reproduction_targets`, not
 this schema's `figures` and `comparison`, so the two have drifted. It is kept as the intended
