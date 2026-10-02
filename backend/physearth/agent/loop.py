@@ -931,6 +931,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         "research_plan_validation",
                         "paper_condition_conflict",
                         "chart_axis_mismatch",
+                        "plan_quality",
+                        "run_validation",
+                        "question_coverage",
                     )
                 ):
                     problems = (result.get("data") or {}).get("problems") or []
@@ -943,7 +946,16 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         for item in blocking_problems
                     )
                     failure_code = (result.get("data") or {}).get("error_code")
-                    if failure_code == "chart_axis_mismatch":
+                    if len((result.get("data") or {}).get("checks") or ()) > 1:
+                        recovery_instruction = (
+                            "Several checks failed in one validation pass, and every problem "
+                            "is listed below. Fix all of them in one action=revise_plan: "
+                            "send only the affected fields, and in runs, charts, "
+                            "reproduction_targets or parameter_mapping only the affected items "
+                            "by id. Preserve evidence, physical parameters, sweep ranges and "
+                            "unrelated runs."
+                        )
+                    elif failure_code == "chart_axis_mismatch":
                         recovery_instruction = (
                             "This is a chart-axis repair. Preserve all evidence, reproduction "
                             "targets, outputs, physical parameters, and unrelated runs. Submit "
@@ -963,6 +975,12 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             "returned by list_models; do not submit an alias or the same invalid "
                             "mapping object again. Add model when the error requests model-scoped "
                             "coverage."
+                        )
+                    elif failure_code in ("plan_quality", "run_validation", "question_coverage"):
+                        recovery_instruction = (
+                            "Fix the listed problems with one action=revise_plan that sends only "
+                            "the affected fields, and in runs or charts only the affected items "
+                            "by id. Preserve evidence, targets, mappings and unrelated runs."
                         )
                     else:
                         recovery_instruction = (

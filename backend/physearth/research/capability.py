@@ -484,6 +484,40 @@ def _target_key(value):
     return "target:%s" % _identity_key(text)
 
 
+def _planned_target_keys(target):
+    values = [target.get("id"), target.get("source_id"), target.get("label")]
+    values.extend(target.get("evidence_refs") or ())
+    return {_target_key(value) for value in values if str(value or "").strip()}
+
+
+def _report_target_keys(report):
+    keys = {_target_key(report.get(name)) for name in ("id", "label") if report.get(name)}
+    if report.get("target_key"):
+        keys.add(report["target_key"])
+    return keys
+
+
+def match_capability_targets(targets, reports):
+    """Pair each planned target with the capability report that checked it.
+
+    A target matches by its id, source_id, label or any evidence reference, so a plan that
+    renames a checked figure target still finds its check. One target against one report
+    pairs directly: there is nothing else it could have been checked as.
+    """
+    targets = [item for item in targets or () if isinstance(item, dict)]
+    reports = [item for item in reports or () if isinstance(item, dict)]
+    pairs = {}
+    for index, target in enumerate(targets):
+        keys = _planned_target_keys(target)
+        for report in reports:
+            if keys & _report_target_keys(report):
+                pairs[index] = report
+                break
+    if not pairs and len(targets) == 1 and len(reports) == 1:
+        pairs[0] = reports[0]
+    return pairs
+
+
 def _target_specs(targets, reference_models, requested_outputs, local_models):
     specs = []
     for index, item in enumerate(targets or ()):

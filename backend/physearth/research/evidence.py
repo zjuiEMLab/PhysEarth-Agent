@@ -71,6 +71,7 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
         if item.get("analysis_status") not in ("unavailable", "metadata_only")
         and item.get("reference")
     }
+    opened_refs = sorted(sections | figures)
     if not sections:
         problems.append({
             "field": "literature_evidence",
@@ -92,7 +93,8 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
                 "field": "literature_evidence[%d].evidence_ref" % index,
                 "source": ref,
                 "expected": "a section or source figure opened in this session",
-                "repair": "Read the cited section or figure, then use its returned citation reference.",
+                "allowed_values": opened_refs,
+                "repair": "Use one of allowed_values, or read the cited section or figure first and use its returned citation reference.",
             })
     if not reproduction_targets:
         problems.append({
@@ -132,7 +134,7 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
         if not refs:
             problems.append({"field": prefix + ".evidence_refs", "source": "research_plan", "expected": "opened paper evidence", "repair": "Read and cite the relevant section, figure, or table."})
         elif not refs.intersection(sections | figures):
-            problems.append({"field": prefix + ".evidence_refs", "source": ", ".join(sorted(refs)), "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."})
+            problems.append({"field": prefix + ".evidence_refs", "source": ", ".join(sorted(refs)), "expected": "opened evidence reference", "allowed_values": opened_refs, "repair": "Use one of allowed_values, or the citation returned by read_literature or read_paper_figure."})
         if (
             figure_target
             and not refs.intersection(figures)

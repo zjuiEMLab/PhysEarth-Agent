@@ -27,6 +27,7 @@ from physearth.research.capability import (
     _capability_strings,
     _target_key,
     capability_check,
+    match_capability_targets,
 )
 from physearth.research.charts import (
     _capability_gaps,

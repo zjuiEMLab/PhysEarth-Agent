@@ -15,7 +15,7 @@ from physearth.research.common import _clean_list, _fail, _needs, _public
 from physearth.research.coverage import _target_coverage
 from physearth.research import evidence
 from physearth.research.evidence import _evidence_plan_problems, _evidence_problem_summary
-from physearth.research.mapping import _is_paper_context_problem
+from physearth.research.mapping import _is_paper_context_problem, _repair_item
 from physearth.research.metadata import _repair_reproduction_metadata
 from physearth.research.normalise import (
     _clean_charts,
@@ -29,6 +29,38 @@ from physearth.research.normalise import (
     _repair_missing_protocol_steps,
     is_reproduction_question,
 )
+
+
+def _refusal(refusals, automatic_repairs):
+    """One answer for every check that failed, so one revision can fix them all.
+
+    The checks used to stop at the first failure, and each fix exposed the next: a traced
+    run spent five refusals walking through evidence, chart axes, sweep bounds, the
+    baseline id and coverage in turn. The first failing check keeps its error code and
+    its summary leads; the others follow, with all their problems in one list.
+    """
+    summary, data = refusals[0]
+    data = dict(data)
+    if len(refusals) > 1:
+        data["problems"] = [
+            problem for _summary, item in refusals for problem in item.get("problems") or ()
+        ]
+        data["repair_hints"] = [
+            hint for _summary, item in refusals for hint in item.get("repair_hints") or ()
+        ]
+        for _summary, item in refusals[1:]:
+            for key, value in item.items():
+                data.setdefault(key, value)
+        data["checks"] = [
+            {"error_code": item.get("error_code"), "summary": text}
+            for text, item in refusals
+        ]
+        summary = (
+            "%s Also failing: %s All %d failing checks are listed; fix them in one revision."
+            % (summary, " ".join(text for text, _item in refusals[1:]), len(refusals))
+        )
+    data["automatic_repairs"] = automatic_repairs
+    return _fail(summary, data)
 
 
 def propose(
@@ -89,8 +121,13 @@ def propose(
         return _fail("A proposal requires question, objective and hypothesis.")
     if not charts:
         return _fail("A proposal requires at least one chart option with x and y fields.")
+    refusals = []
+
+    def refuse(summary, data):
+        refusals.append((summary, data))
+
     if run_problems:
-        return _fail(
+        run_refusal = (
             "The proposed execution plan is invalid: %s" % "; ".join(run_problems),
             {
                 "error_code": "run_validation",
@@ -101,14 +138,18 @@ def propose(
                 ],
             },
         )
+        if not runs:
+            return _fail(*run_refusal)
+        refuse(*run_refusal)
     if not runs:
         return _fail("A proposal requires at least one explicit registered physical-model run.")
     steps, structural_repairs = _repair_missing_protocol_steps(steps, runs, charts)
     if len(steps) < 3:
-        return _fail(
+        refuse(
             "A proposal requires at least three executable research steps.",
             {
                 "error_code": "steps_missing",
+                "problems": ["steps"],
                 "repair_hints": [
                     "Describe model validation, formal execution, and figure/metric review as separate steps.",
                     "Keep the already declared runs and charts; this is a plan-format correction, not a new experiment.",
@@ -146,25 +187,6 @@ def propose(
         condition_provenance,
         parameter_resolution,
     )
-    quality_problems = []
-    for label, values in (
-        ("quantities of interest", quantities),
-        ("controlled conditions", controls),
-        ("acceptance metrics", metrics),
-        ("diagnostics or robustness checks", diagnostics),
-        ("success criteria", success_criteria),
-        ("stop conditions", stop_conditions),
-        ("assumptions", assumptions),
-        ("limitations", limitations),
-    ):
-        if not values:
-            quality_problems.append(label)
-    for problem in metadata_problems:
-        if problem.get("blocking", True) and not str(problem.get("field", "")).startswith("parameter_mapping") and not _is_paper_context_problem(problem):
-            quality_problems.append(
-                "%s (expected %r; repair: %s)"
-                % (problem.get("field"), problem.get("expected"), problem.get("repair"))
-            )
     blocking_metadata_problems = [
         item for item in metadata_problems
         if item.get("blocking", True)
@@ -172,43 +194,54 @@ def propose(
         and not _is_paper_context_problem(item)
     ]
     if blocking_metadata_problems:
-        return _fail(
+        refuse(
             "The reproduction proposal contains non-model validation errors: %s"
             % "; ".join(problem.get("field", "unknown") for problem in blocking_metadata_problems),
             {
                 "error_code": "research_plan_validation",
                 "stage": "registered_model_validation",
                 "problems": blocking_metadata_problems,
-                "automatic_repairs": metadata_repairs,
                 "repair_hints": [problem.get("repair") for problem in blocking_metadata_problems if problem.get("repair")],
             },
         )
     run_ids = [run["id"] for run in runs]
+    baseline_repairs = []
     if baseline_run_id not in run_ids:
-        quality_problems.append("baseline_run_id naming one planned run")
-    if quality_problems:
-        provenance_missing = any(
-            item.startswith("paper_conditions") or item.startswith("condition_provenance")
-            for item in quality_problems
+        # Which run is the smoke-test baseline is a review choice, not physics. A missing
+        # or stale id is filled with the run marked as the baseline stage, else the first
+        # run, and shown at review where the user can change it.
+        chosen = next(
+            (run["id"] for run in runs if str(run.get("stage") or "").lower() == "baseline"),
+            run_ids[0],
         )
-        return _fail(
+        baseline_repairs.append(_repair_item(
+            "baseline_run_id", baseline_run_id or None, chosen,
+            "name a planned run as the baseline; change it at review if another run is the reference",
+            "submitted_runs",
+        ))
+        baseline_run_id = chosen
+    quality_problems = [
+        label
+        for label, values in (
+            ("quantities of interest", quantities),
+            ("controlled conditions", controls),
+            ("acceptance metrics", metrics),
+            ("diagnostics or robustness checks", diagnostics),
+            ("success criteria", success_criteria),
+            ("stop conditions", stop_conditions),
+            ("assumptions", assumptions),
+            ("limitations", limitations),
+        )
+        if not values
+    ]
+    if quality_problems:
+        refuse(
             "The proposal is a computation checklist, not yet a scientific protocol. Add: %s."
             % ", ".join(quality_problems),
             {
-                "error_code": (
-                    "paper_condition_provenance_missing"
-                    if provenance_missing
-                    else "plan_quality"
-                ),
+                "error_code": "plan_quality",
                 "problems": quality_problems,
-                "repair_hints": [
-                    (
-                        "Read the relevant paper section and add paper_conditions plus "
-                        "condition_provenance before resubmitting the generated protocol."
-                        if provenance_missing
-                        else "Complete every required research-protocol field and resubmit the proposal."
-                    )
-                ],
+                "repair_hints": ["Complete every required research-protocol field and resubmit the proposal."],
             },
         )
     evidence_problems = _evidence_plan_problems(
@@ -227,6 +260,8 @@ def propose(
         str(item.get("field", "")) for item in evidence_problems
     }
     for problem in metadata_problems:
+        if problem in blocking_metadata_problems:
+            continue
         field = str(problem.get("field", ""))
         if field in evidence_problem_fields:
             # Prefer the metadata repair detail, which includes registered candidates and
@@ -238,21 +273,17 @@ def propose(
         else:
             evidence_problems.append(problem)
             evidence_problem_fields.add(field)
-    evidence_problems.extend(blocking_metadata_problems)
     nonblocking_evidence_warnings = [
         item for item in evidence_problems if not item.get("blocking", True)
     ]
-    if evidence_problems and any(item.get("blocking", True) for item in evidence_problems):
-        return _fail(
-            _evidence_problem_summary(
-                question,
-                [item for item in evidence_problems if item.get("blocking", True)],
-            ),
+    blocking_evidence = [item for item in evidence_problems if item.get("blocking", True)]
+    if blocking_evidence:
+        refuse(
+            _evidence_problem_summary(question, blocking_evidence),
             {
                 "error_code": "reproduction_evidence_incomplete",
                 "stage": "reproduction_metadata",
-                "problem_count": sum(1 for item in evidence_problems if item.get("blocking", True)),
-                "automatic_repairs": metadata_repairs,
+                "problem_count": len(blocking_evidence),
                 "problems": evidence_problems,
                 "repair_hints": [item.get("repair") for item in evidence_problems if item.get("repair")],
             },
@@ -273,12 +304,13 @@ def propose(
     automatic_repairs.extend(structural_repairs)
     automatic_repairs.extend(reference_repairs)
     automatic_repairs.extend(metadata_repairs)
+    automatic_repairs.extend(baseline_repairs)
     automatic_repairs.extend(_repair_required_companion_outputs(question, charts, runs))
     automatic_repairs.extend(_repair_sampling_density(charts, runs))
     automatic_repairs.extend(_repair_chart_axes(charts, runs))
     dependency_problems = _output_dependency_problems(charts, runs)
     if dependency_problems:
-        return _fail(
+        refuse(
             "The proposed experiment sweeps a parameter that cannot affect its output: %s"
             % "; ".join(dependency_problems),
             {
@@ -300,7 +332,7 @@ def propose(
                 if (run.get("parameters") or {}).get("sweep_parameter") not in (None, "none")
             }
         )
-        return _fail(
+        refuse(
             "The proposed chart cannot be produced by the planned runs: %s" % "; ".join(chart_problems),
             {
                 "error_code": "chart_axis_mismatch",
@@ -313,12 +345,15 @@ def propose(
                 ],
             },
         )
-    coverage_problems = _question_coverage_problems(question, runs, charts)
-    if coverage_problems:
-        return _fail(
+    question_problems = _question_coverage_problems(question, runs, charts)
+    if question_problems:
+        refuse(
             "The plan does not measure every quantity or attribution requested by the question: %s"
-            % "; ".join(coverage_problems)
+            % "; ".join(question_problems),
+            {"error_code": "question_coverage", "problems": question_problems},
         )
+    if refusals:
+        return _refusal(refusals, automatic_repairs)
     plan = {
         "plan_version": 1,
         "title": objective,

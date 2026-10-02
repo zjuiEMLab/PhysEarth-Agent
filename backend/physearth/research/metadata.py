@@ -3,6 +3,7 @@
 import re
 
 from physearth import registry
+from physearth.research.capability import match_capability_targets
 from physearth.research.common import _provenance_confidence
 from physearth.research.mapping import (
     _ledger_entries,
@@ -37,6 +38,50 @@ def _figure_ref_for_target(target, refs):
         if ref_match and str(int(ref_match.group(1))) == number:
             return ref
     return (list(refs or ()) or [None])[0]
+
+
+def _complete_targets_from_capability(session, targets, figures):
+    """Fill a target's descriptive fields from what the session already established.
+
+    The capability check recorded which reference models and outputs each target asks
+    for, and the target's own evidence names its source figure. Re-typing them into the
+    plan only gave the model more fields to omit. Nothing here touches runs, charts or
+    coverage; every filled field is returned as a reviewable repair.
+    """
+    review = (session or {}).get("capability_review") or {}
+    reports = review.get("target_reports") or ([review] if review.get("requested_models") else [])
+    pairs = match_capability_targets(targets, reports)
+    repairs = []
+
+    def fill(index, field, value, reason, source):
+        if value in (None, "", []) or targets[index].get(field):
+            return
+        targets[index][field] = value
+        repairs.append(_repair_item(
+            "reproduction_targets[%d].%s" % (index, field), None, value, reason, source,
+        ))
+
+    for index, target in enumerate(targets):
+        report = pairs.get(index) or {}
+        fill(index, "reference_models", list(report.get("requested_models") or ()),
+             "carry the reference models recorded by the capability check",
+             "capability_review")
+        fill(index, "requested_outputs", list(report.get("requested_outputs") or ()),
+             "carry the outputs recorded by the capability check", "capability_review")
+        figure_refs = [ref for ref in target.get("evidence_refs") or () if ref in figures]
+        source = (figure_refs or [None])[0] or report.get("id") or target.get("label")
+        fill(index, "source_id", source or target.get("id"),
+             "identify the target by its opened source figure or checked target",
+             "session_evidence_ledger")
+        fill(index, "target_quantity", ", ".join(target.get("requested_outputs") or ()),
+             "name the quantity by the target's requested outputs", "submitted_plan_fields")
+        if target.get("target_quantity") and target.get("source_id"):
+            fill(index, "expected_comparison",
+                 "Compare the planned %s against %s: axes, trend and legend series."
+                 % (target["target_quantity"], target["source_id"]),
+                 "state the comparison implied by the target's quantity and source",
+                 "submitted_plan_fields")
+    return repairs
 
 
 def _repair_reproduction_metadata(
@@ -123,6 +168,22 @@ def _repair_reproduction_metadata(
             relevant_refs = paper_refs
     reproduction_targets = list(reproduction_targets or ())
 
+    for index, target in enumerate(reproduction_targets):
+        refs = [_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()]
+        if not refs and relevant_refs:
+            before = list(refs)
+            target["evidence_refs"] = [_figure_ref_for_target(target, relevant_refs)]
+            repairs.append(_repair_item(
+                "reproduction_targets[%d].evidence_refs" % index,
+                before, target["evidence_refs"],
+                "attach the target to evidence already opened in this session",
+                "session_evidence_ledger",
+            ))
+        elif refs:
+            target["evidence_refs"] = refs
+
+    repairs.extend(_complete_targets_from_capability(session, reproduction_targets, figures))
+
     resolved_models = {
         str(item.get("asked") or "").strip(): str(item.get("registered") or "").strip()
         for item in ((session.get("capability_review") or {}).get("resolved_names") or ())
@@ -140,20 +201,6 @@ def _repair_reproduction_metadata(
                 "carry the evidence-backed capability resolution into the executable plan",
                 "capability_review",
             ))
-
-    for index, target in enumerate(reproduction_targets):
-        refs = [_normalise_evidence_ref(ref) for ref in target.get("evidence_refs") or ()]
-        if not refs and relevant_refs:
-            before = list(refs)
-            target["evidence_refs"] = [_figure_ref_for_target(target, relevant_refs)]
-            repairs.append(_repair_item(
-                "reproduction_targets[%d].evidence_refs" % index,
-                before, target["evidence_refs"],
-                "attach the target to evidence already opened in this session",
-                "session_evidence_ledger",
-            ))
-        elif refs:
-            target["evidence_refs"] = refs
 
     if not selected_models:
         seen_models = set()

@@ -3,6 +3,58 @@
 from physearth import registry, research
 from physearth.corpus import model_guidelines
 
+_ITEM_IDENTITY = {
+    "runs": ("id",),
+    "charts": ("id",),
+    "reproduction_targets": ("id",),
+    "parameter_mapping": ("model", "model_input"),
+}
+
+
+def _merge_items(retained, supplied, keys):
+    """Patch a retained list by item identity instead of replacing it.
+
+    A repair names the items it fixes: one run's sweep, one target's source. Replacing
+    the whole list with those items silently dropped every other run or target, and the
+    next validation refused the plan for what had been lost. An item whose identity is
+    already retained is updated field by field (a run's parameters key by key, None
+    deleting one); a new identity is appended; ``remove: true`` drops it. A list whose
+    items do not all carry the identity is a full replacement, as before.
+    """
+    def identity(item):
+        return tuple(str(item.get(key) or "").strip() for key in keys)
+
+    if not isinstance(retained, list) or not all(
+        isinstance(item, dict) and all(identity(item)) for item in supplied
+    ):
+        return supplied
+    merged = [dict(item) if isinstance(item, dict) else item for item in retained]
+    index = {
+        identity(item): position for position, item in enumerate(merged) if isinstance(item, dict)
+    }
+    removed = set()
+    for item in supplied:
+        key = identity(item)
+        if item.get("remove") is True:
+            removed.add(key)
+            continue
+        update = {name: value for name, value in item.items() if name != "remove"}
+        if key not in index:
+            index[key] = len(merged)
+            merged.append(update)
+            continue
+        base = merged[index[key]]
+        if isinstance(base.get("parameters"), dict) and isinstance(update.get("parameters"), dict):
+            parameters = {**base["parameters"], **update["parameters"]}
+            update["parameters"] = {
+                name: value for name, value in parameters.items() if value is not None
+            }
+        merged[index[key]] = {**base, **update}
+    return [
+        item for item in merged
+        if not (isinstance(item, dict) and identity(item) in removed)
+    ]
+
 
 def research_plan(
     action,
@@ -71,24 +123,18 @@ def research_plan(
         planned_targets = [
             item for item in reproduction_targets or () if isinstance(item, dict)
         ]
-        checked_targets = {
-            research._target_key(item.get("id"))
-            for item in capability_review.get("target_reports") or ()
-        }
+        target_reports = capability_review.get("target_reports") or []
+        pairs = research.match_capability_targets(planned_targets, target_reports)
         missing_targets = [
             str(item.get("id") or item.get("source_id") or "target")
-            for item in planned_targets
-            if research._target_key(item.get("id") or item.get("source_id")) not in checked_targets
+            for index, item in enumerate(planned_targets)
+            if index not in pairs
         ]
-        target_reports = capability_review.get("target_reports") or []
-        planned_target_keys = {
-            research._target_key(item.get("id") or item.get("source_id"))
-            for item in planned_targets
-        }
+        paired_reports = {id(report) for report in pairs.values()}
         unplanned_checked_targets = [
             str(item.get("id") or "target")
             for item in target_reports
-            if research._target_key(item.get("id")) not in planned_target_keys
+            if id(item) not in paired_reports
         ]
         target_checks_missing = (
             len(planned_targets) > 1 and not target_reports
@@ -108,10 +154,13 @@ def research_plan(
                     "error_code": "capability_targets_required",
                     "source": "session.capability_review",
                     "missing_targets": missing_targets or capability_review.get("missing_targets") or [],
+                    "checked_target_ids": [
+                        str(item.get("id")) for item in target_reports if item.get("id")
+                    ],
                     "repair": (
-                        "Call research_capability_check once for every figure target, then wait for "
-                        "the unified summary. If any target is unavailable, obtain explicit user "
-                        "confirmation before proposing the partial plan."
+                        "Give every reproduction target the id of the capability check that "
+                        "covered it (checked_target_ids), and keep one target per checked id. "
+                        "Call research_capability_check only for a target that was never checked."
                     ),
                     "blocking": True,
                     "capability_review": capability_review,
@@ -320,6 +369,9 @@ def research_plan(
                 "The rejected proposal is retained. Correct it with "
                 "research_plan(action='revise_plan', changes={...}) sending only the "
                 "fields the problems name%s -- the retained draft supplies the rest. "
+                "In runs, charts, reproduction_targets and parameter_mapping send only the "
+                "items to change, each with its id (mappings: model and model_input) and only "
+                "the fields to change; add {\"id\": ..., \"remove\": true} to drop one. "
                 "Submit a complete proposal again only if the plan has to change shape. "
                 "research_plan(action='status') retrieves the structured failure context."
                 % (" (%s)" % ", ".join(fields) if fields else "")
@@ -356,6 +408,8 @@ def research_plan(
         for key, value in supplied.items():
             if key == "parameters" and isinstance(value, dict):
                 corrected[key] = {**dict(corrected.get(key) or {}), **value}
+            elif key in _ITEM_IDENTITY and isinstance(value, list):
+                corrected[key] = _merge_items(corrected.get(key), value, _ITEM_IDENTITY[key])
             elif value is not None:
                 corrected[key] = value
         return research_plan(action="propose", _session=_session, **corrected)
