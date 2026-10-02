@@ -69,18 +69,19 @@ with `rejudge_q1_records.py --calibrate PATH` and compare.
 
 ## Status
 
-Evidence for B and C: `evaluation/results/competition/final-db4b2e1/` (26 records and
+Evidence for B and C: `evaluation/results/competition/final-db4b2e1/` (74 records and
 `scores.json`), every record made on build db4b2e1: main LLM `openai/gpt-5.6-luna`, judge
-`openai/gpt-6-luna` under the pass rules above.
+`openai/gpt-6-luna` under the pass rules above. A5 counts harness-off SMRT calls since
+878f6a9.
 
 | Item | Status |
 |---|---|
 | A1, A2, A3 | Done: 6/6 models, 197 contract checks; 10/10 Tier 0 tasks, 42 checks; 21/21 registration checks (7/7 A1, 10/10 A2, 4/4 A3) |
-| A4 | Done for all six models (one false-premise probe each, SMRT three repeats, plus the DMRT and two-model probes): nothing illegal executed in any probe run; 3 of 10 harness-on runs ended with an answer naming the card's limit (the tau-omega probe and two of the SMRT density repeats), the others on the no_progress stop or with an answer that did not name the limit |
-| A5 | Done: 0 illegal model calls executed across all 26 records |
+| A4 | Done for all six models: eight false-premise probes, three repeats each, harness on and off. Harness on: no illegal value executed in 24 runs; 4 of 24 ended with an answer naming the card's limit. Harness off: none of the 24 runs reached a model call (each stopped after failing to open a raw paper), so the harness-off rate is empty rather than safe |
+| A5 | Done across 74 records: harness on, 0 illegal model calls executed; harness off, 3 of 5 Q1 runs executed an SMRT recipe with stickiness 0.0, below the card's minimum of 0.05 |
 | A6 | Done: 21 tasks, 16 can, 4 partial, 1 cannot |
-| B1, B2, B4, B5, B6 | Done for all six models (SMRT three repeats, the others one): SMRT Success on r1 and r3 (figure 8/8, report 12/16 and 11/16), Partial on r2 (three parameter sources unlabelled); tau-omega Success (figure 6/8, report 12/16); water cloud Partial (figure 0/8); PROSAIL, pyET and pywatershed Failed (no source in the corpus, so no plan passed the evidence gate) |
-| B3 | Done for SMRT Q1 (every main-LLM repeat: four pairings within 3-4% NRMSE of the notebook, the sticky pair 12%); oracles built for PROSAIL, pyET and pywatershed but no agent curve to compare; tau-omega and water cloud judge-only |
-| B7 | Direct LLM (harness off) on Q1 and the density probe: 0 figures in 6 runs; DeepSeek V4.1 Flash and Qwen3.8 Flash with the harness on Q1: Partial each (report judge 10/16). Coding agents: not run |
-| C1, C2 | Done: per-record calls, tokens, cost and time; the harness-off baseline is cheaper only because it stops early |
+| B1, B2, B4, B5, B6 | Done for all six models: SMRT 5 repeats (Success r1, r3, r5; Partial r2, three parameter sources unlabelled; Failed r4, the planned chart was never completed); tau-omega 5 repeats (Success r1-r3 and r5, Partial r4 on the report judge); water cloud Partial (figure 0/8); PROSAIL, pyET and pywatershed Failed (no source in the corpus, so no plan passed the evidence gate) |
+| B3 | Done for SMRT Q1 (every main-LLM repeat that drew the curves: four pairings within 3-4% NRMSE of the notebook, the sticky pair 12%); oracles built for PROSAIL, pyET and pywatershed but no agent curve to compare; tau-omega and water cloud judge-only |
+| B7 | Harness off, SMRT Q1 and tau-omega, 5 runs each: 0 of 10 drew a figure (the harness-off tool set can run only SMRT, so tau-omega had no model to run); harness on: 9 of 10 passed the figure judge. DeepSeek V4.1 Flash and Qwen3.8 Flash with the harness on Q1: Partial each. Coding agents: not run |
+| C1, C2 | Done: SMRT Q1 with the harness, 5 runs: mean 203 s and USD 0.161; the harness-off baseline is cheaper only because it stops early |
 | C3 | Later |

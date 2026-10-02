@@ -1,0 +1,4819 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "p-two-models-not-comparable",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "1aa641bcb37b8ed0f3bf6a2a0ab26774a82bce8f6d3dfbed44a710a3dcffffdb",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 2,
+  "build": "db4b2e1",
+  "question": "Compare what tau_omega and water_cloud predict as soil moisture rises from 0.05 to 0.45, and tell me which of the two is more sensitive.",
+  "answer": "## Research result and conclusion\n\nThe generated figures show two distinct local-model sensitivities to soil moisture. In Figure 1, both tau-omega brightness-temperature curves decrease and remain separated across 0.05–0.50 m³ m⁻³. In Figure 2, soil and total water-cloud backscatter increase, while the vegetation contribution remains constant. These results answer the approved local sensitivity question, but they do not establish numerical reproduction of the unavailable paper implementations. [model:tau_omega@1.0.0] [model:water_cloud@1.0.0]\n\nThe overall reproduction outcome is **partial**: all approved runs and charts succeeded, but the registered local models were not the paper’s CMEM passive-emission implementation or calibrated paper Water Cloud implementation. [cmem-sampling-density#03] [backscatter-forward-operator#05]\n\n## Source/generated-image conclusion\n\n- **Figure 1:** Two series are plotted against soil moisture: H- and V-polarized brightness temperature in K. Both curves slope downward and remain ordered, with the V-polarized curve above the H-polarized curve.\n- **Figure 2:** Three series are plotted against soil moisture: soil, total, and vegetation backscatter in dB. Soil and total backscatter rise with soil moisture; the vegetation curve is horizontal.\n\nThe recorded state contains no inspected source-paper image for these two local charts. Consequently, qualitative correspondence with a published source figure is **not scoreable**. The automatic render checks establish only that the generated charts were finite, legible, and usable; they do not establish agreement with a source figure.\n\n## Actual result-backed conclusion\n\nThe tau-omega baseline at 1.41 GHz and 0.25 m³ m⁻³ produced `tb_h = 224.804 K` and `tb_v = 246.436 K`. Across the 15-point sweep, `tb_h` decreased from 248.129 K to 214.762 K and `tb_v` decreased from 268.966 K to 234.585 K. [model:tau_omega@1.0.0]\n\nThe water-cloud baseline at 37° and 0.25 m³ m⁻³ produced total backscatter of −13.475 dB, soil backscatter of −14.500 dB, vegetation backscatter of −17.292 dB, and two-way transmissivity of 0.7404. Across the 15-point sweep, total backscatter increased from −15.976 dB to −7.789 dB, while vegetation backscatter remained −17.292 dB. [model:water_cloud@1.0.0]\n\n## Comparison and qualification\n\n| Target | Generated-figure reading | Recorded-array result | Qualification |\n|---|---|---|---|\n| Tau-omega sensitivity | Two separated, downward-sloping polarization curves | Both polarizations decreased monotonically over the full sweep | Same qualitative pattern; comparison with a source figure is not scoreable |\n| Water-cloud sensitivity | Soil and total curves rise; vegetation curve is flat | Soil and total backscatter increased monotonically; vegetation backscatter was constant | Same qualitative pattern; the constant vegetation curve follows the fixed canopy configuration |\n| Paper numerical reproduction | No source-image comparison available | Local-model outputs only | Not identifiable quantitatively; no RMSE, bias, correlation, or other agreement statistic was supplied |\n\nThe passive paper describes CMEM-based land emission involving soil and canopy parameters, while the active paper describes a calibrated Water Cloud formulation in which soil and vegetation contributions combine through attenuation. [cmem-sampling-density#03] [backscatter-forward-operator#05] The executed results therefore demonstrate local-model sensitivity, not quantitative agreement with either paper implementation.\n\n## Supporting results\n\nAll four approved runs completed successfully and passed their model quality checks. Both selected charts rendered; the water-cloud chart was redrawn automatically into a publication layout and remained usable. No measured reference dataset was used, so validation against observations is not available.\n\n## Assumed parameters\n\nThe following values were classified as `model_assumption` in the authoritative ledger and are therefore not paper-explicit:\n\n- Tau-omega: angle 40.0°, baseline soil moisture 0.25 m³ m⁻³, bulk density 1.3 g cm⁻³, soil and canopy temperatures 293.0 K, vegetation optical depth 0.3, single-scattering albedo 0.05, roughness parameter 0.3, and cross-polarization mixing 0.0.\n- Water-cloud: angle 37.0°, baseline soil moisture 0.25 m³ m⁻³, vegetation water content 1.0 kg m⁻², and coefficients `a = 0.09`, `b = 0.12`, `c = −22.0 dB`, and `d = 30.0 dB per m³ m⁻³`.\n- The soil-moisture interval 0.05–0.50 m³ m⁻³ and 15 sweep points were `user_specified`.\n- The 1.41 GHz frequency was classified as `paper_explicit` in the approved ledger, based on the L-band context of the passive paper. [cmem-sampling-density#03]\n\n## Limitations and final conclusion\n\nThe approved local experiment supports a clear sensitivity conclusion: tau-omega brightness temperatures decrease with increasing soil moisture, whereas water-cloud total backscatter increases. It does not identify a paper-level numerical reproduction because the required reference implementations were unavailable and no source-image comparison or measured-data validation was recorded. The calibrated outcome is therefore **partial**, not failed and not a full reproduction.\n\n<parameter_provenance>\n[{\"field\":\"tau_omega.frequency_ghz\",\"value\":1.41,\"source_kind\":\"paper\",\"source_ref\":\"cmem-sampling-density#03\",\"source_span\":\"L-band passive microwave observations\",\"reason\":\"Paper L-band context mapped to the exact registered frequency input.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.angle_deg\",\"value\":40.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed angle for the local exploratory run\",\"reason\":\"Local fixed-angle assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.soil_moisture_baseline\",\"value\":0.25,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; baseline only\",\"reason\":\"Baseline value; the main experiment was the declared sweep.\",\"sensitivity_checked\":true},{\"field\":\"tau_omega.soil_moisture_sweep\",\"value\":\"0.05 to 0.50 m3 m-3, 15 points\",\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; primary local sensitivity sweep\",\"reason\":\"User-specified sweep.\",\"sensitivity_checked\":true},{\"field\":\"tau_omega.bulk_density_g_cm3\",\"value\":1.3,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed exploratory value\",\"reason\":\"Local fixed-value assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.soil_temperature_k\",\"value\":293.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed exploratory value\",\"reason\":\"Local fixed-value assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.canopy_temperature_k\",\"value\":293.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed exploratory value\",\"reason\":\"Local fixed-value assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.vegetation_optical_depth\",\"value\":0.3,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed canopy value\",\"reason\":\"Local fixed-canopy assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.single_scattering_albedo\",\"value\":0.05,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed canopy value\",\"reason\":\"Local fixed-canopy assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.roughness_h\",\"value\":0.3,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed roughness value\",\"reason\":\"Local fixed-value assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.cross_q\",\"value\":0.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; fixed zero cross-polarisation mixing\",\"reason\":\"Local fixed-value assumption.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.sweep_parameter\",\"value\":\"soil_moisture\",\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; selects the exact registered input being swept\",\"reason\":\"User-specified sweep selector.\",\"sensitivity_checked\":true},{\"field\":\"tau_omega.sweep_start\",\"value\":0.05,\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; lower endpoint of the soil-moisture sweep\",\"reason\":\"User-specified sweep endpoint.\",\"sensitivity_checked\":true},{\"field\":\"tau_omega.sweep_stop\",\"value\":0.5,\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; upper endpoint of the soil-moisture sweep\",\"reason\":\"User-specified sweep endpoint.\",\"sensitivity_checked\":true},{\"field\":\"tau_omega.sweep_points\",\"value\":15,\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; number of sweep samples\",\"reason\":\"User-specified sweep density.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.baseline_sweep_parameter\",\"value\":\"none\",\"source_kind\":\"model_default\",\"source_ref\":\"tau_omega registered declaration; baseline run specification\",\"reason\":\"Baseline run did not sweep a parameter.\",\"sensitivity_checked\":false},{\"field\":\"tau_omega.baseline_sweep_points\",\"value\":10,\"source_kind\":\"model_default\",\"source_ref\":\"tau_omega registered declaration; baseline run specification\",\"reason\":\"Recorded baseline specification value.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.angle_deg\",\"value\":37.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed angle for the local exploratory run\",\"reason\":\"Local fixed-angle assumption.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.soil_moisture_baseline\",\"value\":0.25,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; baseline only\",\"reason\":\"Baseline value; the main experiment was the declared sweep.\",\"sensitivity_checked\":true},{\"field\":\"water_cloud.soil_moisture_sweep\",\"value\":\"0.05 to 0.50 m3 m-3, 15 points\",\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; primary local sensitivity sweep\",\"reason\":\"User-specified sweep.\",\"sensitivity_checked\":true},{\"field\":\"water_cloud.vegetation_water_kg_m2\",\"value\":1.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; representative fixed canopy value\",\"reason\":\"Local fixed-canopy assumption.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.coefficient_a\",\"value\":0.09,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; preserved fixed exploratory coefficient\",\"reason\":\"Local fixed coefficient.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.coefficient_b\",\"value\":0.12,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; preserved fixed exploratory coefficient\",\"reason\":\"Local fixed coefficient.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.coefficient_c\",\"value\":-22.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; preserved fixed exploratory coefficient\",\"reason\":\"Local fixed coefficient.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.coefficient_d\",\"value\":30.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved parameter ledger; preserved fixed exploratory coefficient\",\"reason\":\"Local fixed coefficient.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.sweep_parameter\",\"value\":\"soil_moisture\",\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; selects the exact registered input being swept\",\"reason\":\"User-specified sweep selector.\",\"sensitivity_checked\":true},{\"field\":\"water_cloud.sweep_start\",\"value\":0.05,\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; lower endpoint of the soil-moisture sweep\",\"reason\":\"User-specified sweep endpoint.\",\"sensitivity_checked\":true},{\"field\":\"water_cloud.sweep_stop\",\"value\":0.5,\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; upper endpoint of the soil-moisture sweep\",\"reason\":\"User-specified sweep endpoint.\",\"sensitivity_checked\":true},{\"field\":\"water_cloud.sweep_points\",\"value\":15,\"source_kind\":\"user\",\"source_ref\":\"approved parameter ledger; number of sweep samples\",\"reason\":\"User-specified sweep density.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.baseline_sweep_parameter\",\"value\":\"none\",\"source_kind\":\"model_default\",\"source_ref\":\"water_cloud registered declaration; baseline run specification\",\"reason\":\"Baseline run did not sweep a parameter.\",\"sensitivity_checked\":false},{\"field\":\"water_cloud.baseline_sweep_points\",\"value\":10,\"source_kind\":\"model_default\",\"source_ref\":\"water_cloud registered declaration; baseline run specification\",\"reason\":\"Recorded baseline specification value.\",\"sensitivity_checked\":false}]\n</parameter_provenance>\n<reproduction_outcome>partial</reproduction_outcome>",
+  "planning_answer": "Research is paused at the human-review stage (plan_review). No formal physical result has been computed yet. Click Approve plan, or describe the changes you want in Conversation.",
+  "elapsed_s": 222.21,
+  "stop_rule": null,
+  "model_calls": 35,
+  "llm_usage": {
+    "calls": 35,
+    "prompt_tokens": 702894,
+    "completion_tokens": 16679,
+    "total_tokens": 719573,
+    "cost_usd": 0.17852093,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 12625,
+        "completion_tokens": 112,
+        "cost_usd": 0.00045805,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.09
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 13328,
+        "completion_tokens": 21,
+        "cost_usd": 0.00054782,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.99
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 14456,
+        "completion_tokens": 22,
+        "cost_usd": 0.00081354,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.89
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 16500,
+        "completion_tokens": 29,
+        "cost_usd": 0.0013065,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.99
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 17055,
+        "completion_tokens": 29,
+        "cost_usd": 0.00144525,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.91
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 18198,
+        "completion_tokens": 20,
+        "cost_usd": 0.00457335,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.12
+      },
+      {
+        "turn": 1,
+        "index": 7,
+        "prompt_tokens": 19601,
+        "completion_tokens": 25,
+        "cost_usd": 0.0049301,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.54
+      },
+      {
+        "turn": 1,
+        "index": 8,
+        "prompt_tokens": 20002,
+        "completion_tokens": 125,
+        "cost_usd": 0.00515035,
+        "reasoning_chars": 0,
+        "elapsed_s": 13.51
+      },
+      {
+        "turn": 1,
+        "index": 9,
+        "prompt_tokens": 21212,
+        "completion_tokens": 24,
+        "cost_usd": 0.00533165,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.9
+      },
+      {
+        "turn": 1,
+        "index": 10,
+        "prompt_tokens": 21595,
+        "completion_tokens": 208,
+        "cost_usd": 0.0056482,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.17
+      },
+      {
+        "turn": 1,
+        "index": 11,
+        "prompt_tokens": 22025,
+        "completion_tokens": 29,
+        "cost_usd": 0.0055409,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.12
+      },
+      {
+        "turn": 1,
+        "index": 12,
+        "prompt_tokens": 24224,
+        "completion_tokens": 513,
+        "cost_usd": 0.00667145,
+        "reasoning_chars": 0,
+        "elapsed_s": 7.33
+      },
+      {
+        "turn": 2,
+        "index": 1,
+        "prompt_tokens": 12632,
+        "completion_tokens": 320,
+        "cost_usd": 0.00354185,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.62
+      },
+      {
+        "turn": 2,
+        "index": 2,
+        "prompt_tokens": 15937,
+        "completion_tokens": 2804,
+        "cost_usd": 0.0073489,
+        "reasoning_chars": 0,
+        "elapsed_s": 30.35
+      },
+      {
+        "turn": 2,
+        "index": 3,
+        "prompt_tokens": 21535,
+        "completion_tokens": 31,
+        "cost_usd": 0.00541445,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.23
+      },
+      {
+        "turn": 2,
+        "index": 4,
+        "prompt_tokens": 21639,
+        "completion_tokens": 20,
+        "cost_usd": 0.0054336,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.13
+      },
+      {
+        "turn": 2,
+        "index": 5,
+        "prompt_tokens": 23011,
+        "completion_tokens": 19,
+        "cost_usd": 0.0057754,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.94
+      },
+      {
+        "turn": 2,
+        "index": 6,
+        "prompt_tokens": 24203,
+        "completion_tokens": 25,
+        "cost_usd": 0.0060806,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.16
+      },
+      {
+        "turn": 2,
+        "index": 7,
+        "prompt_tokens": 24591,
+        "completion_tokens": 24,
+        "cost_usd": 0.0061764,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.09
+      },
+      {
+        "turn": 2,
+        "index": 8,
+        "prompt_tokens": 24967,
+        "completion_tokens": 2419,
+        "cost_usd": 0.0091444,
+        "reasoning_chars": 0,
+        "elapsed_s": 18.61
+      },
+      {
+        "turn": 2,
+        "index": 9,
+        "prompt_tokens": 29077,
+        "completion_tokens": 2594,
+        "cost_usd": 0.01037555,
+        "reasoning_chars": 0,
+        "elapsed_s": 21.24
+      },
+      {
+        "turn": 2,
+        "index": 10,
+        "prompt_tokens": 35027,
+        "completion_tokens": 271,
+        "cost_usd": 0.0090818,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.31
+      },
+      {
+        "turn": 3,
+        "index": 1,
+        "prompt_tokens": 13167,
+        "completion_tokens": 58,
+        "cost_usd": 0.0033612,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.11
+      },
+      {
+        "turn": 3,
+        "index": 2,
+        "prompt_tokens": 13868,
+        "completion_tokens": 83,
+        "cost_usd": 0.00356645,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.44
+      },
+      {
+        "turn": 3,
+        "index": 3,
+        "prompt_tokens": 15618,
+        "completion_tokens": 84,
+        "cost_usd": 0.00400515,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.3
+      },
+      {
+        "turn": 3,
+        "index": 4,
+        "prompt_tokens": 16369,
+        "completion_tokens": 82,
+        "cost_usd": 0.0041905,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.54
+      },
+      {
+        "turn": 3,
+        "index": 5,
+        "prompt_tokens": 18209,
+        "completion_tokens": 88,
+        "cost_usd": 0.0046577,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.98
+      },
+      {
+        "turn": 3,
+        "index": 6,
+        "prompt_tokens": 18531,
+        "completion_tokens": 54,
+        "cost_usd": 0.0046974,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.32
+      },
+      {
+        "turn": 3,
+        "index": 7,
+        "prompt_tokens": 18728,
+        "completion_tokens": 47,
+        "cost_usd": 0.00473825,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.41
+      },
+      {
+        "turn": 3,
+        "index": 8,
+        "prompt_tokens": 19092,
+        "completion_tokens": 51,
+        "cost_usd": 0.00483405,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.37
+      },
+      {
+        "turn": 3,
+        "index": 9,
+        "prompt_tokens": 19356,
+        "completion_tokens": 288,
+        "cost_usd": 0.00518445,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.92
+      },
+      {
+        "turn": 3,
+        "index": 10,
+        "prompt_tokens": 20540,
+        "completion_tokens": 29,
+        "cost_usd": 0.00516965,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.35
+      },
+      {
+        "turn": 3,
+        "index": 11,
+        "prompt_tokens": 22731,
+        "completion_tokens": 23,
+        "cost_usd": 0.0057102,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.29
+      },
+      {
+        "turn": 3,
+        "index": 12,
+        "prompt_tokens": 24762,
+        "completion_tokens": 2845,
+        "cost_usd": 0.00960435,
+        "reasoning_chars": 0,
+        "elapsed_s": 26.59
+      },
+      {
+        "turn": 3,
+        "index": 13,
+        "prompt_tokens": 28483,
+        "completion_tokens": 3263,
+        "cost_usd": 0.00801147,
+        "reasoning_chars": 0,
+        "elapsed_s": 27.72
+      }
+    ]
+  },
+  "tool_calls": 32,
+  "interventions": 1,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": false,
+    "approval_policy": "not_applicable_safe_refusal",
+    "review_actions": [
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "confirm_reported_partial_scope",
+        "before": "capability waiting_user",
+        "summary": "Yes. I confirm the partial scope exactly as your capability check reported it. Generate the research plan for the supported components only, and name everything outside that scope as unavailable in the report.",
+        "after": "capability confirmed"
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_review",
+        "after": "plan_approved",
+        "status": "needs_input",
+        "summary": "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_approved",
+        "after": "pseudo_preview",
+        "status": "needs_input",
+        "summary": "Pseudo-data preview v001 is ready for layout review only. It is not model output and must not support a scientific conclusion. Confirm the figure package, or revise the plan in chat."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "pseudo_preview",
+        "after": "chart_selected",
+        "status": "needs_input",
+        "summary": "2 chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "chart_selected",
+        "after": "approved",
+        "status": "success",
+        "summary": "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs."
+      }
+    ],
+    "review_error": null,
+    "final_phase": "completed",
+    "plan_version": 1
+  },
+  "research": {
+    "question": "Supported-components-only sensitivity study for local tau_omega and water_cloud models; unavailable named paper implementations and cross-model ranking remain excluded.",
+    "plan_version": 1,
+    "phase": "completed",
+    "plan": {
+      "plan_version": 1,
+      "title": "Quantify separate soil-moisture sensitivities of the two registered local models and report native outputs without claiming reproduction of unavailable reference implementations.",
+      "question": "Supported-components-only sensitivity study for local tau_omega and water_cloud models; unavailable named paper implementations and cross-model ranking remain excluded.",
+      "objective": "Quantify separate soil-moisture sensitivities of the two registered local models and report native outputs without claiming reproduction of unavailable reference implementations.",
+      "hypothesis": "Each registered model shows a systematic within-model response to soil moisture when other parameters are fixed.",
+      "steps": [
+        "Run baseline configurations for both models.",
+        "Sweep soil moisture independently from 0.05 to 0.50 m3 m-3.",
+        "Plot native passive and active outputs separately.",
+        "Report local computations, paper context, unavailable components, and limitations."
+      ],
+      "parameters": {},
+      "paper_conditions": {
+        "tau_omega": {
+          "frequency_ghz": 1.41,
+          "observable": "brightness temperature and emissivity",
+          "provenance": "cmem-sampling-density#03"
+        },
+        "water_cloud": {
+          "observable": "backscatter coefficient",
+          "provenance": "backscatter-forward-operator#05"
+        },
+        "frequency_ghz": 1.41
+      },
+      "condition_provenance": {
+        "tau_omega.frequency_ghz": "paper_explicit",
+        "tau_omega.observable": "paper_explicit",
+        "water_cloud.observable": "paper_explicit",
+        "all_other_conditions": "model_assumption or user_specified as indicated in mappings",
+        "frequency_ghz": "cmem-sampling-density#03"
+      },
+      "literature_evidence": [
+        {
+          "evidence_ref": "cmem-sampling-density#03",
+          "role": "passive L-band context",
+          "purpose": "passive L-band context"
+        },
+        {
+          "evidence_ref": "backscatter-forward-operator#05",
+          "role": "active backscatter context",
+          "purpose": "active backscatter context"
+        }
+      ],
+      "reproduction_targets": [
+        {
+          "id": "tau_omega_sensitivity",
+          "label": "Local tau_omega soil-moisture sensitivity",
+          "source_id": "cmem-sampling-density#03",
+          "target_quantity": "Soil-moisture sensitivity of L-band passive brightness temperature and emissivity",
+          "expected_comparison": "Compare the separately computed local tau_omega curves against the paper's described passive L-band target qualitatively and by native quantities only; do not claim reproduction of an unavailable reference implementation.",
+          "reference_models": [
+            "tau-omega passive emission"
+          ],
+          "requested_outputs": [
+            "tb_h",
+            "tb_v",
+            "emissivity_h",
+            "emissivity_v"
+          ],
+          "evidence_refs": [
+            "cmem-sampling-density#03"
+          ],
+          "status": "partial",
+          "availability_reason": "The paper section is available as context, but no source figure/table asset or digitized reference series is available here, and the explicitly named reference implementation is unavailable.",
+          "source_type": "result",
+          "run_ids": [],
+          "chart_ids": []
+        },
+        {
+          "id": "water_cloud_sensitivity",
+          "label": "Local water_cloud soil-moisture sensitivity",
+          "source_id": "backscatter-forward-operator#05",
+          "target_quantity": "Soil-moisture sensitivity of active soil, vegetation, and total backscatter",
+          "expected_comparison": "Compare the separately computed local water_cloud curves against the paper's active backscatter target qualitatively and by native quantities only; do not claim reproduction of an unavailable reference implementation.",
+          "reference_models": [
+            "Water Cloud Model active backscatter"
+          ],
+          "requested_outputs": [
+            "sigma0_soil_db",
+            "sigma0_total_db",
+            "sigma0_vegetation_db",
+            "two_way_transmissivity"
+          ],
+          "evidence_refs": [
+            "backscatter-forward-operator#05"
+          ],
+          "status": "partial",
+          "availability_reason": "The paper section is available as context, but no source figure/table asset or digitized reference series is available here, and the explicitly named reference implementation is unavailable.",
+          "source_type": "result",
+          "run_ids": [],
+          "chart_ids": []
+        },
+        {
+          "id": "cross_model_ranking",
+          "label": "Cross-model sensitivity ranking",
+          "source_id": "cmem-sampling-density#03;backscatter-forward-operator#05",
+          "target_quantity": "Which model is more sensitive",
+          "expected_comparison": "No comparison will be performed because passive brightness temperature/emissivity and active backscatter are different observables and the named reference implementations are unavailable.",
+          "reference_models": [
+            "tau-omega passive emission",
+            "Water Cloud Model active backscatter"
+          ],
+          "requested_outputs": [
+            "which model is more sensitive"
+          ],
+          "evidence_refs": [
+            "cmem-sampling-density#03",
+            "backscatter-forward-operator#05"
+          ],
+          "status": "unavailable",
+          "availability_reason": "No common observable, no compatible reference implementation, and no source figure/table asset for a visual comparison.",
+          "source_type": "result",
+          "run_ids": [],
+          "chart_ids": []
+        }
+      ],
+      "selected_models": [
+        {
+          "model": "tau_omega",
+          "purpose": "Local passive L-band sensitivity",
+          "capability_status": "supported; not equivalent to named unavailable reference",
+          "version": "1.0.0",
+          "instruction_ref": "guideline:tau_omega@1.0"
+        },
+        {
+          "model": "water_cloud",
+          "purpose": "Local active backscatter sensitivity",
+          "capability_status": "supported; not equivalent to named unavailable reference",
+          "version": "1.0.0",
+          "instruction_ref": "guideline:water_cloud@1.0"
+        }
+      ],
+      "parameter_mapping": [
+        {
+          "model": "tau_omega",
+          "paper_concept": "frequency",
+          "paper_value": 1.41,
+          "model_input": "frequency_ghz",
+          "mapped_value": 1.41,
+          "units": "GHz",
+          "provenance_class": "paper_explicit",
+          "confidence": "high",
+          "confidence_basis": "Explicitly supported by opened paper evidence.",
+          "evidence_ref": "cmem-sampling-density#03",
+          "rationale": "Paper L-band context mapped to the exact registered frequency input."
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "incidence angle",
+          "paper_value": null,
+          "model_input": "angle_deg",
+          "mapped_value": 40.0,
+          "units": "degree",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed angle for the local exploratory run.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "soil moisture baseline",
+          "paper_value": null,
+          "model_input": "soil_moisture",
+          "mapped_value": 0.25,
+          "units": "m3 m-3",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Baseline only; the main experiment is the declared sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "soil moisture sweep",
+          "paper_value": null,
+          "model_input": "soil_moisture",
+          "mapped_value": "0.05 to 0.50, 15 points",
+          "units": "m3 m-3",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified in the submitted plan and preserved unchanged.",
+          "rationale": "Primary local sensitivity sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "bulk density",
+          "paper_value": null,
+          "model_input": "bulk_density_g_cm3",
+          "mapped_value": 1.3,
+          "units": "g cm-3",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed exploratory value.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "soil temperature",
+          "paper_value": null,
+          "model_input": "soil_temperature_k",
+          "mapped_value": 293.0,
+          "units": "K",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed exploratory value.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "canopy temperature",
+          "paper_value": null,
+          "model_input": "canopy_temperature_k",
+          "mapped_value": 293.0,
+          "units": "K",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed exploratory value.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "vegetation optical depth",
+          "paper_value": null,
+          "model_input": "vegetation_optical_depth",
+          "mapped_value": 0.3,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed canopy value.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "single scattering albedo",
+          "paper_value": null,
+          "model_input": "single_scattering_albedo",
+          "mapped_value": 0.05,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed canopy value.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "roughness parameter",
+          "paper_value": null,
+          "model_input": "roughness_h",
+          "mapped_value": 0.3,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed roughness value.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "polarisation mixing",
+          "paper_value": null,
+          "model_input": "cross_q",
+          "mapped_value": 0.0,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Fixed zero cross-polarisation mixing.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep selector",
+          "paper_value": null,
+          "model_input": "sweep_parameter",
+          "mapped_value": "soil_moisture",
+          "units": "none",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified by the submitted sensitivity design.",
+          "rationale": "Selects the exact registered input being swept.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep start",
+          "paper_value": null,
+          "model_input": "sweep_start",
+          "mapped_value": 0.05,
+          "units": "m3 m-3",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified and preserved unchanged.",
+          "rationale": "Lower endpoint of the soil-moisture sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep stop",
+          "paper_value": null,
+          "model_input": "sweep_stop",
+          "mapped_value": 0.5,
+          "units": "m3 m-3",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified and preserved unchanged.",
+          "rationale": "Upper endpoint of the soil-moisture sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "tau_omega",
+          "paper_concept": "sweep points",
+          "paper_value": null,
+          "model_input": "sweep_points",
+          "mapped_value": 15,
+          "units": "count",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified and preserved unchanged.",
+          "rationale": "Number of sweep samples.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "incidence angle",
+          "paper_value": null,
+          "model_input": "angle_deg",
+          "mapped_value": 37.0,
+          "units": "degree",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed angle for the local exploratory run.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "soil moisture baseline",
+          "paper_value": null,
+          "model_input": "soil_moisture",
+          "mapped_value": 0.25,
+          "units": "m3 m-3",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Baseline only; the main experiment is the declared sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "soil moisture sweep",
+          "paper_value": null,
+          "model_input": "soil_moisture",
+          "mapped_value": "0.05 to 0.50, 15 points",
+          "units": "m3 m-3",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified in the submitted plan and preserved unchanged.",
+          "rationale": "Primary local sensitivity sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "vegetation water content",
+          "paper_value": null,
+          "model_input": "vegetation_water_kg_m2",
+          "mapped_value": 1.0,
+          "units": "kg m-2",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Representative fixed canopy value.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "vegetation scattering coefficient",
+          "paper_value": null,
+          "model_input": "coefficient_a",
+          "mapped_value": 0.09,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Preserved fixed exploratory coefficient.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "vegetation attenuation coefficient",
+          "paper_value": null,
+          "model_input": "coefficient_b",
+          "mapped_value": 0.12,
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Preserved fixed exploratory coefficient.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "soil intercept",
+          "paper_value": null,
+          "model_input": "coefficient_c",
+          "mapped_value": -22.0,
+          "units": "dB",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Preserved fixed exploratory coefficient.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "soil-moisture coefficient",
+          "paper_value": null,
+          "model_input": "coefficient_d",
+          "mapped_value": 30.0,
+          "units": "dB per m3 m-3",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Not supplied by the paper evidence or user.",
+          "rationale": "Preserved fixed exploratory coefficient.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep selector",
+          "paper_value": null,
+          "model_input": "sweep_parameter",
+          "mapped_value": "soil_moisture",
+          "units": "none",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified by the submitted sensitivity design.",
+          "rationale": "Selects the exact registered input being swept.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep start",
+          "paper_value": null,
+          "model_input": "sweep_start",
+          "mapped_value": 0.05,
+          "units": "m3 m-3",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified and preserved unchanged.",
+          "rationale": "Lower endpoint of the soil-moisture sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep stop",
+          "paper_value": null,
+          "model_input": "sweep_stop",
+          "mapped_value": 0.5,
+          "units": "m3 m-3",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified and preserved unchanged.",
+          "rationale": "Upper endpoint of the soil-moisture sweep.",
+          "evidence_ref": ""
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep points",
+          "paper_value": null,
+          "model_input": "sweep_points",
+          "mapped_value": 15,
+          "units": "count",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Directly specified and preserved unchanged.",
+          "rationale": "Number of sweep samples.",
+          "evidence_ref": ""
+        }
+      ],
+      "parameter_resolution": [
+        {
+          "run_id": "tau_baseline",
+          "model": "tau_omega",
+          "requested_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0
+          },
+          "resolved_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_parameter",
+            "sweep_points"
+          ]
+        },
+        {
+          "run_id": "tau_sweep",
+          "model": "tau_omega",
+          "requested_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "resolved_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "defaulted_parameters": [
+            "soil_moisture"
+          ]
+        },
+        {
+          "run_id": "wc_baseline",
+          "model": "water_cloud",
+          "requested_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_parameter",
+            "sweep_points"
+          ]
+        },
+        {
+          "run_id": "wc_sweep",
+          "model": "water_cloud",
+          "requested_parameters": {
+            "angle_deg": 37.0,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "defaulted_parameters": [
+            "soil_moisture"
+          ]
+        }
+      ],
+      "outputs": [
+        "tb_h",
+        "tb_v",
+        "emissivity_h",
+        "emissivity_v",
+        "sigma0_soil_db",
+        "sigma0_total_db",
+        "sigma0_vegetation_db",
+        "two_way_transmissivity"
+      ],
+      "runs": [
+        {
+          "id": "tau_baseline",
+          "label": "tau_omega baseline",
+          "model": "tau_omega",
+          "parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "requested_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0
+          },
+          "resolved_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_parameter",
+            "sweep_points"
+          ],
+          "stage": "baseline",
+          "target_ids": []
+        },
+        {
+          "id": "tau_sweep",
+          "label": "tau_omega soil-moisture sweep",
+          "model": "tau_omega",
+          "parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "requested_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "resolved_parameters": {
+            "frequency_ghz": 1.41,
+            "angle_deg": 40.0,
+            "soil_moisture": 0.25,
+            "bulk_density_g_cm3": 1.3,
+            "soil_temperature_k": 293.0,
+            "canopy_temperature_k": 293.0,
+            "vegetation_optical_depth": 0.3,
+            "single_scattering_albedo": 0.05,
+            "roughness_h": 0.3,
+            "cross_q": 0.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "defaulted_parameters": [
+            "soil_moisture"
+          ],
+          "stage": "main",
+          "target_ids": []
+        },
+        {
+          "id": "wc_baseline",
+          "label": "water_cloud baseline",
+          "model": "water_cloud",
+          "parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "requested_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_parameter",
+            "sweep_points"
+          ],
+          "stage": "baseline",
+          "target_ids": []
+        },
+        {
+          "id": "wc_sweep",
+          "label": "water_cloud soil-moisture sweep",
+          "model": "water_cloud",
+          "parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "requested_parameters": {
+            "angle_deg": 37.0,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.5,
+            "sweep_points": 15
+          },
+          "defaulted_parameters": [
+            "soil_moisture"
+          ],
+          "stage": "main",
+          "target_ids": []
+        }
+      ],
+      "charts": [
+        {
+          "id": "tau_chart",
+          "label": "Local tau_omega outputs versus soil moisture",
+          "kind": "line",
+          "x": "soil_moisture",
+          "y": "tb_h",
+          "ys": [
+            "tb_h",
+            "tb_v"
+          ],
+          "required": true,
+          "purpose": "result",
+          "x_label": "Soil moisture (m3 m-3)",
+          "y_label": "Brightness temperature (K)",
+          "target_ids": []
+        },
+        {
+          "id": "wc_chart",
+          "label": "Local water_cloud outputs versus soil moisture",
+          "kind": "line",
+          "x": "soil_moisture",
+          "y": "sigma0_soil_db",
+          "ys": [
+            "sigma0_soil_db",
+            "sigma0_total_db",
+            "sigma0_vegetation_db"
+          ],
+          "required": true,
+          "purpose": "result",
+          "x_label": "Soil moisture (m3 m-3)",
+          "y_label": "Backscatter (dB)",
+          "target_ids": []
+        }
+      ],
+      "quantities": [
+        "soil moisture",
+        "brightness temperature",
+        "emissivity",
+        "soil backscatter",
+        "total backscatter",
+        "vegetation backscatter",
+        "two-way transmissivity"
+      ],
+      "controls": [
+        "Fixed conditions within each model.",
+        "Separate passive and active charts.",
+        "No direct passive-versus-active comparison metric."
+      ],
+      "metrics": [
+        "endpoint_change",
+        "monotonicity"
+      ],
+      "diagnostics": [
+        "Baseline smoke runs",
+        "Quality-control status",
+        "Native-unit and observable checks"
+      ],
+      "success_criteria": [
+        "All four local runs complete quality control.",
+        "Charts use the exact soil-moisture sweep axis and native units.",
+        "Report does not claim reproduction of either unavailable named reference implementation.",
+        "Cross-model ranking remains unavailable."
+      ],
+      "stop_conditions": [
+        "Stop on parameter rejection or failed quality control.",
+        "Do not perform cross-model ranking."
+      ],
+      "assumptions": [
+        "Fixed values other than frequency are exploratory model assumptions, not paper-reported site conditions.",
+        "Local models are not equivalent substitutes for unavailable named reference implementations."
+      ],
+      "limitations": [
+        "Both named reference implementations are unavailable.",
+        "No measured dataset is used.",
+        "No direct passive-versus-active sensitivity ranking is valid.",
+        "Paper reproduction remains partial."
+      ],
+      "baseline_run_id": "tau_baseline",
+      "automatic_repairs": [
+        {
+          "field": "paper_conditions.frequency_ghz",
+          "from": null,
+          "to": 1.41,
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        }
+      ],
+      "validation_warnings": [],
+      "capability_gaps": [
+        "tau-omega passive emission",
+        "Water Cloud Model active backscatter"
+      ],
+      "capability_review": {
+        "status": "confirmed",
+        "supported": [
+          {
+            "model": "tau_omega",
+            "version": "1.0.0",
+            "runnable_here": true,
+            "parameters": [
+              "angle_deg",
+              "bulk_density_g_cm3",
+              "canopy_temperature_k",
+              "cross_q",
+              "frequency_ghz",
+              "roughness_h",
+              "single_scattering_albedo",
+              "soil_moisture",
+              "soil_temperature_k",
+              "sweep_parameter",
+              "sweep_points",
+              "sweep_start",
+              "sweep_stop",
+              "vegetation_optical_depth"
+            ],
+            "combinations": [
+              {
+                "when": {
+                  "vegetation_optical_depth": [
+                    0.0
+                  ]
+                },
+                "allow": {
+                  "single_scattering_albedo": [
+                    0.0
+                  ]
+                },
+                "reason": "With no vegetation layer there is nothing to scatter, so a non-zero single scattering albedo is meaningless. Set both to zero for a bare soil surface."
+              }
+            ],
+            "outputs": [
+              "emissivity_h",
+              "emissivity_v",
+              "tb_h",
+              "tb_v"
+            ],
+            "reference_model": false,
+            "role": "local_candidate",
+            "source": "list_models + read_model_instruction",
+            "target_ids": [
+              "tau_omega_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": []
+          },
+          {
+            "model": "water_cloud",
+            "version": "1.0.0",
+            "runnable_here": true,
+            "parameters": [
+              "angle_deg",
+              "coefficient_a",
+              "coefficient_b",
+              "coefficient_c",
+              "coefficient_d",
+              "soil_moisture",
+              "sweep_parameter",
+              "sweep_points",
+              "sweep_start",
+              "sweep_stop",
+              "vegetation_water_kg_m2"
+            ],
+            "combinations": [
+              {
+                "when": {
+                  "vegetation_water_kg_m2": [
+                    0.0
+                  ]
+                },
+                "allow": {
+                  "coefficient_a": [
+                    0.0
+                  ]
+                },
+                "reason": "With no vegetation water there is no canopy to scatter, so the scattering coefficient A has nothing to act on. Set A to zero for a bare soil surface."
+              }
+            ],
+            "outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "reference_model": false,
+            "role": "local_candidate",
+            "source": "list_models + read_model_instruction",
+            "target_ids": [
+              "tau_omega_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": []
+          }
+        ],
+        "unavailable": [
+          {
+            "model": "tau-omega passive emission",
+            "reason": "not registered in the current model registry; resembles tau_omega, which is not the same model -- confirm which was meant",
+            "resembles": [
+              "tau_omega"
+            ],
+            "certainty": "unsure",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "tau_omega_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          },
+          {
+            "model": "Water Cloud Model active backscatter",
+            "reason": "not registered in the current model registry; resembles equivalent_water_thickness_cm, snowpack_water_equivalent, vegetation_water_kg_m2, water_cloud, which is not the same model -- confirm which was meant",
+            "resembles": [
+              "equivalent_water_thickness_cm",
+              "snowpack_water_equivalent",
+              "vegetation_water_kg_m2",
+              "water_cloud"
+            ],
+            "certainty": "unsure",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "water_cloud_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          }
+        ],
+        "not_comparable": [
+          {
+            "reference_model": "tau-omega passive emission",
+            "local_model": "tau_omega",
+            "reason": "a local model/configuration is not an equivalent reference implementation",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "tau_omega_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          },
+          {
+            "reference_model": "tau-omega passive emission",
+            "local_model": "water_cloud",
+            "reason": "a local model/configuration is not an equivalent reference implementation",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "tau_omega_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          },
+          {
+            "reference_model": "Water Cloud Model active backscatter",
+            "local_model": "tau_omega",
+            "reason": "a local model/configuration is not an equivalent reference implementation",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "water_cloud_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          },
+          {
+            "reference_model": "Water Cloud Model active backscatter",
+            "local_model": "water_cloud",
+            "reason": "a local model/configuration is not an equivalent reference implementation",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "water_cloud_sensitivity"
+            ],
+            "configurations": [],
+            "configuration_options": [],
+            "asked_as": [],
+            "outputs": []
+          }
+        ],
+        "requested_models": [
+          "tau-omega passive emission",
+          "Water Cloud Model active backscatter"
+        ],
+        "requested_outputs": [
+          "tb_v",
+          "tb_h",
+          "emissivity_v",
+          "emissivity_h",
+          "sigma0_total_db",
+          "sigma0_soil_db",
+          "sigma0_vegetation_db",
+          "which model is more sensitive"
+        ],
+        "supported_outputs": [
+          "emissivity_h",
+          "emissivity_v",
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "tb_h",
+          "tb_v",
+          "two_way_transmissivity"
+        ],
+        "unavailable_outputs": [
+          "which model is more sensitive"
+        ],
+        "resource_gaps": [],
+        "resolved_names": [],
+        "evidence": [
+          "research-planning#00",
+          "research-reporting#00",
+          "backscatter-forward-operator#05",
+          "cmem-sampling-density#03"
+        ],
+        "targets": [
+          "tau_omega_sensitivity",
+          "water_cloud_sensitivity",
+          "cross_model_ranking"
+        ],
+        "target_reports": [
+          {
+            "status": "waiting_user",
+            "supported": [
+              {
+                "model": "tau_omega",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "bulk_density_g_cm3",
+                  "canopy_temperature_k",
+                  "cross_q",
+                  "frequency_ghz",
+                  "roughness_h",
+                  "single_scattering_albedo",
+                  "soil_moisture",
+                  "soil_temperature_k",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_optical_depth"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_optical_depth": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "single_scattering_albedo": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation layer there is nothing to scatter, so a non-zero single scattering albedo is meaningless. Set both to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "emissivity_h",
+                  "emissivity_v",
+                  "tb_h",
+                  "tb_v"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              },
+              {
+                "model": "water_cloud",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "coefficient_a",
+                  "coefficient_b",
+                  "coefficient_c",
+                  "coefficient_d",
+                  "soil_moisture",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_water_kg_m2"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_water_kg_m2": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "coefficient_a": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation water there is no canopy to scatter, so the scattering coefficient A has nothing to act on. Set A to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "sigma0_soil_db",
+                  "sigma0_total_db",
+                  "sigma0_vegetation_db",
+                  "two_way_transmissivity"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              }
+            ],
+            "unavailable": [
+              {
+                "model": "tau-omega passive emission",
+                "reason": "not registered in the current model registry; resembles tau_omega, which is not the same model -- confirm which was meant",
+                "resembles": [
+                  "tau_omega"
+                ],
+                "certainty": "unsure",
+                "source": "registered_model_registry"
+              }
+            ],
+            "not_comparable": [
+              {
+                "reference_model": "tau-omega passive emission",
+                "local_model": "tau_omega",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              },
+              {
+                "reference_model": "tau-omega passive emission",
+                "local_model": "water_cloud",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              }
+            ],
+            "requested_models": [
+              "tau-omega passive emission"
+            ],
+            "requested_outputs": [
+              "tb_v",
+              "tb_h",
+              "emissivity_v",
+              "emissivity_h"
+            ],
+            "supported_outputs": [
+              "emissivity_h",
+              "emissivity_v",
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "tb_h",
+              "tb_v",
+              "two_way_transmissivity"
+            ],
+            "unavailable_outputs": [],
+            "resource_gaps": [],
+            "resolved_names": [],
+            "evidence": [
+              "research-planning#00",
+              "research-reporting#00",
+              "backscatter-forward-operator#05",
+              "cmem-sampling-density#03"
+            ],
+            "targets": [
+              "tau_omega_sensitivity"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "tau_omega_sensitivity",
+            "label": "tau_omega_sensitivity",
+            "target_key": "target:tauomegasensitivity"
+          },
+          {
+            "status": "waiting_user",
+            "supported": [
+              {
+                "model": "tau_omega",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "bulk_density_g_cm3",
+                  "canopy_temperature_k",
+                  "cross_q",
+                  "frequency_ghz",
+                  "roughness_h",
+                  "single_scattering_albedo",
+                  "soil_moisture",
+                  "soil_temperature_k",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_optical_depth"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_optical_depth": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "single_scattering_albedo": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation layer there is nothing to scatter, so a non-zero single scattering albedo is meaningless. Set both to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "emissivity_h",
+                  "emissivity_v",
+                  "tb_h",
+                  "tb_v"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              },
+              {
+                "model": "water_cloud",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "coefficient_a",
+                  "coefficient_b",
+                  "coefficient_c",
+                  "coefficient_d",
+                  "soil_moisture",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_water_kg_m2"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_water_kg_m2": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "coefficient_a": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation water there is no canopy to scatter, so the scattering coefficient A has nothing to act on. Set A to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "sigma0_soil_db",
+                  "sigma0_total_db",
+                  "sigma0_vegetation_db",
+                  "two_way_transmissivity"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              }
+            ],
+            "unavailable": [
+              {
+                "model": "Water Cloud Model active backscatter",
+                "reason": "not registered in the current model registry; resembles equivalent_water_thickness_cm, snowpack_water_equivalent, vegetation_water_kg_m2, water_cloud, which is not the same model -- confirm which was meant",
+                "resembles": [
+                  "equivalent_water_thickness_cm",
+                  "snowpack_water_equivalent",
+                  "vegetation_water_kg_m2",
+                  "water_cloud"
+                ],
+                "certainty": "unsure",
+                "source": "registered_model_registry"
+              }
+            ],
+            "not_comparable": [
+              {
+                "reference_model": "Water Cloud Model active backscatter",
+                "local_model": "tau_omega",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              },
+              {
+                "reference_model": "Water Cloud Model active backscatter",
+                "local_model": "water_cloud",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              }
+            ],
+            "requested_models": [
+              "Water Cloud Model active backscatter"
+            ],
+            "requested_outputs": [
+              "sigma0_total_db",
+              "sigma0_soil_db",
+              "sigma0_vegetation_db"
+            ],
+            "supported_outputs": [
+              "emissivity_h",
+              "emissivity_v",
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "tb_h",
+              "tb_v",
+              "two_way_transmissivity"
+            ],
+            "unavailable_outputs": [],
+            "resource_gaps": [],
+            "resolved_names": [],
+            "evidence": [
+              "research-planning#00",
+              "research-reporting#00",
+              "backscatter-forward-operator#05",
+              "cmem-sampling-density#03"
+            ],
+            "targets": [
+              "water_cloud_sensitivity"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "water_cloud_sensitivity",
+            "label": "water_cloud_sensitivity",
+            "target_key": "target:watercloudsensitivity"
+          },
+          {
+            "status": "waiting_user",
+            "supported": [
+              {
+                "model": "tau_omega",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "bulk_density_g_cm3",
+                  "canopy_temperature_k",
+                  "cross_q",
+                  "frequency_ghz",
+                  "roughness_h",
+                  "single_scattering_albedo",
+                  "soil_moisture",
+                  "soil_temperature_k",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_optical_depth"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_optical_depth": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "single_scattering_albedo": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation layer there is nothing to scatter, so a non-zero single scattering albedo is meaningless. Set both to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "emissivity_h",
+                  "emissivity_v",
+                  "tb_h",
+                  "tb_v"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              },
+              {
+                "model": "water_cloud",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "coefficient_a",
+                  "coefficient_b",
+                  "coefficient_c",
+                  "coefficient_d",
+                  "soil_moisture",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_water_kg_m2"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_water_kg_m2": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "coefficient_a": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation water there is no canopy to scatter, so the scattering coefficient A has nothing to act on. Set A to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "sigma0_soil_db",
+                  "sigma0_total_db",
+                  "sigma0_vegetation_db",
+                  "two_way_transmissivity"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              }
+            ],
+            "unavailable": [
+              {
+                "model": "tau-omega passive emission",
+                "reason": "not registered in the current model registry; resembles tau_omega, which is not the same model -- confirm which was meant",
+                "resembles": [
+                  "tau_omega"
+                ],
+                "certainty": "unsure",
+                "source": "registered_model_registry"
+              },
+              {
+                "model": "Water Cloud Model active backscatter",
+                "reason": "not registered in the current model registry; resembles equivalent_water_thickness_cm, snowpack_water_equivalent, vegetation_water_kg_m2, water_cloud, which is not the same model -- confirm which was meant",
+                "resembles": [
+                  "equivalent_water_thickness_cm",
+                  "snowpack_water_equivalent",
+                  "vegetation_water_kg_m2",
+                  "water_cloud"
+                ],
+                "certainty": "unsure",
+                "source": "registered_model_registry"
+              }
+            ],
+            "not_comparable": [
+              {
+                "reference_model": "tau-omega passive emission",
+                "local_model": "tau_omega",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              },
+              {
+                "reference_model": "tau-omega passive emission",
+                "local_model": "water_cloud",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              },
+              {
+                "reference_model": "Water Cloud Model active backscatter",
+                "local_model": "tau_omega",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              },
+              {
+                "reference_model": "Water Cloud Model active backscatter",
+                "local_model": "water_cloud",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              }
+            ],
+            "requested_models": [
+              "tau-omega passive emission",
+              "Water Cloud Model active backscatter"
+            ],
+            "requested_outputs": [
+              "which model is more sensitive"
+            ],
+            "supported_outputs": [
+              "emissivity_h",
+              "emissivity_v",
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "tb_h",
+              "tb_v",
+              "two_way_transmissivity"
+            ],
+            "unavailable_outputs": [
+              "which model is more sensitive"
+            ],
+            "resource_gaps": [],
+            "resolved_names": [],
+            "evidence": [
+              "research-planning#00",
+              "research-reporting#00",
+              "backscatter-forward-operator#05",
+              "cmem-sampling-density#03"
+            ],
+            "targets": [
+              "cross_model_ranking"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "cross_model_ranking",
+            "label": "cross_model_ranking",
+            "target_key": "target:crossmodelranking"
+          }
+        ],
+        "target_check_complete": true,
+        "missing_targets": [],
+        "user_decision": "partial",
+        "confirmed_scope": {
+          "unavailable": [
+            "Water Cloud Model active backscatter",
+            "tau-omega passive emission"
+          ],
+          "not_comparable": [
+            "Water Cloud Model active backscatter/tau_omega",
+            "Water Cloud Model active backscatter/water_cloud",
+            "tau-omega passive emission/tau_omega",
+            "tau-omega passive emission/water_cloud"
+          ],
+          "outputs": [
+            "which model is more sensitive"
+          ]
+        }
+      },
+      "reference_sections": [
+        "backscatter-forward-operator#05",
+        "cmem-sampling-density#03",
+        "research-planning#00",
+        "research-reporting#00"
+      ],
+      "reference_paper_sections": [
+        "Methodology and data - Generation of L-band passive microwave observations"
+      ],
+      "approval_state": "plan_review",
+      "outcome_scope": "partial"
+    },
+    "selected_chart": {
+      "id": "tau_chart",
+      "label": "Local tau_omega outputs versus soil moisture",
+      "kind": "line",
+      "x": "soil_moisture",
+      "y": "tb_h",
+      "ys": [
+        "tb_h",
+        "tb_v"
+      ],
+      "required": true,
+      "purpose": "result",
+      "x_label": "Soil moisture (m3 m-3)",
+      "y_label": "Brightness temperature (K)",
+      "target_ids": []
+    },
+    "selected_charts": [
+      "tau_chart",
+      "wc_chart"
+    ],
+    "pseudo": {
+      "label": "PSEUDO-DATA - layout demonstration only - preview v001",
+      "points": [
+        {
+          "soil_moisture": 0.05,
+          "1_tb_h": 0.22103677,
+          "2_tb_v": 0.29103677
+        },
+        {
+          "soil_moisture": 0.08214286,
+          "1_tb_h": 0.26201815,
+          "2_tb_v": 0.33201815
+        },
+        {
+          "soil_moisture": 0.11428571,
+          "1_tb_h": 0.28209943,
+          "2_tb_v": 0.35209943
+        },
+        {
+          "soil_moisture": 0.14642857,
+          "1_tb_h": 0.29893708,
+          "2_tb_v": 0.36893708
+        },
+        {
+          "soil_moisture": 0.17857143,
+          "1_tb_h": 0.33316975,
+          "2_tb_v": 0.40316975
+        },
+        {
+          "soil_moisture": 0.21071429,
+          "1_tb_h": 0.38944318,
+          "2_tb_v": 0.45944318
+        },
+        {
+          "soil_moisture": 0.24285714,
+          "1_tb_h": 0.45213895,
+          "2_tb_v": 0.52213895
+        },
+        {
+          "soil_moisture": 0.275,
+          "1_tb_h": 0.49973396,
+          "2_tb_v": 0.56973396
+        },
+        {
+          "soil_moisture": 0.30714286,
+          "1_tb_h": 0.52458868,
+          "2_tb_v": 0.59458868
+        },
+        {
+          "soil_moisture": 0.33928571,
+          "1_tb_h": 0.5399709,
+          "2_tb_v": 0.6099709
+        },
+        {
+          "soil_moisture": 0.37142857,
+          "1_tb_h": 0.56785739,
+          "2_tb_v": 0.63785739
+        },
+        {
+          "soil_moisture": 0.40357143,
+          "1_tb_h": 0.61872853,
+          "2_tb_v": 0.68872853
+        },
+        {
+          "soil_moisture": 0.43571429,
+          "1_tb_h": 0.68193275,
+          "2_tb_v": 0.75193275
+        },
+        {
+          "soil_moisture": 0.46785714,
+          "1_tb_h": 0.73547947,
+          "2_tb_v": 0.80547947
+        },
+        {
+          "soil_moisture": 0.5,
+          "1_tb_h": 0.7662572,
+          "2_tb_v": 0.8362572
+        }
+      ]
+    },
+    "preview_version": 1,
+    "plan_card_expanded": true,
+    "review_log": [],
+    "execution_resume_sent": false,
+    "proposed_by": "llm"
+  },
+  "successful_runs": [
+    {
+      "model": "tau_omega",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_9529f9c28e9f",
+      "planned_run_id": "tau_baseline"
+    },
+    {
+      "model": "tau_omega",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.5,
+        "sweep_points": 15
+      },
+      "handle": "res_08980ec9392e",
+      "planned_run_id": "tau_sweep"
+    },
+    {
+      "model": "water_cloud",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_35a95be33f5f",
+      "planned_run_id": "wc_baseline"
+    },
+    {
+      "model": "water_cloud",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.5,
+        "sweep_points": 15
+      },
+      "handle": "res_4be59cef118c",
+      "planned_run_id": "wc_sweep"
+    }
+  ],
+  "numeric_results": [
+    {
+      "handle": "res_9529f9c28e9f",
+      "planned_run_id": "tau_baseline",
+      "model": "tau_omega",
+      "version": "1.0.0",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "axis": null,
+      "series": {
+        "tb_h": [
+          224.80441221818447
+        ],
+        "tb_v": [
+          246.43581601380535
+        ],
+        "emissivity_h": [
+          0.5371663352397188
+        ],
+        "emissivity_v": [
+          0.6949598001337605
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "emissivity_v": "none",
+        "emissivity_h": "none"
+      }
+    },
+    {
+      "handle": "res_08980ec9392e",
+      "planned_run_id": "tau_sweep",
+      "model": "tau_omega",
+      "version": "1.0.0",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.5,
+        "sweep_points": 15
+      },
+      "axis": {
+        "name": "soil_moisture",
+        "values": [
+          0.05,
+          0.08214285714285716,
+          0.1142857142857143,
+          0.14642857142857146,
+          0.1785714285714286,
+          0.21071428571428574,
+          0.24285714285714288,
+          0.275,
+          0.30714285714285716,
+          0.3392857142857143,
+          0.37142857142857144,
+          0.4035714285714286,
+          0.4357142857142858,
+          0.4678571428571429,
+          0.5000000000000001
+        ]
+      },
+      "series": {
+        "tb_h": [
+          248.12858183543096,
+          241.35727029857821,
+          236.55436638145716,
+          232.85577643727655,
+          229.8664238988925,
+          227.37083785081643,
+          225.23823048010516,
+          223.38320188019983,
+          221.74692847246797,
+          220.28719763853223,
+          218.97271566441407,
+          217.7796606249066,
+          216.6894945130686,
+          215.68752002058062,
+          214.76189727575073
+        ],
+        "tb_v": [
+          268.96615545033876,
+          263.177169149029,
+          258.69016011318706,
+          255.02550591042095,
+          251.93313081390306,
+          249.26357413954005,
+          246.9196365479764,
+          244.83428931765118,
+          242.95925323037878,
+          241.25855868574973,
+          239.70467091007177,
+          238.27603713112995,
+          236.95546897819253,
+          235.72903899063832,
+          234.58530609436016
+        ],
+        "emissivity_h": [
+          0.7073079300458183,
+          0.657913599498797,
+          0.622878108608043,
+          0.595898198842193,
+          0.5740919259216666,
+          0.5558875054786961,
+          0.5403308865249495,
+          0.52679910684841,
+          0.514863069180237,
+          0.5042148473507311,
+          0.4946261647485022,
+          0.4859232488271925,
+          0.4779708713614358,
+          0.47066182066833506,
+          0.4639097290578491
+        ],
+        "emissivity_v": [
+          0.8593106836233089,
+          0.8170820693669963,
+          0.7843509202716378,
+          0.7576185597759201,
+          0.735060773612713,
+          0.7155872987814573,
+          0.6984891003675799,
+          0.6832772274771657,
+          0.6695995002335932,
+          0.6571935330823658,
+          0.645858469556329,
+          0.6354370897802493,
+          0.6258040106491157,
+          0.6168576362475933,
+          0.6085145079734329
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "emissivity_v": "none",
+        "emissivity_h": "none"
+      }
+    },
+    {
+      "handle": "res_35a95be33f5f",
+      "planned_run_id": "wc_baseline",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "axis": null,
+      "series": {
+        "sigma0_total_db": [
+          -13.474800303156298
+        ],
+        "sigma0_vegetation_db": [
+          -17.29168775654675
+        ],
+        "sigma0_soil_db": [
+          -14.5
+        ],
+        "two_way_transmissivity": [
+          0.7404386057033007
+        ]
+      },
+      "units": {
+        "sigma0_total_db": "dB",
+        "sigma0_vegetation_db": "dB",
+        "sigma0_soil_db": "dB",
+        "two_way_transmissivity": "none"
+      }
+    },
+    {
+      "handle": "res_4be59cef118c",
+      "planned_run_id": "wc_sweep",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.5,
+        "sweep_points": 15
+      },
+      "axis": {
+        "name": "soil_moisture",
+        "values": [
+          0.05,
+          0.08214285714285716,
+          0.1142857142857143,
+          0.14642857142857146,
+          0.1785714285714286,
+          0.21071428571428574,
+          0.24285714285714288,
+          0.275,
+          0.30714285714285716,
+          0.3392857142857143,
+          0.37142857142857144,
+          0.4035714285714286,
+          0.4357142857142858,
+          0.4678571428571429,
+          0.5000000000000001
+        ]
+      },
+      "series": {
+        "sigma0_total_db": [
+          -15.976403971461679,
+          -15.703064374764732,
+          -15.384278527080513,
+          -15.016515631448897,
+          -14.597142400747927,
+          -14.124654409064668,
+          -13.598816418012019,
+          -13.020684853495172,
+          -12.392507998584355,
+          -11.71752330508326,
+          -10.999688844627698,
+          -10.243392559567521,
+          -9.45317854924817,
+          -8.633517860647656,
+          -7.788637217294491
+        ],
+        "sigma0_vegetation_db": [
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675
+        ],
+        "sigma0_soil_db": [
+          -20.5,
+          -19.535714285714285,
+          -18.57142857142857,
+          -17.607142857142854,
+          -16.642857142857142,
+          -15.678571428571427,
+          -14.714285714285714,
+          -13.75,
+          -12.785714285714285,
+          -11.821428571428571,
+          -10.857142857142858,
+          -9.892857142857142,
+          -8.928571428571427,
+          -7.964285714285712,
+          -6.9999999999999964
+        ],
+        "two_way_transmissivity": [
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007
+        ]
+      },
+      "units": {
+        "sigma0_total_db": "dB",
+        "sigma0_vegetation_db": "dB",
+        "sigma0_soil_db": "dB",
+        "two_way_transmissivity": "none"
+      }
+    }
+  ],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "tau omega water cloud soil moisture sensitivity backscatter brightness temperature",
+        "scenario": "soil",
+        "kind": "any"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": ""
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "05"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "tau_omega"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "tau_omega",
+        "section": "instruction"
+      },
+      "status": "success",
+      "model": "tau_omega",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "water_cloud"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "instruction"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": ""
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "03"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    },
+    {
+      "turn": 2,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Proceed with the supported components only: tau_omega@1.0.0 and water_cloud@1.0.0; explicitly mark the unavailable paper reference components and non-comparable items as unavailable.",
+        "reference_models": [
+          "tau-omega passive emission",
+          "Water Cloud Model active backscatter"
+        ],
+        "requested_outputs": [
+          "tb_h",
+          "tb_v",
+          "emissivity_h",
+          "emissivity_v",
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "two_way_transmissivity"
+        ],
+        "local_models": [
+          "tau_omega@1.0.0",
+          "water_cloud@1.0.0"
+        ],
+        "targets": [
+          {
+            "id": "supported_passive",
+            "reference_models": [
+              "tau-omega passive emission"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v",
+              "emissivity_h",
+              "emissivity_v"
+            ],
+            "evidence_refs": [
+              "cmem-sampling-density#03"
+            ],
+            "status": "partial"
+          },
+          {
+            "id": "supported_active",
+            "reference_models": [
+              "Water Cloud Model active backscatter"
+            ],
+            "requested_outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "evidence_refs": [
+              "backscatter-forward-operator#05"
+            ],
+            "status": "partial"
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "tau_omega@1.0.0",
+        "section": "instruction"
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "list_models",
+      "arguments": {
+        "model": "tau_omega"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "list_models",
+      "arguments": {
+        "model": "water_cloud"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "tau_omega",
+        "section": "instruction"
+      },
+      "status": "success",
+      "model": "tau_omega",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "instruction"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Supported-components-only sensitivity study for local tau_omega and water_cloud models; unavailable named paper implementations and cross-model ranking remain excluded.",
+        "objective": "Quantify separate soil-moisture sensitivities of the two registered local models and report native outputs without claiming reproduction of unavailable reference implementations.",
+        "hypothesis": "Each registered model shows a systematic within-model response to soil moisture when other parameters are fixed.",
+        "steps": [
+          "Run baseline configurations for both models.",
+          "Sweep soil moisture independently from 0.05 to 0.50 m3 m-3.",
+          "Plot native passive and active outputs separately.",
+          "Report local computations, paper context, unavailable components, and limitations."
+        ],
+        "paper_conditions": {
+          "tau_omega": {
+            "frequency_ghz": 1.41,
+            "observable": "brightness temperature and emissivity",
+            "provenance": "cmem-sampling-density#03"
+          },
+          "water_cloud": {
+            "observable": "backscatter coefficient",
+            "provenance": "backscatter-forward-operator#05"
+          }
+        },
+        "condition_provenance": {
+          "tau_omega.frequency_ghz": "paper_explicit",
+          "tau_omega.observable": "paper_explicit",
+          "water_cloud.observable": "paper_explicit",
+          "all_other_conditions": "model_assumption or user_specified as indicated in mappings"
+        },
+        "literature_evidence": [
+          {
+            "evidence_ref": "cmem-sampling-density#03",
+            "role": "passive L-band context"
+          },
+          {
+            "evidence_ref": "backscatter-forward-operator#05",
+            "role": "active backscatter context"
+          }
+        ],
+        "reproduction_targets": [
+          {
+            "id": "tau_omega_sensitivity",
+            "label": "Local tau_omega soil-moisture sensitivity",
+            "reference_models": [
+              "tau-omega passive emission"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v",
+              "emissivity_h",
+              "emissivity_v"
+            ],
+            "evidence_refs": [
+              "cmem-sampling-density#03"
+            ],
+            "status": "partial",
+            "availability_reason": "Registered tau_omega is available, but the explicitly named tau-omega reference implementation is unavailable and is not treated as equivalent."
+          },
+          {
+            "id": "water_cloud_sensitivity",
+            "label": "Local water_cloud soil-moisture sensitivity",
+            "reference_models": [
+              "Water Cloud Model active backscatter"
+            ],
+            "requested_outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "evidence_refs": [
+              "backscatter-forward-operator#05"
+            ],
+            "status": "partial",
+            "availability_reason": "Registered water_cloud is available, but the explicitly named reference implementation is unavailable and is not treated as equivalent."
+          },
+          {
+            "id": "cross_model_ranking",
+            "label": "Cross-model sensitivity ranking",
+            "reference_models": [
+              "tau-omega passive emission",
+              "Water Cloud Model active backscatter"
+            ],
+            "requested_outputs": [
+              "which model is more sensitive"
+            ],
+            "evidence_refs": [
+              "cmem-sampling-density#03",
+              "backscatter-forward-operator#05"
+            ],
+            "status": "unavailable",
+            "availability_reason": "Required reference implementations are unavailable and passive outputs cannot be ranked directly against active backscatter as a common observable."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "tau_omega",
+            "purpose": "Local passive L-band sensitivity",
+            "capability_status": "supported; not equivalent to named unavailable reference"
+          },
+          {
+            "model": "water_cloud",
+            "purpose": "Local active backscatter sensitivity",
+            "capability_status": "supported; not equivalent to named unavailable reference"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "tau_omega",
+            "paper_concept": "frequency",
+            "paper_value": 1.41,
+            "model_input": "frequency_ghz",
+            "mapped_value": 1.41,
+            "units": "GHz",
+            "provenance_class": "paper_explicit",
+            "confidence": "high",
+            "evidence_ref": "cmem-sampling-density#03"
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "incidence angle",
+            "model_input": "angle_deg",
+            "mapped_value": 40.0,
+            "units": "degree",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "rationale": "Representative fixed angle; not supplied by user."
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "soil moisture baseline",
+            "model_input": "soil_moisture",
+            "mapped_value": 0.25,
+            "units": "m3 m-3",
+            "provenance_class": "model_assumption",
+            "confidence": "low"
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "soil moisture sweep",
+            "model_input": "soil_moisture",
+            "mapped_value": "0.05 to 0.50, 15 points",
+            "units": "m3 m-3",
+            "provenance_class": "user_specified",
+            "confidence": "high"
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "fixed soil and canopy parameters",
+            "model_input": "bulk_density_g_cm3, soil_temperature_k, canopy_temperature_k, vegetation_optical_depth, single_scattering_albedo, roughness_h, cross_q",
+            "mapped_value": "1.3, 293, 293, 0.3, 0.05, 0.3, 0.0",
+            "units": "declared units",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "rationale": "Representative fixed exploratory conditions."
+          },
+          {
+            "model": "tau_omega",
+            "paper_concept": "sweep controls",
+            "model_input": "sweep_parameter, sweep_start, sweep_stop, sweep_points",
+            "mapped_value": "soil_moisture, 0.05, 0.50, 15",
+            "units": "declared units",
+            "provenance_class": "user_specified",
+            "confidence": "high"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "incidence angle",
+            "model_input": "angle_deg",
+            "mapped_value": 37.0,
+            "units": "degree",
+            "provenance_class": "model_assumption",
+            "confidence": "low"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "soil moisture baseline",
+            "model_input": "soil_moisture",
+            "mapped_value": 0.25,
+            "units": "m3 m-3",
+            "provenance_class": "model_assumption",
+            "confidence": "low"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "soil moisture sweep",
+            "model_input": "soil_moisture",
+            "mapped_value": "0.05 to 0.50, 15 points",
+            "units": "m3 m-3",
+            "provenance_class": "user_specified",
+            "confidence": "high"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "fixed vegetation and calibration coefficients",
+            "model_input": "vegetation_water_kg_m2, coefficient_a, coefficient_b, coefficient_c, coefficient_d",
+            "mapped_value": "1.0, 0.09, 0.12, -22.0, 30.0",
+            "units": "declared units",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "rationale": "Representative fixed exploratory conditions."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "sweep controls",
+            "model_input": "sweep_parameter, sweep_start, sweep_stop, sweep_points",
+            "mapped_value": "soil_moisture, 0.05, 0.50, 15",
+            "units": "declared units",
+            "provenance_class": "user_specified",
+            "confidence": "high"
+          }
+        ],
+        "outputs": [
+          "tb_h",
+          "tb_v",
+          "emissivity_h",
+          "emissivity_v",
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "two_way_transmissivity"
+        ],
+        "runs": [
+          {
+            "id": "tau_baseline",
+            "label": "tau_omega baseline",
+            "model": "tau_omega",
+            "parameters": {
+              "frequency_ghz": 1.41,
+              "angle_deg": 40.0,
+              "soil_moisture": 0.25,
+              "bulk_density_g_cm3": 1.3,
+              "soil_temperature_k": 293.0,
+              "canopy_temperature_k": 293.0,
+              "vegetation_optical_depth": 0.3,
+              "single_scattering_albedo": 0.05,
+              "roughness_h": 0.3,
+              "cross_q": 0.0
+            },
+            "stage": "baseline"
+          },
+          {
+            "id": "tau_sweep",
+            "label": "tau_omega soil-moisture sweep",
+            "model": "tau_omega",
+            "parameters": {
+              "frequency_ghz": 1.41,
+              "angle_deg": 40.0,
+              "bulk_density_g_cm3": 1.3,
+              "soil_temperature_k": 293.0,
+              "canopy_temperature_k": 293.0,
+              "vegetation_optical_depth": 0.3,
+              "single_scattering_albedo": 0.05,
+              "roughness_h": 0.3,
+              "cross_q": 0.0,
+              "sweep_parameter": "soil_moisture",
+              "sweep_start": 0.05,
+              "sweep_stop": 0.5,
+              "sweep_points": 15
+            },
+            "stage": "main"
+          },
+          {
+            "id": "wc_baseline",
+            "label": "water_cloud baseline",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37.0,
+              "soil_moisture": 0.25,
+              "vegetation_water_kg_m2": 1.0,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22.0,
+              "coefficient_d": 30.0
+            },
+            "stage": "baseline"
+          },
+          {
+            "id": "wc_sweep",
+            "label": "water_cloud soil-moisture sweep",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37.0,
+              "vegetation_water_kg_m2": 1.0,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22.0,
+              "coefficient_d": 30.0,
+              "sweep_parameter": "soil_moisture",
+              "sweep_start": 0.05,
+              "sweep_stop": 0.5,
+              "sweep_points": 15
+            },
+            "stage": "main"
+          }
+        ],
+        "charts": [
+          {
+            "id": "tau_chart",
+            "label": "Local tau_omega outputs versus soil moisture",
+            "kind": "line",
+            "x": "soil_moisture",
+            "ys": [
+              "tb_h",
+              "tb_v"
+            ],
+            "required": true,
+            "purpose": "result",
+            "x_label": "Soil moisture (m3 m-3)",
+            "y_label": "Brightness temperature (K)"
+          },
+          {
+            "id": "wc_chart",
+            "label": "Local water_cloud outputs versus soil moisture",
+            "kind": "line",
+            "x": "soil_moisture",
+            "ys": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db"
+            ],
+            "required": true,
+            "purpose": "result",
+            "x_label": "Soil moisture (m3 m-3)",
+            "y_label": "Backscatter (dB)"
+          }
+        ],
+        "success_criteria": [
+          "All four local runs complete quality control.",
+          "Charts use the exact soil-moisture sweep axis and native units.",
+          "Report does not claim reproduction of either unavailable named reference implementation.",
+          "Cross-model ranking remains unavailable."
+        ],
+        "quantities": [
+          "soil moisture",
+          "brightness temperature",
+          "emissivity",
+          "soil backscatter",
+          "total backscatter",
+          "vegetation backscatter",
+          "two-way transmissivity"
+        ],
+        "controls": [
+          "Fixed conditions within each model.",
+          "Separate passive and active charts.",
+          "No direct passive-versus-active comparison metric."
+        ],
+        "metrics": [
+          "endpoint_change",
+          "monotonicity"
+        ],
+        "diagnostics": [
+          "Baseline smoke runs",
+          "Quality-control status",
+          "Native-unit and observable checks"
+        ],
+        "stop_conditions": [
+          "Stop on parameter rejection or failed quality control.",
+          "Do not perform cross-model ranking."
+        ],
+        "baseline_run_id": "tau_baseline",
+        "assumptions": [
+          "Fixed values other than frequency are exploratory model assumptions, not paper-reported site conditions.",
+          "Local models are not equivalent substitutes for unavailable named reference implementations."
+        ],
+        "limitations": [
+          "Both named reference implementations are unavailable.",
+          "No measured dataset is used.",
+          "No direct passive-versus-active sensitivity ranking is valid.",
+          "Paper reproduction remains partial."
+        ],
+        "note": "User explicitly confirmed the partial scope."
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "tau_baseline"
+      },
+      "status": "success",
+      "model": "tau_omega",
+      "version": "1.0.0",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_9529f9c28e9f",
+      "planned_run_id": "tau_baseline",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "tau_sweep"
+      },
+      "status": "success",
+      "model": "tau_omega",
+      "version": "1.0.0",
+      "spec": {
+        "frequency_ghz": 1.41,
+        "angle_deg": 40.0,
+        "soil_moisture": 0.25,
+        "bulk_density_g_cm3": 1.3,
+        "soil_temperature_k": 293.0,
+        "canopy_temperature_k": 293.0,
+        "vegetation_optical_depth": 0.3,
+        "single_scattering_albedo": 0.05,
+        "roughness_h": 0.3,
+        "cross_q": 0.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.5,
+        "sweep_points": 15
+      },
+      "handle": "res_08980ec9392e",
+      "planned_run_id": "tau_sweep",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "wc_baseline"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_35a95be33f5f",
+      "planned_run_id": "wc_baseline",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "wc_sweep"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.5,
+        "sweep_points": 15
+      },
+      "handle": "res_4be59cef118c",
+      "planned_run_id": "wc_sweep",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "tau_chart",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "tau_chart",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "tau_chart",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [],
+        "n_series": 2,
+        "point_counts": [
+          15,
+          15
+        ],
+        "redrawn": false
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "wc_chart",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "wc_chart",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "wc_chart",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "water_cloud soil-moisture sweep · sigma0_vegetation_db is constant; verify this is physically expected"
+        ],
+        "redraw_reasons": [
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 3,
+        "point_counts": [
+          15,
+          15,
+          15
+        ],
+        "redrawn": true
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "05"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "03"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "research-reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 12625,
+      "completion_tokens": 112,
+      "cost_usd": 0.00045805,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.09
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "4 of 11 item(s) match.",
+      "arguments": {
+        "query": "tau omega water cloud soil moisture sensitivity backscatter brightness temperature",
+        "scenario": "soil",
+        "kind": "any"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13328,
+      "completion_tokens": 21,
+      "cost_usd": 0.00054782,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.99
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 14456,
+      "completion_tokens": 22,
+      "cost_usd": 0.00081354,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.89
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 16500,
+      "completion_tokens": 29,
+      "cost_usd": 0.0013065,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.99
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Section index for backscatter-forward-operator (bundled). Call again with a section_id to read one.",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": ""
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 17055,
+      "completion_tokens": 29,
+      "cost_usd": 0.00144525,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.91
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "backscatter-forward-operator section 05: Data and methods - Water Cloud Model (3215 chars, bundled)",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "05"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18198,
+      "completion_tokens": 20,
+      "cost_usd": 0.00457335,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.12
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for tau_omega v1.0.0.",
+      "arguments": {
+        "model": "tau_omega"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19601,
+      "completion_tokens": 25,
+      "cost_usd": 0.0049301,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.54
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction tau_omega v1.0.",
+      "arguments": {
+        "model": "tau_omega",
+        "section": "instruction"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 20002,
+      "completion_tokens": 125,
+      "cost_usd": 0.00515035,
+      "reasoning_chars": 0,
+      "elapsed_s": 13.51
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for water_cloud v1.0.0.",
+      "arguments": {
+        "model": "water_cloud"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 21212,
+      "completion_tokens": 24,
+      "cost_usd": 0.00533165,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.9
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction water_cloud v1.0.",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "instruction"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 21595,
+      "completion_tokens": 208,
+      "cost_usd": 0.0056482,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.17
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Section index for cmem-sampling-density (bundled). Call again with a section_id to read one.",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": ""
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 22025,
+      "completion_tokens": 29,
+      "cost_usd": 0.0055409,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.12
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "cmem-sampling-density section 03: Methodology and data - Generation of L-band passive microwave observations (7966 chars, bundled)",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "03"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 24224,
+      "completion_tokens": 513,
+      "cost_usd": 0.00667145,
+      "reasoning_chars": 0,
+      "elapsed_s": 7.33
+    },
+    {
+      "kind": "harness_block",
+      "turn": 1,
+      "rule": "physical_domain",
+      "tool": "research_capability_check",
+      "intervention": 1,
+      "detail": "capability review requires user confirmation",
+      "problems": []
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "capability_review",
+      "detail": "Capability review requires the user's partial-scope decision."
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 2,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 12632,
+      "completion_tokens": 320,
+      "cost_usd": 0.00354185,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.62
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability check by reproduction target\n\ntau_omega_sensitivity [tau_omega_sensitivity]\nSupported: tau_omega@1.0.0; water_cloud@1.0.0\nUnavailable: tau-omega passive emission: not registered in the current model registry; resembles tau_omega, which is not the same model -- confirm which was meant\nNot comparable: tau_omega is not equivalent to tau-omega passive emission; water_cloud is not equivalent to tau-omega passive emission\n\nwater_cloud_sensitivity [water_cloud_sensitivity]\nSupported: tau_omega@1.0.0; water_cloud@1.0.0\nUnavailable: Water Cloud Model active backscatter: not registered in the current model registry; resembles equivalent_water_thickness_cm, snowpack_water_equivalent, vegetation_water_kg_m2, water_cloud, which is not the same model -- confirm which was meant\nNot comparable:",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Proceed with the supported components only: tau_omega@1.0.0 and water_cloud@1.0.0; explicitly mark the unavailable paper reference components and non-comparable items as unavailable.",
+        "reference_models": [
+          "tau-omega passive emission",
+          "Water Cloud Model active backscatter"
+        ],
+        "requested_outputs": [
+          "tb_h",
+          "tb_v",
+          "emissivity_h",
+          "emissivity_v",
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "two_way_transmissivity"
+        ],
+        "local_models": [
+          "tau_omega@1.0.0",
+          "water_cloud@1.0.0"
+        ],
+        "targets": [
+          {
+            "id": "supported_passive",
+            "reference_models": [
+              "tau-omega passive emission"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v",
+              "emissivity_h",
+              "emissivity_v"
+            ],
+            "evidence_refs": [
+              "cmem-sampling-density#03"
+            ],
+            "status": "partial"
+          },
+          {
+            "id": "supported_active",
+            "reference_models": [
+              "Water Cloud Model active backscatter"
+            ],
+            "requested_outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "evidence_refs": [
+              "backscatter-forward-operator#05"
+            ],
+            "status": "partial"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 15937,
+      "completion_tokens": 2804,
+      "cost_usd": 0.0073489,
+      "reasoning_chars": 0,
+      "elapsed_s": 30.35
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "review",
+      "detail": "Read every selected model instruction before proposing: tau_omega@1.0.0@? (call list_models first), tau_omega@1.0.0@?, water_cloud@1.0.0@? (call list_models first), water_cloud@1.0.0@?."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 21535,
+      "completion_tokens": 31,
+      "cost_usd": 0.00541445,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.23
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "read_model_instruction",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "Unknown model 'tau_omega@1.0.0'. Call list_models first.",
+      "arguments": {
+        "model": "tau_omega@1.0.0",
+        "section": "instruction"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 21639,
+      "completion_tokens": 20,
+      "cost_usd": 0.0054336,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.13
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for tau_omega v1.0.0.",
+      "arguments": {
+        "model": "tau_omega"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 23011,
+      "completion_tokens": 19,
+      "cost_usd": 0.0057754,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.94
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for water_cloud v1.0.0.",
+      "arguments": {
+        "model": "water_cloud"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 24203,
+      "completion_tokens": 25,
+      "cost_usd": 0.0060806,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.16
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction tau_omega v1.0.",
+      "arguments": {
+        "model": "tau_omega",
+        "section": "instruction"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 24591,
+      "completion_tokens": 24,
+      "cost_usd": 0.0061764,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.09
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Read model instruction water_cloud v1.0.",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "instruction"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 24967,
+      "completion_tokens": 2419,
+      "cost_usd": 0.0091444,
+      "reasoning_chars": 0,
+      "elapsed_s": 18.61
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.005,
+      "summary": "Reproduction plan incomplete: 0 evidence issue(s), 9 target coverage issue(s), and 4 parameter mapping issue(s). Mapping fields: parameter_mapping[4].model_input (actual='bulk_density_g_cm3, soil_temperature_k, canopy_temperature_k, vegetation_optical_depth, single_scattering_albedo, roughness_h, cross_q'); parameter_mapping[5].model_input (actual='sweep_parameter, sweep_start, sweep_stop, sweep_points'); parameter_mapping[9].model_input (actual='vegetation_water_kg_m2, coefficient_a, coefficient_b, coefficient_c, coefficient_d'); parameter_mapping[10].model_input (actual='sweep_parameter, sweep_start, sweep_stop, sweep_points').",
+      "arguments": {
+        "_truncated": "{\"action\": \"propose\", \"question\": \"Supported-components-only sensitivity study for local tau_omega and water_cloud models; unavailable named paper implementations and cross-model ranking remain excluded.\", \"objective\": \"Quantify separate soil-moisture sensitivities of the two registered local models and report native outputs without claiming reproduction of unavailable reference implementations.\", \"hypothesis\": \"Each registered model shows a systematic within-model response to soil moisture when other parameters are fixed.\", \"steps\": [\"Run baseline configurations for both models.\", \"Sweep soil moisture independently from 0.05 to 0.50 m3 m-3.\", \"Plot native passive and active outputs separately.\", \"Report local computations, paper context, unavailable components, and limitations.\"], \"paper_conditions\": {\"tau_omega\": {\"frequency_ghz\": 1.41, \"observable\": \"brightness temperature and emissivity\", \"provenance\": \"cmem-sampling-density#03\"}, \"water_cloud\": {\"observable\": \"backscatter coefficient\", \"provenance\": \"backscatter-forward-operator#05\"}}, \"condition_provenance\": {\"tau_omega.frequency_ghz\": \"paper_explicit\", \"tau_omega.observable\": \"paper_explicit\", \"water_cloud.observable\": \"paper_explicit\", \"all_other_conditions\": \"model_assumption or user_specified as indicated in mappings\"}, \"literature_evidence\": [{\"evidence_ref\": \"cmem-sampling-density#03\", \"role\": \"passive L-band context\"}, {\"evidence_ref\": \"backscatter-forward-operator#05\", \"role\": \"active backscatter context\"}], \"reproduction_targets\": [{\"id\": \"tau_omega_sensitivity\", \"label\": \"Local tau_omega soil-moisture sensitivity\", \"reference_models\": [\"tau-omega passive emission\"], \"requested_outputs\": [\"tb_h\", \"tb_v\", \"emissivity_h\", \"emissivity_v\"], \"evidence_refs\": [\"cmem-sampling-density#03\"], \"status\": \"partial\", \"availability_reason\": \"Registered tau_omega is available, but the explicitly named tau-omega reference implementation is unavailable and is not treated as equivalent.\"}, {\"id\": \"water_cloud_sensitivity\", \"label\": \"Local water_cloud soil-moisture sensitivity\", \"reference_models\": [\"Water Cloud Model active backscatter\"], \"requested_outputs\": [\"sigma0_soil_db\", \"sigma0_total_db\", \"sigma0_vegetation_db\", \"two_way_transmissivity\"], \"evidence_refs\": [\"backscatter-forward-operator#05\"], \"status\": \"partial\", \"availability_reason\": \"Registered water_cloud is available, but the explicitly named reference implementation is unavailable and is not treated as equivalent.\"}, {\"id\": \"cross_model_ranking\", \"label\": \"Cross-model sensitivity ranking\", \"reference_models\": [\"tau-omega passive emission\", \"Water Cloud Model active backscatter\"], \"requested_outputs\": [\"which model is more sensitive\"], \"evidence_refs\": [\"cmem-sampling-density#03\", \"backscatter-forward-operator#05\"], \"status\": \"unavailable\", \"availability_reason\": \"Required reference implementations are unavailable and passive outputs cannot be ranked directly against active backscatter as a common observable.\"}], \"selected_models\": [{\"model\": \"tau_omega\", \"purpose\": \"Local passive L-band sensitivity\", \"capability_status\": \"supported; not equivalent to named unavailable reference\"}, {\"model\": \"water_cloud\", \"purpose\": \"Local active backscatter sensitivity\", \"capability_status\": \"supported; not equivalent to named unavailable reference\"}], \"parameter_mapping\": [{\"model\": \"tau_omega\", \"paper_concept\": \"frequency\", \"paper_value\": 1.41, \"model_input\": \"frequency_ghz\", \"mapped_value\": 1.41, \"units\": \"GHz\", \"provenance_class\": \"paper_explicit\", \"confidence\": \"high\", \"evidence_ref\": \"cmem-sampling-density#03\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"incidence angle\", \"model_input\": \"angle_deg\", \"mapped_value\": 40.0, \"units\": \"degree\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"rationale\": \"Representative fixed angle; not supplied by user.\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"soil moisture baseline\", \"model_input\": \"soil_moisture\", \"mapped_value\": 0.25, \"units\": \"m3 m-3\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"soil moisture sweep\", \"model_input\": \"soil_moisture\", \"mapped_value\": \"0.05 to 0.50, 15 points\", \"units\": \"m3 m-3\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"fixed soil and canopy parameters\", \"model_input\": \"bulk_density_g_cm3, soil_temperature_k, canopy_temperature_k, vegetation_optical_depth, single_scattering_albedo, roughness_h, cross_q\", \"mapped_value\": \"1.3, 293, 293, 0.3, 0.05, 0.3, 0.0\", \"units\": \"declared units\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"rationale\": \"Representative fixed exploratory conditions.\"}, {\"model\": \"tau_omega\", \"paper_concept\": \"sweep controls\", \"model_input\": \"sweep_parameter, sweep_start, sweep_stop, sweep_points\", \"mapped_value\": \"soil_moisture, 0.05, 0.50, 15\", \"units\": \"declared units\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"incidence angle\", \"model_input\": \"angle_deg\", \"mapped_value\": 37.0, \"units\": \"degree\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"soil moisture baseline\", \"model_input\": \"soil_moisture\", \"mapped_value\": 0.25, \"units\": \"m3 m-3\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"soil moisture sweep\", \"model_input\": \"soil_moisture\", \"mapped_value\": \"0.05 to 0.50, 15 points\", \"units\": \"m3 m-3\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"fixed vegetation and calibration coefficients\", \"model_input\": \"vegetation_water_kg_m2, coefficient_a, coefficient_b, coefficient_c, coefficient_d\", \"mapped_value\": \"1.0, 0.09, 0.12, -22.0, 30.0\", \"units\": \"declared units\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"rationale\": \"Representative fixed exploratory conditions.\"}, {\"model\": \"water_cloud\", \"paper_concept\": "
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 29077,
+      "completion_tokens": 2594,
+      "cost_usd": 0.01037555,
+      "reasoning_chars": 0,
+      "elapsed_s": 21.24
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review",
+      "detail": "LLM-authored research plan v001 is ready for human review. Backend applied 1 auditable reference/presentation repair(s); review them explicitly."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 35027,
+      "completion_tokens": 271,
+      "cost_usd": 0.0090818,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.31
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review"
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 3,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 13167,
+      "completion_tokens": 58,
+      "cost_usd": 0.0033612,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.11
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.002,
+      "summary": "Approved run tau_baseline: tau_omega ran in 0.00s: 1 point(s). Quality control passed.",
+      "arguments": {
+        "run_id": "tau_baseline"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 13868,
+      "completion_tokens": 83,
+      "cost_usd": 0.00356645,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.44
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.002,
+      "summary": "Approved run tau_sweep: tau_omega ran in 0.00s: 15 point(s) over soil_moisture. Quality control passed.",
+      "arguments": {
+        "run_id": "tau_sweep"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 15618,
+      "completion_tokens": 84,
+      "cost_usd": 0.00400515,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.3
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.001,
+      "summary": "Approved run wc_baseline: water_cloud ran in 0.00s: 1 point(s). Quality control passed.",
+      "arguments": {
+        "run_id": "wc_baseline"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 16369,
+      "completion_tokens": 82,
+      "cost_usd": 0.0041905,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.54
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.002,
+      "summary": "Approved run wc_sweep: water_cloud ran in 0.00s: 15 point(s) over soil_moisture. Quality control passed.",
+      "arguments": {
+        "run_id": "wc_sweep"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 18209,
+      "completion_tokens": 88,
+      "cost_usd": 0.0046577,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.98
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.07,
+      "summary": "Approved chart tau_chart: Drew a line chart with 2 series over 30 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "tau_chart",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 18531,
+      "completion_tokens": 54,
+      "cost_usd": 0.0046974,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.32
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Figure 1 render check (Render QA) passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 2 series; point counts [15, 15].",
+      "arguments": {
+        "chart_id": "tau_chart",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 18728,
+      "completion_tokens": 47,
+      "cost_usd": 0.00473825,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.41
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.082,
+      "summary": "Approved chart wc_chart: Drew a line chart with 3 series over 45 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "wc_chart",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 19092,
+      "completion_tokens": 51,
+      "cost_usd": 0.00483405,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.37
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.081,
+      "summary": "Figure 2 render check (Render QA) redrawn with a publication layout and passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 3 series; point counts [15, 15, 15]. Warnings: water_cloud soil-moisture sweep · sigma0_vegetation_db is constant; verify this is physically expected.",
+      "arguments": {
+        "chart_id": "wc_chart",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 19356,
+      "completion_tokens": 288,
+      "cost_usd": 0.00518445,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.92
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "backscatter-forward-operator section 05: Data and methods - Water Cloud Model (3215 chars, bundled)",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "05"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 20540,
+      "completion_tokens": 29,
+      "cost_usd": 0.00516965,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.35
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "cmem-sampling-density section 03: Methodology and data - Generation of L-band passive microwave observations (7966 chars, bundled)",
+      "arguments": {
+        "slug": "cmem-sampling-density",
+        "section_id": "03"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 22731,
+      "completion_tokens": 23,
+      "cost_usd": 0.0057102,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.29
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "research-reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 24762,
+      "completion_tokens": 2845,
+      "cost_usd": 0.00960435,
+      "reasoning_chars": 0,
+      "elapsed_s": 26.59
+    },
+    {
+      "kind": "research_block",
+      "turn": 3,
+      "rule": "research_reporting_contract",
+      "detail": "The final report is being checked against the recorded provenance ledger and result state."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 28483,
+      "completion_tokens": 3263,
+      "cost_usd": 0.00801147,
+      "reasoning_chars": 0,
+      "elapsed_s": 27.72
+    },
+    {
+      "kind": "harness_warning",
+      "turn": 3,
+      "rule": "report_completeness",
+      "detail": "The report must give a separate conclusion based on each generated figure, covering its visible curves, axes, units, legend and qualitative patterns. This is only a partial reproduction because these named comparison models are not registered and were not run: tau-omega passive emission, Water Cloud Model active backscatter. State that limitation explicitly; do not report cross-model agreement metrics or attribute causal differences to their solvers."
+    },
+    {
+      "kind": "research_complete",
+      "turn": 3,
+      "detail": "A registered model run, figure and validated report are complete."
+    },
+    {
+      "kind": "harness_pass",
+      "turn": 3,
+      "rule": "citation_integrity",
+      "markers": [
+        "cmem-sampling-density#03",
+        "backscatter-forward-operator#05",
+        "cmem-sampling-density#03",
+        "backscatter-forward-operator#05",
+        "cmem-sampling-density#03",
+        "model:tau_omega@1.0.0",
+        "model:water_cloud@1.0.0",
+        "model:tau_omega@1.0.0"
+      ]
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "backscatter-forward-operator#05",
+      "cmem-sampling-density#03",
+      "research-planning#00",
+      "research-reporting#00"
+    ],
+    "models": [
+      "tau_omega@1.0.0",
+      "water_cloud@1.0.0"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "tau_omega@1.0",
+      "water_cloud@1.0"
+    ],
+    "paper_figures": [],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [
+      "cmem-sampling-density#03",
+      "backscatter-forward-operator#05",
+      "cmem-sampling-density#03",
+      "backscatter-forward-operator#05",
+      "cmem-sampling-density#03",
+      "model:tau_omega@1.0.0",
+      "model:water_cloud@1.0.0",
+      "model:tau_omega@1.0.0",
+      "model:water_cloud@1.0.0"
+    ],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [
+    {
+      "planned_chart_id": "tau_chart",
+      "figure_number": 1,
+      "title": "Figure 1. Local tau_omega outputs versus soil moisture",
+      "subtitle": "f 1.41 GHz · angle 40 °",
+      "x_label": "Soil moisture (m3 m-3)",
+      "y_label": "Brightness temperature (K)",
+      "kind": "line",
+      "series": [
+        {
+          "label": "tau_omega soil-moisture sweep · tb_h",
+          "source": "model_run",
+          "origin": "tau_omega@1.0.0",
+          "n_points": 15,
+          "handle": "res_08980ec9392e",
+          "x": "soil_moisture",
+          "y": "tb_h"
+        },
+        {
+          "label": "tau_omega soil-moisture sweep · tb_v",
+          "source": "model_run",
+          "origin": "tau_omega@1.0.0",
+          "n_points": 15,
+          "handle": "res_08980ec9392e",
+          "x": "soil_moisture",
+          "y": "tb_v"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [],
+        "n_series": 2,
+        "point_counts": [
+          15,
+          15
+        ],
+        "redrawn": false
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/figures/6e3ced3400941adeb991d485_p-two-models-not-comparable_p1-reproduction-first_openai-gpt-5.6-luna_r2_full.png"
+    },
+    {
+      "planned_chart_id": "wc_chart",
+      "figure_number": 2,
+      "title": "Figure 2. Local water_cloud outputs versus soil moisture",
+      "subtitle": "angle 37 °",
+      "x_label": "Soil moisture (m3 m-3)",
+      "y_label": "Backscatter (dB)",
+      "kind": "line",
+      "series": [
+        {
+          "label": "water_cloud soil-moisture sweep · sigma0_soil_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 15,
+          "handle": "res_4be59cef118c",
+          "x": "soil_moisture",
+          "y": "sigma0_soil_db"
+        },
+        {
+          "label": "water_cloud soil-moisture sweep · sigma0_total_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 15,
+          "handle": "res_4be59cef118c",
+          "x": "soil_moisture",
+          "y": "sigma0_total_db"
+        },
+        {
+          "label": "water_cloud soil-moisture sweep · sigma0_vegetation_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 15,
+          "handle": "res_4be59cef118c",
+          "x": "soil_moisture",
+          "y": "sigma0_vegetation_db"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "water_cloud soil-moisture sweep · sigma0_vegetation_db is constant; verify this is physically expected"
+        ],
+        "redraw_reasons": [
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 3,
+        "point_counts": [
+          15,
+          15,
+          15
+        ],
+        "redrawn": true
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/figures/210ede8d0286773bd3557bbe_p-two-models-not-comparable_p1-reproduction-first_openai-gpt-5.6-luna_r2_full.png"
+    }
+  ],
+  "markers": {
+    "literature": [
+      "cmem-sampling-density#03",
+      "backscatter-forward-operator#05",
+      "cmem-sampling-density#03",
+      "backscatter-forward-operator#05",
+      "cmem-sampling-density#03"
+    ],
+    "model": [
+      "tau_omega@1.0.0",
+      "water_cloud@1.0.0",
+      "tau_omega@1.0.0",
+      "water_cloud@1.0.0"
+    ],
+    "data": []
+  },
+  "parameter_provenance": [
+    {
+      "field": "tau_omega.frequency_ghz",
+      "value": 1.41,
+      "source_kind": "paper",
+      "source_ref": "cmem-sampling-density#03",
+      "source_span": "L-band passive microwave observations",
+      "reason": "Paper L-band context mapped to the exact registered frequency input.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.angle_deg",
+      "value": 40.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed angle for the local exploratory run",
+      "reason": "Local fixed-angle assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.soil_moisture_baseline",
+      "value": 0.25,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; baseline only",
+      "reason": "Baseline value; the main experiment was the declared sweep.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "tau_omega.soil_moisture_sweep",
+      "value": "0.05 to 0.50 m3 m-3, 15 points",
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; primary local sensitivity sweep",
+      "reason": "User-specified sweep.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "tau_omega.bulk_density_g_cm3",
+      "value": 1.3,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed exploratory value",
+      "reason": "Local fixed-value assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.soil_temperature_k",
+      "value": 293.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed exploratory value",
+      "reason": "Local fixed-value assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.canopy_temperature_k",
+      "value": 293.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed exploratory value",
+      "reason": "Local fixed-value assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.vegetation_optical_depth",
+      "value": 0.3,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed canopy value",
+      "reason": "Local fixed-canopy assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.single_scattering_albedo",
+      "value": 0.05,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed canopy value",
+      "reason": "Local fixed-canopy assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.roughness_h",
+      "value": 0.3,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed roughness value",
+      "reason": "Local fixed-value assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.cross_q",
+      "value": 0.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; fixed zero cross-polarisation mixing",
+      "reason": "Local fixed-value assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.sweep_parameter",
+      "value": "soil_moisture",
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; selects the exact registered input being swept",
+      "reason": "User-specified sweep selector.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "tau_omega.sweep_start",
+      "value": 0.05,
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; lower endpoint of the soil-moisture sweep",
+      "reason": "User-specified sweep endpoint.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "tau_omega.sweep_stop",
+      "value": 0.5,
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; upper endpoint of the soil-moisture sweep",
+      "reason": "User-specified sweep endpoint.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "tau_omega.sweep_points",
+      "value": 15,
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; number of sweep samples",
+      "reason": "User-specified sweep density.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.baseline_sweep_parameter",
+      "value": "none",
+      "source_kind": "model_default",
+      "source_ref": "tau_omega registered declaration; baseline run specification",
+      "reason": "Baseline run did not sweep a parameter.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "tau_omega.baseline_sweep_points",
+      "value": 10,
+      "source_kind": "model_default",
+      "source_ref": "tau_omega registered declaration; baseline run specification",
+      "reason": "Recorded baseline specification value.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.angle_deg",
+      "value": 37.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed angle for the local exploratory run",
+      "reason": "Local fixed-angle assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.soil_moisture_baseline",
+      "value": 0.25,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; baseline only",
+      "reason": "Baseline value; the main experiment was the declared sweep.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "water_cloud.soil_moisture_sweep",
+      "value": "0.05 to 0.50 m3 m-3, 15 points",
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; primary local sensitivity sweep",
+      "reason": "User-specified sweep.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "water_cloud.vegetation_water_kg_m2",
+      "value": 1.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; representative fixed canopy value",
+      "reason": "Local fixed-canopy assumption.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.coefficient_a",
+      "value": 0.09,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; preserved fixed exploratory coefficient",
+      "reason": "Local fixed coefficient.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.coefficient_b",
+      "value": 0.12,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; preserved fixed exploratory coefficient",
+      "reason": "Local fixed coefficient.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.coefficient_c",
+      "value": -22.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; preserved fixed exploratory coefficient",
+      "reason": "Local fixed coefficient.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.coefficient_d",
+      "value": 30.0,
+      "source_kind": "assumption",
+      "source_ref": "approved parameter ledger; preserved fixed exploratory coefficient",
+      "reason": "Local fixed coefficient.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.sweep_parameter",
+      "value": "soil_moisture",
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; selects the exact registered input being swept",
+      "reason": "User-specified sweep selector.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "water_cloud.sweep_start",
+      "value": 0.05,
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; lower endpoint of the soil-moisture sweep",
+      "reason": "User-specified sweep endpoint.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "water_cloud.sweep_stop",
+      "value": 0.5,
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; upper endpoint of the soil-moisture sweep",
+      "reason": "User-specified sweep endpoint.",
+      "sensitivity_checked": true
+    },
+    {
+      "field": "water_cloud.sweep_points",
+      "value": 15,
+      "source_kind": "user",
+      "source_ref": "approved parameter ledger; number of sweep samples",
+      "reason": "User-specified sweep density.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.baseline_sweep_parameter",
+      "value": "none",
+      "source_kind": "model_default",
+      "source_ref": "water_cloud registered declaration; baseline run specification",
+      "reason": "Baseline run did not sweep a parameter.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "water_cloud.baseline_sweep_points",
+      "value": 10,
+      "source_kind": "model_default",
+      "source_ref": "water_cloud registered declaration; baseline run specification",
+      "reason": "Recorded baseline specification value.",
+      "sensitivity_checked": false
+    }
+  ],
+  "provenance_parse_error": null,
+  "reproduction_outcome": "partial",
+  "archived_report_path": "evaluation/results/competition/reports/6b5bb8c44f68091253e75c09_p-two-models-not-comparable_p1-reproduction-first_openai-gpt-5.6-luna_r2_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/6b5bb8c44f68091253e75c09_p-two-models-not-comparable_p1-reproduction-first_openai-gpt-5.6-luna_r2_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  }
+}

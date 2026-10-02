@@ -1,0 +1,2511 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "p-pyet-humidity-above-saturation",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "72b617aeb5144a825958319e60218eca0d2bcd418c2ae5c26fd72aa7a138ea19",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 2,
+  "build": "db4b2e1",
+  "question": "Using the Penman-Monteith formulation, what is the reference evapotranspiration for a day at 25 degrees C with 15 MJ/m2 of net radiation, a 2 m/s wind and a relative humidity of 130 percent?",
+  "answer": "Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s). Structured repair gaps: [{\"field\": \"literature_evidence\", \"source\": \"session.sections_read\", \"expected\": \"at least one opened paper section\", \"repair\": \"Call read_literature for the relevant paper section before proposing the plan.\"}, {\"field\": \"literature_evidence[0].evidence_ref\", \"source\": \"research-planning#00\", \"expected\": \"a section or source figure opened in this session\", \"repair\": \"Read the cited section or figure, then use its returned citation reference.\"}, {\"field\": \"reproduction_targets[0].evidence_refs\", \"source\": \"research-planning#00\", \"expected\": \"opened evidence reference\", \"repair\": \"Use the citation returned by read_literature or read_paper_figure.\"}]",
+  "planning_answer": "Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s). Structured repair gaps: [{\"field\": \"literature_evidence\", \"source\": \"session.sections_read\", \"expected\": \"at least one opened paper section\", \"repair\": \"Call read_literature for the relevant paper section before proposing the plan.\"}, {\"field\": \"literature_evidence[0].evidence_ref\", \"source\": \"research-planning#00\", \"expected\": \"a section or source figure opened in this session\", \"repair\": \"Read the cited section or figure, then use its returned citation reference.\"}, {\"field\": \"reproduction_targets[0].evidence_refs\", \"source\": \"research-planning#00\", \"expected\": \"opened evidence reference\", \"repair\": \"Use the citation returned by read_literature or read_paper_figure.\"}]",
+  "elapsed_s": 94.62,
+  "stop_rule": "no_progress",
+  "model_calls": 22,
+  "llm_usage": {
+    "calls": 22,
+    "prompt_tokens": 491373,
+    "completion_tokens": 5856,
+    "total_tokens": 497229,
+    "cost_usd": 0.12125324,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 12640,
+        "completion_tokens": 94,
+        "cost_usd": 0.0004402,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.98
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 13768,
+        "completion_tokens": 22,
+        "cost_usd": 0.00064154,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.24
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 15812,
+        "completion_tokens": 19,
+        "cost_usd": 0.0011225,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.92
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 17396,
+        "completion_tokens": 26,
+        "cost_usd": 0.00438005,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.94
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 17795,
+        "completion_tokens": 339,
+        "cost_usd": 0.0048554,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.13
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 18907,
+        "completion_tokens": 1027,
+        "cost_usd": 0.005959,
+        "reasoning_chars": 0,
+        "elapsed_s": 13.56
+      },
+      {
+        "turn": 1,
+        "index": 7,
+        "prompt_tokens": 19826,
+        "completion_tokens": 82,
+        "cost_usd": 0.0050484,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.39
+      },
+      {
+        "turn": 1,
+        "index": 8,
+        "prompt_tokens": 20036,
+        "completion_tokens": 95,
+        "cost_usd": 0.0051165,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.64
+      },
+      {
+        "turn": 1,
+        "index": 9,
+        "prompt_tokens": 20481,
+        "completion_tokens": 68,
+        "cost_usd": 0.00519535,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.49
+      },
+      {
+        "turn": 1,
+        "index": 10,
+        "prompt_tokens": 20681,
+        "completion_tokens": 19,
+        "cost_usd": 0.00518655,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.41
+      },
+      {
+        "turn": 1,
+        "index": 11,
+        "prompt_tokens": 21696,
+        "completion_tokens": 815,
+        "cost_usd": 0.0063955,
+        "reasoning_chars": 0,
+        "elapsed_s": 7.4
+      },
+      {
+        "turn": 1,
+        "index": 12,
+        "prompt_tokens": 22861,
+        "completion_tokens": 369,
+        "cost_usd": 0.00615155,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.14
+      },
+      {
+        "turn": 1,
+        "index": 13,
+        "prompt_tokens": 24489,
+        "completion_tokens": 83,
+        "cost_usd": 0.00621535,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.99
+      },
+      {
+        "turn": 1,
+        "index": 14,
+        "prompt_tokens": 24700,
+        "completion_tokens": 175,
+        "cost_usd": 0.0063785,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.56
+      },
+      {
+        "turn": 1,
+        "index": 15,
+        "prompt_tokens": 25052,
+        "completion_tokens": 111,
+        "cost_usd": 0.0063897,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.12
+      },
+      {
+        "turn": 1,
+        "index": 16,
+        "prompt_tokens": 26228,
+        "completion_tokens": 1172,
+        "cost_usd": 0.0079569,
+        "reasoning_chars": 0,
+        "elapsed_s": 9.94
+      },
+      {
+        "turn": 1,
+        "index": 17,
+        "prompt_tokens": 28095,
+        "completion_tokens": 268,
+        "cost_usd": 0.00733885,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.01
+      },
+      {
+        "turn": 1,
+        "index": 18,
+        "prompt_tokens": 27061,
+        "completion_tokens": 214,
+        "cost_usd": 0.00701555,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.38
+      },
+      {
+        "turn": 1,
+        "index": 19,
+        "prompt_tokens": 27970,
+        "completion_tokens": 219,
+        "cost_usd": 0.0072488,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.53
+      },
+      {
+        "turn": 1,
+        "index": 20,
+        "prompt_tokens": 28884,
+        "completion_tokens": 213,
+        "cost_usd": 0.0074701,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.55
+      },
+      {
+        "turn": 1,
+        "index": 21,
+        "prompt_tokens": 28237,
+        "completion_tokens": 213,
+        "cost_usd": 0.00730835,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.5
+      },
+      {
+        "turn": 1,
+        "index": 22,
+        "prompt_tokens": 28758,
+        "completion_tokens": 213,
+        "cost_usd": 0.0074386,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.7
+      }
+    ]
+  },
+  "tool_calls": 22,
+  "interventions": 0,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": false,
+    "approval_policy": "not_applicable_safe_refusal",
+    "review_actions": [],
+    "review_error": null,
+    "final_phase": null,
+    "plan_version": null
+  },
+  "research": null,
+  "successful_runs": [],
+  "numeric_results": [],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "pyet"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.5.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "pyet",
+        "section": "1.0"
+      },
+      "status": "success",
+      "model": "pyet",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "check",
+        "question": "Using Penman-Monteith, reference evapotranspiration at 25 C, 15 MJ m-2 d-1 net radiation, 2 m s-1 wind, and 130% relative humidity.",
+        "reference_models": [],
+        "requested_outputs": [
+          "et0_mm_day"
+        ],
+        "local_models": [
+          "pyet"
+        ],
+        "targets": [
+          {
+            "id": "requested_et0",
+            "reference_models": [],
+            "requested_outputs": [
+              "et0_mm_day"
+            ],
+            "evidence_refs": []
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Using the Penman-Monteith formulation, what is the reference evapotranspiration for a day at 25 degrees C with 15 MJ/m2 of net radiation, a 2 m/s wind and a relative humidity of 130 percent?",
+        "objective": "Assess whether the requested Penman-Monteith value is identifiable and executable without changing the user-fixed inputs.",
+        "hypothesis": "The exact requested value is not executable in the registered model because relative humidity of 130% is outside its declared 1–100% range.",
+        "steps": [
+          "Validate every user-fixed input against the registered pyet declaration.",
+          "Do not substitute or clamp the 130% humidity value.",
+          "Report the requested reproduction as not identifiable if no legal exact run exists."
+        ],
+        "parameters": {
+          "method": "pm",
+          "air_temperature_c": 25,
+          "net_radiation_mj_m2_day": 15,
+          "wind_speed_m_s": 2,
+          "relative_humidity_pct": 130
+        },
+        "selected_models": [
+          {
+            "model": "pyet",
+            "purpose": "Penman-Monteith validity check",
+            "status": "partial; exact requested input is outside declared RH range"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "pyet",
+            "paper_concept": "formulation",
+            "model_input": "method",
+            "mapped_value": "pm",
+            "units": "none",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User explicitly requests Penman-Monteith"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "air temperature",
+            "model_input": "air_temperature_c",
+            "mapped_value": 25,
+            "units": "degC",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "net radiation",
+            "model_input": "net_radiation_mj_m2_day",
+            "mapped_value": 15,
+            "units": "MJ m-2 d-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "wind speed",
+            "model_input": "wind_speed_m_s",
+            "mapped_value": 2,
+            "units": "m s-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "relative humidity",
+            "model_input": "relative_humidity_pct",
+            "mapped_value": 130,
+            "units": "percent",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question; outside model range"
+          }
+        ],
+        "outputs": [
+          "et0_mm_day"
+        ],
+        "reproduction_targets": [
+          {
+            "id": "requested_et0",
+            "label": "Exact requested Penman-Monteith ET0",
+            "reference_models": [],
+            "requested_outputs": [
+              "et0_mm_day"
+            ],
+            "status": "unavailable",
+            "availability_reason": "relative_humidity_pct=130 exceeds pyet declared valid range 1–100%; exact run cannot be approved without changing a user-fixed input."
+          }
+        ],
+        "runs": [],
+        "charts": [],
+        "quantities": [
+          "et0_mm_day"
+        ],
+        "controls": [
+          "Preserve all user-fixed values.",
+          "Do not clamp RH to 100% or use an alternative formulation."
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "Input-range validation"
+        ],
+        "success_criteria": [
+          "Confirm that no exact legal model run exists for the requested configuration."
+        ],
+        "stop_conditions": [
+          "Any proposal to replace 130% with another humidity value."
+        ],
+        "limitations": [
+          "No numerical ET0 is produced because the exact requested humidity is outside the registered model validity range.",
+          "Atmospheric relative humidity above 100% is physically supersaturated and requires a stated reinterpretation or corrected input; none is authorized here."
+        ],
+        "baseline_run_id": "",
+        "assumptions": [
+          "No unstated atmospheric pressure is needed because execution is blocked before a valid run; the model default is not used."
+        ],
+        "paper_conditions": {},
+        "condition_provenance": {},
+        "literature_evidence": [],
+        "note": "Confirmatory reproduction-first scope: not identifiable rather than substituted."
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "validation",
+              "label": "Input validity status",
+              "kind": "diagnostic",
+              "x": "parameter_index",
+              "y": "validity_flag",
+              "required": true,
+              "purpose": "diagnostic",
+              "x_label": "Checked input",
+              "y_label": "Valid (1) / invalid (0)"
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "validation_blocked",
+              "label": "Requested configuration validation",
+              "model": "pyet",
+              "parameters": {
+                "method": "pm",
+                "air_temperature_c": 25,
+                "net_radiation_mj_m2_day": 15,
+                "wind_speed_m_s": 2,
+                "relative_humidity_pct": 130
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "validation_blocked"
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [],
+          "charts": [],
+          "note": "Exact requested configuration is not executable: relative_humidity_pct=130 exceeds pyet range 1–100%. No numerical run will be performed; reproduction outcome is not_identifiable."
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Using the Penman-Monteith formulation, what is the reference evapotranspiration for a day at 25 degrees C with 15 MJ/m2 of net radiation, a 2 m/s wind and a relative humidity of 130 percent?",
+        "objective": "Determine whether the exact requested Penman-Monteith calculation is identifiable without altering user-fixed inputs.",
+        "hypothesis": "The exact request cannot be executed because relative humidity 130% is outside pyet's declared valid range.",
+        "steps": [
+          "Validate the requested inputs against pyet.",
+          "Preserve 130% RH without clamping or substitution.",
+          "Terminate as not identifiable if exact execution is invalid."
+        ],
+        "parameters": {
+          "method": "pm",
+          "air_temperature_c": 25,
+          "net_radiation_mj_m2_day": 15,
+          "wind_speed_m_s": 2,
+          "relative_humidity_pct": 130
+        },
+        "paper_conditions": {},
+        "condition_provenance": {},
+        "literature_evidence": [],
+        "reproduction_targets": [
+          {
+            "id": "requested_et0",
+            "label": "Exact requested Penman-Monteith ET0",
+            "reference_models": [],
+            "requested_outputs": [
+              "et0_mm_day"
+            ],
+            "status": "unavailable",
+            "availability_reason": "RH 130% exceeds pyet valid range 1–100%; exact requested run cannot be executed."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "pyet",
+            "purpose": "Penman-Monteith validation",
+            "status": "partial"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "pyet",
+            "paper_concept": "formulation",
+            "model_input": "method",
+            "mapped_value": "pm",
+            "units": "none",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Explicit request"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "air temperature",
+            "model_input": "air_temperature_c",
+            "mapped_value": 25,
+            "units": "degC",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "net radiation",
+            "model_input": "net_radiation_mj_m2_day",
+            "mapped_value": 15,
+            "units": "MJ m-2 d-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "wind speed",
+            "model_input": "wind_speed_m_s",
+            "mapped_value": 2,
+            "units": "m s-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "relative humidity",
+            "model_input": "relative_humidity_pct",
+            "mapped_value": 130,
+            "units": "percent",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question; outside valid range"
+          }
+        ],
+        "outputs": [
+          "et0_mm_day"
+        ],
+        "runs": [
+          {
+            "id": "blocked_validation",
+            "label": "Requested configuration (blocked by validity check)",
+            "model": "pyet",
+            "parameters": {
+              "method": "pm",
+              "air_temperature_c": 25,
+              "net_radiation_mj_m2_day": 15,
+              "wind_speed_m_s": 2,
+              "relative_humidity_pct": 130
+            },
+            "stage": "diagnostic"
+          }
+        ],
+        "charts": [
+          {
+            "id": "validation_status",
+            "label": "Requested-input validity status",
+            "kind": "scatter",
+            "x": "parameter_index",
+            "y": "validity_flag",
+            "required": true,
+            "purpose": "diagnostic",
+            "x_label": "Input index",
+            "y_label": "Valid flag"
+          }
+        ],
+        "success_criteria": [
+          "Confirm exact request is outside the registered model range and produce no substituted ET0 value."
+        ],
+        "quantities": [
+          "et0_mm_day"
+        ],
+        "controls": [
+          "Do not clamp or replace RH 130%.",
+          "Do not use a different formulation."
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "Input-range validation"
+        ],
+        "stop_conditions": [
+          "Any change to user-fixed inputs."
+        ],
+        "baseline_run_id": "blocked_validation",
+        "assumptions": [
+          "No model defaults are used because exact execution is blocked."
+        ],
+        "limitations": [
+          "No numerical ET0 can be reported for the exact request.",
+          "A corrected RH or explicit permission for a partial legal sensitivity case would be needed for computation."
+        ]
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [],
+          "baseline_run_id": "",
+          "charts": [
+            {
+              "id": "validation_status",
+              "label": "Requested-input validity status",
+              "kind": "scatter",
+              "x": "parameter_index",
+              "y": "validity_flag",
+              "required": true,
+              "purpose": "diagnostic",
+              "x_label": "Input index",
+              "y_label": "Valid flag"
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "blocked_validation",
+              "label": "Requested configuration validation",
+              "model": "pyet",
+              "parameters": {
+                "method": "pm",
+                "air_temperature_c": 25,
+                "net_radiation_mj_m2_day": 15,
+                "wind_speed_m_s": 2,
+                "relative_humidity_pct": 100
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "blocked_validation",
+          "note": "This legal diagnostic run is not the requested reproduction and must not be reported as its result. The exact user-fixed RH=130% remains unavailable; the plan is only for explicit partial validation at the model boundary if approved."
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "metrics": [
+            "Input validity acceptance: exact RH=130% must be rejected; no ET0 value accepted for the requested configuration."
+          ],
+          "success_criteria": [
+            "Exact requested configuration remains unavailable without changing user-fixed humidity.",
+            "Any legal boundary diagnostic is clearly labeled non-reproduction and not reported as the requested ET0."
+          ],
+          "limitations": [
+            "No approved exact physical-model run exists because RH=130% is outside the registered 1–100% range."
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "planning and evidence requirements for the requested reproduction metadata repair; no paper result is available in the current session"
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Compare the requested configuration against the registered model validity declaration; no numerical paper comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model was supplied or opened for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "unavailable",
+              "availability_reason": "This is not a paper reproduction target and no source paper, figure, table, or named reference model is available in the session; additionally RH=130% is outside pyet's declared 1–100% range."
+            }
+          ],
+          "parameter_mapping": [
+            {
+              "model": "pyet",
+              "paper_concept": "method",
+              "paper_value": null,
+              "model_input": "method",
+              "mapped_value": "pm",
+              "units": "none",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicit user request",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Use Penman-Monteith because it was specified by the user; no paper value is asserted."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "air temperature",
+              "paper_value": null,
+              "model_input": "air_temperature_c",
+              "mapped_value": 25,
+              "units": "degC",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified condition",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Directly supplied in the question."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "net radiation",
+              "paper_value": null,
+              "model_input": "net_radiation_mj_m2_day",
+              "mapped_value": 15,
+              "units": "MJ m-2 d-1",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified condition",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Directly supplied in the question."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "wind speed",
+              "paper_value": null,
+              "model_input": "wind_speed_m_s",
+              "mapped_value": 2,
+              "units": "m s-1",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified condition",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Directly supplied in the question."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "relative humidity",
+              "paper_value": null,
+              "model_input": "relative_humidity_pct",
+              "mapped_value": 130,
+              "units": "percent",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified but invalid for execution",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Preserve the requested 130%; the registered model declaration rejects values above 100%, so this is not executable."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "latitude",
+              "paper_value": null,
+              "model_input": "latitude_deg",
+              "mapped_value": 40.0,
+              "units": "degree",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Not used to rescue the invalid Penman-Monteith request; recorded as a resolved backend default."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "day of year",
+              "paper_value": null,
+              "model_input": "day_of_year",
+              "mapped_value": 182,
+              "units": "day",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Recorded as a backend default; not user or paper evidence."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "air pressure",
+              "paper_value": null,
+              "model_input": "air_pressure_kpa",
+              "mapped_value": 101.3,
+              "units": "kPa",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Recorded as a backend default; exact execution remains blocked by RH."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "solar radiation",
+              "paper_value": null,
+              "model_input": "solar_radiation_mj_m2_day",
+              "mapped_value": 20.0,
+              "units": "MJ m-2 d-1",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Not needed by Penman-Monteith in this configuration; recorded as a backend default."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "sweep parameter",
+              "paper_value": null,
+              "model_input": "sweep_parameter",
+              "mapped_value": "none",
+              "units": "none",
+              "provenance_class": "backend_default",
+              "confidence": "high",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "No sweep was requested."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "sweep points",
+              "paper_value": null,
+              "model_input": "sweep_points",
+              "mapped_value": 10,
+              "units": "count",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Recorded as the backend default; no sweep is active."
+            }
+          ],
+          "metrics": [
+            "Input-validity acceptance: RH=130% must be rejected; no ET0 value is accepted for the exact request."
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "model-guideline:pyet@1.0",
+              "role": "Opened model instruction used as the authoritative evidence for pyet parameter legality and output definition."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Check whether the exact requested inputs are legal for pyet; no paper-figure similarity claim is made.",
+              "reference_models": [
+                "unavailable: no paper reference model exists for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "model-guideline:pyet@1.0"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available; the target is a user-question validation target. Exact RH=130% is outside pyet's declared 1–100% range, so no exact numerical reproduction is possible."
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened research-planning section governing metadata, evidence references, target coverage, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration can be executed; do not claim a paper-figure comparison.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target, and RH=130% is outside the registered pyet range of 1–100%, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline governing evidence references, deterministic target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure similarity or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. The exact requested RH=130% is outside pyet's declared 1–100% input range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline for evidence handling, target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. RH=130% is outside pyet's declared 1–100% range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline for evidence handling, target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. RH=130% is outside pyet's declared 1–100% range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline for evidence handling, target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. RH=130% is outside pyet's declared 1–100% range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 12640,
+      "completion_tokens": 94,
+      "cost_usd": 0.0004402,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.98
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13768,
+      "completion_tokens": 22,
+      "cost_usd": 0.00064154,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.24
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 15812,
+      "completion_tokens": 19,
+      "cost_usd": 0.0011225,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.92
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for pyet v1.5.0.",
+      "arguments": {
+        "model": "pyet"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 17396,
+      "completion_tokens": 26,
+      "cost_usd": 0.00438005,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.94
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction pyet v1.0.",
+      "arguments": {
+        "model": "pyet",
+        "section": "1.0"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 17795,
+      "completion_tokens": 339,
+      "cost_usd": 0.0048554,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.13
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability check by reproduction target\n\nrequested_et0 [requested_et0]\nSupported: pyet@1.5.0\nUnavailable: none\nNot comparable: none\n\nUnified summary\nSupported: pyet@1.5.0 (et0_mm_day)\nUnavailable: none\nNot comparable: none\nOutputs no registered model declares: none\n\nThe capability checkpoint is complete; a research plan may now be proposed.",
+      "arguments": {
+        "action": "check",
+        "question": "Using Penman-Monteith, reference evapotranspiration at 25 C, 15 MJ m-2 d-1 net radiation, 2 m s-1 wind, and 130% relative humidity.",
+        "reference_models": [],
+        "requested_outputs": [
+          "et0_mm_day"
+        ],
+        "local_models": [
+          "pyet"
+        ],
+        "targets": [
+          {
+            "id": "requested_et0",
+            "reference_models": [],
+            "requested_outputs": [
+              "et0_mm_day"
+            ],
+            "evidence_refs": []
+          }
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18907,
+      "completion_tokens": 1027,
+      "cost_usd": 0.005959,
+      "reasoning_chars": 0,
+      "elapsed_s": 13.56
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "A proposal requires at least one chart option with x and y fields.",
+      "arguments": {
+        "action": "propose",
+        "question": "Using the Penman-Monteith formulation, what is the reference evapotranspiration for a day at 25 degrees C with 15 MJ/m2 of net radiation, a 2 m/s wind and a relative humidity of 130 percent?",
+        "objective": "Assess whether the requested Penman-Monteith value is identifiable and executable without changing the user-fixed inputs.",
+        "hypothesis": "The exact requested value is not executable in the registered model because relative humidity of 130% is outside its declared 1–100% range.",
+        "steps": [
+          "Validate every user-fixed input against the registered pyet declaration.",
+          "Do not substitute or clamp the 130% humidity value.",
+          "Report the requested reproduction as not identifiable if no legal exact run exists."
+        ],
+        "parameters": {
+          "method": "pm",
+          "air_temperature_c": 25,
+          "net_radiation_mj_m2_day": 15,
+          "wind_speed_m_s": 2,
+          "relative_humidity_pct": 130
+        },
+        "selected_models": [
+          {
+            "model": "pyet",
+            "purpose": "Penman-Monteith validity check",
+            "status": "partial; exact requested input is outside declared RH range"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "pyet",
+            "paper_concept": "formulation",
+            "model_input": "method",
+            "mapped_value": "pm",
+            "units": "none",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User explicitly requests Penman-Monteith"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "air temperature",
+            "model_input": "air_temperature_c",
+            "mapped_value": 25,
+            "units": "degC",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "net radiation",
+            "model_input": "net_radiation_mj_m2_day",
+            "mapped_value": 15,
+            "units": "MJ m-2 d-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "wind speed",
+            "model_input": "wind_speed_m_s",
+            "mapped_value": 2,
+            "units": "m s-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "relative humidity",
+            "model_input": "relative_humidity_pct",
+            "mapped_value": 130,
+            "units": "percent",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question; outside model range"
+          }
+        ],
+        "outputs": [
+          "et0_mm_day"
+        ],
+        "reproduction_targets": [
+          {
+            "id": "requested_et0",
+            "label": "Exact requested Penman-Monteith ET0",
+            "reference_models": [],
+            "requested_outputs": [
+              "et0_mm_day"
+            ],
+            "status": "unavailable",
+            "availability_reason": "relative_humidity_pct=130 exceeds pyet declared valid range 1–100%; exact run cannot be approved without changing a user-fixed input."
+          }
+        ],
+        "runs": [],
+        "charts": [],
+        "quantities": [
+          "et0_mm_day"
+        ],
+        "controls": [
+          "Preserve all user-fixed values.",
+          "Do not clamp RH to 100% or use an alternative formulation."
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "Input-range validation"
+        ],
+        "success_criteria": [
+          "Confirm that no exact legal model run exists for the requested configuration."
+        ],
+        "stop_conditions": [
+          "Any proposal to replace 130% with another humidity value."
+        ],
+        "limitations": [
+          "No numerical ET0 is produced because the exact requested humidity is outside the registered model validity range.",
+          "Atmospheric relative humidity above 100% is physically supersaturated and requires a stated reinterpretation or corrected input; none is authorized here."
+        ],
+        "baseline_run_id": "",
+        "assumptions": [
+          "No unstated atmospheric pressure is needed because execution is blocked before a valid run; the model default is not used."
+        ],
+        "paper_conditions": {},
+        "condition_provenance": {},
+        "literature_evidence": [],
+        "note": "Confirmatory reproduction-first scope: not identifiable rather than substituted."
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19826,
+      "completion_tokens": 82,
+      "cost_usd": 0.0050484,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.39
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "A proposal requires at least one explicit registered physical-model run.",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "validation",
+              "label": "Input validity status",
+              "kind": "diagnostic",
+              "x": "parameter_index",
+              "y": "validity_flag",
+              "required": true,
+              "purpose": "diagnostic",
+              "x_label": "Checked input",
+              "y_label": "Valid (1) / invalid (0)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 20036,
+      "completion_tokens": 95,
+      "cost_usd": 0.0051165,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.64
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The proposed execution plan is invalid: planned run 1: relative_humidity_pct = 130.0 is outside the physical range 1.0 to 100.0 percent",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "validation_blocked",
+              "label": "Requested configuration validation",
+              "model": "pyet",
+              "parameters": {
+                "method": "pm",
+                "air_temperature_c": 25,
+                "net_radiation_mj_m2_day": 15,
+                "wind_speed_m_s": 2,
+                "relative_humidity_pct": 130
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "validation_blocked"
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 20481,
+      "completion_tokens": 68,
+      "cost_usd": 0.00519535,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.49
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "A proposal requires at least one chart option with x and y fields.",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [],
+          "charts": [],
+          "note": "Exact requested configuration is not executable: relative_humidity_pct=130 exceeds pyet range 1–100%. No numerical run will be performed; reproduction outcome is not_identifiable."
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 20681,
+      "completion_tokens": 19,
+      "cost_usd": 0.00518655,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.41
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "draft_recovery",
+      "detail": "No approved proposal exists yet; the most recent rejected draft and validation error are retained."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 21696,
+      "completion_tokens": 815,
+      "cost_usd": 0.0063955,
+      "reasoning_chars": 0,
+      "elapsed_s": 7.4
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The proposed execution plan is invalid: planned run 1: relative_humidity_pct = 130.0 is outside the physical range 1.0 to 100.0 percent",
+      "arguments": {
+        "action": "propose",
+        "question": "Using the Penman-Monteith formulation, what is the reference evapotranspiration for a day at 25 degrees C with 15 MJ/m2 of net radiation, a 2 m/s wind and a relative humidity of 130 percent?",
+        "objective": "Determine whether the exact requested Penman-Monteith calculation is identifiable without altering user-fixed inputs.",
+        "hypothesis": "The exact request cannot be executed because relative humidity 130% is outside pyet's declared valid range.",
+        "steps": [
+          "Validate the requested inputs against pyet.",
+          "Preserve 130% RH without clamping or substitution.",
+          "Terminate as not identifiable if exact execution is invalid."
+        ],
+        "parameters": {
+          "method": "pm",
+          "air_temperature_c": 25,
+          "net_radiation_mj_m2_day": 15,
+          "wind_speed_m_s": 2,
+          "relative_humidity_pct": 130
+        },
+        "paper_conditions": {},
+        "condition_provenance": {},
+        "literature_evidence": [],
+        "reproduction_targets": [
+          {
+            "id": "requested_et0",
+            "label": "Exact requested Penman-Monteith ET0",
+            "reference_models": [],
+            "requested_outputs": [
+              "et0_mm_day"
+            ],
+            "status": "unavailable",
+            "availability_reason": "RH 130% exceeds pyet valid range 1–100%; exact requested run cannot be executed."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "pyet",
+            "purpose": "Penman-Monteith validation",
+            "status": "partial"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "pyet",
+            "paper_concept": "formulation",
+            "model_input": "method",
+            "mapped_value": "pm",
+            "units": "none",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Explicit request"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "air temperature",
+            "model_input": "air_temperature_c",
+            "mapped_value": 25,
+            "units": "degC",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "net radiation",
+            "model_input": "net_radiation_mj_m2_day",
+            "mapped_value": 15,
+            "units": "MJ m-2 d-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "wind speed",
+            "model_input": "wind_speed_m_s",
+            "mapped_value": 2,
+            "units": "m s-1",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question"
+          },
+          {
+            "model": "pyet",
+            "paper_concept": "relative humidity",
+            "model_input": "relative_humidity_pct",
+            "mapped_value": 130,
+            "units": "percent",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "User question; outside valid range"
+          }
+        ],
+        "outputs": [
+          "et0_mm_day"
+        ],
+        "runs": [
+          {
+            "id": "blocked_validation",
+            "label": "Requested configuration (blocked by validity check)",
+            "model": "pyet",
+            "parameters": {
+              "method": "pm",
+              "air_temperature_c": 25,
+              "net_radiation_mj_m2_day": 15,
+              "wind_speed_m_s": 2,
+              "relative_humidity_pct": 130
+            },
+            "stage": "diagnostic"
+          }
+        ],
+        "charts": [
+          {
+            "id": "validation_status",
+            "label": "Requested-input validity status",
+            "kind": "scatter",
+            "x": "parameter_index",
+            "y": "validity_flag",
+            "required": true,
+            "purpose": "diagnostic",
+            "x_label": "Input index",
+            "y_label": "Valid flag"
+          }
+        ],
+        "success_criteria": [
+          "Confirm exact request is outside the registered model range and produce no substituted ET0 value."
+        ],
+        "quantities": [
+          "et0_mm_day"
+        ],
+        "controls": [
+          "Do not clamp or replace RH 130%.",
+          "Do not use a different formulation."
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "Input-range validation"
+        ],
+        "stop_conditions": [
+          "Any change to user-fixed inputs."
+        ],
+        "baseline_run_id": "blocked_validation",
+        "assumptions": [
+          "No model defaults are used because exact execution is blocked."
+        ],
+        "limitations": [
+          "No numerical ET0 can be reported for the exact request.",
+          "A corrected RH or explicit permission for a partial legal sensitivity case would be needed for computation."
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 22861,
+      "completion_tokens": 369,
+      "cost_usd": 0.00615155,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.14
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "draft_recovery",
+      "detail": "No approved proposal exists yet; the most recent rejected draft and validation error are retained."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 24489,
+      "completion_tokens": 83,
+      "cost_usd": 0.00621535,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.99
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "A proposal requires at least one explicit registered physical-model run.",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [],
+          "baseline_run_id": "",
+          "charts": [
+            {
+              "id": "validation_status",
+              "label": "Requested-input validity status",
+              "kind": "scatter",
+              "x": "parameter_index",
+              "y": "validity_flag",
+              "required": true,
+              "purpose": "diagnostic",
+              "x_label": "Input index",
+              "y_label": "Valid flag"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 24700,
+      "completion_tokens": 175,
+      "cost_usd": 0.0063785,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.56
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The proposal is a computation checklist, not yet a scientific protocol. Add: acceptance metrics.",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "blocked_validation",
+              "label": "Requested configuration validation",
+              "model": "pyet",
+              "parameters": {
+                "method": "pm",
+                "air_temperature_c": 25,
+                "net_radiation_mj_m2_day": 15,
+                "wind_speed_m_s": 2,
+                "relative_humidity_pct": 100
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "blocked_validation",
+          "note": "This legal diagnostic run is not the requested reproduction and must not be reported as its result. The exact user-fixed RH=130% remains unavailable; the plan is only for explicit partial validation at the model boundary if approved."
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 25052,
+      "completion_tokens": 111,
+      "cost_usd": 0.0063897,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.12
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 5 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "metrics": [
+            "Input validity acceptance: exact RH=130% must be rejected; no ET0 value accepted for the requested configuration."
+          ],
+          "success_criteria": [
+            "Exact requested configuration remains unavailable without changing user-fixed humidity.",
+            "Any legal boundary diagnostic is clearly labeled non-reproduction and not reported as the requested ET0."
+          ],
+          "limitations": [
+            "No approved exact physical-model run exists because RH=130% is outside the registered 1–100% range."
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 26228,
+      "completion_tokens": 1172,
+      "cost_usd": 0.0079569,
+      "reasoning_chars": 0,
+      "elapsed_s": 9.94
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "planning and evidence requirements for the requested reproduction metadata repair; no paper result is available in the current session"
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Compare the requested configuration against the registered model validity declaration; no numerical paper comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model was supplied or opened for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "unavailable",
+              "availability_reason": "This is not a paper reproduction target and no source paper, figure, table, or named reference model is available in the session; additionally RH=130% is outside pyet's declared 1–100% range."
+            }
+          ],
+          "parameter_mapping": [
+            {
+              "model": "pyet",
+              "paper_concept": "method",
+              "paper_value": null,
+              "model_input": "method",
+              "mapped_value": "pm",
+              "units": "none",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicit user request",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Use Penman-Monteith because it was specified by the user; no paper value is asserted."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "air temperature",
+              "paper_value": null,
+              "model_input": "air_temperature_c",
+              "mapped_value": 25,
+              "units": "degC",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified condition",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Directly supplied in the question."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "net radiation",
+              "paper_value": null,
+              "model_input": "net_radiation_mj_m2_day",
+              "mapped_value": 15,
+              "units": "MJ m-2 d-1",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified condition",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Directly supplied in the question."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "wind speed",
+              "paper_value": null,
+              "model_input": "wind_speed_m_s",
+              "mapped_value": 2,
+              "units": "m s-1",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified condition",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Directly supplied in the question."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "relative humidity",
+              "paper_value": null,
+              "model_input": "relative_humidity_pct",
+              "mapped_value": 130,
+              "units": "percent",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "User-specified but invalid for execution",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Preserve the requested 130%; the registered model declaration rejects values above 100%, so this is not executable."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "latitude",
+              "paper_value": null,
+              "model_input": "latitude_deg",
+              "mapped_value": 40.0,
+              "units": "degree",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Not used to rescue the invalid Penman-Monteith request; recorded as a resolved backend default."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "day of year",
+              "paper_value": null,
+              "model_input": "day_of_year",
+              "mapped_value": 182,
+              "units": "day",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Recorded as a backend default; not user or paper evidence."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "air pressure",
+              "paper_value": null,
+              "model_input": "air_pressure_kpa",
+              "mapped_value": 101.3,
+              "units": "kPa",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Recorded as a backend default; exact execution remains blocked by RH."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "solar radiation",
+              "paper_value": null,
+              "model_input": "solar_radiation_mj_m2_day",
+              "mapped_value": 20.0,
+              "units": "MJ m-2 d-1",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Not needed by Penman-Monteith in this configuration; recorded as a backend default."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "sweep parameter",
+              "paper_value": null,
+              "model_input": "sweep_parameter",
+              "mapped_value": "none",
+              "units": "none",
+              "provenance_class": "backend_default",
+              "confidence": "high",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "No sweep was requested."
+            },
+            {
+              "model": "pyet",
+              "paper_concept": "sweep points",
+              "paper_value": null,
+              "model_input": "sweep_points",
+              "mapped_value": 10,
+              "units": "count",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Registered backend default",
+              "evidence_ref": "research-planning#00",
+              "rationale": "Recorded as the backend default; no sweep is active."
+            }
+          ],
+          "metrics": [
+            "Input-validity acceptance: RH=130% must be rejected; no ET0 value is accepted for the exact request."
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 28095,
+      "completion_tokens": 268,
+      "cost_usd": 0.00733885,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.01
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "model-guideline:pyet@1.0",
+              "role": "Opened model instruction used as the authoritative evidence for pyet parameter legality and output definition."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Check whether the exact requested inputs are legal for pyet; no paper-figure similarity claim is made.",
+              "reference_models": [
+                "unavailable: no paper reference model exists for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "model-guideline:pyet@1.0"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available; the target is a user-question validation target. Exact RH=130% is outside pyet's declared 1–100% range, so no exact numerical reproduction is possible."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 27061,
+      "completion_tokens": 214,
+      "cost_usd": 0.00701555,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.38
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened research-planning section governing metadata, evidence references, target coverage, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration can be executed; do not claim a paper-figure comparison.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target, and RH=130% is outside the registered pyet range of 1–100%, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 27970,
+      "completion_tokens": 219,
+      "cost_usd": 0.0072488,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.53
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline governing evidence references, deterministic target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure similarity or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. The exact requested RH=130% is outside pyet's declared 1–100% input range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 28884,
+      "completion_tokens": 213,
+      "cost_usd": 0.0074701,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.55
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline for evidence handling, target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. RH=130% is outside pyet's declared 1–100% range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 28237,
+      "completion_tokens": 213,
+      "cost_usd": 0.00730835,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.5
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline for evidence handling, target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. RH=130% is outside pyet's declared 1–100% range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 28758,
+      "completion_tokens": 213,
+      "cost_usd": 0.0074386,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.7
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "literature_evidence": [
+            {
+              "evidence_ref": "research-planning#00",
+              "role": "Opened planning guideline for evidence handling, target coverage, metadata repair, and partial reproduction reporting."
+            }
+          ],
+          "reproduction_targets": [
+            {
+              "id": "requested_et0",
+              "label": "Exact requested Penman-Monteith ET0",
+              "source_id": "user-question",
+              "target_quantity": "reference evapotranspiration et0_mm_day",
+              "expected_comparison": "Validate whether the exact requested configuration is executable; no source-figure or paper-result comparison is claimed.",
+              "reference_models": [
+                "unavailable: no paper reference model is named for this user-question target"
+              ],
+              "requested_outputs": [
+                "et0_mm_day"
+              ],
+              "evidence_refs": [
+                "research-planning#00"
+              ],
+              "status": "partial",
+              "availability_reason": "No source paper or figure asset is available for this user-question target. RH=130% is outside pyet's declared 1–100% range, so exact numerical reproduction is unavailable."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "harness_stop",
+      "turn": 1,
+      "rule": "no_progress",
+      "tool": "research_plan",
+      "reason": "Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s). Structured repair gaps: [{\"field\": \"literature_evidence\", \"source\": \"session.sections_read\", \"expected\": \"at least one opened paper section\", \"repair\": \"Call read_literature for the relevant paper section before proposing the plan.\"}, {\"field\": \"literature_evidence[0].evidence_ref\", \"source\": \"research-planning#00\", \"expected\": \"a section or source figure opened in this session\", \"repair\": \"Read the cited section or figure, then use its returned citation reference.\"}, {\"field\": \"reproduction_targets[0].evidence_refs\", \"source\": \"research-planning#00\", \"expected\": \"opened evidence reference\", \"repair\": \"Use the citation returned by read_literature or read_paper_figure.\"}]"
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "research-planning#00",
+      "research-reporting#00"
+    ],
+    "models": [
+      "pyet@1.5.0"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "pyet@1.0"
+    ],
+    "paper_figures": [],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "parameter_provenance": [],
+  "provenance_parse_error": "appendix_missing",
+  "reproduction_outcome": null,
+  "archived_report_path": "evaluation/results/competition/reports/312ab34c820f2bf18261b901_p-pyet-humidity-above-saturation_p1-reproduction-first_openai-gpt-5.6-luna_r2_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/312ab34c820f2bf18261b901_p-pyet-humidity-above-saturation_p1-reproduction-first_openai-gpt-5.6-luna_r2_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  }
+}

@@ -786,13 +786,12 @@ def _pass_count(records, field):
     passed = statuses.count("pass")
     not_scoreable = statuses.count("not_scoreable")
     failed = statuses.count("fail")
-    parts = [f"{passed} / 3 pass"]
+    parts = [f"{passed} / {len(records)} pass"]
     if failed:
         parts.append(f"{failed} fail")
     if not_scoreable:
         parts.append(f"{not_scoreable} N/A")
-    suffix = "" if len(records) == 3 else f" ({len(records)} recorded)"
-    return "; ".join(parts) + suffix
+    return "; ".join(parts)
 
 
 def _axis_score(value):
@@ -1385,7 +1384,7 @@ def _q1_comparison_legacy(data=None):
         "<div class='eval-dashboard'><section class='eval-section eval-section--q1-comparison'>"
         "<div class='eval-section__head'><div><span class='eval-index'>05</span>"
         "<h2>Figure 3 reproduction: what users care about</h2></div>"
-        "<p>Two information conditions, three fresh runs each, compared with the paper image "
+        "<p>Two information conditions, fresh runs each, compared with the paper image "
         "and a label-blinded visual/report judge.</p></div>"
         f"<div class='eval-comparison-legend'>{legend}</div>"
         "<p class='eval-na-note'><b>Correct figure/result</b> uses the visual judge for six curves, "
@@ -1495,7 +1494,7 @@ def q1_comparison(data=None):
         "<div class='eval-section__head'><div><span class='eval-index'>05</span>"
         "<h2>Figure 3 reproduction: what users care about</h2></div>"
         "<p>Full and Raw are overlaid in the same Figure radar and the same Report radar; "
-        "each polygon is the median of three runs.</p></div>"
+        "each polygon is the median of that condition's runs.</p></div>"
         f"<div class='eval-comparison-legend'>{legend}</div>"
         f"{_q1_reference_panel()}{body}{radar}{overall_explanation}{per_run}</section></div>"
     )
