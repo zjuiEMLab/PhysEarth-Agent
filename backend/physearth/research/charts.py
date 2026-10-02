@@ -2,7 +2,7 @@
 
 import re
 
-from physearth import registry
+from physearth import plotting, registry
 from physearth.corpus import knowledge
 
 
@@ -171,8 +171,10 @@ def _validate_chart_runs(charts, runs):
     problems = []
     for chart in charts:
         units = set()
+        series = 0
         for y_name in _chart_y_names(chart):
             producers = [run["id"] for run in runs if _run_produces_chart(run, chart, y_name)]
+            series += len(producers)
             if not producers:
                 problems.append(
                     "no planned run produces %s over x=%s" % (y_name, chart["x"])
@@ -187,6 +189,14 @@ def _validate_chart_runs(charts, runs):
             problems.append(
                 "%s mixes incompatible y-axis units: %s; split it into separate charts"
                 % (chart["label"], ", ".join(sorted(units)))
+            )
+        if series > plotting.MAX_SERIES:
+            # The renderer refuses it, so an approved plan with this chart can never
+            # produce its figure; say so while the plan can still change.
+            problems.append(
+                "%s would draw %d series (each producing run times each y), more than the "
+                "%d one chart can hold; split it into separate charts or plot fewer outputs"
+                % (chart["label"], series, plotting.MAX_SERIES)
             )
     for run in runs:
         stage = str(run.get("stage") or "main").strip().lower()

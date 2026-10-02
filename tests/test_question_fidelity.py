@@ -98,3 +98,22 @@ def test_a_comparison_the_user_asked_for_survives_a_restated_question():
     assert not _question_coverage_problems("Compute ET0 for the example.", runs, charts)
     problems = _question_coverage_problems("Compute ET0 for the example.", runs, charts, asked)
     assert any("formulation attribution" in item for item in problems)
+
+
+def test_a_chart_the_renderer_cannot_draw_is_refused_at_planning():
+    from physearth.research.charts import _validate_chart_runs
+
+    runs = [
+        {"id": "r%d" % index, "label": "run %d" % index, "model": "prosail",
+         "parameters": {"sweep_parameter": "leaf_area_index"}}
+        for index in range(2)
+    ]
+    outputs = [
+        "reflectance_green", "reflectance_red", "reflectance_nir", "reflectance_swir", "ndvi",
+    ]
+    chart = {"id": "c", "label": "all bands", "x": "leaf_area_index", "y": outputs[0],
+             "ys": outputs, "required": True}
+    problems = _validate_chart_runs([chart], runs)
+    assert any("would draw 10 series" in item for item in problems)
+    chart["ys"] = outputs[:4]
+    assert not any("series" in item for item in _validate_chart_runs([chart], runs))
