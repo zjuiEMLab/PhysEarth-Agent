@@ -172,7 +172,8 @@ def _event_summary(events):
     keep = (
         "kind", "turn", "rule", "name", "status", "phase", "tool", "qc",
         "intervention", "detail", "reason", "upstream", "prompt_tokens",
-        "completion_tokens", "cost_usd", "reasoning_chars", "elapsed_s",
+        "cached_prompt_tokens", "completion_tokens", "first_token_s", "attempt", "cost_usd",
+        "reasoning_chars", "elapsed_s",
     )
     # What the trace view needs to redraw a step: the one-line result, the arguments the
     # model sent, and the reasons a gate gave. Bounded, and passed through the redactor.
@@ -198,6 +199,19 @@ def _event_summary(events):
         item = {field: event.get(field) for field in keep if event.get(field) is not None}
         if "upstream" in item:
             item["upstream"] = safe(item["upstream"])
+        # Why a tool call failed is in its data, not its one-line summary: keep the error
+        # code and the structured problems, bounded, so a refused plan can be diagnosed
+        # from the record after the session log is gone.
+        data = event.get("data") or {}
+        if event.get("kind") == "tool_call" and event.get("status") != "success":
+            if data.get("error_code"):
+                item["error_code"] = safe(data["error_code"])
+            if data.get("problems") and event.get("problems") is None:
+                item["problems"] = [
+                    safe(json.dumps(entry, ensure_ascii=False, default=str))
+                    if isinstance(entry, dict) else safe(entry)
+                    for entry in list(data["problems"])[:8]
+                ]
         for field in trace_fields:
             value = event.get(field)
             if value is None:
@@ -226,6 +240,8 @@ def _provider_name(base_url):
 
 def _llm_usage(events):
     calls = [event for event in events if event.get("kind") == "model_call"]
+    failed = [event for event in events if event.get("kind") == "empty_response"]
+    cached = [event.get("cached_prompt_tokens") for event in calls]
     prompt = [event.get("prompt_tokens") for event in calls]
     completion = [event.get("completion_tokens") for event in calls]
     costs = [event.get("cost_usd") for event in calls]
@@ -249,15 +265,27 @@ def _llm_usage(events):
         ),
         "cost_usd": sum(known_costs) if len(known_costs) == len(calls) else None,
         "cost_complete": len(known_costs) == len(calls),
+        # A failed attempt is billed when it fails mid-stream but reports no usage, so it is
+        # counted here rather than silently dropped.
+        "failed_attempts": len(failed),
+        "failed_attempt_faults": sorted({str(event.get("detail"))[:120] for event in failed}),
+        "cached_prompt_tokens": (
+            sum(int(value) for value in cached)
+            if calls and all(isinstance(value, (int, float)) for value in cached)
+            else None
+        ),
         "per_call": [
             {
                 "turn": event.get("turn"),
                 "index": event.get("index"),
                 "prompt_tokens": event.get("prompt_tokens"),
+                "cached_prompt_tokens": event.get("cached_prompt_tokens"),
                 "completion_tokens": event.get("completion_tokens"),
                 "cost_usd": event.get("cost_usd"),
                 "reasoning_chars": event.get("reasoning_chars"),
                 "elapsed_s": event.get("elapsed_s"),
+                "first_token_s": event.get("first_token_s"),
+                "attempt": event.get("attempt"),
             }
             for event in calls
         ],
@@ -267,7 +295,7 @@ def _llm_usage(events):
 def _judge_usage(*judgements):
     """Combine report and visual-figure judge usage without exposing credentials."""
     usage = {}
-    for name in ("prompt_tokens", "completion_tokens", "total_tokens"):
+    for name in ("prompt_tokens", "completion_tokens", "total_tokens", "cost_usd"):
         values = [
             (judgement.get("usage") or {}).get(name)
             for judgement in judgements
@@ -275,7 +303,7 @@ def _judge_usage(*judgements):
         ]
         usage[name] = (
             sum(values)
-            if values and all(isinstance(value, int) for value in values)
+            if values and all(isinstance(value, (int, float)) for value in values)
             else None
         )
     return usage

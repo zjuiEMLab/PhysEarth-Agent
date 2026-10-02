@@ -1109,3 +1109,44 @@ def test_a_raw_smrt_call_is_checked_against_the_smrt_card():
     calls = competition_score.score.classify_calls({"tool_log": [executed, legal, failed]})
     assert (calls["legal"], calls["illegal_executed"], calls["illegal_refused"]) == (1, 1, 1)
     assert any("stickiness" in problem for problem in calls["illegal_details"][0]["problems"])
+
+
+def test_a_record_keeps_retries_cache_first_token_and_why_a_plan_was_refused():
+    from types import SimpleNamespace
+
+    from physearth.agent.completion import _Completion
+
+    completion = _Completion()
+    usage = SimpleNamespace(
+        prompt_tokens=1000, completion_tokens=50, cost=0.002, cost_details=None,
+        prompt_tokens_details=SimpleNamespace(cached_tokens=800),
+    )
+    delta = SimpleNamespace(content="hi", reasoning_content=None, tool_calls=None)
+    completion.feed(SimpleNamespace(usage=None, choices=[SimpleNamespace(delta=delta,
+                                                                         finish_reason=None)]))
+    completion.feed(SimpleNamespace(usage=usage, choices=[]))
+    assert completion.cached_prompt_tokens == 800 and completion.first_token_s is not None
+
+    competition = _load_runner("competition")
+    events = [
+        {"kind": "empty_response", "attempt": 1, "detail": "HTTP 502"},
+        {"kind": "model_call", "index": 1, "prompt_tokens": 1000, "cached_prompt_tokens": 800,
+         "completion_tokens": 50, "cost_usd": 0.002, "first_token_s": 0.4, "attempt": 2},
+        {"kind": "tool_call", "name": "research_plan", "status": "terminal_error",
+         "summary": "Reproduction plan incomplete.",
+         "data": {"error_code": "reproduction_evidence_incomplete",
+                  "problems": [{"field": "literature_evidence", "expected": "a section"}]}},
+    ]
+    usage = competition._llm_usage(events)
+    assert usage["failed_attempts"] == 1 and usage["failed_attempt_faults"] == ["HTTP 502"]
+    assert usage["cached_prompt_tokens"] == 800 and usage["per_call"][0]["attempt"] == 2
+    refused = competition._event_summary(events)[2]
+    assert refused["error_code"] == "reproduction_evidence_incomplete"
+    assert "literature_evidence" in refused["problems"][0]
+
+    response = SimpleNamespace(usage=SimpleNamespace(model_dump=lambda: {
+        "prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12, "cost": 0.0001}))
+    assert judge._usage(response)["cost_usd"] == 0.0001
+    assert judge._sum_usage([{"usage": {"cost_usd": 0.1}}, {"usage": {"cost_usd": 0.2}}])[
+        "cost_usd"
+    ] == pytest.approx(0.3)

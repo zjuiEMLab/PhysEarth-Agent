@@ -2,6 +2,7 @@
 
 import ast
 import json
+import time
 
 from openai import OpenAI
 
@@ -29,6 +30,9 @@ class _Completion:
         self.completion_tokens = None
         self.cost_usd = None
         self.cost_details = None
+        self.cached_prompt_tokens = None
+        self.started = time.perf_counter()
+        self.first_token_s = None
 
     def feed(self, chunk):
         usage = getattr(chunk, "usage", None)
@@ -40,6 +44,10 @@ class _Completion:
             cost = getattr(usage, "cost", None)
             if cost is not None:
                 self.cost_usd = float(cost)
+            prompt_details = getattr(usage, "prompt_tokens_details", None)
+            cached = getattr(prompt_details, "cached_tokens", None) if prompt_details else None
+            if cached is not None:
+                self.cached_prompt_tokens = int(cached)
             details = getattr(usage, "cost_details", None)
             if details is not None:
                 self.cost_details = (
@@ -72,6 +80,8 @@ class _Completion:
                 if fn.arguments:
                     slot["arguments"] += fn.arguments
             grew = True
+        if grew and self.first_token_s is None:
+            self.first_token_s = round(time.perf_counter() - self.started, 2)
         return grew
 
     def tool_calls(self):

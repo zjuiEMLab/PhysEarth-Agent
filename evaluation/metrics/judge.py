@@ -162,10 +162,13 @@ def _model_aliases(value):
 
 def _usage(response):
     raw = response.usage.model_dump() if response.usage else {}
+    cost = raw.get("cost")
     return {
         "prompt_tokens": raw.get("prompt_tokens"),
         "completion_tokens": raw.get("completion_tokens"),
         "total_tokens": raw.get("total_tokens"),
+        # OpenRouter reports the provider cost in USD beside the token counts.
+        "cost_usd": float(cost) if isinstance(cost, (int, float)) else None,
     }
 
 
@@ -581,11 +584,11 @@ def judge_report(
 def _sum_usage(attempts):
     usages = [item.get("usage") or {} for item in attempts]
     result = {}
-    for name in ("prompt_tokens", "completion_tokens", "total_tokens"):
+    for name in ("prompt_tokens", "completion_tokens", "total_tokens", "cost_usd"):
         values = [item.get(name) for item in usages]
         result[name] = (
             sum(values)
-            if values and all(isinstance(value, int) for value in values)
+            if values and all(isinstance(value, (int, float)) for value in values)
             else None
         )
     return result
