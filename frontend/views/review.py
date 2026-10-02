@@ -211,7 +211,7 @@ def _structured_approval_bar(session, project, research):
         )
     )
     guidance = {
-        "plan_review": "Review the method, variables, runs, and acceptance criteria. No physical result is authorized.",
+        "plan_review": "Review the method, variables, runs, and acceptance criteria. No physical result is authorized. Approve and run skips the layout preview and runs the plan with its required figures.",
         "plan_approved": "Only a display-only preview is authorized. No physical model call is authorized.",
         "pseudo_preview": "Pseudo-data demonstrate layout only. Select the chart package or revise the plan.",
         "chart_selected": "The selected figure package is ready for formal execution approval.",

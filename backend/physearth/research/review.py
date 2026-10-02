@@ -9,11 +9,40 @@ from physearth.research.approval import (
 from physearth.research.common import _fail, _needs, _ok, _public, _require
 
 
+def _select_required_charts(project, note):
+    """The required charts are part of the reviewed plan; confirming it confirms them.
+
+    Used when no optional chart was picked, so the workflow has one figure approval rather
+    than an invisible extra click on a required-chart button.
+    """
+    selected = list(project.get("selected_charts") or [])
+    if selected:
+        return selected
+    charts = project.get("plan", {}).get("charts") or []
+    selected = [
+        chart.get("id") for chart in charts if chart.get("required", True) and chart.get("id")
+    ]
+    project["selected_charts"] = selected
+    project["selected_chart"] = next(
+        (dict(chart) for chart in charts if chart.get("id") in selected), None
+    )
+    if selected:
+        project.setdefault("review_log", []).append(
+            {
+                "version": project["plan_version"],
+                "note": note,
+                "changes": {"selected_charts": list(selected)},
+            }
+        )
+    return selected
+
+
 def review_action(session, choice):
     """Apply one of the two user-facing review controls to the current phase.
 
     Plan edits are made in Conversation. The second control is final figure
-    confirmation, not a second plan-approval or regeneration path. Legacy
+    confirmation; in plan review it approves the plan, its required figures and their
+    execution in one step. It is never a regeneration path. Legacy
     ``secondary``/``pause`` values remain accepted for old callers but are not
     rendered by the current UI.
     """
@@ -39,37 +68,32 @@ def review_action(session, choice):
                 "Formal execution is already approved for the current plan; the duplicate figure confirmation was ignored.",
                 _public(project),
             )
-        if phase == "pseudo_preview":
-            # The required charts are part of the reviewed plan.  Treat the user's
-            # explicit figure confirmation as the chart-package confirmation when no
-            # optional chart was selected, so the workflow has one figure approval
-            # rather than an invisible extra click on a required-chart button.
-            selected = list(project.get("selected_charts") or [])
+        if phase == "plan_review":
+            # Approve and run: one human decision covers the plan, its required figures
+            # and their execution, for a user who does not want the layout preview. The
+            # approval is still the user's click; nothing here can be reached by the agent.
+            approved = approve_plan(session)
+            if project["phase"] != "plan_approved":
+                return approved
+            project["phase"] = "pseudo_preview"
+            selected = _select_required_charts(project, "user approved the plan and its required figures for execution")
             if not selected:
-                selected = [
-                    chart.get("id")
-                    for chart in project.get("plan", {}).get("charts") or []
-                    if chart.get("required", True) and chart.get("id")
-                ]
-                project["selected_charts"] = selected
-                project["selected_chart"] = next(
-                    (
-                        dict(chart)
-                        for chart in project.get("plan", {}).get("charts") or []
-                        if chart.get("id") in selected
-                    ),
-                    None,
+                project["phase"] = "plan_approved"
+                return _needs(
+                    "The plan has no required figure to run. Preview the layout and select a "
+                    "chart, or revise the plan in Conversation.",
+                    _public(project),
                 )
-                project.setdefault("review_log", []).append(
-                    {
-                        "version": project["plan_version"],
-                        "note": "user confirmed the required figure package",
-                        "changes": {"selected_charts": list(selected)},
-                    }
-                )
+            confirm_charts(session)
+            return approve_execution(session)
+        if phase == "pseudo_preview":
+            selected = _select_required_charts(
+                project, "user confirmed the required figure package"
+            )
             if not selected:
                 return _needs(
-                    "The plan has no required figure to confirm. Select a chart or revise the plan in Conversation.",
+                    "The plan has no required figure to confirm. Select a chart or revise the "
+                    "plan in Conversation.",
                     _public(project),
                 )
             confirm_charts(session)

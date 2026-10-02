@@ -489,8 +489,11 @@ def review_click(box, action):
             # Formal execution approval is the run approval. Do not ask a second time.
             approval.set_mode(session, approval.ALWAYS)
         if (
-            action in ("primary", "satisfied_figures")
-            and phase_before in ("pseudo_preview", "chart_selected")
+            (
+                action in ("primary", "satisfied_figures")
+                and phase_before in ("pseudo_preview", "chart_selected")
+                or action == "satisfied_figures" and phase_before == "plan_review"
+            )
             and research.allow_model(session)
         ):
             # The phase transition is idempotent, but the continuation is a one-shot

@@ -1628,3 +1628,24 @@ def test_formulation_attribution_reads_the_formulation_parameter_from_the_card()
     assert problems(runs("pyet", "method", ["pm"]))
     assert problems(runs("smrt", "electromagnetic_model", ["iba", "dmrt_qca_shortrange"])) == []
     assert problems(runs("smrt", "microstructure_model", ["exponential", "sticky_hard_spheres"]))
+
+
+def test_approve_and_run_is_one_human_step_from_plan_review():
+    from frontend import studio as app
+
+    box = session.new_session("m")
+    box["research_required"] = True
+    _proposal(box)
+    assert box["research"]["phase"] == "plan_review"
+    assert not research.allow_model(box)
+
+    command = app.review_click(box, "satisfied_figures")[3]
+    assert box["research"]["phase"] == "approved"
+    assert research.allow_model(box)
+    assert command.startswith("I approve formal execution")
+    required = [
+        chart["id"] for chart in box["research"]["plan"]["charts"] if chart.get("required", True)
+    ]
+    assert box["research"]["selected_charts"] == required
+    assert "required figures for execution" in box["research"]["review_log"][-1]["note"]
+    assert app.review_click(box, "satisfied_figures")[3] == ""

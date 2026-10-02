@@ -24,6 +24,53 @@ from physearth.agent.trace import _event
 from physearth.harness import approval, audit, budget
 from physearth.harness import switches as switch_flags
 
+_STOP_ACTIONS = {
+    "research_plan": "submit the research plan",
+    "run_planned_model": "run the planned model",
+    "research_capability_check": "complete the capability check",
+}
+
+
+def _problem_line(item, limit=220):
+    if isinstance(item, dict):
+        text = str(item.get("message") or item.get("expected") or item.get("repair") or "")
+        field = str(item.get("field") or "").strip()
+        if field:
+            text = "%s: %s" % (field, text) if text else field
+        if item.get("actual") not in (None, "", [], {}):
+            text += " (got %s)" % item.get("actual")
+        allowed = item.get("allowed_values")
+        if isinstance(allowed, list) and allowed and len(allowed) <= 8:
+            text += " (allowed: %s)" % ", ".join(str(value) for value in allowed)
+    else:
+        text = str(item)
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
+def _readable_stop(name, count, result):
+    """What a reader sees when the harness stops a tool that keeps failing.
+
+    The stop reason recorded in the trace is for audit: it carried the raw repair list as
+    JSON. The reader gets what is still unresolved, in sentences, and what they can do.
+    """
+    problems = [
+        _problem_line(item) for item in ((result.get("data") or {}).get("problems") or ())
+    ]
+    problems = [item for item in problems if item]
+    if not problems:
+        problems = [_problem_line(result.get("summary") or result.get("error") or "", 400)]
+    shown = problems[:4]
+    if len(problems) > len(shown):
+        shown.append("and %d more" % (len(problems) - len(shown)))
+    return (
+        "I stopped here: the last %d attempts to %s were refused, so another attempt "
+        "would not help.\n\nStill unresolved:\n%s\n\nYou can supply what is missing in "
+        "the conversation -- for example the figure, model, parameter value or source you "
+        "mean -- or ask a narrower question."
+        % (count, _STOP_ACTIONS.get(name, "call %s" % name), "\n".join("- " + item for item in shown))
+    )
+
 
 def _plan_result_for_model(payload):
     """A research_plan result as the model needs it: the plan once, its repairs by field.
@@ -909,6 +956,11 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             tool=name,
                             reason=answer,
                         )
+                    )
+                    answer = _readable_stop(
+                        name,
+                        tool_failure_streak["count"] if streak_stop else unsuccessful_calls[name],
+                        result,
                     )
                     state["phase"] = "done"
                     yield answer, events, state

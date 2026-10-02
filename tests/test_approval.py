@@ -378,11 +378,13 @@ def test_research_plan_mapping_stop_exposes_exact_structured_repair(monkeypatch)
         }
 
     monkeypatch.setattr(agent.tools, "call", fake_call)
-    answer, _events, _ = agent.run("Reproduce the paper result", session=box)
+    answer, events, _ = agent.run("Reproduce the paper result", session=box)
 
     assert "parameter_mapping[0].model_input" in answer
-    assert "density_kg_m3" in answer
-    assert "allowed_values" in answer
+    assert "(got density)" in answer
+    assert "(allowed: density_kg_m3)" in answer
+    stop = next(event for event in events if event["kind"] == "harness_stop")
+    assert "allowed_values" in stop["reason"]
 
 
 def test_failures_that_keep_changing_still_stop_the_turn(monkeypatch):
@@ -423,10 +425,16 @@ def test_failures_that_keep_changing_still_stop_the_turn(monkeypatch):
     limit = harness.max_unsuccessful_calls(tool="research_plan")
     assert len(attempts) == limit < 30
     assert len(sent) < len(script)
-    assert "Stopped after %d unsuccessful research_plan calls in this turn" % limit in answer
-    assert any(
-        event["kind"] == "harness_stop" and event["rule"] == "no_progress" for event in events
+    stop = next(
+        event for event in events
+        if event["kind"] == "harness_stop" and event["rule"] == "no_progress"
     )
+    expected = "Stopped after %d unsuccessful research_plan calls in this turn" % limit
+    assert expected in stop["reason"]
+    # The reader gets the unresolved problem in words, not the audit string.
+    assert answer.startswith("I stopped here: the last %d attempts" % limit)
+    assert "- evidence gap %d" % limit in answer
+    assert "Structured repair gaps" not in answer
 
 
 def test_chart_axis_failure_adds_a_targeted_revision_instruction(monkeypatch):

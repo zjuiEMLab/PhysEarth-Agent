@@ -597,7 +597,7 @@ function peBoot() {
       reviewInFlight = false;
       reviewPhaseAtClick = "";
     }
-    var labels = ["Approve plan", "Satisfied with figures"];
+    var labels = ["Approve plan", phase === "plan_review" ? "Approve and run" : "Satisfied with figures"];
     if (!labels) return;
     var buttons = [
       document.getElementById("pe-approve-yes"),
@@ -609,7 +609,7 @@ function peBoot() {
       }
     }
     if (buttons[0]) buttons[0].disabled = reviewInFlight || !["plan_review", "plan_approved"].includes(phase);
-    if (buttons[1]) buttons[1].disabled = reviewInFlight || !["pseudo_preview", "chart_selected"].includes(phase);
+    if (buttons[1]) buttons[1].disabled = reviewInFlight || !["plan_review", "pseudo_preview", "chart_selected"].includes(phase);
   }
 
   document.addEventListener("click", function (event) {
