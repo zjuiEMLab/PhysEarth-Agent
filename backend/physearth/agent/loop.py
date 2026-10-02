@@ -177,6 +177,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
         )
     review_attempts = {}
     tool_failure_streak = {"name": None, "count": 0, "detail": ""}
+    unsuccessful_calls = {}
     repeated_success = {"signature": None, "count": 0}
     last_plan_error = ""
     last_plan_problems = []
@@ -376,6 +377,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
             forced_tool_name = "read_research_guideline"
         if not resuming:
             session_state.bump(state, "model_calls")
+            session_state.bump(state, "cost_usd", completion.cost_usd or 0)
             session_state.bump(state, "prompt_tokens", completion.prompt_tokens or 0)
             session_state.bump(state, "completion_tokens", completion.completion_tokens or 0)
             events.append(
@@ -658,6 +660,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     and result["status"] == "needs_input"
                     and bool(session.get("research"))
                 )
+                if result["status"] != "success":
+                    unsuccessful_calls[name] = unsuccessful_calls.get(name, 0) + 1
                 if result["status"] == "success" or human_wait:
                     tool_failure_streak = {"name": None, "count": 0, "detail": ""}
                 else:
@@ -833,8 +837,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         yield answer, events, state
                         return
 
-                if tool_failure_streak["count"] >= harness.max_interventions(tool=name):
-                    stop_detail = tool_failure_streak["detail"]
+                streak_stop = tool_failure_streak["count"] >= harness.max_interventions(tool=name)
+                if streak_stop or (
+                    unsuccessful_calls.get(name, 0) >= harness.max_unsuccessful_calls(tool=name)
+                ):
+                    failure_data = result.get("data") or {}
+                    stop_detail = (
+                        tool_failure_streak["detail"] or result.get("error") or result["summary"]
+                    )
                     if name == "research_plan":
                         structured_stop_problems = [
                             {
@@ -855,12 +865,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             )
                     answer = (
                         "Stopped after %d consecutive failed %s calls with no state progress. "
-                        "Last error: %s"
-                        % (
-                            tool_failure_streak["count"],
-                            name,
-                            stop_detail,
-                        )
+                        "Last error: %s" % (tool_failure_streak["count"], name, stop_detail)
+                        if streak_stop
+                        else "Stopped after %d unsuccessful %s calls in this turn. Last error: %s"
+                        % (unsuccessful_calls[name], name, stop_detail)
                     )
                     events.append(
                         _event(

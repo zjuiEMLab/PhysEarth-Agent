@@ -23,6 +23,16 @@ def max_interventions(tool=None, rule=None):
         return RESEARCH_PLAN_MAX_INTERVENTIONS
     return MAX_INTERVENTIONS
 
+
+# The consecutive-failure streak resets whenever a failure differs from the last one or a
+# call in between succeeds, so a model that keeps changing what it gets wrong never trips
+# it. This count of a tool's unsuccessful calls in one turn never resets.
+UNSUCCESSFUL_CALL_FACTOR = 4
+
+
+def max_unsuccessful_calls(tool=None):
+    return UNSUCCESSFUL_CALL_FACTOR * max_interventions(tool=tool)
+
 # What an abstract-level citation is not allowed to carry. These are the units of a
 # result, not of a configuration: an abstract may well say a study was at 37 GHz and 55
 # degrees, and citing it for that is honest. Saying the brightness temperature was 213 K
@@ -198,6 +208,15 @@ def check_budget(state):
     again. The session's is hard: it ends the conversation until the session is
     cleared, and it is what actually protects the shared quota."""
     session = state.get("session") or {}
+    cost_cap = session.get("max_cost_usd")
+    if cost_cap and session.get("cost_usd", 0) >= cost_cap:
+        return {
+            "rule": "budget",
+            "passed": False,
+            "scope": "session",
+            "reason": "session cost budget reached (USD %.2f of %.2f)"
+            % (session.get("cost_usd", 0), cost_cap),
+        }
     for name, label in (("model_calls", "model call"), ("tool_calls", "tool call")):
         cap = session.get("max_%s" % name)
         if cap and session.get(name, 0) >= cap:

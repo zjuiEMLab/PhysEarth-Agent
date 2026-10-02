@@ -12,7 +12,9 @@ def _client():
     token = config.llm_api_key()
     if not token:
         raise RuntimeError("PHYSEARTH_LLM_API_KEY is not set; the agent cannot reach the model.")
-    return OpenAI(api_key=token, base_url=config.llm_api_base())
+    # The agent loop retries with its own backoff and counts each attempt; the SDK's
+    # hidden retries would multiply every one of them.
+    return OpenAI(api_key=token, base_url=config.llm_api_base(), max_retries=0)
 
 
 class _Completion:

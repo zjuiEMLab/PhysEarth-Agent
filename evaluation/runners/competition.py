@@ -835,6 +835,13 @@ def main(argv=None):
         action="store_true",
         help="record explicit human approval for the printed fixed evaluation batch",
     )
+    parser.add_argument(
+        "--max-spend-usd",
+        type=float,
+        default=3.0,
+        help="stop before the next cell once the batch's candidate LLM cost reaches this; 0 "
+        "disables",
+    )
     args = parser.parse_args(argv)
 
     cells = matrix(args)
@@ -916,7 +923,14 @@ def main(argv=None):
         print(f"Figure 3 oracle uses SMRT {oracle.get('smrt_version')}.")
     print(f"Judge preflight passed with {preflight.get('model')}.")
     written = 0
+    spent = 0.0
     for index, (name, task, profile, config_entry, llm, repeat) in enumerate(pending, 1):
+        if args.max_spend_usd and spent >= args.max_spend_usd:
+            print(
+                f"Stopped: the batch spent USD {spent:.2f} of its USD {args.max_spend_usd:.2f} "
+                "limit; cached cells remain reusable."
+            )
+            return 2
         print(f"[{index}/{len(pending)}] {name}", flush=True)
         try:
             record = run_one(
@@ -939,6 +953,7 @@ def main(argv=None):
             newline="\n",
         )
         written += 1
+        spent += (record.get("llm_usage") or {}).get("cost_usd") or 0.0
         if not (record.get("dashboard_metrics") or {}).get("evaluation_complete", True):
             print(
                 "Evaluation incomplete for this cell; recording it and continuing the "

@@ -351,3 +351,17 @@ def test_verify_report_through_mcp(evidenced):
     assert result["isError"] is False
     assert payload["passed"] is True
     assert service.verify_report("ses_nope", "x")["error"] == "unknown_session"
+
+
+def test_a_second_turn_on_a_busy_session_is_refused(scripted):
+    """A host that times out and asks again must not run a second turn beside the first."""
+    sent = scripted([_text("Done.")])
+    first = service.ask("A plain question")
+    session = service.get_session(first["session_id"])
+    service._RUNNING.add(session["id"])
+    try:
+        busy = service.ask("Again", session_id=session["id"])
+    finally:
+        service._RUNNING.discard(session["id"])
+    assert busy["error"] == "session_busy"
+    assert len(sent) == 1

@@ -19,6 +19,7 @@ MAX_MODEL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_MODEL_CALLS")
 MAX_TOOL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_TOOL_CALLS")
 MAX_SESSION_MODEL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_SESSION_MODEL_CALLS")
 MAX_SESSION_TOOL_CALLS = config.nonnegative_int("PHYSEARTH_MAX_SESSION_TOOL_CALLS")
+MAX_SESSION_COST_USD = config.nonnegative_float("PHYSEARTH_MAX_SESSION_COST_USD")
 CONTEXT_CEILING_TOKENS = 96000
 MAX_HELD_HANDLES = 10
 MAX_KEPT_HANDLES = 40
@@ -34,6 +35,7 @@ COUNTERS = (
     "boundary_flags",
     "prompt_tokens",
     "completion_tokens",
+    "cost_usd",
 )
 
 
@@ -78,6 +80,7 @@ def new_session(model=None):
         "research": None,
         "max_model_calls": MAX_SESSION_MODEL_CALLS,
         "max_tool_calls": MAX_SESSION_TOOL_CALLS,
+        "max_cost_usd": MAX_SESSION_COST_USD,
     }
     session.update({name: 0 for name in COUNTERS})
     return session

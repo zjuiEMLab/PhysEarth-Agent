@@ -29,6 +29,7 @@ from physearth.harness import approval, gates
 
 _LOCK = threading.Lock()
 _SESSIONS: dict = {}
+_RUNNING: set = set()
 
 APPROVAL_MODES = (approval.ASK, approval.ALWAYS)
 DECISIONS = ("approve", "reject")
@@ -393,7 +394,23 @@ def ask(question, session_id=None, model=None, switches=None):
 
 
 def _turn(session, question, model, switches):
-    answer, events, state = agent.run(question, model=model, session=session, switches=switches)
+    # A host that times out and asks again must not start a second turn beside the first:
+    # both would spend, and both would write the same session.
+    with _LOCK:
+        if session["id"] in _RUNNING:
+            return {
+                "status": "terminal_error",
+                "error": "session_busy",
+                "summary": "A turn is still running in this session; wait for it to finish.",
+            }
+        _RUNNING.add(session["id"])
+    try:
+        answer, events, state = agent.run(
+            question, model=model, session=session, switches=switches
+        )
+    finally:
+        with _LOCK:
+            _RUNNING.discard(session["id"])
     result = {
         "status": "success",
         "session_id": session["id"],

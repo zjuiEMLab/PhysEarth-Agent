@@ -5,7 +5,7 @@ import time
 
 from physearth.harness import approval
 
-from physearth import agent, session, tools
+from physearth import agent, harness, session, tools
 
 
 def _asking():
@@ -383,6 +383,50 @@ def test_research_plan_mapping_stop_exposes_exact_structured_repair(monkeypatch)
     assert "parameter_mapping[0].model_input" in answer
     assert "density_kg_m3" in answer
     assert "allowed_values" in answer
+
+
+def test_failures_that_keep_changing_still_stop_the_turn(monkeypatch):
+    """A recorded run made 58 failed research_plan calls in one turn: each failure listed
+    slightly different problems, and a successful read between two failures reset the
+    consecutive streak as well. The turn's count of unsuccessful calls never resets."""
+    box = _asking()
+    box["research_required"] = True
+    script = [
+        [_call_chunk(name, arguments)]
+        for _ in range(30)
+        for name, arguments in (
+            ("research_plan", '{"action":"propose"}'),
+            ("read_literature", '{"paper":"smrt-v1","section":"02"}'),
+        )
+    ]
+    client, sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+    attempts = []
+
+    def fake_call(name, arguments, **_kwargs):
+        if name != "research_plan":
+            return {"status": "success", "summary": "section read", "data": {}}
+        attempts.append(name)
+        return {
+            "status": "terminal_error",
+            "summary": "Reproduction plan incomplete.",
+            "data": {
+                "error_code": "reproduction_evidence_incomplete",
+                "problems": ["evidence gap %d" % len(attempts)],
+            },
+            "error": "plan incomplete (attempt %d)" % len(attempts),
+        }
+
+    monkeypatch.setattr(agent.tools, "call", fake_call)
+    answer, events, _ = agent.run("Reproduce the paper result", session=box)
+
+    limit = harness.max_unsuccessful_calls(tool="research_plan")
+    assert len(attempts) == limit < 30
+    assert len(sent) < len(script)
+    assert "Stopped after %d unsuccessful research_plan calls in this turn" % limit in answer
+    assert any(
+        event["kind"] == "harness_stop" and event["rule"] == "no_progress" for event in events
+    )
 
 
 def test_chart_axis_failure_adds_a_targeted_revision_instruction(monkeypatch):

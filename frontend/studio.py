@@ -890,11 +890,12 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         [evaluation_paper_status, evaluation_evidence, evaluation_session_box, evaluation_pdf],
         queue=False,
     )
+    # An agent turn spends model calls, so it waits in the queue like Send does; outside
+    # it, repeated clicks start parallel turns on one session.
     evaluation_run_button.click(
         evaluation_run,
         [evaluation_test_question, evaluation_test_model, evaluation_session_box, model_bridge],
         [evaluation_answer, evaluation_trace, evaluation_evidence, evaluation_test_status, evaluation_session_box],
-        queue=False,
     )
     evaluation_clear_button.click(
         evaluation_clear,

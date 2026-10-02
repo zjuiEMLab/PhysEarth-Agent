@@ -19,11 +19,14 @@ _DEFAULTS = {
     "PHYSEARTH_LLM_VISION": "1",
     "PHYSEARTH_ONLINE": "1",
     "PHYSEARTH_STATE_DIR": "_state",
-    # Zero means unlimited. Provider quotas and context checks remain independent.
-    "PHYSEARTH_MAX_MODEL_CALLS": "0",
-    "PHYSEARTH_MAX_TOOL_CALLS": "0",
-    "PHYSEARTH_MAX_SESSION_MODEL_CALLS": "0",
-    "PHYSEARTH_MAX_SESSION_TOOL_CALLS": "0",
+    # Hard stops on spend. Zero disables one. The defaults sit above the longest complete
+    # evaluation run (55 model calls in one turn, 66 and USD 0.41 in one session) so that
+    # only a runaway loop reaches them.
+    "PHYSEARTH_MAX_MODEL_CALLS": "60",
+    "PHYSEARTH_MAX_TOOL_CALLS": "80",
+    "PHYSEARTH_MAX_SESSION_MODEL_CALLS": "200",
+    "PHYSEARTH_MAX_SESSION_TOOL_CALLS": "300",
+    "PHYSEARTH_MAX_SESSION_COST_USD": "1.00",
     "PHYSEARTH_MAX_QUESTIONS_PER_HOUR": "0",
     "PHYSEARTH_PORT": "7860",
     "PHYSEARTH_LOG_MAX_BYTES": str(5 * 1024 * 1024),
@@ -101,6 +104,13 @@ def nonnegative_int(name, default=0):
         return max(0, int(get(name) or default))
     except (TypeError, ValueError):
         return max(0, int(default))
+
+
+def nonnegative_float(name, default=0.0):
+    try:
+        return max(0.0, float(get(name) or default))
+    except (TypeError, ValueError):
+        return max(0.0, float(default))
 
 
 # Load local provider selection before agent.py builds its model switcher catalogue.

@@ -199,6 +199,13 @@ def main(argv=None):
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
+        "--max-model-calls",
+        type=int,
+        default=600,
+        help="stop before the next run once the batch has made this many LLM calls (the "
+        "account allows about 2000 a day); 0 disables",
+    )
+    parser.add_argument(
         "--prompt-profile",
         default="P0_direct",
         help="declared prompt condition stored with every record; the question is unchanged",
@@ -247,7 +254,12 @@ def main(argv=None):
 
     dead = set()
     written, abandoned = 0, []
+    calls_made = 0
     for index, (task, repeat) in enumerate(planned, 1):
+        if args.max_model_calls and calls_made >= args.max_model_calls:
+            print("Stopped: the batch made %d LLM calls, its limit is %d"
+                  % (calls_made, args.max_model_calls))
+            break
         placed = False
         for llm in pool:
             if llm in dead:
@@ -268,6 +280,7 @@ def main(argv=None):
                     print(traceback.format_exc())
                     spent = True
                     break
+                calls_made += record.get("model_calls") or 0
                 if record["stop_rule"] in FAULTS:
                     print("        %s: %s" % (entry["name"], record["stop_rule"]))
                     spent = True

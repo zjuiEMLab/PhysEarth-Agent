@@ -167,7 +167,8 @@ change fails loudly; a deliberate one is regenerated with
 
 All runtime configuration is environment variables with defaults in `backend/physearth/config.py`;
 `.env.example` documents them. `PHYSEARTH_ONLINE=0` closes the live-literature layer
-entirely and nothing else changes. Budgets default to `0`, meaning unlimited.
+entirely and nothing else changes. Spend budgets (calls per question and per session,
+USD per session) default to caps above the longest complete run; `0` disables one.
 
 Never commit `.env`. Never put a real token in a test fixture.
 

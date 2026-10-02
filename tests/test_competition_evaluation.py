@@ -122,6 +122,35 @@ def test_execute_without_batch_approval_stops_before_any_paid_call(capsys):
     assert "No LLM or physical-model call was made" in output
 
 
+def test_a_batch_stops_before_the_next_cell_once_its_spend_limit_is_reached(
+    monkeypatch, tmp_path, capsys
+):
+    competition = _load_runner("competition")
+    monkeypatch.setattr(competition, "JUDGE_PREFLIGHT", tmp_path / "preflight.json")
+    monkeypatch.setattr(competition.judge, "preflight", lambda **_: {"passed": True})
+    monkeypatch.setattr(competition.figure3, "ORACLE_PATH", tmp_path / "oracle.json")
+    monkeypatch.setattr(competition.figure3, "build_oracle", lambda: {})
+    ran = []
+
+    def run_one(task, profile, config_entry, llm, repeat, build, **_kwargs):
+        ran.append(repeat)
+        return {"stop_rule": None, "llm_usage": {"cost_usd": 2.0}}
+
+    monkeypatch.setattr(competition, "run_one", run_one)
+    monkeypatch.setattr(competition.time, "sleep", lambda _s: None)
+    result = competition.main(
+        [
+            "--execute", "--approve-batch", "--runs-dir", str(tmp_path / "runs"),
+            "--tasks", "q1-sparse-medium", "--profiles", "p1-reproduction-first",
+            "--configs", "full", "--llm", "qwen-plus", "--repeats", "3",
+            "--max-spend-usd", "3",
+        ]
+    )
+    assert result == 2
+    assert len(ran) == 2
+    assert "spent USD 4.00 of its USD 3.00 limit" in capsys.readouterr().out
+
+
 def test_llm_usage_sums_billable_tokens_and_provider_cost():
     competition = _load_runner("competition")
     usage = competition._llm_usage(

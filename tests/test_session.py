@@ -69,11 +69,19 @@ def test_the_model_cannot_claim_another_sessions_store():
     assert forged["status"] == "needs_input"
 
 
-def test_call_budgets_are_unlimited_by_default_and_optional_when_configured():
+def test_call_and_cost_budgets_are_capped_by_default_and_zero_disables_them():
     box = session.new_session("m")
     state = session.new_state(box)
-    state["model_calls"] = 1000
-    box["model_calls"] = 1000
+    assert state["max_model_calls"] == 60 and box["max_model_calls"] == 200
+    state["model_calls"] = box["model_calls"] = 1000
+    assert not harness.check_budget(state)["passed"]
+    state["max_model_calls"] = box["max_model_calls"] = 0
+    assert harness.check_budget(state)["passed"]
+
+    session.bump(state, "cost_usd", 1.25)
+    over = harness.check_budget(state)
+    assert not over["passed"] and over["scope"] == "session" and "USD 1.25" in over["reason"]
+    box["max_cost_usd"] = 0
     assert harness.check_budget(state)["passed"]
 
     state["max_model_calls"] = 3
@@ -127,8 +135,8 @@ def test_the_trace_meters_report_the_session_not_the_turn():
     state = session.new_state(box)
     state["model_calls"] = 4
     out = render.trace([], state)
-    assert "20 / ∞" in out
-    assert "4 this question, no hard cap" in out
+    assert "20 / 200" in out
+    assert "4 this question, cap 60" in out
     assert "3 questions in this session" in out
 
 
