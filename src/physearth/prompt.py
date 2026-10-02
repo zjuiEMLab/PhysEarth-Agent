@@ -1,6 +1,6 @@
-"""The system prompt, assembled from the levelled text in `prompts/`.
+"""The system prompt, assembled from the levelled text in `physearth/prompts/`.
 
-The text itself is no longer here. It lives one file per block under `prompts/`, so a
+The text itself is no longer here. It lives one file per block under `physearth/prompts/`, so a
 scientist can change what the agent is told without opening Python, and a change to the
 wording shows up in review as a change to that file rather than buried in a module.
 
@@ -26,7 +26,7 @@ The levels, and where each one lives:
     L5  profiles   evaluation/prompts/*.yaml -- per-experiment instructions belonging to
                    the evaluation harness, which loads them itself
 
-`prompts/README.md` says the same thing for a reader who is not in Python.
+`prompts/README.md` (beside the text) says the same thing for a reader who is not in Python.
 """
 
 from physearth import paths, registry

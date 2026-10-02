@@ -9,12 +9,13 @@ mixing the two systems is what broke the previous attempt.
 import base64
 from pathlib import Path
 
+from physearth.api import paths
+
 STATIC = Path(__file__).resolve().parent / "static"
 # The typefaces are not frontend-only: physearth.plotting registers the same two files
-# with matplotlib so a rendered figure carries the interface's type. They stay in the
-# shared assets/ directory rather than moving in here, where the backend could not reach
-# them without crossing the boundary this split just drew.
-FONT_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
+# with matplotlib so a rendered figure carries the interface's type. They ship inside the
+# library as package data, and the interface reads them through the api.
+FONT_DIR = paths.assets() / "fonts"
 
 FONTS = (
     ("Anthropic Serif", "anthropic-serif.ttf", "400"),

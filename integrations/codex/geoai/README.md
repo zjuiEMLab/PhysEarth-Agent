@@ -23,7 +23,7 @@ against a repository you already have. Read the next section before choosing thi
 
 `codex plugin add` **copies** the plugin into `$CODEX_HOME/plugins/cache/<marketplace>/<name>/<version>/`
 — verified, real directories rather than symlinks. The engine, however, is not inside this
-directory and cannot be: it is the whole repository under `backend/`, `catalog/`
+directory and cannot be: it is the whole repository under `src/`, `catalog/`
 and `integrations/`. So an `mcpServers` entry here would have to name the checkout by absolute
 path, and a manifest that must be edited per machine is not repository content.
 

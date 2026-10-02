@@ -72,8 +72,8 @@ def knowledge():
 
 
 def assets():
-    """Shared with the interface: the typefaces, and the architecture diagram."""
-    return root() / "assets"
+    """Package data shared with the interface: the typefaces."""
+    return Path(__file__).resolve().parent / "assets"
 
 
 def evaluation():
@@ -82,8 +82,13 @@ def evaluation():
 
 
 def prompts():
-    """The levelled system-prompt text: identity, policy, workflow."""
-    return root() / "prompts"
+    """The levelled system-prompt text: identity, policy, workflow. Package data."""
+    return Path(__file__).resolve().parent / "prompts"
+
+
+def templates():
+    """The model card and adapter to copy when registering a model. Package data."""
+    return Path(__file__).resolve().parent / "templates"
 
 
 def models():

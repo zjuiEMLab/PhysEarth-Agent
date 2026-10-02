@@ -37,7 +37,7 @@ plugin:geoai-claude:geoai: python3 -m integrations.geoai serve - ✗ Failed to c
 
 A plugin that installs cleanly, reports an enabled MCP server, and offers no tools. The installer
 registers the file form of the server instead, with an absolute interpreter — `mcp_server.py` adds
-the repository root and `backend/` to `sys.path` itself, so that command needs no `cwd` and no
+the repository root and `src/` to `sys.path` itself, so that command needs no `cwd` and no
 `PYTHONPATH`. Verified: `claude mcp list` → `✓ Connected`.
 
 ## Two facts about the cache

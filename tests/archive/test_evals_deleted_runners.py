@@ -8,7 +8,7 @@ import yaml
 
 from evaluation.metrics import score
 from evaluation.runners import llm_robustness, reproduction_eval
-from frontend.views import evaluation as evals
+from apps.studio.views import evaluation as evals
 
 
 def test_reproduction_visual_checks_follow_each_planned_figure_target():

@@ -27,7 +27,7 @@ from physearth.api import knowledge, paths
 
 from evaluation.metrics import competition_score
 from evaluation.metrics import score as scoring
-from frontend.views.text import _inline
+from apps.studio.views.text import _inline
 
 REPO = paths.root()
 EVALUATION = paths.evaluation()
@@ -121,7 +121,7 @@ Q1_REPORT_REASON_TERMS = {
     ),
     "clarity": ("verbose", "clarity", "version", "condition", "contradict", "internal"),
 }
-ARCHITECTURE_IMAGE = paths.assets() / "evaluation" / "agent-architecture.svg"
+ARCHITECTURE_IMAGE = Path(__file__).resolve().parent.parent / "static" / "agent-architecture.svg"
 
 REPRESENTATIVE_CASES = (
     (

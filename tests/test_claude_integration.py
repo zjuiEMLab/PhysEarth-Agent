@@ -242,7 +242,7 @@ def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
     body = launcher.read_text()
     assert "integrations/lib/find-python.sh" in body
     assert "physearth_find_python_for_studio" in body
-    assert "PYTHONPATH=backend" in body, "the package lives under backend/"
+    assert "PYTHONPATH=src" in body, "the package lives under src/"
     wrapper = ROOT / "start-local.command"
     assert wrapper.is_file() and os.access(wrapper, os.X_OK)
     assert "scripts/studio.sh" in wrapper.read_text(), "one implementation, not a second copy"

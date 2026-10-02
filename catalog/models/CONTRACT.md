@@ -1,6 +1,6 @@
 # The model card contract
 
-Enforced by `backend/physearth/models/contract.py`. Every rule below exists because
+Enforced by `src/physearth/models/contract.py`. Every rule below exists because
 breaking it would let a model be validated against one description and executed against
 another — which is the failure this whole system is built to prevent.
 

@@ -2,7 +2,7 @@
 
 A coding agent gets this repository's physics, evidence rules and bundled literature as
 **tools, resources and prompts** over MCP. No host can change this project's interface —
-that is a Gradio app in `frontend/` — so this integration is deliberately text-and-tool
+that is a Gradio app in `apps/studio/` — so this integration is deliberately text-and-tool
 shaped: capability plus knowledge, no pixels.
 
 This package is the one surface every host drives: `service.py` is the Python layer,
@@ -78,7 +78,7 @@ importable. **`integrations/codex/README.md` is the authoritative guide** — th
 
 ```bash
 # from the repository root
-.venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
+.venv/bin/python -c "import sys; sys.path[:0]=['src','.']; \
   from integrations.geoai import service; print('ok')"    # which interpreter to register
 integrations/codex/doctor.sh                                   # checks the interpreter, then the tools
 ```
@@ -119,7 +119,7 @@ python -m integrations.geoai call list_models --arguments '{"model":"smrt"}'
 # the MCP protocol itself
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-  | PYTHONPATH=backend python -m integrations.geoai serve
+  | PYTHONPATH=src python -m integrations.geoai serve
 ```
 
 `pytest tests/test_geoai_bridge.py tests/test_geoai_mcp.py tests/test_geoai_approval.py -q`

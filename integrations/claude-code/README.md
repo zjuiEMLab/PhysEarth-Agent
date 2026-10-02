@@ -8,7 +8,7 @@ Two commands:
 
 ```bash
 # 1. the engine must be importable by some interpreter
-.venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
+.venv/bin/python -c "import sys; sys.path[:0]=['src','.']; \
   from integrations.geoai import service; print('ok')"
 
 # 2. install the plugin, register the MCP server, and write the two settings
@@ -77,7 +77,7 @@ plugin:geoai-claude:geoai: python3 -m integrations.geoai serve - ✗ Failed to c
 
 — a plugin that installs cleanly, reports an enabled MCP server, and offers no tools. The
 installer registers the **file form** of the server with an absolute interpreter instead, because
-`mcp_server.py` adds the repository root and `backend/` to `sys.path` from its own location, so it
+`mcp_server.py` adds the repository root and `src/` to `sys.path` from its own location, so it
 needs neither `cwd` nor `PYTHONPATH`:
 
 ```bash

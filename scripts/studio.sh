@@ -4,10 +4,10 @@
 # Two things this script exists to get right, both of which fail in a way that looks like a code
 # defect rather than a missing step:
 #
-#   1. `physearth` lives under `backend/`, so `python app.py` on its own dies with
+#   1. `physearth` lives under `src/`, so `python app.py` on its own dies with
 #      `ModuleNotFoundError: No module named 'physearth'` before Gradio is even imported. The
 #      supported workflow (`uv sync --extra dev`) hides this by making an editable install; a
-#      plain interpreter needs `PYTHONPATH=backend`.
+#      plain interpreter needs `PYTHONPATH=src`.
 #   2. The interpreter that can actually import the app is not necessarily `python3`. On macOS
 #      that is frequently a bare system Python with no Gradio, so candidates are *proved* by
 #      importing the frontend rather than found on PATH. The search itself lives in
@@ -20,7 +20,7 @@
 #   PHYSEARTH_PORT=8000 scripts/studio.sh
 #   PHYSEARTH_PYTHON=/abs/py scripts/studio.sh
 #
-# Environment is the same one `backend/physearth/config.py` reads, so anything the app
+# Environment is the same one `src/physearth/config.py` reads, so anything the app
 # understands can be set here too (see `.env.example`).
 
 set -euo pipefail
@@ -100,4 +100,4 @@ fi
 cd "$ROOT"
 # Bind loopback unless the operator asked otherwise; the app's own default is 0.0.0.0, which puts
 # a research tool on every interface of the machine.
-exec env PYTHONPATH=backend PHYSEARTH_HOST="$HOST" PHYSEARTH_PORT="$PORT" "$PYTHON" app.py
+exec env PYTHONPATH=src PHYSEARTH_HOST="$HOST" PHYSEARTH_PORT="$PORT" "$PYTHON" app.py

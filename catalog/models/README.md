@@ -2,7 +2,7 @@
 
 Every model the agent can run. A model here is content you read, copy and edit — not
 library code. The machinery that loads and validates these lives in
-`backend/physearth/models/`; nothing in this directory imports anything.
+`src/physearth/models/`; nothing in this directory imports anything.
 
 ```
 bundled/           the six models that ship with the repository
@@ -10,15 +10,15 @@ examples/          toy_model, the smallest thing that registers
 CONTRACT.md        what the card must declare, and why each rule exists
 
 The starting point lives with the other templates, at the top of the repository:
-TEMPLATES/model_card.yaml and TEMPLATES/model_adapter.py.
+src/physearth/templates/model_card.yaml and src/physearth/templates/model_adapter.py.
 ```
 
 ## Register a model in five minutes
 
 ```bash
 mkdir catalog/models/bundled/my_model
-cp TEMPLATES/model_card.yaml catalog/models/bundled/my_model/model_card.yaml
-cp TEMPLATES/model_adapter.py catalog/models/bundled/my_model/adapter.py
+cp src/physearth/templates/model_card.yaml catalog/models/bundled/my_model/model_card.yaml
+cp src/physearth/templates/model_adapter.py catalog/models/bundled/my_model/adapter.py
 ```
 
 Then edit two files.
@@ -70,7 +70,7 @@ Every card declares a `tier`.
 
 ## These are not in the wheel
 
-`models/` sits outside the installable package, alongside `knowledge/` and `prompts/`.
+`catalog/` sits outside the installable package; the prompts and the model templates ship inside it.
 A built distribution contains the loader, not the models. That is the point: the models
 are yours, and an operator's own model is registered by exactly the mechanism the bundled
 six use, not a lesser one bolted on beside it.

@@ -189,7 +189,7 @@ plugin_config["pythonCmd"] = python_cmd
 mcp_config = dict(rows["mcp-geoai"]["config"])
 mcp_config["command"] = python_cmd
 mcp_config["cwd"] = checkout
-mcp_config["env"] = {**mcp_config.get("env", {}), "PYTHONPATH": f"{checkout}/backend:{checkout}"}
+mcp_config["env"] = {**mcp_config.get("env", {}), "PYTHONPATH": f"{checkout}/src:{checkout}"}
 
 body = yaml.safe_dump(
     [
@@ -245,7 +245,7 @@ Next steps
   2. confirm the row carries your paths:
        dsh --profile $PROFILE --dump-config | grep -A12 'id: mcp-geoai'
   3. confirm the Python side answers:
-       cd $CHECKOUT && PYTHONPATH=backend:. $PYTHON -m integrations.geoai health
+       cd $CHECKOUT && PYTHONPATH=src:. $PYTHON -m integrations.geoai health
   4. confirm the browser half is served (with the harness running on PORT):
        curl -s http://127.0.0.1:PORT/ | grep -o '$PACKAGE_NAME[^"]*'
        curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:PORT/plugins/$PACKAGE_NAME/client.js

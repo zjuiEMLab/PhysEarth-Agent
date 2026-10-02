@@ -1,7 +1,7 @@
 """Render recorded evaluation runs as static pages of the Studio's own interface.
 
 Each page is drawn from one record under evaluation/results/competition/runs/ with the
-views the live Studio uses (frontend/views) and its stylesheet (frontend/theme): the
+views the live Studio uses (apps/studio/views) and its stylesheet (apps/studio/theme): the
 conversation the agent was actually sent, the scripted plan approval, every step of the
 trace including the gate refusals, the figures it drew and the final report. The page is
 self-contained: inline CSS and fonts, figures as base64, no external request.
@@ -19,14 +19,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "evaluation" / "runners"))
 
 import competition  # noqa: E402
 from physearth.api import agent  # noqa: E402
 
-from frontend import theme  # noqa: E402
-from frontend import views as render  # noqa: E402
+from apps.studio import theme  # noqa: E402
+from apps.studio import views as render  # noqa: E402
 
 PAGE_CSS = """
 html, body { margin: 0; height: 100%; background: var(--paper); }

@@ -261,7 +261,7 @@ def test_guided_reproduction_preflight_selects_research_mode_before_model_plan(m
         }
 
     monkeypatch.setattr(agent.tools, "call", fake_call)
-    from frontend.views import evaluation as evals
+    from apps.studio.views import evaluation as evals
 
     answer, events, _ = agent.run(evals.guided_demo()["question"], session=box)
 
@@ -777,7 +777,7 @@ def test_source_figure_inspection_sends_the_image_to_the_model(monkeypatch):
 
 
 def test_the_trace_names_what_is_waiting_and_what_was_decided():
-    from frontend import views as render
+    from apps.studio import views as render
 
     waiting = {
         "kind": "approval_wait",
@@ -801,7 +801,7 @@ def test_the_trace_names_what_is_waiting_and_what_was_decided():
 
 
 def test_the_approval_bar_appears_only_while_something_waits():
-    from frontend import views as render
+    from apps.studio import views as render
 
     box = _asking()
     assert "hidden" in render.approval_bar(box)

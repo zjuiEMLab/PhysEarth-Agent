@@ -4,7 +4,7 @@ import json
 
 from physearth.api import knowledge
 
-from frontend.views.text import _e
+from apps.studio.views.text import _e
 
 
 def _reproduction_state(session):

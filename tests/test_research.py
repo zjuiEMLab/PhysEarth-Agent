@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from physearth import agent, research, session, tools
 
-from frontend import views as render
+from apps.studio import views as render
 
 
 def _proposal(box, question="How does snow density affect microwave scattering?"):
@@ -322,7 +322,7 @@ def test_plan_revision_preview_chart_and_execution_gate():
 
 
 def test_execution_approval_is_idempotent_and_sends_one_continuation():
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     box = session.new_session("m")
     box["research_required"] = True
@@ -1631,7 +1631,7 @@ def test_formulation_attribution_reads_the_formulation_parameter_from_the_card()
 
 
 def test_approve_and_run_is_one_human_step_from_plan_review():
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     box = session.new_session("m")
     box["research_required"] = True

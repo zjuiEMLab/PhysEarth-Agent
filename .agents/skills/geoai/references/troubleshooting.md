@@ -35,7 +35,7 @@ python3 /abs/path/to/PhysEarth-Agent/integrations/geoai/mcp_server.py --stdio </
 A useful one-liner before blaming the client:
 
 ```bash
-/abs/path/.venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; from integrations.geoai import service; print('engine importable')"
+/abs/path/.venv/bin/python -c "import sys; sys.path[:0]=['src','.']; from integrations.geoai import service; print('engine importable')"
 ```
 
 ## The agent says the tools are unavailable, but the server works in a shell

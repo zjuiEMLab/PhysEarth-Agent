@@ -34,12 +34,12 @@ def _bootstrap_path() -> None:
     """Make this file runnable as a script, and not only as ``-m integrations.geoai serve``.
 
     Both forms are needed. The module form is what a host runs from the checkout (``cwd`` =
-    repository root, ``PYTHONPATH=backend``), and it can leave ``sys.path`` alone. The file
+    repository root, ``PYTHONPATH=src``), and it can leave ``sys.path`` alone. The file
     form is what an MCP client's documentation almost always shows —
     ``command = "python3"``, ``args = ["/abs/path/to/integrations/geoai/mcp_server.py"]`` —
     and a file run that way gets *its own directory* on ``sys.path``, which finds neither
     ``integrations`` nor ``physearth``. So the file form has to establish both roots itself:
-    the repository root (for ``integrations.geoai``) and ``backend/`` (for the engine).
+    the repository root (for ``integrations.geoai``) and ``src/`` (for the engine).
 
     Doing it here rather than requiring every host to get ``cwd`` right also removes this
     server's commonest failure: a subprocess that dies of ``ModuleNotFoundError``, whose
@@ -48,7 +48,7 @@ def _bootstrap_path() -> None:
     from pathlib import Path
 
     here = Path(__file__).resolve()
-    for candidate in (here.parents[2], here.parents[2] / "backend"):
+    for candidate in (here.parents[2], here.parents[2] / "src"):
         text = str(candidate)
         if text not in sys.path:
             sys.path.insert(0, text)

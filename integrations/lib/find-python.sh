@@ -78,7 +78,7 @@ physearth_find_python() {
     [ -n "$candidate" ] || continue
     command -v "$candidate" >/dev/null 2>&1 || [ -x "$candidate" ] || continue
     if [ -n "$cwd" ]; then
-      (cd "$cwd" && PYTHONPATH="backend:." "$candidate" -c "$probe" >/dev/null 2>&1) || continue
+      (cd "$cwd" && PYTHONPATH="src:." "$candidate" -c "$probe" >/dev/null 2>&1) || continue
     else
       "$candidate" -c "$probe" >/dev/null 2>&1 || continue
     fi

@@ -21,11 +21,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT / "src"))
 
 import yaml  # noqa: E402
 
-from frontend import theme  # noqa: E402
+from apps.studio import theme  # noqa: E402
 
 RANK = {"Success": 0, "Partial": 1, "Failed": 2}
 TAG_STYLE = {

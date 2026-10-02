@@ -28,11 +28,11 @@ import { dirname, join, resolve } from 'node:path'
 /**
  * Files that only exist in a checkout of this repository.
  *
- * Both are required: `backend/physearth` alone would match any sibling project that happens to
+ * Both are required: `src/physearth` alone would match any sibling project that happens to
  * have the same layout, and `integrations/geoai` alone would match a directory holding only the
  * integrations tree.
  */
-export const CHECKOUT_MARKERS = ['backend/physearth/__init__.py', 'integrations/geoai/service.py']
+export const CHECKOUT_MARKERS = ['src/physearth/__init__.py', 'integrations/geoai/service.py']
 
 /**
  * Directories to consider, nearest first: every ancestor of the starting points, plus `cwd`.
@@ -205,7 +205,7 @@ export function readPromptStack({
   const result = run(pythonCmd, args, {
     cwd: checkout,
     timeout,
-    env: { ...env, PYTHONPATH: `${checkout}/backend:${checkout}` },
+    env: { ...env, PYTHONPATH: `${checkout}/src:${checkout}` },
     encoding: 'utf8',
   })
   if (!result || result.error) throw new Error(result?.error?.message || 'the run produced no result')

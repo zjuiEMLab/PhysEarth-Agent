@@ -17,7 +17,7 @@ Run approval is the operator's setting, fixed when the server starts: `ask` by d
 cd /path/to/PhysEarth-Agent
 
 # Which Python can import the engine? Use exactly this path below.
-.venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
+.venv/bin/python -c "import sys; sys.path[:0]=['src','.']; \
   from integrations.geoai import service; print('ok')"     # (uv sync --extra dev creates .venv)
 ```
 
@@ -38,7 +38,7 @@ Use absolute paths: Codex launches the command from its own working directory.
 
 The file form of the server (`.../integrations/geoai/mcp_server.py`) is deliberate. A script run
 that way gets its own directory on `sys.path`, which finds neither `integrations` nor
-`physearth`, so the file adds the repository root and `backend/` to `sys.path` itself. That means
+`physearth`, so the file adds the repository root and `src/` to `sys.path` itself. That means
 no `cwd` and no `PYTHONPATH` are needed, and it removes the failure where the module form dies of
 `ModuleNotFoundError` in a subprocess whose stderr nobody reads.
 

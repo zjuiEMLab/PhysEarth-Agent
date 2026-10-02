@@ -2,7 +2,7 @@ from pathlib import Path
 
 from physearth.corpus import live
 
-from frontend.views import evaluation as evals
+from apps.studio.views import evaluation as evals
 from physearth import harness, prompt, research, session, tools
 from physearth.ingest import jats
 

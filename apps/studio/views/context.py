@@ -1,8 +1,8 @@
 """The research panel: where the plan stands, and what the agent is doing now."""
 
-from frontend.views.parts import _reproduction_state
-from frontend.views.review import approval_bar
-from frontend.views.text import _e
+from apps.studio.views.parts import _reproduction_state
+from apps.studio.views.review import approval_bar
+from apps.studio.views.text import _e
 
 
 def research_context(session):

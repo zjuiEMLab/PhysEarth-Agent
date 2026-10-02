@@ -118,11 +118,11 @@ claude plugin install "$PLUGIN_NAME@$MARKETPLACE" --scope "$SCOPE" 2>&1 | head -
 # preference. `claude plugin install` copies the plugin into
 # ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/, so a bundled `.mcp.json` could only
 # reach the engine through a machine-specific absolute path. The relative form is worse than
-# useless: with `command: python3, env.PYTHONPATH: backend` it resolved to a system Python without
+# useless: with `command: python3, env.PYTHONPATH: src` it resolved to a system Python without
 # PyYAML and reported "✗ Failed to connect" — a plugin that installs cleanly and offers no tools.
 #
 # The file form of the server is registered instead, because it needs neither `cwd` nor
-# PYTHONPATH: `mcp_server.py` adds the repository root and `backend/` to sys.path from its own
+# PYTHONPATH: `mcp_server.py` adds the repository root and `src/` to sys.path from its own
 # location. That reduces this step to naming an interpreter that can import the engine.
 if [ -z "$ENGINE_PYTHON" ]; then
   echo "WARNING: no interpreter could import integrations.geoai.service." >&2

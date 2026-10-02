@@ -20,7 +20,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "backend"))
+sys.path.insert(0, str(ROOT / "src"))
 
 from physearth import paths  # noqa: E402
 from physearth.tools.figures import _extract_vector_figure_observations  # noqa: E402

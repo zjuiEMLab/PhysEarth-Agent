@@ -165,7 +165,7 @@ export function apply(ctx, config = {}) {
         const result = spawnSync(
           command,
           ['-c', 'from integrations.geoai import service'],
-          { cwd: checkout, env: { ...process.env, PYTHONPATH: checkout ? `${checkout}/backend:${checkout}` : '' }, timeout: 20000 },
+          { cwd: checkout, env: { ...process.env, PYTHONPATH: checkout ? `${checkout}/src:${checkout}` : '' }, timeout: 20000 },
         )
         return result.status === 0
       },
@@ -178,7 +178,7 @@ export function apply(ctx, config = {}) {
   if (!checkout) {
     ctx.logger?.error?.(
       'physearth-geoai: cannot find this repository. Set `projectRoot` in the plugin row to the ' +
-        'checkout that holds backend/physearth and integrations/geoai, or run ' +
+        'checkout that holds src/physearth and integrations/geoai, or run ' +
         'integrations/dsh/scripts/install.sh, which resolves it for you.',
     )
   }

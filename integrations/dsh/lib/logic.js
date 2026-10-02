@@ -253,7 +253,7 @@ export function portOf(bridgeUrl) {
  * The extra environment the bridge needs, given a checkout.
  *
  * `-m integrations.geoai` puts the working directory on `sys.path`, which is enough to find
- * `integrations` — but the engine itself lives under `backend/`, so without this the child dies
+ * `integrations` — but the engine itself lives under `src/`, so without this the child dies
  * with `ModuleNotFoundError: No module named 'physearth'`. It died silently, too: the spawn uses
  * `stdio: 'ignore'` so nothing surfaced, and the plugin simply reported a bridge that never
  * answered. `PYTHONUNBUFFERED` keeps a future crash's traceback in order.
@@ -263,7 +263,7 @@ export function portOf(bridgeUrl) {
  */
 export function engineEnv(root) {
   if (!root) return {}
-  return { PYTHONPATH: `${root}/backend:${root}`, PYTHONUNBUFFERED: '1' }
+  return { PYTHONPATH: `${root}/src:${root}`, PYTHONUNBUFFERED: '1' }
 }
 
 /** The bridge command this plugin starts when nothing is listening yet. */

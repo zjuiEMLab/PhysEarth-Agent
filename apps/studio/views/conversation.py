@@ -2,9 +2,9 @@
 
 from physearth.api import agent
 
-from frontend.views.context import current_activity_status
-from frontend.views.parts import _mapping_text, _reproduction_state
-from frontend.views.text import _e, _paragraphs, _svg, answer_html
+from apps.studio.views.context import current_activity_status
+from apps.studio.views.parts import _mapping_text, _reproduction_state
+from apps.studio.views.text import _e, _paragraphs, _svg, answer_html
 
 PLACEHOLDER = (
     "Run a small SMRT pilot at 37 GHz for snow densities 1, 25, 50, 75 and 96 kg/m3, "

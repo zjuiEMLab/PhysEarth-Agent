@@ -15,10 +15,10 @@ from physearth.api import (
     research,
 )
 
-from frontend.views import evaluation as evals
+from apps.studio.views import evaluation as evals
 
-from frontend import theme
-from frontend import views as render
+from apps.studio import theme
+from apps.studio import views as render
 
 config.load_dotenv()
 audit.configure()

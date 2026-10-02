@@ -2,13 +2,13 @@
 
 from physearth.api import research
 
-from frontend.views.parts import (
+from apps.studio.views.parts import (
     _mapping_text,
     _plan_cell,
     _plan_disclosure,
     _plan_table,
 )
-from frontend.views.text import _e
+from apps.studio.views.text import _e
 
 
 def _revision_changes_html(summary):

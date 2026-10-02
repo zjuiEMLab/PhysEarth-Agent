@@ -12,14 +12,14 @@ working unchanged.
 # Re-exported for the Gradio layer and the interface tests.
 # ruff: noqa: F401
 
-from frontend.views.context import (
+from apps.studio.views.context import (
     current_activity_status,
     research_context,
 )
 
 # The remaining names the single-module version exposed, kept reachable at the same
 # address so nothing outside this package has to know the split happened.
-from frontend.views.conversation import (
+from apps.studio.views.conversation import (
     next_step,
     PLACEHOLDER,
     _message,
@@ -32,7 +32,7 @@ from frontend.views.conversation import (
     live,
     live_result,
 )
-from frontend.views.evidence import (
+from apps.studio.views.evidence import (
     SOURCE_BADGE,
     _abstract_card,
     _agreement_row,
@@ -45,7 +45,7 @@ from frontend.views.evidence import (
     _section_card,
     evidence,
 )
-from frontend.views.parts import (
+from apps.studio.views.parts import (
     _disclosure,
     _kv,
     _mapping_text,
@@ -55,12 +55,12 @@ from frontend.views.parts import (
     _plan_table,
     _reproduction_state,
 )
-from frontend.views.review import (
+from apps.studio.views.review import (
     _revision_changes_html,
     _structured_approval_bar,
     approval_bar,
 )
-from frontend.views.text import (
+from apps.studio.views.text import (
     ABS_CITE,
     BOLD,
     CITE,
@@ -79,7 +79,7 @@ from frontend.views.text import (
     _svg,
     answer_html,
 )
-from frontend.views.trace import (
+from apps.studio.views.trace import (
     APPROVAL_WORDS,
     BADGES,
     _event_body,

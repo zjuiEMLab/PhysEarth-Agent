@@ -86,7 +86,7 @@ are not separate task definitions.
 
 A configuration is a value in a YAML file, not an edit to the code. The switches reach
 the agent as an argument from the process that started the run; they are never reachable
-from a prompt or a tool call, and `frontend/studio.py` never passes them, so the deployed
+from a prompt or a tool call, and `apps/studio/studio.py` never passes them, so the deployed
 application always runs with everything on.
 
 ## Why the metrics are recomputed
