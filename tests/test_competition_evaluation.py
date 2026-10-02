@@ -1082,3 +1082,30 @@ def test_a_point_run_beside_a_sweep_is_not_compared_and_does_not_crash():
     scored = reference_series.score({"numeric_results": [point], "figures": []}, fixture,
                                     prosail_oracle)
     assert scored["status"] == "not_scoreable"
+
+
+def test_a_raw_smrt_call_is_checked_against_the_smrt_card():
+    """With the harness off, SMRT runs through run_raw_smrt; an illegal value it executes
+    must count, or the harness-off condition would look perfectly safe by construction."""
+    recipe = {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "sticky_hard_spheres",
+        "frequency_ghz": 37,
+        "densities_kg_m3": [50, 100],
+        "radius_m": 0.0005,
+        "microstructure_parameters": {"stickiness": 0.0, "unknown_keyword": 1.0},
+    }
+    executed = {"name": "run_raw_smrt", "arguments": {"recipe": recipe}, "status": "success"}
+    legal = {
+        "name": "run_raw_smrt",
+        "arguments": {"recipe": dict(recipe, microstructure_parameters={"stickiness": 0.2})},
+        "status": "success",
+    }
+    failed = {
+        "name": "run_raw_smrt",
+        "arguments": {"recipe": dict(recipe, densities_kg_m3=[950])},
+        "status": "terminal_error",
+    }
+    calls = competition_score.score.classify_calls({"tool_log": [executed, legal, failed]})
+    assert (calls["legal"], calls["illegal_executed"], calls["illegal_refused"]) == (1, 1, 1)
+    assert any("stickiness" in problem for problem in calls["illegal_details"][0]["problems"])

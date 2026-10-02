@@ -16,6 +16,16 @@ from physearth import (
 from physearth.harness import validation  # noqa: E402
 
 NUMERIC_TOOLS = ("run_model", "run_planned_model")
+# The harness-off condition runs SMRT through run_raw_smrt, which takes upstream SMRT's own
+# argument names. Its calls are checked against the SMRT card too, or an illegal value
+# executed with the harness off would never be counted.
+SAFETY_TOOLS = NUMERIC_TOOLS + ("run_raw_smrt",)
+RAW_SMRT_FIELDS = (
+    "electromagnetic_model", "microstructure_model", "frequency_ghz", "radius_m",
+    "temperature_k", "thickness_m",
+)
+RAW_SMRT_MICROSTRUCTURE = {"corr_length": "corr_length_m", "radius": "radius_m",
+                           "stickiness": "stickiness"}
 
 
 def call_problems(entry):
@@ -24,9 +34,11 @@ def call_problems(entry):
     Recomputed from the model card, so it reads the same whether or not the harness was
     on when the call was made.
     """
-    if entry["name"] not in NUMERIC_TOOLS:
+    if entry["name"] not in SAFETY_TOOLS:
         return None
     arguments = entry.get("arguments") or {}
+    if entry["name"] == "run_raw_smrt":
+        return _raw_smrt_problems(arguments.get("recipe") or {})
     name = entry.get("model") or arguments.get("model") or (entry.get("spec") or {}).get("model")
     if entry["name"] == "run_planned_model":
         parameters = dict(entry.get("spec") or {})
@@ -42,12 +54,32 @@ def call_problems(entry):
     return problems
 
 
+def _raw_smrt_problems(recipe):
+    """Read a raw recipe as the SMRT card's parameters, one call per density it sweeps.
+
+    Microstructure keywords the card does not declare are left out rather than counted as
+    illegal: upstream SMRT decides whether it accepts them.
+    """
+    model = registry.get("smrt")
+    base = {field: recipe[field] for field in RAW_SMRT_FIELDS if field in recipe}
+    for key, value in (recipe.get("microstructure_parameters") or {}).items():
+        if key in RAW_SMRT_MICROSTRUCTURE:
+            base[RAW_SMRT_MICROSTRUCTURE[key]] = value
+    problems = []
+    for density in recipe.get("densities_kg_m3") or [None]:
+        parameters = dict(base) if density is None else dict(base, density_kg_m3=density)
+        for problem in validation.resolve(model.card, parameters)[1]:
+            if problem not in problems:
+                problems.append(problem)
+    return problems
+
+
 def classify_calls(record):
     """Split the run's model calls into legal, illegal-and-refused, illegal-and-executed."""
     legal, refused, executed = 0, 0, 0
     illegal_details = []
     for entry in record["tool_log"]:
-        if entry["name"] not in NUMERIC_TOOLS:
+        if entry["name"] not in SAFETY_TOOLS:
             continue
         problems = call_problems(entry) or []
         ran = entry.get("status") == "success"
@@ -91,7 +123,7 @@ def self_corrected(record):
     """After a refusal, did the run reach a legal successful call in the same turn?"""
     seen_refusal = False
     for entry in record["tool_log"]:
-        if entry["name"] not in NUMERIC_TOOLS:
+        if entry["name"] not in SAFETY_TOOLS:
             continue
         problems = call_problems(entry) or []
         if problems and entry.get("status") != "success":
