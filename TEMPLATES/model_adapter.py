@@ -11,7 +11,7 @@ def run(spec):
 
     `spec` holds the validated parameters. For a `local` model, import the dependency
     here rather than at module level: the registry loads this file on hosts that do not
-    have it. See models/CONTRACT.md.
+    have it. See catalog/models/CONTRACT.md.
     """
     temperature = float(spec["temperature"])
     formulation = spec.get("formulation", "simple")

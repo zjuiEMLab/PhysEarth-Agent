@@ -102,4 +102,4 @@ The registry loads the adapter on every host, including hosts without that packa
 as not runnable rather than vanishing — so a module-level import degrades rather than
 breaks. It is still wrong: importing the registry would drag in the dependencies of every
 registered model, and a model that is merely slow to import makes startup slow for
-everyone. `models/bundled/smrt/adapter.py` is the worked example.
+everyone. `catalog/models/bundled/smrt/adapter.py` is the worked example.

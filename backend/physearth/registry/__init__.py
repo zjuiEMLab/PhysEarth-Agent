@@ -1,6 +1,6 @@
 """Loading a registered model, and refusing one that cannot be trusted.
 
-The mechanism only. The models themselves are content and live in `models/` at the top of
+The mechanism only. The models themselves are content and live in `catalog/models/` at the top of
 the repository, where they can be read and copied; this decides what counts as a model,
 validates its card against the contract, and refuses the ones that do not hold up.
 

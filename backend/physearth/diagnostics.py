@@ -137,7 +137,7 @@ def network_probes(timeout=6.0):
 def smrt_warmup():
     entry = {"available": False}
     try:
-        # The bundled adapters are content under models/ and are not importable as a
+        # The bundled adapters are content under catalog/models/ and are not importable as a
         # package path. The registry loads each one from its directory, so ask the
         # registry for smrt and then reach the module it loaded. Before the models moved
         # this was `from physearth.models.bundled.smrt.adapter import ...`, which broke

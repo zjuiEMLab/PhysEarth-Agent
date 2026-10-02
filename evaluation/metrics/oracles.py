@@ -272,7 +272,7 @@ def _sagehen_domain():
     import importlib.util
     from pathlib import Path
 
-    path = Path(__file__).resolve().parents[2] / "models" / "bundled" / "pywatershed" / "adapter.py"
+    path = Path(__file__).resolve().parents[2] / "catalog" / "models" / "bundled" / "pywatershed" / "adapter.py"
     spec = importlib.util.spec_from_file_location("_pywatershed_fixture", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

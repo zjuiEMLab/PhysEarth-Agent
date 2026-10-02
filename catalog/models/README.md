@@ -16,9 +16,9 @@ TEMPLATES/model_card.yaml and TEMPLATES/model_adapter.py.
 ## Register a model in five minutes
 
 ```bash
-mkdir models/bundled/my_model
-cp TEMPLATES/model_card.yaml models/bundled/my_model/model_card.yaml
-cp TEMPLATES/model_adapter.py models/bundled/my_model/adapter.py
+mkdir catalog/models/bundled/my_model
+cp TEMPLATES/model_card.yaml catalog/models/bundled/my_model/model_card.yaml
+cp TEMPLATES/model_adapter.py catalog/models/bundled/my_model/adapter.py
 ```
 
 Then edit two files.
@@ -48,7 +48,7 @@ be validated against one description and run against another.
 
 | Where | How it is found | Use it for |
 |---|---|---|
-| `models/bundled/` | scanned at startup | a model you want in the repository |
+| `catalog/models/bundled/` | scanned at startup | a model you want in the repository |
 | `$PHYSEARTH_MODEL_PATH` | colon-separated directories | your own model, kept outside this repo |
 | `physearth.models` entry point | installed distribution | a model shipped as its own package |
 

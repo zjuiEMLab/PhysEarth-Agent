@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "downloads"
-OUT = ROOT / "knowledge" / "reference"
+OUT = ROOT / "catalog" / "knowledge" / "reference"
 
 SANE_LINEAR = (1e-5, 10.0)
 

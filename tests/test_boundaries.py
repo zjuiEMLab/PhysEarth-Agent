@@ -113,7 +113,7 @@ def test_the_card_checker_runs_end_to_end():
     import sys
 
     result = subprocess.run(
-        [sys.executable, "-m", "physearth.registry.check", "models/bundled/smrt"],
+        [sys.executable, "-m", "physearth.registry.check", "catalog/models/bundled/smrt"],
         cwd=ROOT, capture_output=True, text=True, timeout=120,
     )
     assert result.returncode == 0, result.stderr[-400:]

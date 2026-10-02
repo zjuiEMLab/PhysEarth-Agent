@@ -16,7 +16,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "knowledge" / "literature"
+OUT = ROOT / "catalog" / "knowledge" / "literature"
 CODE_SUFFIXES = {".py": "python"}
 
 

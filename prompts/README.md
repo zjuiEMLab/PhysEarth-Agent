@@ -18,7 +18,7 @@ The prompt is a stack. Lower levels change almost never; higher ones change per 
 | **L1** policy | citation rules, evidence tiers, the untrusted-text boundary, the online layer | `10-citations.md`, `11-abstract-only.md`, `12-online.md`, `13-citations-no-corpus.md` | with a scientific decision |
 | **L2** workflow | explore → plan → approve → run → report, and the triggers that open a method note | `20-workflow.md`, `21-research.md`, `22-triggers.md`, `23-workflow-no-corpus.md` | with a UX decision |
 | **L3** context | the registered models, the reference datasets, the corpus catalogue; the run status, sent after the conversation | generated in `backend/physearth/prompt.py` | the run status every call |
-| **L4** methods | the three method notes the agent opens before acting | `knowledge/skills/` | per method |
+| **L4** methods | the three method notes the agent opens before acting | `catalog/knowledge/skills/` | per method |
 | **L5** profiles | per-experiment instructions for the robustness study | `evaluation/prompts/*.yaml` | per experiment |
 
 **L3 is not a file** and cannot be: it follows the registry and the session. It is the only
@@ -32,7 +32,7 @@ rather than in the system prompt, which keeps everything before them a cacheable
 **L4 and L5 are not in this directory**, and the table says where they are rather than
 moving them here, because both would be misfiled:
 
-- The method notes in `knowledge/skills/` are *evidence*, not prompt text. The agent opens
+- The method notes in `catalog/knowledge/skills/` are *evidence*, not prompt text. The agent opens
   them with a tool and cites them with `[skill:slug]`, and the marker resolves only for a
   note it actually read. Only a listing of them reaches the prompt. They belong with the
   corpus, beside the papers that work the same way.

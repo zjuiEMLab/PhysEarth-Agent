@@ -16,17 +16,18 @@ import os
 from pathlib import Path
 
 ROOT_ENV = "PHYSEARTH_ROOT"
+CATALOG_ENV = "PHYSEARTH_CATALOG"
 
-# A directory is the repository root when the content the package reads is beside it.
-# Two markers rather than one, so a stray empty `knowledge/` somewhere up the tree cannot
+# A directory is the repository root when the catalog the package reads is beside it.
+# Two markers rather than one, so a stray empty `catalog/` somewhere up the tree cannot
 # be mistaken for the real thing.
-_MARKERS = ("knowledge", "evaluation")
+_MARKERS = ("catalog", "evaluation")
 
 _root = None
 
 
 def root():
-    """The directory holding knowledge/, evaluation/ and assets/."""
+    """The directory holding catalog/ and evaluation/."""
     global _root
     if _root is not None:
         return _root
@@ -50,9 +51,24 @@ def root():
     )
 
 
+def catalog():
+    """What is registered: the models and the knowledge a citation resolves to.
+
+    `PHYSEARTH_CATALOG` points at a catalog kept elsewhere, so an installed library can
+    read a catalog that is not inside a repository checkout.
+    """
+    override = os.environ.get(CATALOG_ENV, "").strip()
+    if override:
+        candidate = Path(override).expanduser().resolve()
+        if not candidate.is_dir():
+            raise RuntimeError("%s points at %s, which is not a directory" % (CATALOG_ENV, candidate))
+        return candidate
+    return root() / "catalog"
+
+
 def knowledge():
     """Bundled literature, method notes, reference data and model guidelines."""
-    return root() / "knowledge"
+    return catalog() / "knowledge"
 
 
 def assets():
@@ -77,4 +93,4 @@ def models():
     edits, not library code, and an operator's own model joins it through the same
     directory rather than through a different mechanism.
     """
-    return root() / "models"
+    return catalog() / "models"

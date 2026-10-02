@@ -99,7 +99,7 @@ the PRMS process chain over the official five-year Sagehen Creek domain and answ
 water in that surface is doing, which is why the harness is not written around any one
 physics: the same parameter validation, quality control and citation rules apply to a
 hydrologic model that never emits a photon. Its card is
-[`models/bundled/pywatershed/model_card.yaml`](models/bundled/pywatershed/model_card.yaml).
+[`catalog/models/bundled/pywatershed/model_card.yaml`](catalog/models/bundled/pywatershed/model_card.yaml).
 
 Its pinned Sagehen domain is fetched once into the state directory and checksummed on first
 use; it is not redistributed here.
@@ -377,7 +377,7 @@ my_model = "my_package:model_dir"
 
 ```
 # or contribute it, by dropping the folder into
-models/bundled/
+catalog/models/bundled/
 ```
 
 Start the app and it is there:

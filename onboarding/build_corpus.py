@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from physearth.ingest import jats  # noqa: E402
 
-OUT = ROOT / "knowledge" / "literature"
+OUT = ROOT / "catalog" / "knowledge" / "literature"
 
 
 JOURNAL_NAMES = {
@@ -50,7 +50,7 @@ def flatten(value):
     return value
 
 
-TEMPLATE = ROOT / "TEMPLATES" / "literature_card.yaml"
+TEMPLATE = Path(__file__).resolve().parent / "literature_card.yaml"
 
 # Fields the builder does not produce and must never destroy. `figures` is written by
 # onboarding/extract_figure_metadata.py from the publisher PDFs; rebuilding the corpus used

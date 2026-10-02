@@ -20,7 +20,7 @@ The levels, and where each one lives:
     L3  context    generated below: models_section, reference_section,
                    catalogue_section, skills_section; status_block and the held
                    state go out through state_note(), after the conversation
-    L4  methods    knowledge/skills/ -- not prompt text. Those are cited evidence, read
+    L4  methods    catalog/knowledge/skills/ -- not prompt text. Those are cited evidence, read
                    through the tools and carrying [skill:slug] markers; only a listing of
                    them reaches the prompt, through skills_section()
     L5  profiles   evaluation/prompts/*.yaml -- per-experiment instructions belonging to
