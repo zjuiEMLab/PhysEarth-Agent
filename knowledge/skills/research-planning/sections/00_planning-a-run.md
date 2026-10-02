@@ -52,6 +52,41 @@ Keep the paper result, the model-generated figure, and any measured or digitized
 separate provenance classes. A visual trend can support a qualitative comparison, but it cannot by
 itself establish numeric agreement or a correct parameter value.
 
+## Reproducing a paper result: the enforced stages
+
+A reproduction plan is refused until these are in the session, in this order.
+
+1. **Evidence.** Find the paper with list_literature or the session paper, read the relevant
+   sections with read_literature, and open every source figure that is a target with
+   read_paper_figure. When the asset is available, inspect it with inspect_paper_figure to
+   record axes, units, legend, panels, annotations and qualitative trends. If it is
+   unavailable, record the target as partial or unavailable with the reason; do not invent a
+   figure citation. A caption-only or metadata-only inspection is not a visual inspection, and
+   a target without a source asset may not receive a visual-similarity claim.
+2. **Capability checkpoint.** Tell the user briefly what the selected model can compute, which
+   outputs and parameter combinations are supported, what is unavailable here, which paper
+   reference models are required and which result will be reproduced. Record it with
+   research_capability_check, one target per source figure, from what list_models,
+   read_model_instruction and the opened evidence returned. If anything required is
+   unavailable, list Supported, Unavailable and Not comparable components, ask the user
+   whether to plan a partial reproduction, and only after explicit confirmation call
+   research_capability_check(action=confirm_partial).
+3. **Mapping.** Translate each paper concept into an exact registered model input. Mark it
+   paper_explicit, paper_inferred, user_specified, model_assumption or backend_default, give
+   its confidence as high, medium or low, and attach the opened evidence reference when the
+   value comes from the paper. Run inputs you leave unmapped are mapped by their source and
+   shown at review.
+4. **Plan.** Include literature_evidence, reproduction_targets (each with the id its
+   capability check used), selected_models, parameter_mapping, paper_conditions and
+   condition_provenance, explicit runs and charts, quantities, controls, metrics, diagnostics,
+   success criteria, stop conditions, assumptions and limitations. Every target must be covered
+   by a planned run or chart. A target's source, quantity, comparison, reference models and
+   outputs are filled from its capability check and evidence when you leave them out.
+
+The report keeps the paper's reported result, the new model output and any reference data
+apart, states the mapping and its provenance classes, says which targets were covered or
+remained partial or unavailable, and explains meaningful differences.
+
 ## Check the run is inside the model before running it
 
 Read the declaration with list_models rather than assuming a range. Two questions to settle:

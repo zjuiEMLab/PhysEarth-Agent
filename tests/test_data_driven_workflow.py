@@ -50,9 +50,13 @@ def _valid_plan(box, question="How does density affect the registered model outp
 def test_prompt_is_general_and_does_not_embed_smrt_protocols():
     text = prompt.build(session.new_state(session.new_session("m")))
     assert "Earth-science physical-modeling agent" in text
-    assert "axes, units, legends, panels, annotations" in text
-    assert "separately identified reference-data artifact" in text
-    assert "visual-similarity claim" in text
+    # The figure-provenance rules are read with the planning guideline, which the plan
+    # gate requires before any proposal, rather than carried in every request.
+    guideline = tools.call("read_research_guideline", {}, session=session.new_session("m"))
+    rules = guideline["data"]["text"]
+    assert "axes, units, legend, panels, annotations" in rules
+    assert "named reference-data artifact" in rules
+    assert "visual-similarity claim" in rules
     assert "Q1 sparse-medium requires exactly six" not in text
     assert "radius_m=0.0001" not in text
     assert "smrt-v1#08" not in text

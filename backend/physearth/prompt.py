@@ -67,14 +67,15 @@ def models_section(declared=True, session=None):
             )
         )
     return (
-        "Registered physical models. These are the only sources of numerical results; the "
-        "declaration below is what the system validates your calls against.\n\n"
-        "This table is here so you can choose a model and get a call right the first time. "
-        "Reading it is not an act you performed in the conversation, so it earns no "
-        "citation: a [model:name@version] marker resolves only after you have run that "
-        "model or called list_models on it. If you want to state its version, a range or a "
-        "constraint in the answer, call list_models first. Do not cite a version you have "
-        "only seen here.\n\n%s" % registry.capability_block(session=session)
+        "Registered physical models. These are the only sources of numerical results. This "
+        "list is for choosing a model. Its declaration -- every parameter with its range, "
+        "unit and default, and the legal combinations the system validates your calls "
+        "against -- comes from list_models(model=...): call it for each model you will run "
+        "or plan with, before choosing values, and use the parameter names it returns.\n\n"
+        "Reading this list earns no citation: a [model:name@version] marker resolves only "
+        "after you have run that model or called list_models on it. Do not cite a version "
+        "you have only seen here.\n\n%s"
+        % registry.capability_block(session=session, summary=True)
     )
 
 
@@ -97,8 +98,11 @@ def catalogue_section():
     kinds = [entry["source_type"] for entry in knowledge.catalogue()]
     return (
         "Literature corpus (%d papers, %d software documentation sources). Slug, title, "
-        "coverage, and what each is for:\n\n%s"
-        % (kinds.count("paper"), kinds.count("documentation"), knowledge.catalogue_block())
+        "coverage, and when to read each; list_literature returns full descriptions:\n\n%s"
+        % (
+            kinds.count("paper"), kinds.count("documentation"),
+            knowledge.catalogue_block(compact=True),
+        )
     )
 
 

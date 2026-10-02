@@ -491,22 +491,15 @@ RESEARCH_PLAN_SPEC = {
     "function": {
         "name": "research_plan",
         "description": (
-            "Submit and control a reviewed research workflow. Analyse the user's actual question "
-            "first, then call action=propose with your own structured plan. No question-specific "
-            "templates exist. The user must review or revise the plan, inspect pseudo-data, choose "
-            "a chart, and approve formal execution. Approval actions are deliberately unavailable "
-            "to the language model and are recorded only by the human UI. Pseudo-data are display "
-            "demonstrations only, never scientific evidence. When the user requests a revision, "
-            "call action=revise_plan with changes that update every affected run and chart, not "
-            "only the pseudo-preview labels; the backend creates a new plan version and returns "
-            "to human plan review. The returned protocol_yaml is a session-scoped, generated "
-            "research protocol; it is not loaded from a paper protocol file. For paper "
-            "reproduction, the proposal must include opened literature evidence, explicit "
-            "reproduction targets with reference-model identities, selected models, "
-            "paper-to-model parameter mappings and "
-            "target coverage. Keep initial proposals concise enough to fit one tool call. "
-            "For revise_plan, send only the affected fields in changes; the backend retains "
-            "unchanged runs, charts, evidence, and mappings."
+            "Submit and control a reviewed research workflow. action=propose submits your own "
+            "structured plan for the user's question; no templates exist. The user reviews the "
+            "plan, chooses charts and approves execution in the interface; approval is not "
+            "available to you. For a paper reproduction include opened literature_evidence, "
+            "reproduction_targets with their reference_models, selected_models and "
+            "parameter_mapping; fields the session already holds are filled and shown at "
+            "review. action=revise_plan applies changes: send only the affected fields, and in "
+            "runs, charts, reproduction_targets or parameter_mapping only the affected items "
+            "by id. A refusal lists every failing check at once. Keep values concise."
         ),
         "parameters": {
             "type": "object",
@@ -519,72 +512,59 @@ RESEARCH_PLAN_SPEC = {
                 "parameters": {"type": "object"},
                 "paper_conditions": {
                     "type": "object",
-                    "description": "Paper reference conditions for comparison context. They are not model-validity constraints; legality comes from the registered model declaration and model instruction.",
+                    "description": "Paper reference conditions: comparison context, not model-validity constraints.",
                 },
                 "condition_provenance": {
                     "type": "object",
-                    "description": "For each paper condition, identify its evidence marker or say agent-assumption/user-question.",
+                    "description": "Per paper condition: its evidence marker, agent-assumption or user-question.",
                 },
                 "literature_evidence": {
                     "type": "array",
-                    "description": "Opened paper section, figure, table, or result references and the role each plays in the reproduction.",
+                    "description": "Opened section or figure references and the role of each.",
                     "items": {"type": "object"},
                 },
                 "reproduction_targets": {
                     "type": "array",
-                    "description": "Paper figures, tables, or results to reproduce. Include reference_models and requested_outputs so coverage cannot be satisfied by a different local model.",
                     "items": {
                         "type": "object",
                         "properties": {
-                            "id": {"type": "string"},
+                            "id": {"type": "string", "description": "The id its capability check used."},
                             "label": {"type": "string"},
                             "reference_models": {"type": "array", "items": {"type": "string"}},
                             "requested_outputs": {"type": "array", "items": {"type": "string"}},
                             "evidence_refs": {"type": "array", "items": {"type": "string"}},
                             "run_ids": {"type": "array", "items": {"type": "string"}},
                             "chart_ids": {"type": "array", "items": {"type": "string"}},
-                            "status": {
-                                "type": "string",
-                                "enum": ["planned", "partial", "unavailable"],
-                                "description": "partial or unavailable when a reference model or output is missing; then availability_reason is required.",
-                            },
-                            "availability_reason": {"type": "string"},
+                            "status": {"type": "string", "enum": ["planned", "partial", "unavailable"]},
+                            "availability_reason": {"type": "string", "description": "Required for partial or unavailable."},
                         },
                     },
                 },
-                "selected_models": {
-                    "type": "array",
-                    "description": "Models selected after list_models/read_model_instruction, with purpose and capability status.",
-                    "items": {"type": "object"},
-                },
+                "selected_models": {"type": "array", "items": {"type": "object"}},
                 "parameter_mapping": {
                     "type": "array",
-                    "description": "Map every paper concept to an exact registered model input and model. provenance_class must be paper_explicit, paper_inferred, user_specified, model_assumption, or backend_default.",
                     "items": {
                         "type": "object",
                         "properties": {
-                            "model": {"type": "string", "description": "Registered model declaring this input."},
+                            "model": {"type": "string"},
                             "paper_concept": {"type": "string"},
                             "paper_value": {},
-                            "model_input": {"type": "string", "description": "Exact input name returned by list_models."},
+                            "model_input": {"type": "string", "description": "Exact name from list_models."},
                             "mapped_value": {},
                             "units": {"type": "string"},
-                            "provenance_class": {"type": "string"},
+                            "provenance_class": {
+                                "type": "string",
+                                "enum": ["paper_explicit", "paper_inferred", "user_specified", "model_assumption", "backend_default"],
+                            },
                             "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-                            "confidence_basis": {"type": "string"},
                             "evidence_ref": {"type": "string"},
                             "rationale": {"type": "string"},
                         },
                     },
                 },
-                "outputs": {
-                    "type": "array",
-                    "description": "Model outputs used to compare the planned runs with the paper targets.",
-                    "items": {"type": "string"},
-                },
+                "outputs": {"type": "array", "items": {"type": "string"}},
                 "runs": {
                     "type": "array",
-                    "description": "Every distinct registered physical-model run required by the plan.",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -592,10 +572,7 @@ RESEARCH_PLAN_SPEC = {
                             "label": {"type": "string"},
                             "model": {"type": "string"},
                             "parameters": {"type": "object"},
-                            "stage": {
-                                "type": "string",
-                                "description": "baseline, main, diagnostic, sensitivity, or robustness.",
-                            },
+                            "stage": {"type": "string", "description": "baseline, main, diagnostic, sensitivity or robustness."},
                         },
                         "required": ["id", "label", "model", "parameters"],
                     },
@@ -608,21 +585,11 @@ RESEARCH_PLAN_SPEC = {
                             "id": {"type": "string"},
                             "label": {"type": "string"},
                             "kind": {"type": "string"},
-                            "x": {"type": "string"},
+                            "x": {"type": "string", "description": "The common sweep_parameter of its runs."},
                             "y": {"type": "string"},
-                            "ys": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "Compatible output columns sharing one unit, e.g. tb_v and tb_h.",
-                            },
-                            "required": {
-                                "type": "boolean",
-                                "description": "True for a required scientific result or diagnostic figure.",
-                            },
-                            "purpose": {
-                                "type": "string",
-                                "description": "result, baseline, validation, diagnostic, sensitivity, or uncertainty.",
-                            },
+                            "ys": {"type": "array", "items": {"type": "string"}, "description": "Outputs sharing one unit."},
+                            "required": {"type": "boolean"},
+                            "purpose": {"type": "string"},
                             "x_label": {"type": "string"},
                             "y_label": {"type": "string"},
                         },
@@ -635,10 +602,7 @@ RESEARCH_PLAN_SPEC = {
                 "metrics": {"type": "array", "items": {"type": "string"}},
                 "diagnostics": {"type": "array", "items": {"type": "string"}},
                 "stop_conditions": {"type": "array", "items": {"type": "string"}},
-                "baseline_run_id": {
-                    "type": "string",
-                    "description": "ID of the planned run serving as the baseline/smoke validation.",
-                },
+                "baseline_run_id": {"type": "string"},
                 "assumptions": {"type": "array", "items": {"type": "string"}},
                 "limitations": {"type": "array", "items": {"type": "string"}},
                 "chart_id": {"type": "string"},
@@ -646,14 +610,8 @@ RESEARCH_PLAN_SPEC = {
                 "changes": {
                     "type": "object",
                     "description": (
-                        "User-requested plan changes. Include complete affected runs and charts "
-                        "when changing a sweep, output, axis, or figure. Update paper_conditions "
-                        "and condition_provenance only when explicitly changing the source reference; "
-                        "paper conditions are comparison context, not model-validity constraints. Update "
-                        "reproduction_targets and parameter_mapping when changing evidence, targets, "
-                        "or paper-to-model translation; do not edit pseudo-data as if it were a "
-                        "model result. For a focused revision, omit unchanged fields and do not "
-                        "resend the complete protocol."
+                        "revise_plan: the fields to change, list items by id with only the "
+                        "fields to change; {\"id\": ..., \"remove\": true} drops one."
                     ),
                 },
             },

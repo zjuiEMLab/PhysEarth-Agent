@@ -450,12 +450,28 @@ def summary(session=None):
     return rows
 
 
-def capability_block(declared=True, session=None):
+def _short_description(text, floor=120, ceiling=320):
+    """Leading sentences of a card description, enough to choose the model by."""
+    kept = ""
+    for sentence in re.split(r"(?<=\.)\s+", str(text or "").strip()):
+        if kept and len(kept) + len(sentence) + 1 > ceiling:
+            break
+        kept = ("%s %s" % (kept, sentence)).strip()
+        if len(kept) >= floor:
+            break
+    return kept
+
+
+def capability_block(declared=True, session=None, summary=False):
     """The models as the agent sees them.
 
     With `declared` false only the name, the description and the output names survive;
     every range, enum, default and legal combination is withheld. That is the capability
     ablation, and nothing else about the system changes with it.
+
+    With `summary` each model keeps its name, a short description, its outputs and its
+    sweepable parameters; the declaration itself is read with list_models when a model is
+    chosen. Six full declarations were 17,000 characters of every request.
     """
     session = session if session is not None else _ACTIVE_SESSION.get()
     lines = []
@@ -464,6 +480,14 @@ def capability_block(declared=True, session=None):
         head = "- %s v%s (%s)" % (name, card["version"], card["tier"])
         if not model.runnable:
             head += " [registered but not runnable in this environment]"
+        if summary:
+            lines.append("%s\n  %s" % (head, _short_description(card["description"])))
+            lines.append("  outputs: %s" % ", ".join(sorted(card["outputs"])))
+            sweep = (card["parameters"].get("sweep_parameter") or {}).get("enum") or ()
+            sweepable = [str(value) for value in sweep if str(value) != "none"]
+            if sweepable:
+                lines.append("  sweepable: %s" % ", ".join(sweepable))
+            continue
         lines.append("%s\n  %s" % (head, card["description"]))
         lines.append("  outputs: %s" % ", ".join(sorted(card["outputs"])))
         if not declared:

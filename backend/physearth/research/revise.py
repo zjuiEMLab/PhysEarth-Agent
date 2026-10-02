@@ -7,7 +7,16 @@ from physearth import registry
 from physearth.harness import audit
 from physearth.research.approval import _clear_previews
 from physearth.research.charts import _chart_y_names, _run_produces_chart, _validate_chart_runs
-from physearth.research.common import _clean_list, _fail, _needs, _ok, _public, _require
+from physearth.research.common import (
+    ITEM_IDENTITY,
+    _clean_list,
+    _fail,
+    _needs,
+    _ok,
+    _public,
+    _require,
+    merge_items,
+)
 from physearth.research.coverage import _target_coverage
 from physearth.research.evidence import _evidence_plan_problems, _evidence_problem_summary
 from physearth.research.mapping import _is_paper_context_problem, _mark_user_revised_inputs
@@ -137,6 +146,21 @@ def revise(session, changes=None, note=""):
         "quantities", "controls", "metrics", "diagnostics", "success_criteria",
         "stop_conditions", "assumptions", "limitations", "baseline_run_id",
     }
+    for key, identity in ITEM_IDENTITY.items():
+        if isinstance(changes.get(key), list):
+            retained = plan.get(key) or []
+            if key == "runs":
+                # Patch what was asked for, so a default the backend inserted stays a default.
+                retained = [
+                    {
+                        **run,
+                        "parameters": dict(
+                            run.get("requested_parameters") or run.get("parameters") or {}
+                        ),
+                    }
+                    for run in retained
+                ]
+            changes[key] = merge_items(retained, changes[key], identity)
     # Apply revisions to a copy. A provider can submit valid chart changes together with
     # invalid runs; mutating the live plan before run validation leaves a half-revised
     # package whose selected chart IDs no longer exist and causes a figure-gate loop.

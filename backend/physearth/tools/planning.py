@@ -3,58 +3,6 @@
 from physearth import registry, research
 from physearth.corpus import model_guidelines
 
-_ITEM_IDENTITY = {
-    "runs": ("id",),
-    "charts": ("id",),
-    "reproduction_targets": ("id",),
-    "parameter_mapping": ("model", "model_input"),
-}
-
-
-def _merge_items(retained, supplied, keys):
-    """Patch a retained list by item identity instead of replacing it.
-
-    A repair names the items it fixes: one run's sweep, one target's source. Replacing
-    the whole list with those items silently dropped every other run or target, and the
-    next validation refused the plan for what had been lost. An item whose identity is
-    already retained is updated field by field (a run's parameters key by key, None
-    deleting one); a new identity is appended; ``remove: true`` drops it. A list whose
-    items do not all carry the identity is a full replacement, as before.
-    """
-    def identity(item):
-        return tuple(str(item.get(key) or "").strip() for key in keys)
-
-    if not isinstance(retained, list) or not all(
-        isinstance(item, dict) and all(identity(item)) for item in supplied
-    ):
-        return supplied
-    merged = [dict(item) if isinstance(item, dict) else item for item in retained]
-    index = {
-        identity(item): position for position, item in enumerate(merged) if isinstance(item, dict)
-    }
-    removed = set()
-    for item in supplied:
-        key = identity(item)
-        if item.get("remove") is True:
-            removed.add(key)
-            continue
-        update = {name: value for name, value in item.items() if name != "remove"}
-        if key not in index:
-            index[key] = len(merged)
-            merged.append(update)
-            continue
-        base = merged[index[key]]
-        if isinstance(base.get("parameters"), dict) and isinstance(update.get("parameters"), dict):
-            parameters = {**base["parameters"], **update["parameters"]}
-            update["parameters"] = {
-                name: value for name, value in parameters.items() if value is not None
-            }
-        merged[index[key]] = {**base, **update}
-    return [
-        item for item in merged
-        if not (isinstance(item, dict) and identity(item) in removed)
-    ]
-
 
 def research_plan(
     action,
@@ -408,8 +356,10 @@ def research_plan(
         for key, value in supplied.items():
             if key == "parameters" and isinstance(value, dict):
                 corrected[key] = {**dict(corrected.get(key) or {}), **value}
-            elif key in _ITEM_IDENTITY and isinstance(value, list):
-                corrected[key] = _merge_items(corrected.get(key), value, _ITEM_IDENTITY[key])
+            elif key in research.ITEM_IDENTITY and isinstance(value, list):
+                corrected[key] = research.merge_items(
+                    corrected.get(key), value, research.ITEM_IDENTITY[key]
+                )
             elif value is not None:
                 corrected[key] = value
         return research_plan(action="propose", _session=_session, **corrected)

@@ -133,3 +133,66 @@ def status(session):
     if not project:
         return _needs("No research proposal exists yet. Analyse the question and propose one.", {"phase": "analysis"})
     return _ok("Research project is in phase %s." % project["phase"], _public(project))
+
+
+ITEM_IDENTITY = {
+    "runs": ("id",),
+    "charts": ("id",),
+    "reproduction_targets": ("id",),
+    "parameter_mapping": ("model", "model_input"),
+}
+
+
+# A field a patch changes takes with it what was derived from the old value: a chart's
+# series list and axis titles from its y, its x title from its x.
+_DEPENDENT_FIELDS = {"y": ("ys", "y_label"), "x": ("x_label",)}
+
+
+def merge_items(retained, supplied, keys):
+    """Patch a retained list by item identity instead of replacing it.
+
+    A repair names the items it fixes: one run's sweep, one target's source. Replacing
+    the whole list with those items silently dropped every other run or target, and the
+    next validation refused the plan for what had been lost. An item whose identity is
+    already retained is updated field by field (a run's parameters key by key, None
+    deleting one); a new identity is appended; ``remove: true`` drops it. A list whose
+    items do not all carry the identity, or an empty list, is a full replacement, as before.
+    """
+    def identity(item):
+        return tuple(str(item.get(key) or "").strip() for key in keys)
+
+    if not supplied or not isinstance(retained, list) or not all(
+        isinstance(item, dict) and all(identity(item)) for item in supplied
+    ):
+        return supplied
+    merged = [dict(item) if isinstance(item, dict) else item for item in retained]
+    index = {
+        identity(item): position for position, item in enumerate(merged) if isinstance(item, dict)
+    }
+    removed = set()
+    for item in supplied:
+        key = identity(item)
+        if item.get("remove") is True:
+            removed.add(key)
+            continue
+        update = {name: value for name, value in item.items() if name != "remove"}
+        if key not in index:
+            index[key] = len(merged)
+            merged.append(update)
+            continue
+        base = dict(merged[index[key]])
+        for name, dependents in _DEPENDENT_FIELDS.items():
+            if name in update and update[name] != base.get(name):
+                for dependent in dependents:
+                    if dependent not in update:
+                        base.pop(dependent, None)
+        if isinstance(base.get("parameters"), dict) and isinstance(update.get("parameters"), dict):
+            parameters = {**base["parameters"], **update["parameters"]}
+            update["parameters"] = {
+                name: value for name, value in parameters.items() if value is not None
+            }
+        merged[index[key]] = {**base, **update}
+    return [
+        item for item in merged
+        if not (isinstance(item, dict) and identity(item) in removed)
+    ]

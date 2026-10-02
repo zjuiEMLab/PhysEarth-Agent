@@ -153,7 +153,7 @@ def test_a_draft_repair_patches_runs_by_id_and_keeps_the_rest():
 
 
 def test_a_draft_repair_can_remove_one_item():
-    from physearth.tools.planning import _merge_items
+    from physearth.research import merge_items as _merge_items
 
     retained = [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]
     merged = _merge_items(copy.deepcopy(retained), [{"id": "b", "remove": True}], ("id",))
@@ -172,3 +172,25 @@ def test_a_renamed_target_still_finds_its_capability_check():
     assert capability.match_capability_targets(
         [{"id": "anything"}, {"id": "else"}], reports + [{"id": "fig05.png"}]
     ) == {}
+
+
+def test_a_reviewed_plan_is_patched_by_id_and_keeps_its_defaults():
+    from physearth import research
+
+    box = _session()
+    plan = _plan()
+    plan["runs"] = plan["runs"] + [{
+        "id": "angle", "label": "angle check", "model": "smrt",
+        "parameters": {
+            "output": "coefficients", "sweep_parameter": "density_kg_m3",
+            "sweep_start": 10, "sweep_stop": 100, "sweep_points": 12,
+        },
+    }]
+    assert tools.call("research_plan", plan, session=box)["status"] == "needs_input"
+    defaulted = box["research"]["plan"]["runs"][1]["defaulted_parameters"]
+    result = research.revise(box, {"runs": [{"id": "angle", "parameters": {"sweep_stop": 80}}]})
+    assert result["status"] == "needs_input", result["summary"]
+    runs = {run["id"]: run for run in box["research"]["plan"]["runs"]}
+    assert set(runs) == {"density", "angle"}
+    assert runs["angle"]["parameters"]["sweep_stop"] == 80
+    assert runs["angle"]["defaulted_parameters"] == defaulted

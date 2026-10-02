@@ -1,3 +1,4 @@
+import re
 
 import yaml
 
@@ -55,7 +56,14 @@ def catalogue():
     return entries
 
 
-def catalogue_block():
+def _reading_note(description):
+    """The sentence of a description that says when to read the source, else its first."""
+    sentences = re.split(r"(?<=\.)\s+", str(description or "").strip())
+    return next((item for item in sentences if item.startswith("Read this")), sentences[0])
+
+
+def catalogue_block(compact=False):
+    """The corpus listing. Compact keeps only when to read each; list_literature has the rest."""
     lines = []
     for entry in catalogue():
         lines.append(
@@ -67,7 +75,7 @@ def catalogue_block():
                 entry["year"],
                 ", ".join(entry["scenarios"]) or "-",
                 ", ".join(entry["outputs"]) or "-",
-                entry["description"],
+                _reading_note(entry["description"]) if compact else entry["description"],
             )
         )
     return "\n".join(lines)

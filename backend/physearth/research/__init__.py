@@ -45,6 +45,7 @@ from physearth.research.charts import (
     _validate_chart_runs,
 )
 from physearth.research.common import (
+    ITEM_IDENTITY,
     PARAMETER_CONFIDENCE,
     PARAMETER_PROVENANCE,
     PHASES,
@@ -55,6 +56,7 @@ from physearth.research.common import (
     _provenance_confidence,
     _public,
     _require,
+    merge_items,
     protocol_document,
     protocol_yaml,
     status,
