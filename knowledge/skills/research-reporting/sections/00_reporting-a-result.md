@@ -64,20 +64,20 @@ than silently omitting a missing result.
 - The approved parameter-mapping ledger is authoritative. Copy its provenance class exactly;
   do not promote a `paper_inferred`, `model_assumption`, `backend_default`, `unknown`, or
   null-paper-value input to `paper_explicit`.
-- Manual or LLM visual review is the primary figure validation. A deterministic title, caption,
-  legend, recipe, or numeric check may fail because the paper did not specify an execution
-  parameter; record that difference and its likely effect instead of treating it as automatic
-  reproduction failure. If visual review confirms the same scientific curves and patterns, the
-  report may call the qualitative reproduction successful.
-- Reserve `failed` for an unrenderable figure, missing required curves, failed visual review, or
-  contradiction of a parameter that the paper explicitly required. Use `partial` or
+- Figure success rests on comparing the generated curves with the inspected source figure. A
+  deterministic title, caption, legend, recipe, or numeric check may fail because the paper did
+  not specify an execution parameter; record that difference and its likely effect instead of
+  treating it as automatic reproduction failure. If the comparison shows the same scientific
+  curves and patterns, the report may call the qualitative reproduction successful.
+- Reserve `failed` for an unrenderable figure, missing required curves, or contradiction of a parameter that the paper explicitly required. Use `partial` or
   `not scoreable` when the limitation is only quantitative comparability. Visual agreement does
   not waive a failed model run, missing evidence, an unsupported model/output, or a numeric or
   parameter constraint explicitly required by the user.
 - Never invent correlation, RMSE, bias, ratio, percent error, or other agreement statistics.
   If an actual tool result did not provide or calculate the quantity, write `N/A`.
-- A successful render or post-render quality review proves that a chart is usable; it does not
-  prove that it agrees with the published figure.
+- A successful render or the automatic render check (Render QA) proves only that a chart is
+  usable; it does not prove that it agrees with the published figure. Never call the render
+  check a manual, visual or chart review.
 - Answer the original research question directly in the final conclusion. If the requested
   range or threshold is not supported by opened evidence or recorded results, say so.
 - Do not write "matches exactly" or "no visual discrepancy" unless an explicit comparison
@@ -87,7 +87,7 @@ than silently omitting a missing result.
 
 State the research question, the figure or result target, the model and version actually run,
 and the outcome: reproduced, partial, unavailable, or not comparable. Base figure success on
-the manual/visual review and explain any deterministic check differences as parameter or
+the comparison with the source figure and explain any deterministic check differences as parameter or
 metadata diagnostics.
 
 ### 2. Parameter provenance: list every guessed value

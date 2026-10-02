@@ -136,12 +136,12 @@ def execution_gaps(session):
         )
     elif unreviewed_charts:
         figure_problem = (
-            "Formal figure quality review is still required for: %s."
+            "The formal figure render check is still required for: %s."
             % ", ".join(item["chart"].get("id") for item in unreviewed_charts)
         )
     elif failed_reviews:
         figure_problem = (
-            "Formal figure quality review failed for %s: %s."
+            "The formal figure render check failed for %s: %s."
             % (
                 failed_reviews[0]["requirement"]["chart"].get("id"),
                 "; ".join(failed_reviews[0]["issues"]),

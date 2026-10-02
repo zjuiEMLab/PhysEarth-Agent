@@ -1436,8 +1436,8 @@ def test_planned_chart_expands_multiple_compatible_outputs_and_completes():
         owner=box["id"], session=box,
     )
     assert review["status"] == "success"
-    assert review["data"]["quality_review"]["passed"] is True
-    assert review["data"]["quality_review"]["redrawn"] is True
+    assert review["data"]["render_check"]["passed"] is True
+    assert review["data"]["render_check"]["redrawn"] is True
     agent._record_tool_result("plot_planned_chart", review, state, [])
     assert research.complete(box)["status"] == "success"
 

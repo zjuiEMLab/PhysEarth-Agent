@@ -52,7 +52,7 @@ Q1_COMPARISON_LABELS = {
 Q1_COMPARISON_DESCRIPTIONS = {
     "full": (
         "Structured paper and figure evidence, model cards, capability review, planning, "
-        "validation, approval and figure QA."
+        "validation, approval and render QA."
     ),
     "no-harness": (
         "Raw publisher PDF pages and a generic upstream-SMRT recipe tool; no structured "

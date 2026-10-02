@@ -43,7 +43,7 @@ def report_generation_prompt(session):
     figure_state = []
     for index, figure in enumerate(figures, 1):
         figure_state.append(
-            "- Figure %s: title=%r; x=%r; y=%r; series=%s; render_review=%s"
+            "- Figure %s: title=%r; x=%r; y=%r; series=%s; render_check=%s"
             % (
                 figure.get("figure_number") or index,
                 figure.get("title"),
@@ -70,15 +70,19 @@ def report_generation_prompt(session):
             "evaluation instructions or headings such as Language Compliance, rubric, gate, "
             "workflow, prompt, QA, or evaluator. Apply those checks silently while writing "
             "normal research-results and conclusion prose.",
-            "3. Choose a calibrated outcome. Manual or LLM visual review is the primary figure "
-            "validation: if it confirms the same scientific curves and patterns, the report may "
-            "call the qualitative reproduction successful even when deterministic title, caption, "
-            "legend, recipe, or numeric checks differ. Treat those differences as diagnostics when "
-            "the paper did not specify the parameter. Call the result failed only when the figure "
-            "cannot be rendered, required curves are missing, visual review fails, or a required "
-            "paper-explicit condition is contradicted. This visual allowance does not waive a "
-            "failed model run, missing evidence, an unsupported model/output, or a user-requested "
-            "numeric or parameter constraint.",
+            "3. Choose a calibrated outcome. render_check below is the system's automatic render "
+            "check (Render QA): it confirms only that the plotted arrays are finite, dense enough "
+            "and legible. It is not a comparison with the source figure, so never call it a "
+            "manual, visual or chart review and never cite it as evidence that the figure matches "
+            "the source; the comparison with the source image is judged separately. Compare the "
+            "generated curves with the inspected source figure yourself: if they show the same "
+            "scientific curves and patterns, the report may call the qualitative reproduction "
+            "successful even when deterministic title, caption, legend, recipe, or numeric "
+            "checks differ. Treat those differences as diagnostics when the paper did not specify "
+            "the parameter. Call the result failed only when the figure cannot be rendered, "
+            "required curves are missing, or a required paper-explicit condition is contradicted. "
+            "This allowance does not waive a failed model run, missing evidence, an unsupported "
+            "model/output, or a user-requested numeric or parameter constraint.",
             "4. The parameter ledger below is authoritative. Copy each provenance class exactly. "
             "Every paper_inferred, model_assumption, backend_default, unknown, or null-paper-value "
             "must appear under a clearly labelled Guessed/assumed parameters subsection. Never "
@@ -90,8 +94,8 @@ def report_generation_prompt(session):
             "visible separation; it does not supply digitized values or prove numerical agreement.",
             "6. Compare those two conclusions in a short table or explicit paragraphs. Identify agreement, "
             "disagreement, and qualifications caused by assumptions, version differences, rendering, "
-            "or insufficient checks. A passed manual/visual review establishes qualitative figure "
-            "correspondence; a render/metadata check alone only establishes that the chart is usable.",
+            "or insufficient checks. A passed render check only establishes that the chart is "
+            "usable; qualitative correspondence rests on the curves you compared with the source.",
             "7. Only report numerical comparisons that an actual tool result or recorded calculation "
             "supplied. Do not invent or estimate correlation, RMSE, bias, ratios, percent error, or "
             "validation statistics. If none was supplied, write N/A or not scoreable.",
@@ -130,7 +134,7 @@ def report_warnings(session, answer):
             )
         ):
             problems.append(
-                "Figure QA retained a persistent discontinuity as a qualified diagnostic. "
+                "Render QA retained a persistent discontinuity as a qualified diagnostic. "
                 "The report must identify it and state that it may be numerical or a model-validity "
                 "boundary rather than a verified physical transition."
             )

@@ -1217,12 +1217,13 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             {
                                 "role": "user",
                                 "content": (
-                                    "Figure QA safely increased sampling without changing the "
+                                    "Render QA safely increased sampling without changing the "
                                     "approved scientific question or controls. Continue the same "
                                     "execution now. Call run_planned_model once for each exact "
                                     "affected run_id: %s. Then regenerate every selected chart and "
                                     "call plot_planned_chart(action='review') for each. Do not call "
-                                    "research_plan and do not publish a conclusion until QA passes."
+                                    "research_plan and do not publish a conclusion until Render QA "
+                                    "passes."
                                     % ", ".join(rerun_ids)
                                 ),
                             }

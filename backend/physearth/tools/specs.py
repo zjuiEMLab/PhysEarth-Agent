@@ -682,7 +682,11 @@ PLOT_PLANNED_CHART_SPEC = {
                 "action": {
                     "type": "string",
                     "enum": ["render", "review"],
-                    "description": "Render first; after it is on screen, call again with review.",
+                    "description": (
+                        "Render first; after it is on screen, call again with review to run "
+                        "the automatic render check (data legibility only, not a comparison "
+                        "with the source figure)."
+                    ),
                 },
             },
             "required": ["chart_id"],

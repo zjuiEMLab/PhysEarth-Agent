@@ -347,7 +347,7 @@ def revise(session, changes=None, note=""):
 
 
 def revise_after_figure_quality(session, chart_id, issues=None):
-    """Prepare a scientifically reviewable revision instead of terminating on Figure QA."""
+    """Prepare a scientifically reviewable revision instead of terminating on Render QA."""
     project = _require(session)
     plan = project["plan"]
     issues = list(issues or [])
@@ -359,7 +359,7 @@ def revise_after_figure_quality(session, chart_id, issues=None):
     )
     chart = next((item for item in plan.get("charts") or [] if item.get("id") == chart_id), None)
     if chart is None:
-        return _fail("Cannot revise unknown chart %r after Figure QA." % chart_id)
+        return _fail("Cannot revise unknown chart %r after Render QA." % chart_id)
     repairs = []
     coefficient_outputs = {
         "ks_per_m", "ka_per_m", "effective_permittivity", "single_scattering_albedo"
@@ -491,7 +491,7 @@ def revise_after_figure_quality(session, chart_id, issues=None):
                 anomaly=anomaly,
             )
             return _ok(
-                "Figure QA found a persistent discontinuity after maximum safe grid refinement. "
+                "Render QA found a persistent discontinuity after maximum safe grid refinement. "
                 "The Figure is retained as a qualified scientific diagnostic; the report must "
                 "describe the discontinuity and may not call it a verified physical threshold.",
                 {
@@ -507,7 +507,7 @@ def revise_after_figure_quality(session, chart_id, issues=None):
             "automatic_attempts": int((project.get("qa_recovery") or {}).get("automatic_attempts", 0)),
         }
         summary = (
-            "Figure QA remains unresolved after safe automatic repair was exhausted for %s: %s. "
+            "Render QA remains unresolved after safe automatic repair was exhausted for %s: %s. "
             "Execution is paused without reopening or regenerating the research plan."
             % (chart_id, "; ".join(issues) or "unspecified quality failure")
         )
@@ -536,9 +536,9 @@ def revise_after_figure_quality(session, chart_id, issues=None):
         {
             "version": project["plan_version"],
             "note": (
-                "automatic scientific-axis revision after Figure QA"
+                "automatic scientific-axis revision after Render QA"
                 if requires_human_review
-                else "automatic in-plan sampling repair after Figure QA"
+                else "automatic in-plan sampling repair after Render QA"
             ),
             "changes": {"chart_id": chart_id, "repairs": repairs, "issues": issues},
         }
@@ -568,7 +568,7 @@ def revise_after_figure_quality(session, chart_id, issues=None):
         project["selected_chart"] = None
         project["selected_charts"] = []
         summary = (
-            "Figure QA generated plan v%03d with %d scientific-axis repair(s). Human review "
+            "Render QA generated plan v%03d with %d scientific-axis repair(s). Human review "
             "is required because the independent variable changed."
             % (project["plan_version"], len(repairs))
         )
@@ -585,7 +585,7 @@ def revise_after_figure_quality(session, chart_id, issues=None):
     # or output. Keep formal execution approved and let the agent rerun only changed specs.
     project["phase"] = "approved"
     summary = (
-        "Figure QA applied %d safe sampling repair(s) in plan v%03d. Formal execution remains "
+        "Render QA applied %d safe sampling repair(s) in plan v%03d. Formal execution remains "
         "approved; rerun affected run IDs and regenerate/review the selected figure package."
         % (len(repairs), project["plan_version"])
     )

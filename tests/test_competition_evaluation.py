@@ -283,9 +283,9 @@ def test_human_editable_standards_are_loaded_by_figure_and_report_evaluators():
         judge.standard_figure()["figure"]["visual_judge"]["pass"]["required_scores"][
             "patterns"
         ]
-        == 2
+        == 1
     )
-    assert judge.pass_rule(judge.standard()) == (12, {"factuality": 2}, True)
+    assert judge.pass_rule(judge.standard()) == (8, {"factuality": 1}, True)
     assert judge.dimensions(judge.standard()) == (
         "source_fidelity", "answer", "factuality", "technical_completeness",
         "assumed_parameters", "evidence", "calibration", "clarity",
@@ -506,7 +506,7 @@ def test_report_judge_pass_rule_comes_from_the_standard(monkeypatch):
     monkeypatch.setattr(judge.config, "eval_llm_api_key", lambda: "judge-secret")
     monkeypatch.setattr(judge.config, "eval_llm_api_base", lambda: "https://judge.invalid/v1")
     monkeypatch.setattr(judge.config, "eval_llm_model", lambda: "judge-model")
-    scores = {"factuality": 1}
+    scores = {"factuality": 0}
     seen = {}
 
     def fake_request(messages, candidate_models=(), max_tokens=1200, response_format=None):
@@ -526,7 +526,7 @@ def test_report_judge_pass_rule_comes_from_the_standard(monkeypatch):
         {"passed": True},
     )
     current = judge.judge_report(*args, candidate_models=("c",))
-    assert len(seen["names"]) == 8 and current["total"] == 15
+    assert len(seen["names"]) == 8 and current["total"] == 14
     assert current["passed"] is False
     older = judge.judge_report(
         *args, candidate_models=("c",),

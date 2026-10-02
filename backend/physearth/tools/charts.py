@@ -276,7 +276,7 @@ def _review_planned_figure(chart_id, _owner=None, _session=None):
     ]
     resolved, problems = plotting.resolve({"series": series_specs}, _owner)
     if problems:
-        return _fail("Figure quality review could not resolve its data: %s" % "; ".join(problems))
+        return _fail("Figure render check could not resolve its data: %s" % "; ".join(problems))
     spec = {
         "kind": requirement["chart"].get("kind", "line"),
         "title": current.get("title"),
@@ -308,7 +308,9 @@ def _review_planned_figure(chart_id, _owner=None, _session=None):
         "passed" if review["passed"] else "failed"
     )
     return _ok(
-        "Figure %s quality review %s. %d series; point counts %s.%s"
+        "Figure %s render check (Render QA) %s. Render QA checks only that the plotted arrays "
+        "are legible; it is not a comparison with the source figure. %d series; point "
+        "counts %s.%s"
         % (
             reviewed_figure.get("figure_number") or "?",
             action,
@@ -316,7 +318,7 @@ def _review_planned_figure(chart_id, _owner=None, _session=None):
             review["point_counts"],
             " Warnings: %s." % "; ".join(review["warnings"]) if review["warnings"] else "",
         ),
-        {"chart_id": chart_id, "quality_review": review},
+        {"chart_id": chart_id, "render_check": review},
         ui={"figure": reviewed_figure},
     )
 

@@ -72,8 +72,9 @@ will not let a chart axis silently change the physical experiment.
 After human plan approval, use the pseudo-data preview only to review layout and chart design.
 If the user rejects the preview or figure, revise the plan and wait again; do not execute a
 model. After chart confirmation and formal execution approval, call each planned run exactly
-once with run_planned_model, then render and review every selected chart with
-plot_planned_chart. For a reproduction report, separate the paper's reported result from the
+once with run_planned_model, then render every selected chart and run its render check with
+plot_planned_chart. The render check only confirms the plotted data are legible; it is not a
+visual comparison with the source figure. For a reproduction report, separate the paper's reported result from the
 new model output, state the paper-to-model parameter mapping and provenance classes, identify
 which targets were covered or remained partial/unavailable, explain meaningful differences,
 and state assumptions and limitations. Before writing the final report, read the

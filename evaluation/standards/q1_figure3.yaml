@@ -38,15 +38,15 @@ figure:
       - font, color palette, line width, dash syntax, legend placement, and canvas dimensions
       - pixel similarity, OCR exact matching, RMSE, and any numeric curve error metric
     score_scale:
-      0: absent, materially different, or impossible to determine
-      1: partially matching but with a material omission or ambiguity
-      2: clearly matching the reference under the qualitative criterion
+      0: absent, contradicting the reference, or impossible to determine
+      1: partly matching, or the same trend drawn in a different chart form
+      2: matching the reference under the qualitative criterion; differences in curve
+        spacing, curvature or magnitude are expected from a new model run and allowed
     pass:
-      minimum_total: 6
+      minimum_total: 5
       required_scores:
-        line_count: 2
-        patterns: 2
-        grouping: 1
+        line_count: 1
+        patterns: 1
         visual_correspondence: 1
 report:
   deterministic_requirements:

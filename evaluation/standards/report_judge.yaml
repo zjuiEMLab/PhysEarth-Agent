@@ -1,13 +1,14 @@
-schema_version: report-judge-standard-v2
+schema_version: report-judge-standard-v3
 description: >-
   Label-blinded review standard for the final reproduction report, eight dimensions scored
   0-2. The judge uses the supplied source description, reference facts, measured results and
-  deterministic checks; it must not infer a successful reproduction from fluent prose. A
-  passing visual figure judgement may support a qualitative reproduction even when a numeric
-  comparison is not scoreable because the source left an execution parameter unspecified. A
-  report that correctly declines a task the system cannot support is judged on whether its
-  reasons are true and complete, not penalised for the missing figure.
-supersedes: report_judge_v1.yaml
+  deterministic checks; it must not infer a successful reproduction from fluent prose. The
+  figure is judged separately against the reference image (B2); this standard scores the
+  report's text, so a figure verdict that did not pass is context, not a factual error in the
+  report. A report that correctly declines a task the system cannot support is judged on
+  whether its reasons are true and complete, not penalised for the missing figure. v3 lowers
+  the v2 pass rule (total 12/16, factuality 2) to total 8/16, factuality 1.
+supersedes: report-judge-standard-v2
 dimensions:
   source_fidelity: >-
     Does the report reproduce the experiment the source actually describes -- its stated
@@ -34,13 +35,13 @@ dimensions:
   clarity: >-
     Is the report understandable, precise and explicit about versions, units and conditions?
 score_scale:
-  0: missing, unsupported or materially wrong
-  1: partial, weak or incompletely supported
-  2: correct, complete and well supported
+  0: missing, or materially wrong in a way that changes the conclusion
+  1: partly met, or one material error that does not change the conclusion
+  2: substantially met; minor omissions or small slips in a secondary detail are acceptable
 pass:
-  minimum_total: 12
+  minimum_total: 8
   required_scores:
-    factuality: 2
+    factuality: 1
   require_deterministic_checks: true
 output:
   max_factual_errors: 3

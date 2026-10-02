@@ -149,7 +149,7 @@ def _tool_log(events):
                     "handle": data.get("handle"),
                     "planned_run_id": data.get("planned_run_id"),
                     "planned_chart_id": data.get("planned_chart_id"),
-                    "quality_review": data.get("quality_review"),
+                    "render_check": data.get("render_check"),
                     "unguarded_problems": data.get("unguarded_problems") or [],
                     "qc_passed": event.get("qc"),
                 }

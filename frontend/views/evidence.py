@@ -91,7 +91,7 @@ def _figure_card(figure, index):
     quality_html = ""
     if not preview and quality.get("reviewed"):
         quality_html = (
-            "<div class='fig-quality %s'><b>Figure QA:</b> %s%s</div>"
+            "<div class='fig-quality %s'><b>Render QA:</b> %s%s</div>"
             % (
                 "is-passed" if quality.get("passed") else "is-failed",
                 "passed" if quality.get("passed") else "failed",
