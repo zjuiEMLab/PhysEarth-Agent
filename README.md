@@ -134,7 +134,7 @@ src/physearth/   the library: agent, harness, registry, and its package data (pr
 apps/studio/     the Gradio Studio (app.py at the root is the ModelScope entry shim)
 catalog/         what is registered: models/ (bundled, examples) and knowledge/ (papers, method notes, datasets)
 onboarding/      bringing a model or paper in: corpus builders and the literature card template
-integrations/    geoai/ (the MCP engine adapter), claude-code/, codex/, dsh/ and their installers
+integrations/    physearth/ (the MCP engine adapter), claude-code/, codex/, dsh/ and their installers
 evaluation/      tasks, fixtures, scorers, runners and the committed result records
 tests/  docs/    docs/reorganisation/ records why the layout is this way
 ```

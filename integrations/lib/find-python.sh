@@ -13,7 +13,7 @@
 #
 # Source it, then call one of:
 #
-#   physearth_find_python <probe>        # probe: a Python statement, e.g. "from integrations.geoai import service"
+#   physearth_find_python <probe>        # probe: a Python statement, e.g. "from integrations.physearth import service"
 #   physearth_find_python_for_studio     # gradio + physearth
 #   physearth_find_python_for_engine     # the bridge service (what the MCP server and bridge need)
 #
@@ -43,7 +43,7 @@ physearth_python_candidates() {
     conda_base="$(conda info --base 2>/dev/null)"
     if [ -n "$conda_base" ] && [ -d "$conda_base" ]; then
       [ -x "$conda_base/bin/python" ] && echo "$conda_base/bin/python"
-      for env_dir in "$conda_base/envs"/*physearth* "$conda_base/envs"/*geoai* "$conda_base/envs"/*; do
+      for env_dir in "$conda_base/envs"/*physearth* "$conda_base/envs"/*physearth* "$conda_base/envs"/*; do
         [ -x "$env_dir/bin/python" ] && echo "$env_dir/bin/python"
       done
     fi
@@ -58,7 +58,7 @@ physearth_python_candidates() {
     /usr/local/miniconda3 /usr/local/anaconda3; do
     [ -d "$candidate/envs" ] || continue
     [ -x "$candidate/bin/python" ] && echo "$candidate/bin/python"
-    for env_dir in "$candidate/envs"/*physearth* "$candidate/envs"/*geoai* "$candidate/envs"/*; do
+    for env_dir in "$candidate/envs"/*physearth* "$candidate/envs"/*physearth* "$candidate/envs"/*; do
       [ -x "$env_dir/bin/python" ] && echo "$env_dir/bin/python"
     done
   done
@@ -100,5 +100,5 @@ physearth_find_python_for_studio() {
 # `import physearth`: that package's __init__ is lazy, so `import physearth` succeeds on an
 # interpreter with no PyYAML, which is how a broken interpreter got written into a profile once.
 physearth_find_python_for_engine() {
-  physearth_find_python "from integrations.geoai import service" "${1:-}"
+  physearth_find_python "from integrations.physearth import service" "${1:-}"
 }

@@ -7,7 +7,7 @@
 #     list and no error anywhere, so "no tools" is checked before "is it registered";
 #   - `python` is absent on macOS and most Linux distributions;
 #   - the default 10 s startup timeout is tight for a scientific Python import;
-#   - a missing inference credential breaks exactly one tool (`geoai_ask`), so it is reported as
+#   - a missing inference credential breaks exactly one tool (`physearth_ask`), so it is reported as
 #     a degradation rather than a failure.
 #
 # Exit code 0 when the tools are reachable, 1 otherwise. Safe to run any time: it starts the
@@ -23,8 +23,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=integrations/lib/find-python.sh
 . "$ROOT/integrations/lib/find-python.sh"
-SERVER="$ROOT/integrations/geoai/mcp_server.py"
-NAME="${GEOAI_MCP_NAME:-geoai}"
+SERVER="$ROOT/integrations/physearth/mcp_server.py"
+NAME="${PHYSEARTH_MCP_NAME:-physearth}"
 failures=0
 notes=()
 
@@ -38,7 +38,7 @@ echo
 # ── 1. The server itself ────────────────────────────────────────────────────────────────────
 echo "server"
 if [ ! -f "$SERVER" ]; then
-  bad "integrations/geoai/mcp_server.py is missing"
+  bad "integrations/physearth/mcp_server.py is missing"
   exit 1
 fi
 ok "found $SERVER"
@@ -88,7 +88,7 @@ else
   exit 1
 fi
 
-for tool in run_model plot geoai_health geoai_evidence; do
+for tool in run_model plot physearth_health physearth_evidence; do
   if printf '%s' "$reply" | grep -q "\"$tool\""; then
     ok "tool present: $tool"
   else
@@ -133,9 +133,9 @@ fi
 echo
 echo "credentials"
 if [ -n "${PHYSEARTH_LLM_API_KEY:-}" ]; then
-  ok "PHYSEARTH_LLM_API_KEY is set: the agent turn (geoai_ask) is available"
+  ok "PHYSEARTH_LLM_API_KEY is set: the agent turn (physearth_ask) is available"
 else
-  warn "PHYSEARTH_LLM_API_KEY is unset. Everything except geoai_ask works; that tool refuses in one line"
+  warn "PHYSEARTH_LLM_API_KEY is unset. Everything except physearth_ask works; that tool refuses in one line"
 fi
 
 echo

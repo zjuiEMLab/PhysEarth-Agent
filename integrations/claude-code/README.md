@@ -9,7 +9,7 @@ Two commands:
 ```bash
 # 1. the engine must be importable by some interpreter
 .venv/bin/python -c "import sys; sys.path[:0]=['src','.']; \
-  from integrations.geoai import service; print('ok')"
+  from integrations.physearth import service; print('ok')"
 
 # 2. install the plugin, register the MCP server, and write the two settings
 integrations/claude-code/install.sh              # user scope; --scope project for a repo
@@ -19,17 +19,17 @@ Then start a **new** session — plugins, output styles and MCP servers are read
 
 The server is registered with run approval set to `ask`: a physical run stops with
 `awaiting_approval` until you answer, either in Claude Code's own prompt when the server can ask
-through MCP elicitation, or by telling Claude your verdict, which it passes to `geoai_decide`.
+through MCP elicitation, or by telling Claude your verdict, which it passes to `physearth_decide`.
 To pre-approve runs as the operator, register the server with `--approval always` appended.
 
 ## What arrives, and which mechanism carries it
 
 | Piece | Component | What a user notices |
 |---|---|---|
-| 28 MCP tools | MCP server, registered by the installer | `run_model`, `research_plan`, `read_literature`, … as `mcp__geoai__*` |
-| Workflow | `skills/geoai/` | the model knows which tool answers which geophysical question, and which refusals are results |
-| Answer discipline | `output-styles/geoai-brief.md` | every unit-bearing number is sourced, every claim carries a resolvable marker |
-| Colour | `themes/geoai-night.json` + the status line | ice/amber on a near-black field, and a coloured status row |
+| 28 MCP tools | MCP server, registered by the installer | `run_model`, `research_plan`, `read_literature`, … as `mcp__physearth__*` |
+| Workflow | `skills/physearth/` | the model knows which tool answers which geophysical question, and which refusals are results |
+| Answer discipline | `output-styles/physearth-brief.md` | every unit-bearing number is sourced, every claim carries a resolvable marker |
+| Colour | `themes/physearth-night.json` + the status line | ice/amber on a near-black field, and a coloured status row |
 
 ## Text and colour: the two levers, honestly ranked
 
@@ -37,14 +37,14 @@ Claude Code is stricter than it looks, so the ranking here is by *reliability*, 
 
 **1. `statusLine` — the strongest colour lever.** Claude Code renders ANSI escape sequences from a
 status-line command's stdout, and re-runs it on session start, on every assistant message, on
-`/compact`, on a mode change and every `refreshInterval` seconds. `integrations/claude-code/geoai-claude/scripts/statusline.py`
+`/compact`, on a mode change and every `refreshInterval` seconds. `integrations/claude-code/physearth/scripts/statusline.py`
 prints one coloured row: the model, the active output style, context remaining with a colour
 threshold, the branch, and the effort level.
 
 ```json
 "statusLine": {
   "type": "command",
-  "command": "python3 \"/abs/path/integrations/claude-code/geoai-claude/scripts/statusline.py\"",
+  "command": "python3 \"/abs/path/integrations/claude-code/physearth/scripts/statusline.py\"",
   "padding": 0,
   "refreshInterval": 10
 }
@@ -59,7 +59,7 @@ style apply without the user selecting anything, which no other mechanism does.
 so the style adds claim discipline rather than replacing the ability to write code.
 
 **3. Theme — satisfies "colour", but needs one selection.** A plugin supplies a theme; it cannot
-activate one. Claude Code reads `experimental.themes` and shows it as `custom:geoai-claude:geoai-night`,
+activate one. Claude Code reads `experimental.themes` and shows it as `custom:physearth:physearth-night`,
 then the user picks it in `/theme` — or the installer writes the settings key for them.
 
 **4.** `subagentStatusLine` — the one status-line-shaped thing a plugin *can* default. Not used
@@ -72,7 +72,7 @@ Measured, not assumed. `claude plugin install` copies the plugin into
 reach the engine by a relative path, and the relative form does something worse than fail loudly:
 
 ```
-plugin:geoai-claude:geoai: python3 -m integrations.geoai serve - ✗ Failed to connect
+plugin:physearth:physearth: python3 -m integrations.physearth serve - ✗ Failed to connect
 ```
 
 — a plugin that installs cleanly, reports an enabled MCP server, and offers no tools. The
@@ -81,46 +81,46 @@ installer registers the **file form** of the server with an absolute interpreter
 needs neither `cwd` nor `PYTHONPATH`:
 
 ```bash
-claude mcp add geoai --scope user -- \
-  /abs/python /abs/PhysEarth-Agent/integrations/geoai/mcp_server.py --stdio
+claude mcp add physearth --scope user -- \
+  /abs/python /abs/PhysEarth-Agent/integrations/physearth/mcp_server.py --stdio
 ```
 
-Verified after install: `claude mcp list` → `geoai: … - ✓ Connected`.
+Verified after install: `claude mcp list` → `physearth: … - ✓ Connected`.
 
 ## Verify
 
 ```bash
-claude plugin validate ./integrations/claude-code/geoai-claude    # the manifest, before anything is installed
-claude plugin tag ./integrations/claude-code/geoai-claude --dry-run   # plugin.json and the marketplace entry agree
+claude plugin validate ./integrations/claude-code/physearth    # the manifest, before anything is installed
+claude plugin tag ./integrations/claude-code/physearth --dry-run   # plugin.json and the marketplace entry agree
 integrations/claude-code/install.sh --check         # plugin inventory, component list, settings
-claude plugin details geoai-claude               # skills / agents / MCP servers / token cost
-claude mcp list | grep geoai                     # must say ✓ Connected
+claude plugin details physearth               # skills / agents / MCP servers / token cost
+claude mcp list | grep physearth                     # must say ✓ Connected
 ```
 
 The first two are the pre-flight pair and both were run against this tree:
 
 ```
 ✔ Validation passed
-Plugin:  geoai-claude
+Plugin:  physearth
 Version: 1.0.0 (from plugin.json)
 Marketplace entry: plugins[0] in …/.claude-plugin/marketplace.json
-Tag:     geoai-claude--v1.0.0
+Tag:     physearth--v1.0.0
 ```
 
 `tag --dry-run` is worth keeping in that list because it checks the thing `validate` cannot: that
 the manifest and the marketplace entry describe the *same* plugin and version. It refuses to run
 on a dirty tree, which is a feature — a tag that points at uncommitted code is worse than no tag.
 
-In a session: `/output-style` shows `geoai-claude:geoai-brief`, and the status row carries the
+In a session: `/output-style` shows `physearth:physearth-brief`, and the status row carries the
 Geo-AI palette. Ask a question only the engine can answer — *"sweep snow density in SMRT and plot
 brightness temperature"* — and confirm it calls the tools instead of answering from memory.
 
 ### Two facts measured here, one left to a session
 
 Measured: the status line renders colour (the row above was printed by
-`integrations/claude-code/geoai-claude/scripts/statusline.py` with `FORCE_COLOR=1`), and the theme id form is
-`custom:<plugin>:<slug>` — `claude plugin details` reports the plugin as `geoai-claude`, and the
-installer writes `theme: "custom:geoai-claude:geoai-night"`, which is the form Claude Code resolves
+`integrations/claude-code/physearth/scripts/statusline.py` with `FORCE_COLOR=1`), and the theme id form is
+`custom:<plugin>:<slug>` — `claude plugin details` reports the plugin as `physearth`, and the
+installer writes `theme: "custom:physearth:physearth-night"`, which is the form Claude Code resolves
 for a plugin-supplied theme.
 
 Not measured, and left to a session on purpose: that `force-for-plugin: true` really does apply the
@@ -133,7 +133,7 @@ than copy a secret out of the keychain or log into somebody's account from a tes
 recorded as documented-not-measured. One command settles it in your own session:
 
 ```bash
-claude -p "Reply with exactly: OK"   # then run /output-style and look for geoai-claude:geoai-brief
+claude -p "Reply with exactly: OK"   # then run /output-style and look for physearth:physearth-brief
 ```
 
 ## What this cannot do
@@ -150,11 +150,11 @@ claude -p "Reply with exactly: OK"   # then run /output-style and look for geoai
 
 ## Troubleshooting
 
-`integrations/claude-code/geoai-claude/skills/geoai/references/troubleshooting.md` — the same engine-side guide the
+`integrations/claude-code/physearth/skills/physearth/references/troubleshooting.md` — the same engine-side guide the
 Codex and DSH integrations use. For this surface specifically:
 
 - **`✗ Failed to connect`** — the interpreter cannot import the engine. The installer proves its
-  choice with `from integrations.geoai import service`; if you registered by hand, do the same.
+  choice with `from integrations.physearth import service`; if you registered by hand, do the same.
   `python3` on macOS is a system interpreter without PyYAML.
 - **No Geo-AI palette after installing** — the theme needs selecting once (`/theme`, or the
   `theme` key the installer writes into the scope you chose). A project-scope settings file is only

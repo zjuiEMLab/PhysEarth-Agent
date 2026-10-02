@@ -8,7 +8,7 @@
 export const DEFAULTS = Object.freeze({
   /** The one switch: off means the plugin contributes nothing, tools included. */
   enabled: false,
-  /** Loopback address of the Python bridge (`python -m integrations.geoai serve-http`). */
+  /** Loopback address of the Python bridge (`python -m integrations.physearth serve-http`). */
   bridgeUrl: 'http://127.0.0.1:8799',
   /**
    * Whether this plugin starts the optional HTTP bridge itself.
@@ -81,7 +81,7 @@ export const ENGINE_TOOLS = [
   'read_reference_dataset',
 ]
 
-export const HOST_TOOLS = ['geoai_health', 'geoai_ask', 'geoai_evidence', 'geoai_plan_status', 'geoai_review']
+export const HOST_TOOLS = ['physearth_health', 'physearth_ask', 'physearth_evidence', 'physearth_plan_status', 'physearth_review']
 
 /** Short labels and tones for the run-trace cards the browser half draws. */
 export const TOOL_CARDS = {
@@ -93,8 +93,8 @@ export const TOOL_CARDS = {
   list_models: { title: 'Registered models', icon: 'database', fields: ['name', 'version', 'runnable_here'] },
   read_literature: { title: 'Evidence read', icon: 'book', fields: ['slug', 'section_id', 'title'] },
   read_reference_dataset: { title: 'Measurement read', icon: 'ruler', fields: ['dataset', 'rows'] },
-  geoai_ask: { title: 'Geo-AI question', icon: 'sparkles', fields: ['session_id', 'counters'] },
-  geoai_evidence: { title: 'Evidence gathered', icon: 'shield', fields: ['counts'] },
+  physearth_ask: { title: 'Geo-AI question', icon: 'sparkles', fields: ['session_id', 'counters'] },
+  physearth_evidence: { title: 'Evidence gathered', icon: 'shield', fields: ['counts'] },
 }
 
 /** Result fields a reviewer must be able to audit without opening the raw payload. */
@@ -252,7 +252,7 @@ export function portOf(bridgeUrl) {
 /**
  * The extra environment the bridge needs, given a checkout.
  *
- * `-m integrations.geoai` puts the working directory on `sys.path`, which is enough to find
+ * `-m integrations.physearth` puts the working directory on `sys.path`, which is enough to find
  * `integrations` — but the engine itself lives under `src/`, so without this the child dies
  * with `ModuleNotFoundError: No module named 'physearth'`. It died silently, too: the spawn uses
  * `stdio: 'ignore'` so nothing surfaced, and the plugin simply reported a bridge that never
@@ -271,7 +271,7 @@ export function bridgeCommand(settings) {
   return {
     command: settings.pythonCmd,
     args: [
-      '-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', String(portOf(settings.bridgeUrl)),
+      '-m', 'integrations.physearth', 'serve-http', '--host', '127.0.0.1', '--port', String(portOf(settings.bridgeUrl)),
       '--approval', settings.approveRuns ? 'always' : 'ask',
     ],
     cwd: settings.projectRoot || undefined,

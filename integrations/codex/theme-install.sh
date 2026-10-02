@@ -23,13 +23,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=integrations/lib/find-python.sh
 . "$ROOT/integrations/lib/find-python.sh"
-THEME_SRC="$ROOT/integrations/codex/geoai.tmTheme"
+THEME_SRC="$ROOT/integrations/codex/physearth.tmTheme"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 THEMES_DIR="$CODEX_HOME/themes"
-THEME_ID="geoai"
+THEME_ID="physearth"
 CONFIG="$CODEX_HOME/config.toml"
-BEGIN="# >>> physearth-geoai (written by integrations/codex/theme-install.sh)"
-END="# <<< physearth-geoai"
+BEGIN="# >>> physearth (written by integrations/codex/theme-install.sh)"
+END="# <<< physearth"
 
 WRITE_CONFIG=0
 CHECK=0
@@ -97,7 +97,7 @@ if [ "$CHECK" = "1" ]; then
   target="$THEMES_DIR/$THEME_ID.tmTheme"
   [ -f "$target" ] || { echo "not installed: $target" >&2; exit 1; }
   validate "$target"
-  grep -q '^theme = "geoai"' "$CONFIG" 2>/dev/null \
+  grep -q '^theme = "physearth"' "$CONFIG" 2>/dev/null \
     && echo "config: tui.theme is set" \
     || echo "config: tui.theme is not set — pick the theme in /theme, or run with --write-config"
   exit 0

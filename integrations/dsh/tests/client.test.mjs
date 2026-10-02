@@ -207,7 +207,7 @@ test('the browser half registers under its module id, which is the package name'
   // it does not match, with a console error and no visible effect. It is the package name, not
   // the settings namespace and not a display name.
   assert.equal(id, manifest.name)
-  assert.equal(exports.NS, 'physearth-geoai')
+  assert.equal(exports.NS, 'physearth')
   for (const service of ['settingsScope', 'slots', 'theme', 'locale']) {
     assert.ok(exports.inject.includes(service), service)
   }
@@ -265,12 +265,12 @@ test('the stylesheet carries the accent and stays scoped to the enabled class', 
   const { exports } = mountClient()
 
   const css = exports.stylesheet(exports.accentPaint({ accent: 'amber', colorScheme: 'dark' }))
-  assert.match(css, /body\.geoai-restyled/)
+  assert.match(css, /body\.physearth-restyled/)
   assert.match(css, /#f59e0b/)
   assert.match(css, /prefers-reduced-motion: reduce/)
   // The card must be readable with the restyle off, because it is the way back on.
-  assert.match(css, /\.geoai-card \{/)
-  assert.match(css, /\.geoai-switch \{/)
+  assert.match(css, /\.physearth-card \{/)
+  assert.match(css, /\.physearth-switch \{/)
 })
 
 test('apply() binds the settings namespace and applies the token layer', () => {
@@ -279,9 +279,9 @@ test('apply() binds the settings namespace and applies the token layer', () => {
 
   withDom(() => exports.apply(ctx))
 
-  assert.deepEqual(calls.binds, [{ namespace: 'physearth-geoai' }])
+  assert.deepEqual(calls.binds, [{ namespace: 'physearth' }])
   assert.equal(calls.tokens.length, 1)
-  assert.equal(calls.tokens[0].source, 'physearth-geoai')
+  assert.equal(calls.tokens[0].source, 'physearth')
   assert.ok(Object.keys(calls.tokens[0].tokens).length >= 40)
 })
 
@@ -291,7 +291,7 @@ test('the restyle is a body class, so the switch is visible and reversible', () 
 
   withDom((dom) => {
     exports.apply(ctx)
-    assert.ok(dom.classes.has('geoai-restyled'), 'enabled turns the restyle on')
+    assert.ok(dom.classes.has('physearth-restyled'), 'enabled turns the restyle on')
     assert.ok(calls.effects.some((label) => /stylesheet/.test(label)))
   })
 })
@@ -302,8 +302,8 @@ test('the restyle stays off when the plugin is off, and the card stays styleable
 
   withDom((dom) => {
     exports.apply(ctx)
-    assert.equal(dom.classes.has('geoai-restyled'), false, 'disabled leaves the shell alone')
-    assert.equal(dom.body.dataset.geoaiEnabled, 'false')
+    assert.equal(dom.classes.has('physearth-restyled'), false, 'disabled leaves the shell alone')
+    assert.equal(dom.body.dataset.physearthEnabled, 'false')
     assert.equal(calls.subscribed, 2, 'the token layer and the stylesheet both follow the settings')
     assert.equal(calls.tokens.length, 0, 'no palette is stacked while the plugin is off')
   })
@@ -352,8 +352,8 @@ test('the card registers into settings.plugin.item with the fields the plugin ta
   assert.equal(options.name, 'settings.plugin.item')
   // `key` is what the plugins tab matches a host-served namespace against, so a wrong key means
   // a card that never appears, with nothing logged.
-  assert.equal(options.key, 'physearth-geoai')
-  assert.equal(options.id, 'physearth-geoai')
+  assert.equal(options.key, 'physearth')
+  assert.equal(options.id, 'physearth')
   assert.ok(Number.isFinite(options.order))
   assert.equal(typeof options.label, 'function')
 })
@@ -388,7 +388,7 @@ test('the switch writes the host half\u2019s enabled setting, which is what move
   const control = buttons.find((button) => button.props.role === 'switch')
   assert.ok(control, 'the card renders a switch')
   assert.equal(control.props['aria-checked'], 'false')
-  assert.match(control.props.className, /geoai-switch/)
+  assert.match(control.props.className, /physearth-switch/)
 
   control.props.onClick()
   await Promise.resolve()

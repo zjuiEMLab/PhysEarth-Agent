@@ -8,17 +8,17 @@
 #
 # Two rows, and the split is deliberate:
 #
-#   geoai       our plugin: the settings switch, the prompt rules, the browser restyle.
+#   physearth       our plugin: the settings switch, the prompt rules, the browser restyle.
 #               It carries no paths: the host half finds the checkout by walking up from its own
 #               file and finds a Python by proving candidates against the engine, so this row is
 #               the same in every checkout. See lib/host-env.js.
-#   mcp-geoai   the harness' own MCP client, pointed at this repository's MCP server. The
+#   mcp-physearth   the harness' own MCP client, pointed at this repository's MCP server. The
 #               engine's tools are therefore *discovered* rather than hand-declared, and the
 #               tool list follows the server (`notifications/tools/list_changed`). Tools appear
-#               as `mcp__geoai__<tool>`.
+#               as `mcp__physearth__<tool>`.
 #
 # The switch in 设置 → 插件 (PhysEarth Geo-AI) flips this plugin's `enabled` setting and, in the
-# same gesture, disables the mcp-geoai row through the loader, so the model's tool list follows
+# same gesture, disables the mcp-physearth row through the loader, so the model's tool list follows
 # the switch. That loader update is live in the web profile; a page refresh shows the result.
 #
 # Paths. A patch layer cannot carry a checkout's absolute path, and it must not pretend to: the
@@ -30,23 +30,23 @@
 # restart.
 
 - insert:
-    - id: geoai
-      name: dsh-plugin-physearth-geoai
+    - id: physearth
+      name: dsh-plugin-physearth
       config:
         # The one setting that has to be declared: off until a user turns it on. Everything else
         # is the schema default in entry.js, and the card edits the stored layer on top.
         enabled: false
 
-    - id: mcp-geoai
+    - id: mcp-physearth
       name: '@deepseek-ai/dsh-mcp-client'
       config:
-        serverName: geoai
+        serverName: physearth
         transport: stdio
         # `python3`, not `python`: `python` is absent on macOS and on most Linux distributions,
         # and a row that cannot spawn shows up as an empty tool list with no error. install.sh
         # replaces this with an interpreter it has proved can import the engine.
         command: python3
-        args: ['-m', 'integrations.geoai', 'serve']
+        args: ['-m', 'integrations.physearth', 'serve']
         # Relative to the harness' working directory, which is the checkout for anyone who
         # follows the README. install.sh rewrites this and `cwd` as absolute paths.
         env:
@@ -55,6 +55,6 @@
         # by default (see lib/logic.js) so nothing here has to guess an interpreter.
         toolCallTimeoutMs: 120000
         # The bridge needs the same credentials the engine does; leave the key unset and the
-        # tool-only and knowledge-only paths still work while `geoai_ask` refuses in one line.
+        # tool-only and knowledge-only paths still work while `physearth_ask` refuses in one line.
         # failOnStartupError stays false so a missing Python does not stop the whole harness.
         failOnStartupError: false

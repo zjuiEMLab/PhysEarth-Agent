@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PLUGIN = ROOT / "integrations" / "dsh"
-SERVER = ROOT / "integrations" / "geoai" / "mcp_server.py"
+SERVER = ROOT / "integrations" / "physearth" / "mcp_server.py"
 
 
 def test_the_installer_uses_the_shared_interpreter_search():
@@ -47,7 +47,7 @@ def test_the_shared_library_answers_the_probe_this_branch_needs():
     interpreter = probe.stdout.strip()
     assert Path(interpreter).is_absolute(), interpreter
     again = subprocess.run(
-        [interpreter, "-c", "from integrations.geoai import service"],
+        [interpreter, "-c", "from integrations.physearth import service"],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -57,7 +57,7 @@ def test_the_shared_library_answers_the_probe_this_branch_needs():
 
 
 def test_the_server_runs_as_a_file_from_an_unrelated_directory(tmp_path):
-    # Why this branch cares: its own row invokes `python -m integrations.geoai serve` with a
+    # Why this branch cares: its own row invokes `python -m integrations.physearth serve` with a
     # `cwd` and a `PYTHONPATH` written into the profile patch, so the file form is never
     # exercised by the plugin itself. A reader who copies the file form out of any other host's
     # guide would get `ModuleNotFoundError` and a server that "starts but has no tools".
@@ -92,7 +92,7 @@ def test_the_server_runs_as_a_file_from_an_unrelated_directory(tmp_path):
     )
     replies = [json.loads(line) for line in run.stdout.splitlines() if line.strip()]
     assert [reply["id"] for reply in replies] == [1, 2], run.stdout + run.stderr
-    assert replies[0]["result"]["serverInfo"]["name"] == "physearth-geoai"
+    assert replies[0]["result"]["serverInfo"]["name"] == "physearth"
     assert len(replies[1]["result"]["tools"]) >= 28
     # `--stdio` is what every host's guide spells; it must be accepted, not argued with.
     assert "unrecognised argument" not in run.stdout

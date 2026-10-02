@@ -3,14 +3,14 @@
 #
 # Usage:
 #   integrations/dsh/scripts/install.sh                              # into $DSH_PROFILE (default web)
-#   DSH_PROFILE=geoai-verify integrations/dsh/scripts/install.sh
-#   scripts/verify-profile.sh geoai-verify 3199                      # create + install a throwaway one
+#   DSH_PROFILE=physearth-verify integrations/dsh/scripts/install.sh
+#   scripts/verify-profile.sh physearth-verify 3199                      # create + install a throwaway one
 #
 # Four things happen, and each one exists because a live boot said so.
 #
 # 1. RESOLVE THE INTERPRETER. The search is `integrations/lib/find-python.sh`, shared with the Codex
 #    and Claude integrations — every one of them had written the same wrong candidate list. A
-#    candidate is accepted only after it imports `integrations.geoai.service`, and not
+#    candidate is accepted only after it imports `integrations.physearth.service`, and not
 #    `physearth`: that package's `__init__` is lazy, so `import physearth` succeeds on an
 #    interpreter with no PyYAML, and the row then mounts and offers an empty tool list with
 #    nothing in the log.
@@ -45,9 +45,9 @@ PROFILE="${DSH_PROFILE:-web}"
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 PROFILE_DIR="$DSH_HOME/profiles/$PROFILE"
 PATCH="$PROFILE_DIR/cordis.patch.yml"
-PACKAGE_NAME="dsh-plugin-physearth-geoai"
-BLOCK_BEGIN="# >>> physearth-geoai (written by integrations/dsh/scripts/install.sh)"
-BLOCK_END="# <<< physearth-geoai"
+PACKAGE_NAME="dsh-plugin-physearth"
+BLOCK_BEGIN="# >>> physearth (written by integrations/dsh/scripts/install.sh)"
+BLOCK_END="# <<< physearth"
 
 if [ -z "$CHECKOUT" ]; then
   echo "Cannot find the repository root: run this from a git checkout." >&2
@@ -68,7 +68,7 @@ if PYTHON="$(physearth_find_python_for_engine "$CHECKOUT" || true)" && [ -n "$PY
   echo "python:    $PYTHON (imports the bridge service)"
 else
   PYTHON="python3"
-  echo "python:    $PYTHON — WARNING: no candidate could import integrations.geoai.service." >&2
+  echo "python:    $PYTHON — WARNING: no candidate could import integrations.physearth.service." >&2
   echo "           The rows will mount and every physics tool will refuse. Install first:" >&2
   echo "             uv sync --extra dev        # or: pip install -e backend, plus pyyaml/numpy" >&2
   echo "           then re-run as:  PHYSEARTH_PYTHON=/path/to/python $0" >&2
@@ -182,19 +182,19 @@ with open(bundle_path) as handle:
     bundle = yaml.safe_load(handle)
 rows = {entry["id"]: entry for group in bundle for entry in group.get("insert", [])}
 
-plugin_config = dict(rows["geoai"]["config"])
+plugin_config = dict(rows["physearth"]["config"])
 plugin_config["projectRoot"] = checkout
 plugin_config["pythonCmd"] = python_cmd
 
-mcp_config = dict(rows["mcp-geoai"]["config"])
+mcp_config = dict(rows["mcp-physearth"]["config"])
 mcp_config["command"] = python_cmd
 mcp_config["cwd"] = checkout
 mcp_config["env"] = {**mcp_config.get("env", {}), "PYTHONPATH": f"{checkout}/src:{checkout}"}
 
 body = yaml.safe_dump(
     [
-        {"id": "geoai", "config": plugin_config},
-        {"id": "mcp-geoai", "config": mcp_config},
+        {"id": "physearth", "config": plugin_config},
+        {"id": "mcp-physearth", "config": mcp_config},
     ],
     sort_keys=False,
     default_flow_style=False,
@@ -243,14 +243,14 @@ cat <<NEXT
 Next steps
   1. start or restart the harness:      dsh --profile $PROFILE
   2. confirm the row carries your paths:
-       dsh --profile $PROFILE --dump-config | grep -A12 'id: mcp-geoai'
+       dsh --profile $PROFILE --dump-config | grep -A12 'id: mcp-physearth'
   3. confirm the Python side answers:
-       cd $CHECKOUT && PYTHONPATH=src:. $PYTHON -m integrations.geoai health
+       cd $CHECKOUT && PYTHONPATH=src:. $PYTHON -m integrations.physearth health
   4. confirm the browser half is served (with the harness running on PORT):
        curl -s http://127.0.0.1:PORT/ | grep -o '$PACKAGE_NAME[^"]*'
        curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:PORT/plugins/$PACKAGE_NAME/client.js
   5. in the browser: 设置 → 插件 → PhysEarth Geo-AI → flip the switch.
      On:  the palette turns Geo-AI (dark surface, ice/amber accent, monospace numbers),
-          tools appear as mcp__geoai__*, and the system prompt gains the citation and unit rules.
+          tools appear as mcp__physearth__*, and the system prompt gains the citation and unit rules.
      Off: palette back to the host default, tools and prompt section gone, bridge released.
 NEXT

@@ -29,10 +29,10 @@ import { dirname, join, resolve } from 'node:path'
  * Files that only exist in a checkout of this repository.
  *
  * Both are required: `src/physearth` alone would match any sibling project that happens to
- * have the same layout, and `integrations/geoai` alone would match a directory holding only the
+ * have the same layout, and `integrations/physearth` alone would match a directory holding only the
  * integrations tree.
  */
-export const CHECKOUT_MARKERS = ['src/physearth/__init__.py', 'integrations/geoai/service.py']
+export const CHECKOUT_MARKERS = ['src/physearth/__init__.py', 'integrations/physearth/service.py']
 
 /**
  * Directories to consider, nearest first: every ancestor of the starting points, plus `cwd`.
@@ -147,9 +147,9 @@ export const PROMPT_SCOPES = Object.freeze(['identity', 'rules', 'context'])
  * How deep a host takes the project's prompt stack, and what each answer costs.
  *
  * These are the card's choices. The sizes below are what this checkout reports, not guesses —
- * `python -m integrations.geoai prompt --list` prints them for any revision, and they are the
+ * `python -m integrations.physearth prompt --list` prints them for any revision, and they are the
  * reason the default is not `full`: `context` is 24k characters of registered-model and corpus
- * text that the same session can also read through `mcp__geoai__*`, so paying for a copy in
+ * text that the same session can also read through `mcp__physearth__*`, so paying for a copy in
  * every turn buys a snapshot that starts going stale immediately.
  *
  * `identity` is deliberately absent from the default for a different reason. It is 1.3k
@@ -201,7 +201,7 @@ export function readPromptStack({
   const scopes = PROMPT_SCOPE_ARGS[scope]
   if (!scopes) throw new Error(`prompt depth "${scope}" does not ask the engine for anything`)
   if (!pythonCmd || !checkout) throw new Error('no interpreter or checkout to ask')
-  const args = ['-m', 'integrations.geoai', 'prompt', '--scopes', scopes]
+  const args = ['-m', 'integrations.physearth', 'prompt', '--scopes', scopes]
   const result = run(pythonCmd, args, {
     cwd: checkout,
     timeout,

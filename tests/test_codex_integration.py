@@ -17,10 +17,10 @@ from pathlib import Path
 import tomllib
 import yaml
 
-from integrations.geoai import mcp_server
+from integrations.physearth import mcp_server
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL_DIR = ROOT / ".agents" / "skills" / "geoai"
+SKILL_DIR = ROOT / ".agents" / "skills" / "physearth"
 SKILL = SKILL_DIR / "SKILL.md"
 CODEX_DIR = ROOT / "integrations" / "codex"
 
@@ -61,14 +61,14 @@ def test_the_skill_is_where_codex_looks_for_a_repository_skill():
     # the skill discoverable without any install step. `codex debug prompt-input` was used to
     # confirm it is listed to the model from this location on 0.155.1.
     assert SKILL.is_file(), SKILL
-    assert SKILL_DIR.name == "geoai"
+    assert SKILL_DIR.name == "physearth"
     assert (SKILL_DIR / "references").is_dir()
 
 
 def test_the_skill_front_matter_carries_a_name_and_a_triggering_description():
     matter = _front_matter(SKILL.read_text())
 
-    assert matter["name"] == "geoai"
+    assert matter["name"] == "physearth"
     # Required by the loader; also the only thing the model sees before deciding to open the file.
     assert isinstance(matter["description"], str)
     assert len(matter["description"]) > 200
@@ -92,10 +92,10 @@ def test_the_skill_states_the_rules_the_engine_actually_enforces():
     # Each of these is a guarantee in the engine, so an omission here is a model that will
     # confidently break one.
     for phrase in (
-        "geoai_health",
-        "geoai_evidence",
-        "geoai_decide",
-        "geoai_verify_report",
+        "physearth_health",
+        "physearth_evidence",
+        "physearth_decide",
+        "physearth_verify_report",
         "[abs:doi]",
         "needs_input",
     ):
@@ -128,7 +128,7 @@ def test_the_openai_metadata_is_parseable_and_its_assets_exist():
     # together on a surface that has no other way to express it.
     dependency = meta["dependencies"]["tools"][0]
     assert dependency["type"] == "mcp"
-    assert dependency["value"] == "geoai"
+    assert dependency["value"] == "physearth"
 
 
 def test_the_config_snippet_uses_the_key_codex_reads_and_no_invented_keys():
@@ -136,7 +136,7 @@ def test_the_config_snippet_uses_the_key_codex_reads_and_no_invented_keys():
 
     assert "mcp_servers" in data, "the key is mcp_servers, never mcpServers"
     assert "mcpServers" not in data
-    server = data["mcp_servers"]["geoai"]
+    server = data["mcp_servers"]["physearth"]
     unknown = set(server) - MCP_SERVER_KEYS
     assert not unknown, f"keys Codex does not read: {sorted(unknown)}"
     for required in ("command", "args", "cwd", "startup_timeout_sec", "tool_timeout_sec"):
@@ -144,7 +144,7 @@ def test_the_config_snippet_uses_the_key_codex_reads_and_no_invented_keys():
 
 
 def test_the_config_snippet_does_not_promise_a_python_that_does_not_exist():
-    server = tomllib.loads((CODEX_DIR / "config.snippet.toml").read_text())["mcp_servers"]["geoai"]
+    server = tomllib.loads((CODEX_DIR / "config.snippet.toml").read_text())["mcp_servers"]["physearth"]
 
     # A bare `python` is the hazard: it is absent on macOS and on most Linux distributions, and a
     # server pointed at a missing or dependency-free interpreter starts and offers an empty tool
@@ -153,7 +153,7 @@ def test_the_config_snippet_does_not_promise_a_python_that_does_not_exist():
     assert os.path.isabs(server["command"]), server["command"]
     assert server["command"].startswith("/absolute/path") or "/" in server["command"]
     assert "--stdio" in server["args"]
-    assert server["args"][0].endswith("integrations/geoai/mcp_server.py")
+    assert server["args"][0].endswith("integrations/physearth/mcp_server.py")
     # A scientific Python import exceeds the 10 s default.
     assert server["startup_timeout_sec"] >= 30
     assert server["tool_timeout_sec"] >= 120
@@ -164,8 +164,8 @@ def test_the_install_guide_keeps_the_cli_command_primary():
 
     # A hand-edited config is the thing users get wrong; the guide has to lead with the command
     # that writes it, and mention the file form as the alternative.
-    assert "codex mcp add geoai --" in guide
-    assert guide.index("codex mcp add geoai --") < guide.index("config.snippet.toml")
+    assert "codex mcp add physearth --" in guide
+    assert guide.index("codex mcp add physearth --") < guide.index("config.snippet.toml")
     assert "startup_timeout_sec" in guide
     assert "mcp_servers" in guide
     # The one thing it must not do.
@@ -202,19 +202,19 @@ def test_the_shell_scripts_share_one_interpreter_search():
 
 
 def test_the_agents_md_snippet_matches_the_skill_on_the_rules_that_matter():
-    snippet = (ROOT / "integrations" / "geoai" / "AGENTS.snippet.md").read_text()
+    snippet = (ROOT / "integrations" / "physearth" / "AGENTS.snippet.md").read_text()
     skill = SKILL.read_text()
 
     # Two documents, one policy: a rule present in one and absent from the other is a model that
     # behaves differently depending on which surface it was loaded through.
-    for rule in ("[abs:doi]", "geoai_decide", "geoai_evidence", "geoai_verify_report"):
+    for rule in ("[abs:doi]", "physearth_decide", "physearth_evidence", "physearth_verify_report"):
         assert rule in snippet, f"AGENTS snippet lost {rule}"
         assert rule in skill, f"skill lost {rule}"
 
 
 # ── the installable bundle (repo marketplace) ────────────────────────────────────────────────
 
-PLUGIN = ROOT / "integrations" / "codex" / "geoai"
+PLUGIN = ROOT / "integrations" / "codex" / "physearth"
 MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -269,14 +269,14 @@ def test_the_plugin_declares_no_mcp_server_and_says_why():
     # offers no tools.
     assert "mcpServers" not in manifest
     assert "copies" in readme and "cache" in readme
-    assert "codex mcp add geoai --" in readme
+    assert "codex mcp add physearth --" in readme
 
 
 def test_the_bundled_skill_is_byte_identical_to_the_repository_one():
     # Two copies exist because two discovery paths exist. A test rather than a symlink: the
     # installer copies the plugin root, so a symlink pointing outside it would arrive broken.
     for relative in ("SKILL.md", "references/tools.md", "references/troubleshooting.md"):
-        bundled = (PLUGIN / "skills" / "geoai" / relative).read_bytes()
+        bundled = (PLUGIN / "skills" / "physearth" / relative).read_bytes()
         assert bundled == (SKILL_DIR / relative).read_bytes(), relative
 
 
@@ -302,7 +302,7 @@ def test_the_repository_marketplace_points_at_the_plugin_it_catalogues():
 
 # ── text and colour: the only surface a CLI plugin has ───────────────────────────────────────
 
-THEME = ROOT / "integrations" / "codex" / "geoai.tmTheme"
+THEME = ROOT / "integrations" / "codex" / "physearth.tmTheme"
 THEME_SNIPPET = ROOT / "integrations" / "codex" / "config-theme.snippet.toml"
 
 # Every scope Codex names in its own theme scope list, plus the markdown ones an answer here
@@ -381,7 +381,7 @@ def test_the_theme_snippet_writes_only_keys_that_were_probed():
     # These two are the ones an installer can set safely: a string and a boolean. The list-valued
     # keys are deliberately absent — an unknown item id is accepted at load and filtered later, so
     # a wrong id is a silently empty slot, and guessing is worse than pointing at the picker.
-    assert tui["theme"] == "geoai"
+    assert tui["theme"] == "physearth"
     assert tui["status_line_use_colors"] is True
     assert "status_line" not in tui
     assert "terminal_title" not in tui
@@ -417,7 +417,7 @@ def test_the_marketplace_entry_carries_what_the_cli_needs_to_install_it():
     entry, = catalog["plugins"]
     manifest = _plugin_manifest()
 
-    assert entry["source"] == {"source": "local", "path": "./integrations/codex/geoai"}
+    assert entry["source"] == {"source": "local", "path": "./integrations/codex/physearth"}
     assert (ROOT / entry["source"]["path"]).resolve() == PLUGIN.resolve()
     # The version the CLI printed in `plugin list` is the manifest's, not the catalogue's.
     assert manifest["version"] == "1.0.0"
