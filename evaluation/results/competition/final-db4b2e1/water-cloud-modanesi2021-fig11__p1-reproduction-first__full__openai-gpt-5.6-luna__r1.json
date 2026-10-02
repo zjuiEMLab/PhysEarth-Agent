@@ -1,0 +1,4719 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "water-cloud-modanesi2021-fig11",
+  "suite": "tier2",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "1300fd39e1aecb1aaf1d42e669cfd97837913fec310cc5b8cdf7a7d72264527a",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 1,
+  "build": "db4b2e1",
+  "question": "Reproduce Figure 11 of Modanesi, Massari, Gruber, Lievens, Tarpanelli, Morbidelli and De Lannoy (2021), \"Optimizing a backscatter forward operator using Sentinel-1 data over irrigated land\" (Hydrology and Earth System Sciences 25, 6283-6307, DOI: 10.5194/hess-25-6283-2021): the 2016-2017 time series of VV and VH backscatter at the Faenza field, Sentinel-1 observations against the calibrated water cloud model, for the natural and irrigation runs. Read the paper and inspect the figure first, then reproduce it with the registered models and data, or explain precisely what prevents a faithful reproduction.",
+  "answer": "## Research result and conclusion\n\nThe generated figures show monotonic component behavior, not convergence between model formulations or reproduction of the paper’s VV/VH Sentinel-1 time series. Total backscatter increases with both vegetation water content and soil moisture in the supported local Water Cloud runs. The figures therefore support a **partial reproduction only**: they demonstrate the registered model’s component sensitivities, but do not reproduce Figure 11’s calibrated VV/VH time series or KGE/J-based evaluation.\n\n## Supporting results\n\nFigure 1 contains three curves versus vegetation water content from 0–8 kg m⁻². Total backscatter increases from −14.5 to −2.7879 dB, while two-way transmissivity decreases from 1.0 to 0.09035. The soil component remains constant at −14.5 dB. [model:water_cloud@1.0.0]\n\nFigure 2 contains three curves versus soil moisture from 0.05–0.55 m³ m⁻³. Total backscatter increases from −15.9764 to −6.4332 dB, and the soil component increases from −20.5 to −5.5 dB. The vegetation component remains constant at −17.2917 dB, and transmissivity remains 0.74044. [model:water_cloud@1.0.0]\n\nThe source paper’s Figure 11 concerns VV and VH Sentinel-1 time series and a calibrated Water Cloud Model evaluation [backscatter-forward-operator#11] [backscatter-forward-operator#12]. The generated figures use scalar supported components rather than those required time series, so numerical agreement, curve-by-curve correspondence, bias, RMSE, correlation, KGE, and J are **not scoreable**.\n\n| Aspect | Source/generated-image conclusion | Result-array conclusion |\n|---|---|---|\n| Curves | Three supported backscatter components are plotted in each generated figure. | The recorded runs contain soil, vegetation, and total backscatter outputs. |\n| Ordering and trend | The generated curves show increasing total backscatter with both sweep variables; transmissivity decreases with vegetation water content. | The recorded arrays confirm those monotonic endpoint changes. |\n| Paper comparison | No claim of visual reproduction of Figure 11 is supported. | VV/VH time-series comparison and calibrated KGE/J assessment are unavailable. |\n| Quantitative agreement | Not scoreable. | No source-aligned numerical comparison was supplied. |\n\nThe chart render checks passed, establishing that the generated arrays were finite, sufficiently sampled, and legible. This does not establish agreement with the source figure.\n\n## Assumed parameters\n\nThe following values were assumptions or registered backend defaults, not paper-derived parameters:\n\n- `angle_deg = 37`: model assumption; no paper evidence.\n- `soil_moisture = 0.25`: model assumption; no paper evidence.\n- `vegetation_water_kg_m2 = 1`: model assumption; no paper evidence.\n- `coefficient_a = 0.09`, `coefficient_b = 0.12`, `coefficient_c = -22`, and `coefficient_d = 30`: backend defaults.\n- `sweep_parameter = none`: model assumption in the baseline specification.\n- `sweep_points = 10`: backend default in the baseline specification.\n- `sweep_start = 0.0` and `sweep_stop = 8.0`: model assumptions associated with the vegetation-water sweep.\n\nThe principal limitations are the absence of the paper’s calibrated KGE/J procedure, the missing VV/VH Sentinel-1 time-series output, and the use of assumed rather than paper-explicit local input values. The requested full Figure 11 reproduction is therefore not identifiable from the recorded supported runs.\n\n## Conclusion\n\nThe generated figures support a clear local-model conclusion: backscatter increases with vegetation water content and soil moisture under the approved conditions, while vegetation water reduces transmissivity. They do not support a full reproduction or quantitative validation of the paper’s Figure 11. The calibrated outcome is **partial**. [skill:research-reporting]\n\n<parameter_provenance>\n[\n  {\"field\":\"angle_deg\",\"value\":37,\"source_kind\":\"assumption\",\"source_ref\":\"none; registered input retained without paper evidence\",\"reason\":\"The registered input was retained as a model assumption without paper evidence.\",\"provenance_class\":\"model_assumption\",\"sensitivity_checked\":false},\n  {\"field\":\"soil_moisture\",\"value\":0.25,\"source_kind\":\"assumption\",\"source_ref\":\"none; registered input retained without paper evidence\",\"reason\":\"The registered input was retained as a model assumption without paper evidence.\",\"provenance_class\":\"model_assumption\",\"sensitivity_checked\":false},\n  {\"field\":\"vegetation_water_kg_m2\",\"value\":1,\"source_kind\":\"assumption\",\"source_ref\":\"none; registered input retained without paper evidence\",\"reason\":\"The registered input was retained as a model assumption without paper evidence.\",\"provenance_class\":\"model_assumption\",\"sensitivity_checked\":false},\n  {\"field\":\"coefficient_a\",\"value\":0.09,\"source_kind\":\"model_default\",\"source_ref\":\"registered backend default\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"provenance_class\":\"backend_default\",\"sensitivity_checked\":false},\n  {\"field\":\"coefficient_b\",\"value\":0.12,\"source_kind\":\"model_default\",\"source_ref\":\"registered backend default\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"provenance_class\":\"backend_default\",\"sensitivity_checked\":false},\n  {\"field\":\"coefficient_c\",\"value\":-22,\"source_kind\":\"model_default\",\"source_ref\":\"registered backend default\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"provenance_class\":\"backend_default\",\"sensitivity_checked\":false},\n  {\"field\":\"coefficient_d\",\"value\":30,\"source_kind\":\"model_default\",\"source_ref\":\"registered backend default\",\"reason\":\"The registered backend supplied this default; it is not paper evidence.\",\"provenance_class\":\"backend_default\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_parameter\",\"value\":\"none\",\"source_kind\":\"assumption\",\"source_ref\":\"none; submitted baseline run specification\",\"reason\":\"The submitted run retained this value without attached paper or user evidence.\",\"provenance_class\":\"model_assumption\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_points\",\"value\":10,\"source_kind\":\"model_default\",\"source_ref\":\"registered backend parameter resolution\",\"reason\":\"The registered model inserted this value; it is not paper evidence.\",\"provenance_class\":\"backend_default\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_start\",\"value\":0.0,\"source_kind\":\"assumption\",\"source_ref\":\"none; submitted vegetation-water sweep specification\",\"reason\":\"The submitted run retained this value without attached paper or user evidence.\",\"provenance_class\":\"model_assumption\",\"sensitivity_checked\":false},\n  {\"field\":\"sweep_stop\",\"value\":8.0,\"source_kind\":\"assumption\",\"source_ref\":\"none; submitted vegetation-water sweep specification\",\"reason\":\"The submitted run retained this value without attached paper or user evidence.\",\"provenance_class\":\"model_assumption\",\"sensitivity_checked\":false}\n]\n</parameter_provenance>\n<reproduction_outcome>partial</reproduction_outcome>",
+  "planning_answer": "Research is paused at the human-review stage (plan_review). No formal physical result has been computed yet. Click Approve plan, or describe the changes you want in Conversation.",
+  "elapsed_s": 205.16,
+  "stop_rule": null,
+  "model_calls": 36,
+  "llm_usage": {
+    "calls": 36,
+    "prompt_tokens": 712964,
+    "completion_tokens": 17173,
+    "total_tokens": 730137,
+    "cost_usd": 0.18316962,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 12747,
+        "completion_tokens": 107,
+        "cost_usd": 0.00048255,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.04
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 13303,
+        "completion_tokens": 21,
+        "cost_usd": 0.00054157,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.03
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 14431,
+        "completion_tokens": 22,
+        "cost_usd": 0.00080729,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.92
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 16475,
+        "completion_tokens": 19,
+        "cost_usd": 0.00128825,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.95
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 17696,
+        "completion_tokens": 24,
+        "cost_usd": 0.00445265,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.97
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 18084,
+        "completion_tokens": 29,
+        "cost_usd": 0.00455565,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.14
+      },
+      {
+        "turn": 1,
+        "index": 7,
+        "prompt_tokens": 18639,
+        "completion_tokens": 29,
+        "cost_usd": 0.0046944,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.08
+      },
+      {
+        "turn": 1,
+        "index": 8,
+        "prompt_tokens": 19782,
+        "completion_tokens": 29,
+        "cost_usd": 0.00498015,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.14
+      },
+      {
+        "turn": 1,
+        "index": 9,
+        "prompt_tokens": 20853,
+        "completion_tokens": 29,
+        "cost_usd": 0.0052479,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.89
+      },
+      {
+        "turn": 1,
+        "index": 10,
+        "prompt_tokens": 22149,
+        "completion_tokens": 29,
+        "cost_usd": 0.0055719,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.25
+      },
+      {
+        "turn": 1,
+        "index": 11,
+        "prompt_tokens": 23634,
+        "completion_tokens": 31,
+        "cost_usd": 0.00594555,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.29
+      },
+      {
+        "turn": 1,
+        "index": 12,
+        "prompt_tokens": 23977,
+        "completion_tokens": 65,
+        "cost_usd": 0.0060721,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.55
+      },
+      {
+        "turn": 1,
+        "index": 13,
+        "prompt_tokens": 13867,
+        "completion_tokens": 527,
+        "cost_usd": 0.004099,
+        "reasoning_chars": 0,
+        "elapsed_s": 9.26
+      },
+      {
+        "turn": 1,
+        "index": 14,
+        "prompt_tokens": 19556,
+        "completion_tokens": 2613,
+        "cost_usd": 0.0080181,
+        "reasoning_chars": 0,
+        "elapsed_s": 22.88
+      },
+      {
+        "turn": 1,
+        "index": 15,
+        "prompt_tokens": 22298,
+        "completion_tokens": 249,
+        "cost_usd": 0.0058667,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.93
+      },
+      {
+        "turn": 2,
+        "index": 1,
+        "prompt_tokens": 12669,
+        "completion_tokens": 238,
+        "cost_usd": 0.0034527,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.53
+      },
+      {
+        "turn": 2,
+        "index": 2,
+        "prompt_tokens": 14601,
+        "completion_tokens": 2377,
+        "cost_usd": 0.0065025,
+        "reasoning_chars": 0,
+        "elapsed_s": 21.61
+      },
+      {
+        "turn": 2,
+        "index": 3,
+        "prompt_tokens": 19782,
+        "completion_tokens": 26,
+        "cost_usd": 0.0049702,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.23
+      },
+      {
+        "turn": 2,
+        "index": 4,
+        "prompt_tokens": 20160,
+        "completion_tokens": 62,
+        "cost_usd": 0.00511425,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.51
+      },
+      {
+        "turn": 2,
+        "index": 5,
+        "prompt_tokens": 21395,
+        "completion_tokens": 2155,
+        "cost_usd": 0.0079346,
+        "reasoning_chars": 0,
+        "elapsed_s": 13.52
+      },
+      {
+        "turn": 2,
+        "index": 6,
+        "prompt_tokens": 23693,
+        "completion_tokens": 364,
+        "cost_usd": 0.00635355,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.35
+      },
+      {
+        "turn": 2,
+        "index": 7,
+        "prompt_tokens": 24200,
+        "completion_tokens": 19,
+        "cost_usd": 0.0060663,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.44
+      },
+      {
+        "turn": 2,
+        "index": 8,
+        "prompt_tokens": 26884,
+        "completion_tokens": 276,
+        "cost_usd": 0.0070457,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.3
+      },
+      {
+        "turn": 2,
+        "index": 9,
+        "prompt_tokens": 27303,
+        "completion_tokens": 531,
+        "cost_usd": 0.00745645,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.0
+      },
+      {
+        "turn": 2,
+        "index": 10,
+        "prompt_tokens": 27977,
+        "completion_tokens": 165,
+        "cost_usd": 0.00718575,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.26
+      },
+      {
+        "turn": 2,
+        "index": 11,
+        "prompt_tokens": 28285,
+        "completion_tokens": 1600,
+        "cost_usd": 0.00898475,
+        "reasoning_chars": 0,
+        "elapsed_s": 12.81
+      },
+      {
+        "turn": 2,
+        "index": 12,
+        "prompt_tokens": 33717,
+        "completion_tokens": 321,
+        "cost_usd": 0.0088143,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.63
+      },
+      {
+        "turn": 3,
+        "index": 1,
+        "prompt_tokens": 13107,
+        "completion_tokens": 54,
+        "cost_usd": 0.0033414,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.43
+      },
+      {
+        "turn": 3,
+        "index": 2,
+        "prompt_tokens": 13795,
+        "completion_tokens": 128,
+        "cost_usd": 0.0036022,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.75
+      },
+      {
+        "turn": 3,
+        "index": 3,
+        "prompt_tokens": 15573,
+        "completion_tokens": 107,
+        "cost_usd": 0.0040215,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.67
+      },
+      {
+        "turn": 3,
+        "index": 4,
+        "prompt_tokens": 17355,
+        "completion_tokens": 105,
+        "cost_usd": 0.0044646,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.73
+      },
+      {
+        "turn": 3,
+        "index": 5,
+        "prompt_tokens": 17776,
+        "completion_tokens": 27,
+        "cost_usd": 0.00447625,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.85
+      },
+      {
+        "turn": 3,
+        "index": 6,
+        "prompt_tokens": 18068,
+        "completion_tokens": 84,
+        "cost_usd": 0.00461765,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.67
+      },
+      {
+        "turn": 3,
+        "index": 7,
+        "prompt_tokens": 18460,
+        "completion_tokens": 26,
+        "cost_usd": 0.00464605,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.45
+      },
+      {
+        "turn": 3,
+        "index": 8,
+        "prompt_tokens": 18676,
+        "completion_tokens": 2736,
+        "cost_usd": 0.00795205,
+        "reasoning_chars": 0,
+        "elapsed_s": 22.76
+      },
+      {
+        "turn": 3,
+        "index": 9,
+        "prompt_tokens": 21997,
+        "completion_tokens": 1949,
+        "cost_usd": 0.00354311,
+        "reasoning_chars": 0,
+        "elapsed_s": 17.71
+      }
+    ]
+  },
+  "tool_calls": 32,
+  "interventions": 1,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": true,
+    "approval_policy": "scripted_accept_unmodified_plan",
+    "review_actions": [
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "confirm_reported_partial_scope",
+        "before": "capability waiting_user",
+        "summary": "Yes. I confirm the partial scope exactly as your capability check reported it. Generate the research plan for the supported components only, and name everything outside that scope as unavailable in the report.",
+        "after": "capability confirmed"
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_review",
+        "after": "plan_approved",
+        "status": "needs_input",
+        "summary": "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_approved",
+        "after": "pseudo_preview",
+        "status": "needs_input",
+        "summary": "Pseudo-data preview v001 is ready for layout review only. It is not model output and must not support a scientific conclusion. Confirm the figure package, or revise the plan in chat."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "pseudo_preview",
+        "after": "chart_selected",
+        "status": "needs_input",
+        "summary": "2 chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "chart_selected",
+        "after": "approved",
+        "status": "success",
+        "summary": "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs."
+      }
+    ],
+    "review_error": null,
+    "final_phase": "completed",
+    "plan_version": 1
+  },
+  "research": {
+    "question": "Partial supported-scope study for the paper Figure 11 context using the registered water_cloud model only.",
+    "plan_version": 1,
+    "phase": "completed",
+    "plan": {
+      "plan_version": 1,
+      "title": "Compute supported local Water Cloud component outputs under fixed exploratory conditions and explicitly document unavailable paper components.",
+      "question": "Partial supported-scope study for the paper Figure 11 context using the registered water_cloud model only.",
+      "objective": "Compute supported local Water Cloud component outputs under fixed exploratory conditions and explicitly document unavailable paper components.",
+      "hypothesis": "The registered local model produces internally consistent soil, vegetation, total backscatter, and transmissivity sensitivities, but cannot reproduce the paper's calibrated KGE/J VV/VH time series.",
+      "steps": [
+        "Run baseline.",
+        "Sweep vegetation water content.",
+        "Sweep soil moisture.",
+        "Report supported outputs and unavailable components separately."
+      ],
+      "parameters": {},
+      "paper_conditions": {},
+      "condition_provenance": {},
+      "literature_evidence": [
+        {
+          "evidence_ref": "backscatter-forward-operator#05",
+          "purpose": "model formulation"
+        },
+        {
+          "evidence_ref": "backscatter-forward-operator#07",
+          "purpose": "experimental context"
+        },
+        {
+          "evidence_ref": "backscatter-forward-operator#11",
+          "purpose": "calibration context"
+        },
+        {
+          "evidence_ref": "backscatter-forward-operator#12",
+          "purpose": "evaluation context"
+        },
+        {
+          "evidence_ref": "backscatter-forward-operator#fig11",
+          "purpose": "partial figure target"
+        }
+      ],
+      "reproduction_targets": [
+        {
+          "id": "fig11-partial",
+          "source_id": "figure:11",
+          "target_quantity": "Supported local water-cloud component outputs",
+          "expected_comparison": "Internal sensitivity study only; no full paper reproduction or equivalence claim.",
+          "reference_models": [
+            "Water Cloud Model calibrated with KGE and J objectives"
+          ],
+          "requested_outputs": [
+            "sigma0_soil_db",
+            "sigma0_vegetation_db",
+            "sigma0_total_db",
+            "two_way_transmissivity"
+          ],
+          "evidence_refs": [
+            "backscatter-forward-operator#05",
+            "backscatter-forward-operator#07",
+            "backscatter-forward-operator#11",
+            "backscatter-forward-operator#12",
+            "backscatter-forward-operator#fig11"
+          ],
+          "status": "partial",
+          "availability_reason": "Calibrated KGE/J reference and VV/VH Sentinel-1 time series are unavailable and non-comparable.",
+          "source_type": "result",
+          "run_ids": [],
+          "chart_ids": []
+        }
+      ],
+      "selected_models": [
+        {
+          "model": "water_cloud",
+          "version": "1.0.0",
+          "purpose": "Supported local sensitivity analysis",
+          "capability_status": "supported outputs only; not equivalent to paper reference",
+          "declaration_provenance": "list_models water_cloud@1.0.0",
+          "instruction_provenance": "read_model_instruction water_cloud@1.0",
+          "instruction_ref": "guideline:water_cloud@1.0"
+        }
+      ],
+      "parameter_mapping": [
+        {
+          "model": "water_cloud",
+          "paper_concept": "incidence angle",
+          "model_input": "angle_deg",
+          "mapped_value": 37,
+          "units": "degree",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Exploratory value, not paper-extracted",
+          "paper_value": null,
+          "evidence_ref": "",
+          "rationale": "The registered input was retained as a model assumption without paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "soil moisture",
+          "model_input": "soil_moisture",
+          "mapped_value": 0.25,
+          "units": "m3 m-3",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Exploratory baseline",
+          "paper_value": null,
+          "evidence_ref": "",
+          "rationale": "The registered input was retained as a model assumption without paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "vegetation water content",
+          "model_input": "vegetation_water_kg_m2",
+          "mapped_value": 1,
+          "units": "kg m-2",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "Exploratory baseline",
+          "paper_value": null,
+          "evidence_ref": "",
+          "rationale": "The registered input was retained as a model assumption without paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "coefficient a",
+          "model_input": "coefficient_a",
+          "mapped_value": 0.09,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default",
+          "paper_value": null,
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "coefficient b",
+          "model_input": "coefficient_b",
+          "mapped_value": 0.12,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default",
+          "paper_value": null,
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "coefficient c",
+          "model_input": "coefficient_c",
+          "mapped_value": -22,
+          "units": "dB",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default",
+          "paper_value": null,
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "coefficient d",
+          "model_input": "coefficient_d",
+          "mapped_value": 30,
+          "units": "dB per m3 m-3",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Registered default",
+          "paper_value": null,
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep_parameter",
+          "paper_value": null,
+          "model_input": "sweep_parameter",
+          "mapped_value": "none",
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep_points",
+          "paper_value": null,
+          "model_input": "sweep_points",
+          "mapped_value": 10,
+          "units": "count",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep_start",
+          "paper_value": null,
+          "model_input": "sweep_start",
+          "mapped_value": 0.0,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "water_cloud",
+          "paper_concept": "sweep_stop",
+          "paper_value": null,
+          "model_input": "sweep_stop",
+          "mapped_value": 8.0,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        }
+      ],
+      "parameter_resolution": [
+        {
+          "run_id": "baseline",
+          "model": "water_cloud",
+          "requested_parameters": {
+            "angle_deg": 37,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22,
+            "coefficient_d": 30,
+            "sweep_parameter": "none"
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_points"
+          ]
+        },
+        {
+          "run_id": "sweep-vwc",
+          "model": "water_cloud",
+          "requested_parameters": {
+            "angle_deg": 37,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22,
+            "coefficient_d": 30,
+            "sweep_parameter": "vegetation_water_kg_m2",
+            "sweep_start": 0,
+            "sweep_stop": 8,
+            "sweep_points": 17
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "vegetation_water_kg_m2",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "defaulted_parameters": []
+        },
+        {
+          "run_id": "sweep-sm",
+          "model": "water_cloud",
+          "requested_parameters": {
+            "angle_deg": 37,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22,
+            "coefficient_d": 30,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.55,
+            "sweep_points": 17
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.55,
+            "sweep_points": 17
+          },
+          "defaulted_parameters": []
+        }
+      ],
+      "outputs": [
+        "sigma0_soil_db",
+        "sigma0_vegetation_db",
+        "sigma0_total_db",
+        "two_way_transmissivity"
+      ],
+      "runs": [
+        {
+          "id": "baseline",
+          "label": "Baseline",
+          "model": "water_cloud",
+          "parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "requested_parameters": {
+            "angle_deg": 37,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22,
+            "coefficient_d": 30,
+            "sweep_parameter": "none"
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "none",
+            "sweep_points": 10
+          },
+          "defaulted_parameters": [
+            "sweep_points"
+          ],
+          "stage": "baseline",
+          "target_ids": []
+        },
+        {
+          "id": "sweep-vwc",
+          "label": "Vegetation water sweep",
+          "model": "water_cloud",
+          "parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "vegetation_water_kg_m2",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "requested_parameters": {
+            "angle_deg": 37,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22,
+            "coefficient_d": 30,
+            "sweep_parameter": "vegetation_water_kg_m2",
+            "sweep_start": 0,
+            "sweep_stop": 8,
+            "sweep_points": 17
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "vegetation_water_kg_m2",
+            "sweep_start": 0.0,
+            "sweep_stop": 8.0,
+            "sweep_points": 17
+          },
+          "defaulted_parameters": [],
+          "stage": "main",
+          "target_ids": []
+        },
+        {
+          "id": "sweep-sm",
+          "label": "Soil moisture sweep",
+          "model": "water_cloud",
+          "parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.55,
+            "sweep_points": 17
+          },
+          "requested_parameters": {
+            "angle_deg": 37,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22,
+            "coefficient_d": 30,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.55,
+            "sweep_points": 17
+          },
+          "resolved_parameters": {
+            "angle_deg": 37.0,
+            "soil_moisture": 0.25,
+            "vegetation_water_kg_m2": 1.0,
+            "coefficient_a": 0.09,
+            "coefficient_b": 0.12,
+            "coefficient_c": -22.0,
+            "coefficient_d": 30.0,
+            "sweep_parameter": "soil_moisture",
+            "sweep_start": 0.05,
+            "sweep_stop": 0.55,
+            "sweep_points": 17
+          },
+          "defaulted_parameters": [],
+          "stage": "main",
+          "target_ids": []
+        }
+      ],
+      "charts": [
+        {
+          "id": "supported-vwc",
+          "label": "Supported backscatter components versus vegetation water content",
+          "kind": "line",
+          "x": "vegetation_water_kg_m2",
+          "y": "sigma0_soil_db",
+          "ys": [
+            "sigma0_soil_db",
+            "sigma0_vegetation_db",
+            "sigma0_total_db"
+          ],
+          "required": true,
+          "purpose": "result",
+          "x_label": "Vegetation water content (kg m-2)",
+          "y_label": "Backscatter (dB)",
+          "target_ids": []
+        },
+        {
+          "id": "supported-sm",
+          "label": "Supported backscatter components versus soil moisture",
+          "kind": "line",
+          "x": "soil_moisture",
+          "y": "sigma0_soil_db",
+          "ys": [
+            "sigma0_soil_db",
+            "sigma0_vegetation_db",
+            "sigma0_total_db"
+          ],
+          "required": true,
+          "purpose": "result",
+          "x_label": "Soil moisture (m3 m-3)",
+          "y_label": "Backscatter (dB)",
+          "target_ids": []
+        },
+        {
+          "id": "supported-transmissivity",
+          "label": "Supported transmissivity versus vegetation water content",
+          "kind": "line",
+          "x": "vegetation_water_kg_m2",
+          "y": "two_way_transmissivity",
+          "ys": [
+            "two_way_transmissivity"
+          ],
+          "required": false,
+          "purpose": "diagnostic",
+          "x_label": "Vegetation water content (kg m-2)",
+          "y_label": "Two-way transmissivity (1)",
+          "target_ids": []
+        }
+      ],
+      "quantities": [
+        "sigma0_soil_db",
+        "sigma0_vegetation_db",
+        "sigma0_total_db",
+        "two_way_transmissivity"
+      ],
+      "controls": [
+        "Fixed angle and coefficients"
+      ],
+      "metrics": [
+        "Within-model sensitivity only"
+      ],
+      "diagnostics": [
+        "Baseline quality control",
+        "Bare-soil endpoint constraint",
+        "Sweep-axis validation"
+      ],
+      "success_criteria": [
+        "Runs pass registered checks.",
+        "Supported outputs are reported separately from paper results.",
+        "Unavailable and non-comparable components are named explicitly."
+      ],
+      "stop_conditions": [
+        "Constraint or quality-control failure",
+        "Any full-reproduction interpretation"
+      ],
+      "assumptions": [
+        "Exploratory values are not paper calibration values.",
+        "No calibration or validation is performed."
+      ],
+      "limitations": [
+        "Unavailable: calibrated Water Cloud Model with KGE and J objectives.",
+        "Unavailable: Figure 11 VV and VH Sentinel-1 time series.",
+        "Not comparable: local water_cloud and paper calibrated reference.",
+        "No full reproduction or visual-similarity claim."
+      ],
+      "baseline_run_id": "baseline",
+      "automatic_repairs": [
+        {
+          "field": "parameter_mapping[0].rationale",
+          "from": "",
+          "to": "The registered input was retained as a model assumption without paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[1].rationale",
+          "from": "",
+          "to": "The registered input was retained as a model assumption without paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[2].rationale",
+          "from": "",
+          "to": "The registered input was retained as a model assumption without paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[3].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[4].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[5].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[6].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.water_cloud.sweep_parameter",
+          "from": null,
+          "to": {
+            "model": "water_cloud",
+            "paper_concept": "sweep_parameter",
+            "paper_value": null,
+            "model_input": "sweep_parameter",
+            "mapped_value": "none",
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.water_cloud.sweep_points",
+          "from": null,
+          "to": {
+            "model": "water_cloud",
+            "paper_concept": "sweep_points",
+            "paper_value": null,
+            "model_input": "sweep_points",
+            "mapped_value": 10,
+            "units": "count",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.water_cloud.sweep_start",
+          "from": null,
+          "to": {
+            "model": "water_cloud",
+            "paper_concept": "sweep_start",
+            "paper_value": null,
+            "model_input": "sweep_start",
+            "mapped_value": 0.0,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.water_cloud.sweep_stop",
+          "from": null,
+          "to": {
+            "model": "water_cloud",
+            "paper_concept": "sweep_stop",
+            "paper_value": null,
+            "model_input": "sweep_stop",
+            "mapped_value": 8.0,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        }
+      ],
+      "validation_warnings": [],
+      "capability_gaps": [
+        "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series"
+      ],
+      "capability_review": {
+        "status": "confirmed",
+        "supported": [
+          {
+            "model": "water_cloud",
+            "version": "1.0.0",
+            "runnable_here": true,
+            "parameters": [
+              "angle_deg",
+              "coefficient_a",
+              "coefficient_b",
+              "coefficient_c",
+              "coefficient_d",
+              "soil_moisture",
+              "sweep_parameter",
+              "sweep_points",
+              "sweep_start",
+              "sweep_stop",
+              "vegetation_water_kg_m2"
+            ],
+            "combinations": [
+              {
+                "when": {
+                  "vegetation_water_kg_m2": [
+                    0.0
+                  ]
+                },
+                "allow": {
+                  "coefficient_a": [
+                    0.0
+                  ]
+                },
+                "reason": "With no vegetation water there is no canopy to scatter, so the scattering coefficient A has nothing to act on. Set A to zero for a bare soil surface."
+              }
+            ],
+            "outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "reference_model": false,
+            "role": "local_candidate",
+            "source": "list_models + read_model_instruction",
+            "target_ids": [
+              "fig11-qualitative"
+            ]
+          }
+        ],
+        "unavailable": [
+          {
+            "model": "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series",
+            "reason": "not registered in the current model registry; resembles equivalent_water_thickness_cm, snowpack_water_equivalent, vegetation_water_kg_m2, water_cloud, which is not the same model -- confirm which was meant",
+            "resembles": [
+              "equivalent_water_thickness_cm",
+              "snowpack_water_equivalent",
+              "vegetation_water_kg_m2",
+              "water_cloud"
+            ],
+            "certainty": "unsure",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "fig11-qualitative"
+            ]
+          }
+        ],
+        "not_comparable": [
+          {
+            "reference_model": "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series",
+            "local_model": "water_cloud",
+            "reason": "a local model/configuration is not an equivalent reference implementation",
+            "source": "registered_model_registry",
+            "target_ids": [
+              "fig11-qualitative"
+            ]
+          }
+        ],
+        "requested_models": [
+          "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series"
+        ],
+        "requested_outputs": [
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "two_way_transmissivity"
+        ],
+        "supported_outputs": [
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "two_way_transmissivity"
+        ],
+        "unavailable_outputs": [],
+        "resource_gaps": [],
+        "resolved_names": [],
+        "evidence": [
+          "research-planning#00",
+          "research-reporting#00",
+          "backscatter-forward-operator#05",
+          "backscatter-forward-operator#07",
+          "backscatter-forward-operator#11",
+          "backscatter-forward-operator#12",
+          "backscatter-forward-operator#fig11",
+          "backscatter-forward-operator#fig-fig11"
+        ],
+        "targets": [
+          "fig11-qualitative"
+        ],
+        "target_reports": [
+          {
+            "status": "waiting_user",
+            "supported": [
+              {
+                "model": "water_cloud",
+                "version": "1.0.0",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "coefficient_a",
+                  "coefficient_b",
+                  "coefficient_c",
+                  "coefficient_d",
+                  "soil_moisture",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "vegetation_water_kg_m2"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "vegetation_water_kg_m2": [
+                        0.0
+                      ]
+                    },
+                    "allow": {
+                      "coefficient_a": [
+                        0.0
+                      ]
+                    },
+                    "reason": "With no vegetation water there is no canopy to scatter, so the scattering coefficient A has nothing to act on. Set A to zero for a bare soil surface."
+                  }
+                ],
+                "outputs": [
+                  "sigma0_soil_db",
+                  "sigma0_total_db",
+                  "sigma0_vegetation_db",
+                  "two_way_transmissivity"
+                ],
+                "reference_model": false,
+                "role": "local_candidate",
+                "source": "list_models + read_model_instruction"
+              }
+            ],
+            "unavailable": [
+              {
+                "model": "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series",
+                "reason": "not registered in the current model registry; resembles equivalent_water_thickness_cm, snowpack_water_equivalent, vegetation_water_kg_m2, water_cloud, which is not the same model -- confirm which was meant",
+                "resembles": [
+                  "equivalent_water_thickness_cm",
+                  "snowpack_water_equivalent",
+                  "vegetation_water_kg_m2",
+                  "water_cloud"
+                ],
+                "certainty": "unsure",
+                "source": "registered_model_registry"
+              }
+            ],
+            "not_comparable": [
+              {
+                "reference_model": "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series",
+                "local_model": "water_cloud",
+                "reason": "a local model/configuration is not an equivalent reference implementation",
+                "source": "registered_model_registry"
+              }
+            ],
+            "requested_models": [
+              "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series"
+            ],
+            "requested_outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "supported_outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "unavailable_outputs": [],
+            "resource_gaps": [],
+            "resolved_names": [],
+            "evidence": [
+              "research-planning#00",
+              "research-reporting#00",
+              "backscatter-forward-operator#05",
+              "backscatter-forward-operator#07",
+              "backscatter-forward-operator#11",
+              "backscatter-forward-operator#12",
+              "backscatter-forward-operator#fig11",
+              "backscatter-forward-operator#fig-fig11"
+            ],
+            "targets": [
+              "fig11-qualitative"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "fig11-qualitative",
+            "label": "fig11-qualitative",
+            "target_key": "figure:11"
+          }
+        ],
+        "target_check_complete": true,
+        "missing_targets": [],
+        "user_decision": "partial",
+        "confirmed_scope": {
+          "unavailable": [
+            "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series"
+          ],
+          "not_comparable": [
+            "Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series/water_cloud"
+          ],
+          "outputs": []
+        }
+      },
+      "reference_sections": [
+        "backscatter-forward-operator#05",
+        "backscatter-forward-operator#07",
+        "backscatter-forward-operator#11",
+        "backscatter-forward-operator#12",
+        "backscatter-forward-operator#fig-fig11",
+        "research-planning#00",
+        "research-reporting#00"
+      ],
+      "reference_paper_sections": [
+        "Results - WCM evaluation"
+      ],
+      "approval_state": "plan_review",
+      "outcome_scope": "partial"
+    },
+    "selected_chart": {
+      "id": "supported-vwc",
+      "label": "Supported backscatter components versus vegetation water content",
+      "kind": "line",
+      "x": "vegetation_water_kg_m2",
+      "y": "sigma0_soil_db",
+      "ys": [
+        "sigma0_soil_db",
+        "sigma0_vegetation_db",
+        "sigma0_total_db"
+      ],
+      "required": true,
+      "purpose": "result",
+      "x_label": "Vegetation water content (kg m-2)",
+      "y_label": "Backscatter (dB)",
+      "target_ids": []
+    },
+    "selected_charts": [
+      "supported-vwc",
+      "supported-sm"
+    ],
+    "pseudo": {
+      "label": "PSEUDO-DATA - layout demonstration only - preview v001",
+      "points": [
+        {
+          "vegetation_water_kg_m2": 0.0,
+          "1_sigma0_soil_db": 0.22103677,
+          "2_sigma0_vegetation_db": 0.29103677,
+          "3_sigma0_total_db": 0.36103677
+        },
+        {
+          "vegetation_water_kg_m2": 0.5,
+          "1_sigma0_soil_db": 0.25710744,
+          "2_sigma0_vegetation_db": 0.32710744,
+          "3_sigma0_total_db": 0.39710744
+        },
+        {
+          "vegetation_water_kg_m2": 1.0,
+          "1_sigma0_soil_db": 0.272278,
+          "2_sigma0_vegetation_db": 0.342278,
+          "3_sigma0_total_db": 0.412278
+        },
+        {
+          "vegetation_water_kg_m2": 1.5,
+          "1_sigma0_soil_db": 0.28420494,
+          "2_sigma0_vegetation_db": 0.35420494,
+          "3_sigma0_total_db": 0.42420494
+        },
+        {
+          "vegetation_water_kg_m2": 2.0,
+          "1_sigma0_soil_db": 0.31352689,
+          "2_sigma0_vegetation_db": 0.38352689,
+          "3_sigma0_total_db": 0.45352689
+        },
+        {
+          "vegetation_water_kg_m2": 2.5,
+          "1_sigma0_soil_db": 0.36488961,
+          "2_sigma0_vegetation_db": 0.43488961,
+          "3_sigma0_total_db": 0.50488961
+        },
+        {
+          "vegetation_water_kg_m2": 3.0,
+          "1_sigma0_soil_db": 0.42267466,
+          "2_sigma0_vegetation_db": 0.49267466,
+          "3_sigma0_total_db": 0.56267466
+        },
+        {
+          "vegetation_water_kg_m2": 3.5,
+          "1_sigma0_soil_db": 0.46535896,
+          "2_sigma0_vegetation_db": 0.53535896,
+          "3_sigma0_total_db": 0.60535896
+        },
+        {
+          "vegetation_water_kg_m2": 4.0,
+          "1_sigma0_soil_db": 0.48530296,
+          "2_sigma0_vegetation_db": 0.55530296,
+          "3_sigma0_total_db": 0.62530296
+        },
+        {
+          "vegetation_water_kg_m2": 4.5,
+          "1_sigma0_soil_db": 0.49577447,
+          "2_sigma0_vegetation_db": 0.56577447,
+          "3_sigma0_total_db": 0.63577447
+        },
+        {
+          "vegetation_water_kg_m2": 5.0,
+          "1_sigma0_soil_db": 0.51875024,
+          "2_sigma0_vegetation_db": 0.58875024,
+          "3_sigma0_total_db": 0.65875024
+        },
+        {
+          "vegetation_water_kg_m2": 5.5,
+          "1_sigma0_soil_db": 0.56471068,
+          "2_sigma0_vegetation_db": 0.63471068,
+          "3_sigma0_total_db": 0.70471068
+        },
+        {
+          "vegetation_water_kg_m2": 6.0,
+          "1_sigma0_soil_db": 0.62300418,
+          "2_sigma0_vegetation_db": 0.69300418,
+          "3_sigma0_total_db": 0.76300418
+        },
+        {
+          "vegetation_water_kg_m2": 6.5,
+          "1_sigma0_soil_db": 0.67164018,
+          "2_sigma0_vegetation_db": 0.74164018,
+          "3_sigma0_total_db": 0.81164018
+        },
+        {
+          "vegetation_water_kg_m2": 7.0,
+          "1_sigma0_soil_db": 0.6975072,
+          "2_sigma0_vegetation_db": 0.7675072,
+          "3_sigma0_total_db": 0.8375072
+        },
+        {
+          "vegetation_water_kg_m2": 7.5,
+          "1_sigma0_soil_db": 0.70842742,
+          "2_sigma0_vegetation_db": 0.77842742,
+          "3_sigma0_total_db": 0.84842742
+        },
+        {
+          "vegetation_water_kg_m2": 8.0,
+          "1_sigma0_soil_db": 0.72596506,
+          "2_sigma0_vegetation_db": 0.79596506,
+          "3_sigma0_total_db": 0.86596506
+        }
+      ]
+    },
+    "preview_version": 1,
+    "plan_card_expanded": true,
+    "review_log": [],
+    "execution_resume_sent": false,
+    "proposed_by": "llm"
+  },
+  "successful_runs": [
+    {
+      "model": "water_cloud",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_bc26dfc1c67f",
+      "planned_run_id": "baseline"
+    },
+    {
+      "model": "water_cloud",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "vegetation_water_kg_m2",
+        "sweep_start": 0.0,
+        "sweep_stop": 8.0,
+        "sweep_points": 17
+      },
+      "handle": "res_b7db41e5f2a7",
+      "planned_run_id": "sweep-vwc"
+    },
+    {
+      "model": "water_cloud",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.55,
+        "sweep_points": 17
+      },
+      "handle": "res_e4cca9d743cc",
+      "planned_run_id": "sweep-sm"
+    }
+  ],
+  "numeric_results": [
+    {
+      "handle": "res_bc26dfc1c67f",
+      "planned_run_id": "baseline",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "axis": null,
+      "series": {
+        "sigma0_total_db": [
+          -13.474800303156298
+        ],
+        "sigma0_vegetation_db": [
+          -17.29168775654675
+        ],
+        "sigma0_soil_db": [
+          -14.5
+        ],
+        "two_way_transmissivity": [
+          0.7404386057033007
+        ]
+      },
+      "units": {
+        "sigma0_total_db": "dB",
+        "sigma0_vegetation_db": "dB",
+        "sigma0_soil_db": "dB",
+        "two_way_transmissivity": "none"
+      }
+    },
+    {
+      "handle": "res_b7db41e5f2a7",
+      "planned_run_id": "sweep-vwc",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "vegetation_water_kg_m2",
+        "sweep_start": 0.0,
+        "sweep_stop": 8.0,
+        "sweep_points": 17
+      },
+      "axis": {
+        "name": "vegetation_water_kg_m2",
+        "values": [
+          0.0,
+          0.5,
+          1.0,
+          1.5,
+          2.0,
+          2.5,
+          3.0,
+          3.5,
+          4.0,
+          4.5,
+          5.0,
+          5.5,
+          6.0,
+          6.5,
+          7.0,
+          7.5,
+          8.0
+        ]
+      },
+      "series": {
+        "sigma0_total_db": [
+          -14.5,
+          -14.49219864870328,
+          -13.474800303156298,
+          -12.095124744360781,
+          -10.736896468878392,
+          -9.521044648002578,
+          -8.461836099174628,
+          -7.5427005692286695,
+          -6.74166227633488,
+          -6.038582526435308,
+          -5.416672940705064,
+          -4.862348656101356,
+          -4.364693590558209,
+          -3.91491674310073,
+          -3.5058956496863614,
+          -3.1318163102513235,
+          -2.7878954289882225
+        ],
+        "sigma0_vegetation_db": [
+          -60.0,
+          -22.99825509907165,
+          -17.29168775654675,
+          -14.075762542568901,
+          -11.874800719191061,
+          -10.226389395695461,
+          -8.924609408230012,
+          -7.8596705774668605,
+          -6.966091758452012,
+          -6.201689731114573,
+          -5.537714609931945,
+          -4.953711393700976,
+          -4.4346262326497685,
+          -3.9690744051535685,
+          -3.5482514924644497,
+          -3.165220658039702,
+          -2.8144300166214964
+        ],
+        "sigma0_soil_db": [
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5,
+          -14.5
+        ],
+        "two_way_transmissivity": [
+          1.0,
+          0.8604874233266286,
+          0.7404386057033007,
+          0.6371381079531948,
+          0.548249328815848,
+          0.47176165229330264,
+          0.40594496860617685,
+          0.34931054004833834,
+          0.3005773265470278,
+          0.2586430092308586,
+          0.22255905657450697,
+          0.1915092691298029,
+          0.16479131753666992,
+          0.14180085621372937,
+          0.1220178533888618,
+          0.10499482826242805,
+          0.09034672923415858
+        ]
+      },
+      "units": {
+        "sigma0_total_db": "dB",
+        "sigma0_vegetation_db": "dB",
+        "sigma0_soil_db": "dB",
+        "two_way_transmissivity": "none"
+      }
+    },
+    {
+      "handle": "res_e4cca9d743cc",
+      "planned_run_id": "sweep-sm",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.55,
+        "sweep_points": 17
+      },
+      "axis": {
+        "name": "soil_moisture",
+        "values": [
+          0.05,
+          0.08125,
+          0.1125,
+          0.14375,
+          0.175,
+          0.20625,
+          0.2375,
+          0.26875,
+          0.3,
+          0.33125,
+          0.3625,
+          0.39375,
+          0.425,
+          0.45625,
+          0.4875,
+          0.51875,
+          0.55
+        ]
+      },
+      "series": {
+        "sigma0_total_db": [
+          -15.976403971461679,
+          -15.71125275596766,
+          -15.40324468762751,
+          -15.049104371844706,
+          -14.64634550536977,
+          -14.193476510557261,
+          -13.690131694216864,
+          -13.137104294393865,
+          -12.536275241735309,
+          -11.890450835618942,
+          -11.203137864205406,
+          -10.478291839272886,
+          -9.720072222582155,
+          -8.932630141944806,
+          -8.119942938351697,
+          -7.2856994131088975,
+          -6.433231930296666
+        ],
+        "sigma0_vegetation_db": [
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675,
+          -17.29168775654675
+        ],
+        "sigma0_soil_db": [
+          -20.5,
+          -19.5625,
+          -18.625,
+          -17.6875,
+          -16.75,
+          -15.8125,
+          -14.875,
+          -13.9375,
+          -13.0,
+          -12.0625,
+          -11.125,
+          -10.1875,
+          -9.25,
+          -8.3125,
+          -7.375,
+          -6.437499999999998,
+          -5.5
+        ],
+        "two_way_transmissivity": [
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007,
+          0.7404386057033007
+        ]
+      },
+      "units": {
+        "sigma0_total_db": "dB",
+        "sigma0_vegetation_db": "dB",
+        "sigma0_soil_db": "dB",
+        "two_way_transmissivity": "none"
+      }
+    }
+  ],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "Optimizing a backscatter forward operator Figure 11 Faenza field natural irrigation VV VH",
+        "scenario": "soil",
+        "kind": "paper"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "water_cloud"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "01"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": ""
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "05"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "07"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "11"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "12"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_paper_figure",
+      "arguments": {
+        "paper": "backscatter-forward-operator",
+        "figure_id": "fig11"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "inspect_paper_figure",
+      "arguments": {
+        "paper": "backscatter-forward-operator",
+        "figure_id": "fig11",
+        "focus": "Inspect all panels: axes, units, legends, date range, plotted series, and visible qualitative differences between natural and irrigation runs and KGE versus J."
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Using the registered Water Cloud Model, reproduce the qualitative four-panel structure of the Faenza Sentinel-1 backscatter comparison in source Figure 11: compare natural and irrigation vegetation-water scenarios and two calibration-inspired parameter sets, without digitizing or claiming exact reproduction of the paper curves.",
+        "objective": "Generate a controlled sensitivity experiment showing how vegetation water content and Water Cloud Model coefficients affect VV/VH-like backscatter components over a short temporal proxy, and compare natural versus irrigation configurations using the model's total and component backscatter outputs.",
+        "hypothesis": "Increasing vegetation water content increases vegetation backscatter and attenuation, while the resulting total backscatter response depends on the soil-moisture trajectory and calibrated coefficients; distinct coefficient sets can change the agreement pattern, but this registered model cannot reproduce the paper's polarization-specific Sentinel-1 observations or time series exactly.",
+        "steps": [
+          "Run a baseline Water Cloud Model configuration for a representative natural condition.",
+          "Run an irrigation-condition sensitivity with increased vegetation water content and a specified soil-moisture state.",
+          "Run two coefficient configurations representing calibration-inspired alternatives, clearly marked as user-specified/model-assumption rather than paper-reported fitted values.",
+          "Compare soil, vegetation, total backscatter, and transmissivity in a common chart; interpret only model-produced trends.",
+          "Do not digitize the source figure or compute visual similarity to it."
+        ],
+        "parameters": {
+          "angle_deg": 37,
+          "soil_moisture": [
+            0.18,
+            0.3
+          ],
+          "vegetation_water_kg_m2": [
+            0.8,
+            2.5
+          ],
+          "coefficient_sets": [
+            {
+              "name": "set_A",
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22,
+              "coefficient_d": 30
+            },
+            {
+              "name": "set_B",
+              "coefficient_a": 0.05,
+              "coefficient_b": 0.18,
+              "coefficient_c": -21,
+              "coefficient_d": 35
+            }
+          ],
+          "sweep_parameter": "vegetation_water_kg_m2",
+          "sweep_start": 0.0,
+          "sweep_stop": 4.0,
+          "sweep_points": 20
+        },
+        "paper_conditions": {
+          "site": "Faenza (San Silvestro) field",
+          "observable": "Sentinel-1 sigma0 VV and VH in dB",
+          "panels": [
+            "natural KGE",
+            "irrigation KGE",
+            "natural J",
+            "irrigation J"
+          ],
+          "date_range": "approximately 16–18 January"
+        },
+        "condition_provenance": {
+          "site": "paper_explicit: backscatter-forward-operator#fig-fig11",
+          "observable": "paper_explicit: backscatter-forward-operator#fig-fig11",
+          "panels": "paper_explicit: backscatter-forward-operator#fig-fig11",
+          "date_range": "figure-inspection: backscatter-forward-operator#fig-fig11",
+          "angle_deg": "model_assumption: representative Sentinel-1 incidence angle",
+          "soil_moisture": "model_assumption: no digitized paper time series used",
+          "vegetation_water_kg_m2": "model_assumption: scenario values for sensitivity only",
+          "coefficient_sets": "model_assumption: illustrative alternatives, not paper-fitted coefficients"
+        },
+        "literature_evidence": [
+          {
+            "ref": "backscatter-forward-operator#05",
+            "role": "describes the Water Cloud Model forward-operator formulation and component combination"
+          },
+          {
+            "ref": "backscatter-forward-operator#07",
+            "role": "describes calibration context and coefficient fitting"
+          },
+          {
+            "ref": "backscatter-forward-operator#11",
+            "role": "reports the comparison context for natural and irrigation runs"
+          },
+          {
+            "ref": "backscatter-forward-operator#12",
+            "role": "supports interpretation of model components and calibration metrics"
+          },
+          {
+            "ref": "backscatter-forward-operator#fig-fig11",
+            "role": "source visual target: four panels, VV/VH observations and simulations, KGE versus J calibrations"
+          }
+        ],
+        "reproduction_targets": [
+          {
+            "id": "fig11-qualitative",
+            "label": "Figure 11 qualitative scenario structure",
+            "reference_models": [
+              "Water Cloud Model"
+            ],
+            "requested_outputs": [
+              "sigma0_soil_db",
+              "sigma0_total_db",
+              "sigma0_vegetation_db",
+              "two_way_transmissivity"
+            ],
+            "evidence_refs": [
+              "backscatter-forward-operator#fig-fig11"
+            ],
+            "status": "partial",
+            "availability_reason": "The registered model does not expose separate VV and VH polarization outputs, temporal forcing, KGE/J calibration, or the paper's exact fitted parameters; no curve digitization is performed."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "water_cloud",
+            "purpose": "Active microwave backscatter sensitivity for soil, vegetation, and total components",
+            "capability_status": "partial relative to the paper target"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "water_cloud",
+            "paper_concept": "incidence angle",
+            "model_input": "angle_deg",
+            "mapped_value": 37,
+            "units": "degree",
+            "provenance_class": "model_assumption",
+            "confidence": "medium",
+            "confidence_basis": "representative Sentinel-1 angle; not digitized from the figure"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "natural vegetation condition",
+            "model_input": "vegetation_water_kg_m2",
+            "mapped_value": 0.8,
+            "units": "kg m-2",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative scenario only"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "irrigation vegetation condition",
+            "model_input": "vegetation_water_kg_m2",
+            "mapped_value": 2.5,
+            "units": "kg m-2",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative scenario only"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "natural soil condition",
+            "model_input": "soil_moisture",
+            "mapped_value": 0.18,
+            "units": "m3 m-3",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative scenario only"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "irrigation soil condition",
+            "model_input": "soil_moisture",
+            "mapped_value": 0.3,
+            "units": "m3 m-3",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative scenario only"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "coefficient calibration alternatives",
+            "model_input": "coefficient_a",
+            "mapped_value": [
+              0.09,
+              0.05
+            ],
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative alternatives, not paper-fitted values"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "coefficient calibration alternatives",
+            "model_input": "coefficient_b",
+            "mapped_value": [
+              0.12,
+              0.18
+            ],
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative alternatives, not paper-fitted values"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "coefficient calibration alternatives",
+            "model_input": "coefficient_c",
+            "mapped_value": [
+              -22,
+              -21
+            ],
+            "units": "dB",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative alternatives, not paper-fitted values"
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "coefficient calibration alternatives",
+            "model_input": "coefficient_d",
+            "mapped_value": [
+              30,
+              35
+            ],
+            "units": "dB per m3 m-3",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "illustrative alternatives, not paper-fitted values"
+          }
+        ],
+        "outputs": [
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "two_way_transmissivity"
+        ],
+        "runs": [
+          {
+            "id": "baseline_natural_setA",
+            "label": "Natural condition, coefficient set A",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.18,
+              "vegetation_water_kg_m2": 0.8,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22,
+              "coefficient_d": 30
+            },
+            "stage": "baseline"
+          },
+          {
+            "id": "irrigation_setA",
+            "label": "Irrigation condition, coefficient set A",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.3,
+              "vegetation_water_kg_m2": 2.5,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22,
+              "coefficient_d": 30
+            },
+            "stage": "main"
+          },
+          {
+            "id": "baseline_natural_setB",
+            "label": "Natural condition, coefficient set B",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.18,
+              "vegetation_water_kg_m2": 0.8,
+              "coefficient_a": 0.05,
+              "coefficient_b": 0.18,
+              "coefficient_c": -21,
+              "coefficient_d": 35
+            },
+            "stage": "sensitivity"
+          },
+          {
+            "id": "irrigation_setB",
+            "label": "Irrigation condition, coefficient set B",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.3,
+              "vegetation_water_kg_m2": 2.5,
+              "coefficient_a": 0.05,
+              "coefficient_b": 0.18,
+              "coefficient_c": -21,
+              "coefficient_d": 35
+            },
+            "stage": "sensitivity"
+          },
+          {
+            "id": "vegetation_water_sweep_setA",
+            "label": "Vegetation-water sweep, coefficient set A",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.24,
+              "vegetation_water_kg_m2": 1.0,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22,
+              "coefficient_d": 30,
+              "sweep_parameter": "vegetation_water_kg_m2",
+              "sweep_start": 0.0,
+              "sweep_stop": 4.0,
+              "sweep_points": 20
+            },
+            "stage": "diagnostic"
+          }
+        ],
+        "charts": [
+          {
+            "id": "scenario_total_backscatter",
+            "label": "Natural versus irrigation total backscatter",
+            "kind": "scatter",
+            "x": "vegetation_water_kg_m2",
+            "y": "sigma0_total_db",
+            "required": true,
+            "purpose": "result",
+            "x_label": "Vegetation water content (kg m−2)",
+            "y_label": "Total backscatter σ0 (dB)"
+          },
+          {
+            "id": "component_backscatter",
+            "label": "Soil and vegetation components",
+            "kind": "line",
+            "x": "vegetation_water_kg_m2",
+            "ys": [
+              "sigma0_soil_db",
+              "sigma0_vegetation_db"
+            ],
+            "required": true,
+            "purpose": "diagnostic",
+            "x_label": "Vegetation water content (kg m−2)",
+            "y_label": "Backscatter component (dB)"
+          },
+          {
+            "id": "transmissivity",
+            "label": "Two-way canopy transmissivity",
+            "kind": "line",
+            "x": "vegetation_water_kg_m2",
+            "y": "two_way_transmissivity",
+            "required": true,
+            "purpose": "diagnostic",
+            "x_label": "Vegetation water content (kg m−2)",
+            "y_label": "Two-way transmissivity (dimensionless)"
+          }
+        ],
+        "success_criteria": [
+          "All planned runs pass the registered Water Cloud Model parameter checks and quality control.",
+          "The vegetation-water sweep produces a physically interpretable change in vegetation contribution and/or canopy transmissivity.",
+          "Natural and irrigation scenarios are distinguishable in the model outputs under the stated assumptions.",
+          "The report explicitly labels this as a partial, qualitative analogue rather than an exact reproduction of Figure 11.",
+          "No numerical values are attributed to the paper figure unless separately digitized and reviewed."
+        ],
+        "quantities": [
+          "sigma0_soil_db",
+          "sigma0_total_db",
+          "sigma0_vegetation_db",
+          "two_way_transmissivity"
+        ],
+        "controls": [
+          "fixed incidence angle of 37 degrees",
+          "fixed coefficient set within each scenario comparison",
+          "same model and output definitions across scenarios",
+          "mid-range soil moisture for the vegetation-water diagnostic sweep"
+        ],
+        "metrics": [
+          "scenario difference in total backscatter",
+          "change in vegetation component",
+          "change in two-way transmissivity"
+        ],
+        "diagnostics": [
+          "parameter validity and quality-control status",
+          "component-versus-total consistency",
+          "sensitivity to vegetation water content",
+          "comparison of coefficient sets"
+        ],
+        "stop_conditions": [
+          "Stop if any requested output is unavailable from the registered model.",
+          "Stop if a planned run violates declared model ranges or legal combinations.",
+          "Do not claim polarization-specific agreement, temporal agreement, KGE/J performance, or visual similarity to the source figure."
+        ],
+        "baseline_run_id": "baseline_natural_setA",
+        "assumptions": [
+          "The paper's VV/VH and temporal dimensions are represented only by model component and scenario sensitivities.",
+          "The selected incidence angle and scenario parameter values are illustrative assumptions, not extracted measurements.",
+          "Coefficient set B is a user-designed sensitivity case, not a paper calibration.",
+          "The model's single backscatter output is not polarization-specific."
+        ],
+        "limitations": [
+          "No paper time series forcing or observed reference rows are supplied to the plan.",
+          "No exact KGE or J calibration objective is implemented.",
+          "No separate VV/VH outputs are available.",
+          "The figure is used for structure and qualitative visual context only; curve values are not digitized.",
+          "The model is not being validated against measurements in this plan."
+        ]
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    },
+    {
+      "turn": 2,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Partial reproduction of the supported components of the backscatter-forward-operator Figure 11 target, excluding the unavailable calibrated Water Cloud Model with KGE/J objectives and the non-comparable VV/VH Sentinel-1 time-series target.",
+        "reference_models": [
+          "Water Cloud Model calibrated with KGE and J objectives"
+        ],
+        "requested_outputs": [
+          "VV and VH Sentinel-1 time series",
+          "water-cloud backscatter components"
+        ],
+        "local_models": [
+          "water_cloud"
+        ],
+        "targets": [
+          {
+            "id": "fig11",
+            "reference_models": [
+              "Water Cloud Model calibrated with KGE and J objectives"
+            ],
+            "requested_outputs": [
+              "VV and VH Sentinel-1 time series"
+            ],
+            "evidence_refs": [
+              "backscatter-forward-operator#05",
+              "backscatter-forward-operator#07",
+              "backscatter-forward-operator#11",
+              "backscatter-forward-operator#12",
+              "backscatter-forward-operator#fig11",
+              "backscatter-forward-operator#fig-fig11"
+            ]
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "1.0"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "list_models",
+      "arguments": {
+        "model": "water_cloud"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Generate a partial, explicitly non-comparable reproduction study for the supported Water Cloud backscatter components associated with paper Figure 11.",
+        "objective": "Quantify the registered water_cloud model response to vegetation water content and soil moisture, and report the unavailable calibrated KGE/J and VV/VH time-series components explicitly.",
+        "hypothesis": "In the registered model, vegetation water content changes canopy scattering and attenuation, while soil moisture changes the soil backscatter contribution; these results are not a reproduction of the paper's calibrated VV/VH time series.",
+        "steps": [
+          "Run a fixed-condition baseline.",
+          "Sweep vegetation_water_kg_m2 at fixed soil moisture.",
+          "Sweep soil_moisture at fixed vegetation water content.",
+          "Report local-model outputs separately from paper results and unavailable components."
+        ],
+        "paper_conditions": {
+          "target": "Figure 11: calibrated Water Cloud Model with KGE/J objectives and VV/VH Sentinel-1 time series",
+          "supported_scope": "Local water_cloud forward-operator components only"
+        },
+        "condition_provenance": {
+          "target": "backscatter-forward-operator#fig11",
+          "supported_scope": "agent-assumption; exploratory local-model sensitivity, not paper condition"
+        },
+        "literature_evidence": [
+          {
+            "evidence_ref": "backscatter-forward-operator#05",
+            "purpose": "paper model formulation"
+          },
+          {
+            "evidence_ref": "backscatter-forward-operator#07",
+            "purpose": "paper experimental setup"
+          },
+          {
+            "evidence_ref": "backscatter-forward-operator#11",
+            "purpose": "paper calibration context"
+          },
+          {
+            "evidence_ref": "backscatter-forward-operator#12",
+            "purpose": "paper evaluation context"
+          },
+          {
+            "evidence_ref": "backscatter-forward-operator#fig11",
+            "purpose": "source figure target; not digitized"
+          }
+        ],
+        "reproduction_targets": [
+          {
+            "id": "fig11-supported-components",
+            "source_id": "figure:11",
+            "target_quantity": "Supported local-model backscatter components: sigma0_soil_db, sigma0_vegetation_db, sigma0_total_db, and two_way_transmissivity",
+            "expected_comparison": "Compare only internal component responses from the registered local model against the paper target context; make no numerical, visual-similarity, VV/VH, or calibration-equivalence claim.",
+            "reference_models": [
+              "Water Cloud Model calibrated with KGE and J objectives"
+            ],
+            "requested_outputs": [
+              "sigma0_soil_db",
+              "sigma0_vegetation_db",
+              "sigma0_total_db",
+              "two_way_transmissivity"
+            ],
+            "evidence_refs": [
+              "backscatter-forward-operator#05",
+              "backscatter-forward-operator#07",
+              "backscatter-forward-operator#11",
+              "backscatter-forward-operator#12",
+              "backscatter-forward-operator#fig11"
+            ],
+            "status": "partial",
+            "availability_reason": "The registered water_cloud model supports these component outputs, but the paper's calibrated KGE/J implementation and VV/VH Sentinel-1 time-series target are unavailable and non-comparable."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "water_cloud",
+            "version": "1.0.0",
+            "purpose": "Supported local forward-operator sensitivity study",
+            "capability_status": "supported for four declared outputs; not equivalent to paper calibrated reference",
+            "declaration_provenance": "list_models water_cloud@1.0.0",
+            "instruction_provenance": "read_model_instruction water_cloud@1.0"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "water_cloud",
+            "paper_concept": "incidence angle",
+            "paper_value": null,
+            "model_input": "angle_deg",
+            "mapped_value": 37,
+            "units": "degree",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "Exploratory valid angle, not extracted from paper Figure 11",
+            "rationale": "Fixed local-model condition."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "soil moisture state",
+            "paper_value": null,
+            "model_input": "soil_moisture",
+            "mapped_value": 0.25,
+            "units": "m3 m-3",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "Exploratory baseline, not extracted from paper",
+            "rationale": "Fixed baseline and vegetation sweep condition."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "vegetation water content",
+            "paper_value": null,
+            "model_input": "vegetation_water_kg_m2",
+            "mapped_value": 1,
+            "units": "kg m-2",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "Exploratory baseline, not extracted from paper",
+            "rationale": "Fixed baseline and soil-moisture sweep condition."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "vegetation scattering coefficient",
+            "paper_value": null,
+            "model_input": "coefficient_a",
+            "mapped_value": 0.09,
+            "units": "none",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "Registered model default, not paper calibration",
+            "rationale": "Held fixed."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "vegetation attenuation coefficient",
+            "paper_value": null,
+            "model_input": "coefficient_b",
+            "mapped_value": 0.12,
+            "units": "none",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "Registered model default, not paper calibration",
+            "rationale": "Held fixed."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "soil backscatter intercept",
+            "paper_value": null,
+            "model_input": "coefficient_c",
+            "mapped_value": -22,
+            "units": "dB",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "Registered model default, not paper calibration",
+            "rationale": "Held fixed."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "soil-moisture backscatter sensitivity",
+            "paper_value": null,
+            "model_input": "coefficient_d",
+            "mapped_value": 30,
+            "units": "dB per m3 m-3",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "Registered model default, not paper calibration",
+            "rationale": "Held fixed."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "vegetation-water sweep",
+            "paper_value": null,
+            "model_input": "sweep_parameter",
+            "mapped_value": "vegetation_water_kg_m2",
+            "units": "none",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Defined by this partial exploratory plan",
+            "rationale": "Main sensitivity axis."
+          },
+          {
+            "model": "water_cloud",
+            "paper_concept": "soil-moisture sweep",
+            "paper_value": null,
+            "model_input": "sweep_parameter",
+            "mapped_value": "soil_moisture",
+            "units": "none",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Defined by this partial exploratory plan",
+            "rationale": "Main sensitivity axis."
+          }
+        ],
+        "outputs": [
+          "sigma0_soil_db",
+          "sigma0_vegetation_db",
+          "sigma0_total_db",
+          "two_way_transmissivity"
+        ],
+        "runs": [
+          {
+            "id": "baseline",
+            "label": "Fixed-condition baseline",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.25,
+              "vegetation_water_kg_m2": 1,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22,
+              "coefficient_d": 30,
+              "sweep_parameter": "none"
+            },
+            "stage": "baseline"
+          },
+          {
+            "id": "sweep-vwc",
+            "label": "Vegetation water-content sensitivity",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.25,
+              "vegetation_water_kg_m2": 1,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22,
+              "coefficient_d": 30,
+              "sweep_parameter": "vegetation_water_kg_m2",
+              "sweep_start": 0,
+              "sweep_stop": 8,
+              "sweep_points": 17
+            },
+            "stage": "main"
+          },
+          {
+            "id": "sweep-sm",
+            "label": "Soil-moisture sensitivity",
+            "model": "water_cloud",
+            "parameters": {
+              "angle_deg": 37,
+              "soil_moisture": 0.25,
+              "vegetation_water_kg_m2": 1,
+              "coefficient_a": 0.09,
+              "coefficient_b": 0.12,
+              "coefficient_c": -22,
+              "coefficient_d": 30,
+              "sweep_parameter": "soil_moisture",
+              "sweep_start": 0.05,
+              "sweep_stop": 0.55,
+              "sweep_points": 17
+            },
+            "stage": "main"
+          }
+        ],
+        "charts": [
+          {
+            "id": "vwc-backscatter",
+            "label": "Local model response to vegetation water content",
+            "kind": "line",
+            "x": "vegetation_water_kg_m2",
+            "ys": [
+              "sigma0_soil_db",
+              "sigma0_vegetation_db",
+              "sigma0_total_db"
+            ],
+            "required": true,
+            "purpose": "result",
+            "x_label": "Vegetation water content (kg m-2)",
+            "y_label": "Backscatter (dB)"
+          },
+          {
+            "id": "vwc-transmissivity",
+            "label": "Local model transmissivity response to vegetation water content",
+            "kind": "line",
+            "x": "vegetation_water_kg_m2",
+            "y": "two_way_transmissivity",
+            "required": true,
+            "purpose": "diagnostic",
+            "x_label": "Vegetation water content (kg m-2)",
+            "y_label": "Two-way transmissivity (1)"
+          },
+          {
+            "id": "sm-backscatter",
+            "label": "Local model response to soil moisture",
+            "kind": "line",
+            "x": "soil_moisture",
+            "ys": [
+              "sigma0_soil_db",
+              "sigma0_vegetation_db",
+              "sigma0_total_db"
+            ],
+            "required": true,
+            "purpose": "result",
+            "x_label": "Soil moisture (m3 m-3)",
+            "y_label": "Backscatter (dB)"
+          }
+        ],
+        "success_criteria": [
+          "All runs pass registered checks.",
+          "Charts show only supported local-model outputs.",
+          "Report labels KGE/J calibration and VV/VH time series unavailable and non-comparable."
+        ],
+        "quantities": [
+          "soil backscatter",
+          "vegetation backscatter",
+          "total backscatter",
+          "two-way transmissivity"
+        ],
+        "controls": [
+          "Fixed angle and coefficients across sweeps",
+          "Baseline at fixed exploratory conditions"
+        ],
+        "metrics": [
+          "Within-model component response; no paper skill metric"
+        ],
+        "diagnostics": [
+          "Baseline quality control",
+          "Bare-soil endpoint obeys coefficient_a=0 constraint",
+          "Common sweep axes and units"
+        ],
+        "stop_conditions": [
+          "Any registered constraint or quality-control failure",
+          "Any interpretation as calibrated paper reproduction or measured VV/VH data"
+        ],
+        "baseline_run_id": "baseline",
+        "assumptions": [
+          "Angle and all coefficient values are exploratory/default conditions, not paper-extracted calibration values.",
+          "Sweeps are sensitivity experiments, not calibration or validation.",
+          "No measured reference dataset is used."
+        ],
+        "limitations": [
+          "Unavailable: Water Cloud Model calibrated with KGE and J objectives.",
+          "Unavailable: Figure 11 VV and VH Sentinel-1 time-series outputs.",
+          "Not comparable: local water_cloud@1.0.0 versus the paper calibrated reference.",
+          "No visual-similarity or full-reproduction claim."
+        ],
+        "note": "Partial scope confirmed by user; unavailable and non-comparable components must remain explicit in final report."
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "vwc-backscatter",
+              "label": "Local model response to vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "vwc-transmissivity",
+              "label": "Local model transmissivity response to vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "y": "two_way_transmissivity",
+              "required": true,
+              "purpose": "diagnostic",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Two-way transmissivity (1)"
+            },
+            {
+              "id": "sm-backscatter",
+              "label": "Local model response to soil moisture",
+              "kind": "line",
+              "x": "soil_moisture",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Soil moisture (m3 m-3)",
+              "y_label": "Backscatter (dB)"
+            }
+          ],
+          "outputs": [
+            "sigma0_soil_db",
+            "sigma0_vegetation_db",
+            "sigma0_total_db",
+            "two_way_transmissivity"
+          ],
+          "success_criteria": [
+            "All runs pass registered checks.",
+            "The required backscatter charts show sigma0_soil_db, sigma0_vegetation_db, and sigma0_total_db for both sensitivity axes.",
+            "The transmissivity diagnostic is reported separately.",
+            "The report labels the KGE/J calibrated reference and VV/VH time series unavailable and non-comparable."
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "required-backscatter-vwc",
+              "label": "Supported water-cloud backscatter components versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "required-backscatter-sm",
+              "label": "Supported water-cloud backscatter components versus soil moisture",
+              "kind": "line",
+              "x": "soil_moisture",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Soil moisture (m3 m-3)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "transmissivity-vwc",
+              "label": "Supported water-cloud transmissivity versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "y": "two_way_transmissivity",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Two-way transmissivity (1)"
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "reproduction_targets": [
+            {
+              "id": "fig11-supported-components",
+              "source_id": "figure:11",
+              "target_quantity": "Supported local-model backscatter components",
+              "expected_comparison": "Internal sensitivity results only; no calibration, VV/VH, numerical reproduction, or visual-similarity claim.",
+              "reference_models": [
+                "Water Cloud Model calibrated with KGE and J objectives"
+              ],
+              "requested_outputs": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db",
+                "two_way_transmissivity"
+              ],
+              "evidence_refs": [
+                "backscatter-forward-operator#05",
+                "backscatter-forward-operator#07",
+                "backscatter-forward-operator#11",
+                "backscatter-forward-operator#12",
+                "backscatter-forward-operator#fig11"
+              ],
+              "run_ids": [
+                "baseline",
+                "sweep-vwc",
+                "sweep-sm"
+              ],
+              "chart_ids": [
+                "vwc-backscatter",
+                "vwc-transmissivity",
+                "sm-backscatter"
+              ],
+              "status": "partial",
+              "availability_reason": "The local model supports component outputs only; calibrated KGE/J reference and VV/VH Sentinel-1 time series are unavailable and non-comparable."
+            }
+          ],
+          "charts": [
+            {
+              "id": "vwc-backscatter",
+              "label": "Local water-cloud backscatter versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "vwc-transmissivity",
+              "label": "Local water-cloud transmissivity versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "y": "two_way_transmissivity",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Two-way transmissivity (1)"
+            },
+            {
+              "id": "sm-backscatter",
+              "label": "Local water-cloud backscatter versus soil moisture",
+              "kind": "line",
+              "x": "soil_moisture",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Soil moisture (m3 m-3)",
+              "y_label": "Backscatter (dB)"
+            }
+          ],
+          "success_criteria": [
+            "All planned runs pass registered checks.",
+            "Required charts contain the supported backscatter outputs.",
+            "The final report explicitly names calibrated KGE/J and VV/VH time series as unavailable and non-comparable."
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "success_criteria": [
+            "All planned runs pass registered checks.",
+            "The supported local water_cloud outputs are computed and reported separately from the paper target.",
+            "The final report explicitly names the calibrated KGE/J reference and VV/VH Sentinel-1 time series as unavailable and non-comparable."
+          ],
+          "limitations": [
+            "Unavailable: Water Cloud Model calibrated with KGE and J objectives.",
+            "Unavailable: paper Figure 11 VV and VH Sentinel-1 time-series outputs.",
+            "Not comparable: local water_cloud@1.0.0 versus the paper's calibrated reference.",
+            "No visual-similarity or full-reproduction claim."
+          ],
+          "note": "Partial scope confirmed by user. Use the retained runs and charts; do not require a paper-equivalence chart."
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "baseline"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "none",
+        "sweep_points": 10
+      },
+      "handle": "res_bc26dfc1c67f",
+      "planned_run_id": "baseline",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "sweep-vwc"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "vegetation_water_kg_m2",
+        "sweep_start": 0.0,
+        "sweep_stop": 8.0,
+        "sweep_points": 17
+      },
+      "handle": "res_b7db41e5f2a7",
+      "planned_run_id": "sweep-vwc",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "sweep-sm"
+      },
+      "status": "success",
+      "model": "water_cloud",
+      "version": "1.0.0",
+      "spec": {
+        "angle_deg": 37.0,
+        "soil_moisture": 0.25,
+        "vegetation_water_kg_m2": 1.0,
+        "coefficient_a": 0.09,
+        "coefficient_b": 0.12,
+        "coefficient_c": -22.0,
+        "coefficient_d": 30.0,
+        "sweep_parameter": "soil_moisture",
+        "sweep_start": 0.05,
+        "sweep_stop": 0.55,
+        "sweep_points": 17
+      },
+      "handle": "res_e4cca9d743cc",
+      "planned_run_id": "sweep-sm",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "supported-vwc",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "supported-vwc",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "supported-vwc",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "Vegetation water sweep · sigma0_soil_db is constant; verify this is physically expected",
+          "Vegetation water sweep · sigma0_vegetation_db has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation"
+        ],
+        "redraw_reasons": [],
+        "n_series": 3,
+        "point_counts": [
+          17,
+          17,
+          17
+        ],
+        "redrawn": false
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "supported-sm",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "supported-sm",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "supported-sm",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "Soil moisture sweep · sigma0_vegetation_db is constant; verify this is physically expected"
+        ],
+        "redraw_reasons": [],
+        "n_series": 3,
+        "point_counts": [
+          17,
+          17,
+          17
+        ],
+        "redrawn": false
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 12747,
+      "completion_tokens": 107,
+      "cost_usd": 0.00048255,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.04
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "3 of 8 item(s) match.",
+      "arguments": {
+        "query": "Optimizing a backscatter forward operator Figure 11 Faenza field natural irrigation VV VH",
+        "scenario": "soil",
+        "kind": "paper"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13303,
+      "completion_tokens": 21,
+      "cost_usd": 0.00054157,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.03
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 14431,
+      "completion_tokens": 22,
+      "cost_usd": 0.00080729,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.92
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 16475,
+      "completion_tokens": 19,
+      "cost_usd": 0.00128825,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.95
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for water_cloud v1.0.0.",
+      "arguments": {
+        "model": "water_cloud"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 17696,
+      "completion_tokens": 24,
+      "cost_usd": 0.00445265,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.97
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction water_cloud v1.0.",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "01"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18084,
+      "completion_tokens": 29,
+      "cost_usd": 0.00455565,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.14
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Section index for backscatter-forward-operator (bundled). Call again with a section_id to read one.",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": ""
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18639,
+      "completion_tokens": 29,
+      "cost_usd": 0.0046944,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.08
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "backscatter-forward-operator section 05: Data and methods - Water Cloud Model (3215 chars, bundled)",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "05"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19782,
+      "completion_tokens": 29,
+      "cost_usd": 0.00498015,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.14
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "backscatter-forward-operator section 07: Data and methods - Experimental set-up (3598 chars, bundled)",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "07"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 20853,
+      "completion_tokens": 29,
+      "cost_usd": 0.0052479,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.89
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "backscatter-forward-operator section 11: Results - WCM calibration (4892 chars, bundled)",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "11"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 22149,
+      "completion_tokens": 29,
+      "cost_usd": 0.0055719,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.25
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "backscatter-forward-operator section 12: Results - WCM evaluation (5421 chars, bundled)",
+      "arguments": {
+        "slug": "backscatter-forward-operator",
+        "section_id": "12"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 23634,
+      "completion_tokens": 31,
+      "cost_usd": 0.00594555,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.29
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_paper_figure",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Source-paper figure fig11 is available. It is not model output and has not been digitized.",
+      "arguments": {
+        "paper": "backscatter-forward-operator",
+        "figure_id": "fig11"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 23977,
+      "completion_tokens": 65,
+      "cost_usd": 0.0060721,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.55
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "inspect_paper_figure",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "Inspected source-paper figure fig11. The source image is attached for visual review; extracted axes and legend text are included as an audit aid. Numeric curve digitization was not performed.",
+      "arguments": {
+        "paper": "backscatter-forward-operator",
+        "figure_id": "fig11",
+        "focus": "Inspect all panels: axes, units, legends, date range, plotted series, and visible qualitative differences between natural and irrigation runs and KGE versus J."
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13867,
+      "completion_tokens": 527,
+      "cost_usd": 0.004099,
+      "reasoning_chars": 0,
+      "elapsed_s": 9.26
+    },
+    {
+      "kind": "research_block",
+      "turn": 1,
+      "rule": "plan_required",
+      "intervention": 1,
+      "detail": "No LLM-authored research proposal has been submitted."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19556,
+      "completion_tokens": 2613,
+      "cost_usd": 0.0080181,
+      "reasoning_chars": 0,
+      "elapsed_s": 22.88
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "A capability checkpoint is required before proposing a reproduction plan.",
+      "arguments": {
+        "_truncated": "{\"action\": \"propose\", \"question\": \"Using the registered Water Cloud Model, reproduce the qualitative four-panel structure of the Faenza Sentinel-1 backscatter comparison in source Figure 11: compare natural and irrigation vegetation-water scenarios and two calibration-inspired parameter sets, without digitizing or claiming exact reproduction of the paper curves.\", \"objective\": \"Generate a controlled sensitivity experiment showing how vegetation water content and Water Cloud Model coefficients affect VV/VH-like backscatter components over a short temporal proxy, and compare natural versus irrigation configurations using the model's total and component backscatter outputs.\", \"hypothesis\": \"Increasing vegetation water content increases vegetation backscatter and attenuation, while the resulting total backscatter response depends on the soil-moisture trajectory and calibrated coefficients; distinct coefficient sets can change the agreement pattern, but this registered model cannot reproduce the paper's polarization-specific Sentinel-1 observations or time series exactly.\", \"steps\": [\"Run a baseline Water Cloud Model configuration for a representative natural condition.\", \"Run an irrigation-condition sensitivity with increased vegetation water content and a specified soil-moisture state.\", \"Run two coefficient configurations representing calibration-inspired alternatives, clearly marked as user-specified/model-assumption rather than paper-reported fitted values.\", \"Compare soil, vegetation, total backscatter, and transmissivity in a common chart; interpret only model-produced trends.\", \"Do not digitize the source figure or compute visual similarity to it.\"], \"parameters\": {\"angle_deg\": 37, \"soil_moisture\": [0.18, 0.3], \"vegetation_water_kg_m2\": [0.8, 2.5], \"coefficient_sets\": [{\"name\": \"set_A\", \"coefficient_a\": 0.09, \"coefficient_b\": 0.12, \"coefficient_c\": -22, \"coefficient_d\": 30}, {\"name\": \"set_B\", \"coefficient_a\": 0.05, \"coefficient_b\": 0.18, \"coefficient_c\": -21, \"coefficient_d\": 35}], \"sweep_parameter\": \"vegetation_water_kg_m2\", \"sweep_start\": 0.0, \"sweep_stop\": 4.0, \"sweep_points\": 20}, \"paper_conditions\": {\"site\": \"Faenza (San Silvestro) field\", \"observable\": \"Sentinel-1 sigma0 VV and VH in dB\", \"panels\": [\"natural KGE\", \"irrigation KGE\", \"natural J\", \"irrigation J\"], \"date_range\": \"approximately 16–18 January\"}, \"condition_provenance\": {\"site\": \"paper_explicit: backscatter-forward-operator#fig-fig11\", \"observable\": \"paper_explicit: backscatter-forward-operator#fig-fig11\", \"panels\": \"paper_explicit: backscatter-forward-operator#fig-fig11\", \"date_range\": \"figure-inspection: backscatter-forward-operator#fig-fig11\", \"angle_deg\": \"model_assumption: representative Sentinel-1 incidence angle\", \"soil_moisture\": \"model_assumption: no digitized paper time series used\", \"vegetation_water_kg_m2\": \"model_assumption: scenario values for sensitivity only\", \"coefficient_sets\": \"model_assumption: illustrative alternatives, not paper-fitted coefficients\"}, \"literature_evidence\": [{\"ref\": \"backscatter-forward-operator#05\", \"role\": \"describes the Water Cloud Model forward-operator formulation and component combination\"}, {\"ref\": \"backscatter-forward-operator#07\", \"role\": \"describes calibration context and coefficient fitting\"}, {\"ref\": \"backscatter-forward-operator#11\", \"role\": \"reports the comparison context for natural and irrigation runs\"}, {\"ref\": \"backscatter-forward-operator#12\", \"role\": \"supports interpretation of model components and calibration metrics\"}, {\"ref\": \"backscatter-forward-operator#fig-fig11\", \"role\": \"source visual target: four panels, VV/VH observations and simulations, KGE versus J calibrations\"}], \"reproduction_targets\": [{\"id\": \"fig11-qualitative\", \"label\": \"Figure 11 qualitative scenario structure\", \"reference_models\": [\"Water Cloud Model\"], \"requested_outputs\": [\"sigma0_soil_db\", \"sigma0_total_db\", \"sigma0_vegetation_db\", \"two_way_transmissivity\"], \"evidence_refs\": [\"backscatter-forward-operator#fig-fig11\"], \"status\": \"partial\", \"availability_reason\": \"The registered model does not expose separate VV and VH polarization outputs, temporal forcing, KGE/J calibration, or the paper's exact fitted parameters; no curve digitization is performed.\"}], \"selected_models\": [{\"model\": \"water_cloud\", \"purpose\": \"Active microwave backscatter sensitivity for soil, vegetation, and total components\", \"capability_status\": \"partial relative to the paper target\"}], \"parameter_mapping\": [{\"model\": \"water_cloud\", \"paper_concept\": \"incidence angle\", \"model_input\": \"angle_deg\", \"mapped_value\": 37, \"units\": \"degree\", \"provenance_class\": \"model_assumption\", \"confidence\": \"medium\", \"confidence_basis\": \"representative Sentinel-1 angle; not digitized from the figure\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"natural vegetation condition\", \"model_input\": \"vegetation_water_kg_m2\", \"mapped_value\": 0.8, \"units\": \"kg m-2\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"confidence_basis\": \"illustrative scenario only\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"irrigation vegetation condition\", \"model_input\": \"vegetation_water_kg_m2\", \"mapped_value\": 2.5, \"units\": \"kg m-2\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"confidence_basis\": \"illustrative scenario only\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"natural soil condition\", \"model_input\": \"soil_moisture\", \"mapped_value\": 0.18, \"units\": \"m3 m-3\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"confidence_basis\": \"illustrative scenario only\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"irrigation soil condition\", \"model_input\": \"soil_moisture\", \"mapped_value\": 0.3, \"units\": \"m3 m-3\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"confidence_basis\": \"illustrative scenario only\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"coefficient calibration alternatives\", \"model_input\": \"coefficient_a\", \"mapped_value\": [0.09, 0.05], \"units\": \"none\", \"provenance_class\": \"model_assumption\", \"confidence\": \""
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 22298,
+      "completion_tokens": 249,
+      "cost_usd": 0.0058667,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.93
+    },
+    {
+      "kind": "harness_block",
+      "turn": 1,
+      "rule": "physical_domain",
+      "tool": "research_capability_check",
+      "intervention": 1,
+      "detail": "capability review requires user confirmation",
+      "problems": []
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "capability_review",
+      "detail": "Capability review requires the user's partial-scope decision."
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 2,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 12669,
+      "completion_tokens": 238,
+      "cost_usd": 0.0034527,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.53
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability check by reproduction target\n\nfig11-qualitative [fig11-qualitative]\nSupported: water_cloud@1.0.0\nUnavailable: Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series: not registered in the current model registry; resembles equivalent_water_thickness_cm, snowpack_water_equivalent, vegetation_water_kg_m2, water_cloud, which is not the same model -- confirm which was meant\nNot comparable: water_cloud is not equivalent to Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series\n\nUnified summary\nSupported: water_cloud@1.0.0 (sigma0_soil_db, sigma0_total_db, sigma0_vegetation_db, two_way_transmissivity)\nUnavailable: Water Cloud Model calibrated with KGE and J objectives; paper Fi",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Partial reproduction of the supported components of the backscatter-forward-operator Figure 11 target, excluding the unavailable calibrated Water Cloud Model with KGE/J objectives and the non-comparable VV/VH Sentinel-1 time-series target.",
+        "reference_models": [
+          "Water Cloud Model calibrated with KGE and J objectives"
+        ],
+        "requested_outputs": [
+          "VV and VH Sentinel-1 time series",
+          "water-cloud backscatter components"
+        ],
+        "local_models": [
+          "water_cloud"
+        ],
+        "targets": [
+          {
+            "id": "fig11",
+            "reference_models": [
+              "Water Cloud Model calibrated with KGE and J objectives"
+            ],
+            "requested_outputs": [
+              "VV and VH Sentinel-1 time series"
+            ],
+            "evidence_refs": [
+              "backscatter-forward-operator#05",
+              "backscatter-forward-operator#07",
+              "backscatter-forward-operator#11",
+              "backscatter-forward-operator#12",
+              "backscatter-forward-operator#fig11",
+              "backscatter-forward-operator#fig-fig11"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 14601,
+      "completion_tokens": 2377,
+      "cost_usd": 0.0065025,
+      "reasoning_chars": 0,
+      "elapsed_s": 21.61
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "review",
+      "detail": "Read every selected model instruction before proposing: water_cloud@1.0.0@? (call list_models first), water_cloud@1.0.0@?."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 19782,
+      "completion_tokens": 26,
+      "cost_usd": 0.0049702,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.23
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction water_cloud v1.0.",
+      "arguments": {
+        "model": "water_cloud",
+        "section": "1.0"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 20160,
+      "completion_tokens": 62,
+      "cost_usd": 0.00511425,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.51
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for water_cloud v1.0.0.",
+      "arguments": {
+        "model": "water_cloud"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 21395,
+      "completion_tokens": 2155,
+      "cost_usd": 0.0079346,
+      "reasoning_chars": 0,
+      "elapsed_s": 13.52
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The plan does not measure every quantity or attribution requested by the question: no required backscatter chart",
+      "arguments": {
+        "_truncated": "{\"action\": \"propose\", \"question\": \"Generate a partial, explicitly non-comparable reproduction study for the supported Water Cloud backscatter components associated with paper Figure 11.\", \"objective\": \"Quantify the registered water_cloud model response to vegetation water content and soil moisture, and report the unavailable calibrated KGE/J and VV/VH time-series components explicitly.\", \"hypothesis\": \"In the registered model, vegetation water content changes canopy scattering and attenuation, while soil moisture changes the soil backscatter contribution; these results are not a reproduction of the paper's calibrated VV/VH time series.\", \"steps\": [\"Run a fixed-condition baseline.\", \"Sweep vegetation_water_kg_m2 at fixed soil moisture.\", \"Sweep soil_moisture at fixed vegetation water content.\", \"Report local-model outputs separately from paper results and unavailable components.\"], \"paper_conditions\": {\"target\": \"Figure 11: calibrated Water Cloud Model with KGE/J objectives and VV/VH Sentinel-1 time series\", \"supported_scope\": \"Local water_cloud forward-operator components only\"}, \"condition_provenance\": {\"target\": \"backscatter-forward-operator#fig11\", \"supported_scope\": \"agent-assumption; exploratory local-model sensitivity, not paper condition\"}, \"literature_evidence\": [{\"evidence_ref\": \"backscatter-forward-operator#05\", \"purpose\": \"paper model formulation\"}, {\"evidence_ref\": \"backscatter-forward-operator#07\", \"purpose\": \"paper experimental setup\"}, {\"evidence_ref\": \"backscatter-forward-operator#11\", \"purpose\": \"paper calibration context\"}, {\"evidence_ref\": \"backscatter-forward-operator#12\", \"purpose\": \"paper evaluation context\"}, {\"evidence_ref\": \"backscatter-forward-operator#fig11\", \"purpose\": \"source figure target; not digitized\"}], \"reproduction_targets\": [{\"id\": \"fig11-supported-components\", \"source_id\": \"figure:11\", \"target_quantity\": \"Supported local-model backscatter components: sigma0_soil_db, sigma0_vegetation_db, sigma0_total_db, and two_way_transmissivity\", \"expected_comparison\": \"Compare only internal component responses from the registered local model against the paper target context; make no numerical, visual-similarity, VV/VH, or calibration-equivalence claim.\", \"reference_models\": [\"Water Cloud Model calibrated with KGE and J objectives\"], \"requested_outputs\": [\"sigma0_soil_db\", \"sigma0_vegetation_db\", \"sigma0_total_db\", \"two_way_transmissivity\"], \"evidence_refs\": [\"backscatter-forward-operator#05\", \"backscatter-forward-operator#07\", \"backscatter-forward-operator#11\", \"backscatter-forward-operator#12\", \"backscatter-forward-operator#fig11\"], \"status\": \"partial\", \"availability_reason\": \"The registered water_cloud model supports these component outputs, but the paper's calibrated KGE/J implementation and VV/VH Sentinel-1 time-series target are unavailable and non-comparable.\"}], \"selected_models\": [{\"model\": \"water_cloud\", \"version\": \"1.0.0\", \"purpose\": \"Supported local forward-operator sensitivity study\", \"capability_status\": \"supported for four declared outputs; not equivalent to paper calibrated reference\", \"declaration_provenance\": \"list_models water_cloud@1.0.0\", \"instruction_provenance\": \"read_model_instruction water_cloud@1.0\"}], \"parameter_mapping\": [{\"model\": \"water_cloud\", \"paper_concept\": \"incidence angle\", \"paper_value\": null, \"model_input\": \"angle_deg\", \"mapped_value\": 37, \"units\": \"degree\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"confidence_basis\": \"Exploratory valid angle, not extracted from paper Figure 11\", \"rationale\": \"Fixed local-model condition.\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"soil moisture state\", \"paper_value\": null, \"model_input\": \"soil_moisture\", \"mapped_value\": 0.25, \"units\": \"m3 m-3\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"confidence_basis\": \"Exploratory baseline, not extracted from paper\", \"rationale\": \"Fixed baseline and vegetation sweep condition.\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"vegetation water content\", \"paper_value\": null, \"model_input\": \"vegetation_water_kg_m2\", \"mapped_value\": 1, \"units\": \"kg m-2\", \"provenance_class\": \"model_assumption\", \"confidence\": \"low\", \"confidence_basis\": \"Exploratory baseline, not extracted from paper\", \"rationale\": \"Fixed baseline and soil-moisture sweep condition.\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"vegetation scattering coefficient\", \"paper_value\": null, \"model_input\": \"coefficient_a\", \"mapped_value\": 0.09, \"units\": \"none\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"Registered model default, not paper calibration\", \"rationale\": \"Held fixed.\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"vegetation attenuation coefficient\", \"paper_value\": null, \"model_input\": \"coefficient_b\", \"mapped_value\": 0.12, \"units\": \"none\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"Registered model default, not paper calibration\", \"rationale\": \"Held fixed.\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"soil backscatter intercept\", \"paper_value\": null, \"model_input\": \"coefficient_c\", \"mapped_value\": -22, \"units\": \"dB\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"Registered model default, not paper calibration\", \"rationale\": \"Held fixed.\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"soil-moisture backscatter sensitivity\", \"paper_value\": null, \"model_input\": \"coefficient_d\", \"mapped_value\": 30, \"units\": \"dB per m3 m-3\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"Registered model default, not paper calibration\", \"rationale\": \"Held fixed.\"}, {\"model\": \"water_cloud\", \"paper_concept\": \"vegetation-water sweep\", \"paper_value\": null, \"model_input\": \"sweep_parameter\", \"mapped_value\": \"vegetation_water_kg_m2\", \"units\": \"none\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\", \"confidence_basis\": \"Defined by this partial exploratory plan\", \"rationale\": \"Main sensitivity axis.\"}, {\"model\": \"water_cloud\""
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 23693,
+      "completion_tokens": 364,
+      "cost_usd": 0.00635355,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.35
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.006,
+      "summary": "The plan does not measure every quantity or attribution requested by the question: no required backscatter chart",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "vwc-backscatter",
+              "label": "Local model response to vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "vwc-transmissivity",
+              "label": "Local model transmissivity response to vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "y": "two_way_transmissivity",
+              "required": true,
+              "purpose": "diagnostic",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Two-way transmissivity (1)"
+            },
+            {
+              "id": "sm-backscatter",
+              "label": "Local model response to soil moisture",
+              "kind": "line",
+              "x": "soil_moisture",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Soil moisture (m3 m-3)",
+              "y_label": "Backscatter (dB)"
+            }
+          ],
+          "outputs": [
+            "sigma0_soil_db",
+            "sigma0_vegetation_db",
+            "sigma0_total_db",
+            "two_way_transmissivity"
+          ],
+          "success_criteria": [
+            "All runs pass registered checks.",
+            "The required backscatter charts show sigma0_soil_db, sigma0_vegetation_db, and sigma0_total_db for both sensitivity axes.",
+            "The transmissivity diagnostic is reported separately.",
+            "The report labels the KGE/J calibrated reference and VV/VH time series unavailable and non-comparable."
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 24200,
+      "completion_tokens": 19,
+      "cost_usd": 0.0060663,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.44
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "draft_recovery",
+      "detail": "No approved proposal exists yet; the most recent rejected draft and validation error are retained."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 26884,
+      "completion_tokens": 276,
+      "cost_usd": 0.0070457,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.3
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.002,
+      "summary": "The plan does not measure every quantity or attribution requested by the question: no required backscatter chart",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "required-backscatter-vwc",
+              "label": "Supported water-cloud backscatter components versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "required-backscatter-sm",
+              "label": "Supported water-cloud backscatter components versus soil moisture",
+              "kind": "line",
+              "x": "soil_moisture",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Soil moisture (m3 m-3)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "transmissivity-vwc",
+              "label": "Supported water-cloud transmissivity versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "y": "two_way_transmissivity",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Two-way transmissivity (1)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 27303,
+      "completion_tokens": 531,
+      "cost_usd": 0.00745645,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.0
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The plan does not measure every quantity or attribution requested by the question: no required backscatter chart",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "reproduction_targets": [
+            {
+              "id": "fig11-supported-components",
+              "source_id": "figure:11",
+              "target_quantity": "Supported local-model backscatter components",
+              "expected_comparison": "Internal sensitivity results only; no calibration, VV/VH, numerical reproduction, or visual-similarity claim.",
+              "reference_models": [
+                "Water Cloud Model calibrated with KGE and J objectives"
+              ],
+              "requested_outputs": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db",
+                "two_way_transmissivity"
+              ],
+              "evidence_refs": [
+                "backscatter-forward-operator#05",
+                "backscatter-forward-operator#07",
+                "backscatter-forward-operator#11",
+                "backscatter-forward-operator#12",
+                "backscatter-forward-operator#fig11"
+              ],
+              "run_ids": [
+                "baseline",
+                "sweep-vwc",
+                "sweep-sm"
+              ],
+              "chart_ids": [
+                "vwc-backscatter",
+                "vwc-transmissivity",
+                "sm-backscatter"
+              ],
+              "status": "partial",
+              "availability_reason": "The local model supports component outputs only; calibrated KGE/J reference and VV/VH Sentinel-1 time series are unavailable and non-comparable."
+            }
+          ],
+          "charts": [
+            {
+              "id": "vwc-backscatter",
+              "label": "Local water-cloud backscatter versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Backscatter (dB)"
+            },
+            {
+              "id": "vwc-transmissivity",
+              "label": "Local water-cloud transmissivity versus vegetation water content",
+              "kind": "line",
+              "x": "vegetation_water_kg_m2",
+              "y": "two_way_transmissivity",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Vegetation water content (kg m-2)",
+              "y_label": "Two-way transmissivity (1)"
+            },
+            {
+              "id": "sm-backscatter",
+              "label": "Local water-cloud backscatter versus soil moisture",
+              "kind": "line",
+              "x": "soil_moisture",
+              "ys": [
+                "sigma0_soil_db",
+                "sigma0_vegetation_db",
+                "sigma0_total_db"
+              ],
+              "required": true,
+              "purpose": "result",
+              "x_label": "Soil moisture (m3 m-3)",
+              "y_label": "Backscatter (dB)"
+            }
+          ],
+          "success_criteria": [
+            "All planned runs pass registered checks.",
+            "Required charts contain the supported backscatter outputs.",
+            "The final report explicitly names calibrated KGE/J and VV/VH time series as unavailable and non-comparable."
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 27977,
+      "completion_tokens": 165,
+      "cost_usd": 0.00718575,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.26
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The plan does not measure every quantity or attribution requested by the question: no required backscatter chart",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "success_criteria": [
+            "All planned runs pass registered checks.",
+            "The supported local water_cloud outputs are computed and reported separately from the paper target.",
+            "The final report explicitly names the calibrated KGE/J reference and VV/VH Sentinel-1 time series as unavailable and non-comparable."
+          ],
+          "limitations": [
+            "Unavailable: Water Cloud Model calibrated with KGE and J objectives.",
+            "Unavailable: paper Figure 11 VV and VH Sentinel-1 time-series outputs.",
+            "Not comparable: local water_cloud@1.0.0 versus the paper's calibrated reference.",
+            "No visual-similarity or full-reproduction claim."
+          ],
+          "note": "Partial scope confirmed by user. Use the retained runs and charts; do not require a paper-equivalence chart."
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 28285,
+      "completion_tokens": 1600,
+      "cost_usd": 0.00898475,
+      "reasoning_chars": 0,
+      "elapsed_s": 12.81
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review",
+      "detail": "LLM-authored research plan v001 is ready for human review. Backend applied 11 auditable reference/presentation repair(s); review them explicitly."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 33717,
+      "completion_tokens": 321,
+      "cost_usd": 0.0088143,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.63
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "plan_review"
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 3,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 13107,
+      "completion_tokens": 54,
+      "cost_usd": 0.0033414,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.43
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.002,
+      "summary": "Approved run baseline: water_cloud ran in 0.00s: 1 point(s). Quality control passed.",
+      "arguments": {
+        "run_id": "baseline"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 13795,
+      "completion_tokens": 128,
+      "cost_usd": 0.0036022,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.75
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.002,
+      "summary": "Approved run sweep-vwc: water_cloud ran in 0.00s: 17 point(s) over vegetation_water_kg_m2. Quality control passed.",
+      "arguments": {
+        "run_id": "sweep-vwc"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 15573,
+      "completion_tokens": 107,
+      "cost_usd": 0.0040215,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.67
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.001,
+      "summary": "Approved run sweep-sm: water_cloud ran in 0.00s: 17 point(s) over soil_moisture. Quality control passed.",
+      "arguments": {
+        "run_id": "sweep-sm"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 17355,
+      "completion_tokens": 105,
+      "cost_usd": 0.0044646,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.73
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.071,
+      "summary": "Approved chart supported-vwc: Drew a line chart with 3 series over 51 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "supported-vwc",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 17776,
+      "completion_tokens": 27,
+      "cost_usd": 0.00447625,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.85
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Figure 1 render check (Render QA) passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 3 series; point counts [17, 17, 17]. Warnings: Vegetation water sweep · sigma0_soil_db is constant; verify this is physically expected; Vegetation water sweep · sigma0_vegetation_db has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation.",
+      "arguments": {
+        "chart_id": "supported-vwc",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 18068,
+      "completion_tokens": 84,
+      "cost_usd": 0.00461765,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.67
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.079,
+      "summary": "Approved chart supported-sm: Drew a line chart with 3 series over 51 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "supported-sm",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 18460,
+      "completion_tokens": 26,
+      "cost_usd": 0.00464605,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.45
+    },
+    {
+      "kind": "tool_call",
+      "turn": 3,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Figure 2 render check (Render QA) passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 3 series; point counts [17, 17, 17]. Warnings: Soil moisture sweep · sigma0_vegetation_db is constant; verify this is physically expected.",
+      "arguments": {
+        "chart_id": "supported-sm",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 18676,
+      "completion_tokens": 2736,
+      "cost_usd": 0.00795205,
+      "reasoning_chars": 0,
+      "elapsed_s": 22.76
+    },
+    {
+      "kind": "research_block",
+      "turn": 3,
+      "rule": "research_reporting_contract",
+      "detail": "The final report is being checked against the recorded provenance ledger and result state."
+    },
+    {
+      "kind": "model_call",
+      "turn": 3,
+      "prompt_tokens": 21997,
+      "completion_tokens": 1949,
+      "cost_usd": 0.00354311,
+      "reasoning_chars": 0,
+      "elapsed_s": 17.71
+    },
+    {
+      "kind": "harness_warning",
+      "turn": 3,
+      "rule": "report_completeness",
+      "detail": "The report must give a separate conclusion based on each generated figure, covering its visible curves, axes, units, legend and qualitative patterns. This is only a partial reproduction because these named comparison models are not registered and were not run: Water Cloud Model calibrated with KGE and J objectives; paper Figure 11 uses VV and VH Sentinel-1 time series. State that limitation explicitly; do not report cross-model agreement metrics or attribute causal differences to their solvers."
+    },
+    {
+      "kind": "research_complete",
+      "turn": 3,
+      "detail": "A registered model run, figure and validated report are complete."
+    },
+    {
+      "kind": "harness_pass",
+      "turn": 3,
+      "rule": "citation_integrity",
+      "markers": [
+        "backscatter-forward-operator#11",
+        "backscatter-forward-operator#12",
+        "model:water_cloud@1.0.0",
+        "model:water_cloud@1.0.0",
+        "skill:research-reporting"
+      ]
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "backscatter-forward-operator#05",
+      "backscatter-forward-operator#07",
+      "backscatter-forward-operator#11",
+      "backscatter-forward-operator#12",
+      "backscatter-forward-operator#fig-fig11",
+      "research-planning#00",
+      "research-reporting#00"
+    ],
+    "models": [
+      "water_cloud@1.0.0"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "water_cloud@1.0"
+    ],
+    "paper_figures": [
+      "backscatter-forward-operator#fig11"
+    ],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [
+      "backscatter-forward-operator#11",
+      "backscatter-forward-operator#12",
+      "model:water_cloud@1.0.0",
+      "model:water_cloud@1.0.0",
+      "skill:research-reporting"
+    ],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [
+    {
+      "planned_chart_id": "supported-vwc",
+      "figure_number": 1,
+      "title": "Figure 1. Supported backscatter components versus vegetation water content",
+      "subtitle": "angle 37 °",
+      "x_label": "Vegetation water content (kg m-2)",
+      "y_label": "Backscatter (dB)",
+      "kind": "line",
+      "series": [
+        {
+          "label": "Vegetation water sweep · sigma0_soil_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 17,
+          "handle": "res_b7db41e5f2a7",
+          "x": "vegetation_water_kg_m2",
+          "y": "sigma0_soil_db"
+        },
+        {
+          "label": "Vegetation water sweep · sigma0_vegetation_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 17,
+          "handle": "res_b7db41e5f2a7",
+          "x": "vegetation_water_kg_m2",
+          "y": "sigma0_vegetation_db"
+        },
+        {
+          "label": "Vegetation water sweep · sigma0_total_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 17,
+          "handle": "res_b7db41e5f2a7",
+          "x": "vegetation_water_kg_m2",
+          "y": "sigma0_total_db"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "Vegetation water sweep · sigma0_soil_db is constant; verify this is physically expected",
+          "Vegetation water sweep · sigma0_vegetation_db has an abrupt adjacent jump between x=0.0 and x=0.5; endpoint behaviour should be noted in interpretation"
+        ],
+        "redraw_reasons": [],
+        "n_series": 3,
+        "point_counts": [
+          17,
+          17,
+          17
+        ],
+        "redrawn": false
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/figures/703e9f1a6284da6d73f4ce2d_water-cloud-modanesi2021-fig11_p1-reproduction-first_openai-gpt-5.6-luna_r1_full.png"
+    },
+    {
+      "planned_chart_id": "supported-sm",
+      "figure_number": 2,
+      "title": "Figure 2. Supported backscatter components versus soil moisture",
+      "subtitle": "angle 37 °",
+      "x_label": "Soil moisture (m3 m-3)",
+      "y_label": "Backscatter (dB)",
+      "kind": "line",
+      "series": [
+        {
+          "label": "Soil moisture sweep · sigma0_soil_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 17,
+          "handle": "res_e4cca9d743cc",
+          "x": "soil_moisture",
+          "y": "sigma0_soil_db"
+        },
+        {
+          "label": "Soil moisture sweep · sigma0_vegetation_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 17,
+          "handle": "res_e4cca9d743cc",
+          "x": "soil_moisture",
+          "y": "sigma0_vegetation_db"
+        },
+        {
+          "label": "Soil moisture sweep · sigma0_total_db",
+          "source": "model_run",
+          "origin": "water_cloud@1.0.0",
+          "n_points": 17,
+          "handle": "res_e4cca9d743cc",
+          "x": "soil_moisture",
+          "y": "sigma0_total_db"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [
+          "Soil moisture sweep · sigma0_vegetation_db is constant; verify this is physically expected"
+        ],
+        "redraw_reasons": [],
+        "n_series": 3,
+        "point_counts": [
+          17,
+          17,
+          17
+        ],
+        "redrawn": false
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/figures/0c67fe84f3615291aa1bcfbc_water-cloud-modanesi2021-fig11_p1-reproduction-first_openai-gpt-5.6-luna_r1_full.png"
+    }
+  ],
+  "markers": {
+    "literature": [
+      "backscatter-forward-operator#11",
+      "backscatter-forward-operator#12"
+    ],
+    "model": [
+      "water_cloud@1.0.0",
+      "water_cloud@1.0.0"
+    ],
+    "data": []
+  },
+  "parameter_provenance": [
+    {
+      "field": "angle_deg",
+      "value": 37,
+      "source_kind": "assumption",
+      "source_ref": "none; registered input retained without paper evidence",
+      "reason": "The registered input was retained as a model assumption without paper evidence.",
+      "provenance_class": "model_assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "soil_moisture",
+      "value": 0.25,
+      "source_kind": "assumption",
+      "source_ref": "none; registered input retained without paper evidence",
+      "reason": "The registered input was retained as a model assumption without paper evidence.",
+      "provenance_class": "model_assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "vegetation_water_kg_m2",
+      "value": 1,
+      "source_kind": "assumption",
+      "source_ref": "none; registered input retained without paper evidence",
+      "reason": "The registered input was retained as a model assumption without paper evidence.",
+      "provenance_class": "model_assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "coefficient_a",
+      "value": 0.09,
+      "source_kind": "model_default",
+      "source_ref": "registered backend default",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "provenance_class": "backend_default",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "coefficient_b",
+      "value": 0.12,
+      "source_kind": "model_default",
+      "source_ref": "registered backend default",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "provenance_class": "backend_default",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "coefficient_c",
+      "value": -22,
+      "source_kind": "model_default",
+      "source_ref": "registered backend default",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "provenance_class": "backend_default",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "coefficient_d",
+      "value": 30,
+      "source_kind": "model_default",
+      "source_ref": "registered backend default",
+      "reason": "The registered backend supplied this default; it is not paper evidence.",
+      "provenance_class": "backend_default",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_parameter",
+      "value": "none",
+      "source_kind": "assumption",
+      "source_ref": "none; submitted baseline run specification",
+      "reason": "The submitted run retained this value without attached paper or user evidence.",
+      "provenance_class": "model_assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_points",
+      "value": 10,
+      "source_kind": "model_default",
+      "source_ref": "registered backend parameter resolution",
+      "reason": "The registered model inserted this value; it is not paper evidence.",
+      "provenance_class": "backend_default",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_start",
+      "value": 0.0,
+      "source_kind": "assumption",
+      "source_ref": "none; submitted vegetation-water sweep specification",
+      "reason": "The submitted run retained this value without attached paper or user evidence.",
+      "provenance_class": "model_assumption",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_stop",
+      "value": 8.0,
+      "source_kind": "assumption",
+      "source_ref": "none; submitted vegetation-water sweep specification",
+      "reason": "The submitted run retained this value without attached paper or user evidence.",
+      "provenance_class": "model_assumption",
+      "sensitivity_checked": false
+    }
+  ],
+  "provenance_parse_error": null,
+  "reproduction_outcome": "partial",
+  "archived_report_path": "evaluation/results/competition/reports/185b3d93064efd57ca9feb17_water-cloud-modanesi2021-fig11_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/185b3d93064efd57ca9feb17_water-cloud-modanesi2021-fig11_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  },
+  "dashboard_metrics": {
+    "evaluation_complete": true,
+    "successful": true,
+    "figure_result_correct": "fail",
+    "report_correct": "pass",
+    "overall_correct": "fail",
+    "figure_result": {
+      "passed": null,
+      "status": "not_scoreable",
+      "plot": {
+        "passed": true
+      }
+    },
+    "figure_judgement": {
+      "complete": true,
+      "passed": false,
+      "status": "fail",
+      "total": 0,
+      "scores": {
+        "line_count": 0,
+        "patterns": 0,
+        "grouping": 0,
+        "visual_correspondence": 0
+      },
+      "observations": [
+        "The reference shows four fluctuating data series in two broadly separated upper and lower groups; the candidate has three curves, including one flat series and two steadily rising series.",
+        "The candidate’s strong monotonic rise and changing curve separation differ from the reference’s comparatively stable, irregular time-series patterns. The figures communicate different relationships."
+      ],
+      "summary": "The candidate does not qualitatively reproduce the reference figure.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 568,
+          "elapsed_s": 6.361,
+          "usage": {
+            "prompt_tokens": 1938,
+            "completion_tokens": 288,
+            "total_tokens": 2226
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1938,
+        "completion_tokens": 288,
+        "total_tokens": 2226
+      }
+    },
+    "deterministic_report": {
+      "passed": true,
+      "checks": {
+        "report_exists": true,
+        "outcome_declared": true,
+        "evidence_resolved": true,
+        "computed_result_identified": true,
+        "model_version_qualified": true,
+        "calibrated_outcome": true
+      },
+      "unresolved_markers": [],
+      "visual_validation": "not_passed",
+      "plot_checks_are_diagnostic": true
+    },
+    "report_judgement": {
+      "complete": true,
+      "passed": true,
+      "standard": "report-judge-standard-v3",
+      "total": 13,
+      "maximum": 16,
+      "scores": {
+        "source_fidelity": 1,
+        "answer": 1,
+        "factuality": 2,
+        "technical_completeness": 1,
+        "assumed_parameters": 2,
+        "evidence": 2,
+        "calibration": 2,
+        "clarity": 2
+      },
+      "factual_errors": [],
+      "summary": "The report clearly distinguishes its local component-sensitivity runs from Figure 11 and does not claim visual or quantitative reproduction. It documents assumptions and resolves source/model evidence. It only partially addresses the requested experiment: it omits the natural/irrigation conditions and does not name the missing Noah-MP soil-moisture and LAI forcing, so the explanation for why a-faç",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 583,
+          "elapsed_s": 8.7,
+          "usage": {
+            "prompt_tokens": 3250,
+            "completion_tokens": 770,
+            "total_tokens": 4020
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3250,
+        "completion_tokens": 770,
+        "total_tokens": 4020
+      }
+    },
+    "judge_usage": {
+      "prompt_tokens": 5188,
+      "completion_tokens": 1058,
+      "total_tokens": 6246
+    },
+    "figure_judge_usage": {
+      "prompt_tokens": 1938,
+      "completion_tokens": 288,
+      "total_tokens": 2226
+    }
+  }
+}

@@ -1,0 +1,3651 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "p-smrt-density-above-ice",
+  "suite": "probe",
+  "quality": "false_premise",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "1a27a74fae6858c10bb9979423898ec3e12428c7f2a97e2462054188b882cfdc",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 3,
+  "build": "db4b2e1",
+  "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and tell me the brightness temperature.",
+  "answer": "## Research result and conclusion\n\nThe generated diagnostic shows two passive brightness-temperature curves over **916–917 kg m⁻³**. Vertical polarization remains above horizontal polarization, and both curves decrease slightly across the interval. This is a legal-boundary diagnostic; it does not evaluate the requested density of **2000 kg m⁻³**.\n\nThe original reproduction is therefore **partial**. The approved SMRT run completed successfully, but 2000 kg m⁻³ was not executable within the registered model’s declared density range. [model:smrt@1.5.1]\n\n## Supporting results\n\nThe model returned:\n\n| Snow density (kg m⁻³) | TBₕ (K) | TBᵥ (K) |\n|---:|---:|---:|\n| 916.0 | 156.3343 | 199.3226 |\n| 917.0 | 156.2760 | 199.2696 |\n\nAcross the diagnostic interval, TBₕ decreased by **0.0584 K**, while TBᵥ decreased by **0.0530 K**. TBᵥ was higher than TBₕ at both evaluated densities. These values are model outputs, not measurements. [model:smrt@1.5.1]\n\nThe selected figure was rendered with snow density on the x-axis and brightness temperature in kelvin on the y-axis. The recorded render check passed. This establishes that the generated curves were available and legible; it does not establish numerical agreement with a source figure.\n\n## Comparison and interpretation\n\nThe figure and the returned arrays support the same qualitative interpretation:\n\n- two polarization series are present;\n- TBᵥ is ordered above TBₕ;\n- both series slope slightly downward over 916–917 kg m⁻³.\n\nNo numerical comparison with a source curve was recorded. Bias, RMSE, correlation, and percent error are therefore **not scoreable**.\n\n## Assumed parameters\n\nThe original user-specified conditions were:\n\n- frequency: **37 GHz**;\n- snow thickness: **1 m**;\n- requested density: **2000 kg m⁻³**;\n- output: **brightness temperature**.\n\nThe executed legal-boundary diagnostic used **916–917 kg m⁻³** with two sweep points. The following values were retained as assumptions or backend defaults rather than paper-explicit values:\n\n- electromagnetic model: `iba`;\n- microstructure model: `exponential`;\n- incidence angle: **55°**;\n- snow temperature: **265 K**;\n- DORT streams: **32**;\n- correlation length: **0.00015 m**;\n- particle radius: **0.0002 m**;\n- stickiness: **0.2**;\n- sweep parameter: `density_kg_m3`;\n- sweep start: **916.0 kg m⁻³**;\n- sweep stop: **917.0 kg m⁻³**;\n- sweep points: **2**.\n\nThese choices describe the executed diagnostic and should not be interpreted as values extracted from the paper.\n\n## Limitations\n\nThe executed run does not identify the model response at 2000 kg m⁻³. The two-point boundary diagnostic shows only the local behavior at the upper legal boundary. The outcome is consequently **partial**, not a reproduction at the requested density.\n\n<parameter_provenance>\n[{\"field\":\"frequency_ghz\",\"value\":37,\"source_kind\":\"user\",\"source_ref\":\"user question\",\"reason\":\"User-specified frequency retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"thickness_m\",\"value\":1,\"source_kind\":\"user\",\"source_ref\":\"user question\",\"reason\":\"User-specified snow thickness retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"density_kg_m3\",\"value\":2000,\"source_kind\":\"user\",\"source_ref\":\"user question\",\"reason\":\"Original requested density; not evaluated because it was outside the registered model range.\",\"sensitivity_checked\":false},{\"field\":\"density_kg_m3\",\"value\":917,\"source_kind\":\"assumption\",\"source_ref\":\"approved legal-boundary validation run\",\"reason\":\"Upper legal-boundary value used by the executed diagnostic.\",\"sensitivity_checked\":false},{\"field\":\"output\",\"value\":\"tb\",\"source_kind\":\"user\",\"source_ref\":\"user question\",\"reason\":\"User requested passive brightness temperature.\",\"sensitivity_checked\":false},{\"field\":\"electromagnetic_model\",\"value\":\"iba\",\"source_kind\":\"model_default\",\"source_ref\":\"registered SMRT default\",\"reason\":\"Backend default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"microstructure_model\",\"value\":\"exponential\",\"source_kind\":\"model_default\",\"source_ref\":\"registered SMRT default\",\"reason\":\"Backend default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"angle_deg\",\"value\":55,\"source_kind\":\"model_default\",\"source_ref\":\"registered SMRT default\",\"reason\":\"Backend default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"temperature_k\",\"value\":265,\"source_kind\":\"model_default\",\"source_ref\":\"registered SMRT default\",\"reason\":\"Backend default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"dort_streams\",\"value\":32,\"source_kind\":\"model_default\",\"source_ref\":\"registered SMRT default\",\"reason\":\"Backend default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"corr_length_m\",\"value\":0.00015,\"source_kind\":\"model_default\",\"source_ref\":\"registered model parameter resolution\",\"reason\":\"Registered model default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"radius_m\",\"value\":0.0002,\"source_kind\":\"model_default\",\"source_ref\":\"registered model parameter resolution\",\"reason\":\"Registered model default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"stickiness\",\"value\":0.2,\"source_kind\":\"model_default\",\"source_ref\":\"registered model parameter resolution\",\"reason\":\"Registered model default retained in the approved run.\",\"sensitivity_checked\":false},{\"field\":\"sweep_parameter\",\"value\":\"density_kg_m3\",\"source_kind\":\"assumption\",\"source_ref\":\"approved diagnostic run\",\"reason\":\"Density was varied to test the legal boundary.\",\"sensitivity_checked\":false},{\"field\":\"sweep_start\",\"value\":916.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved diagnostic run\",\"reason\":\"Lower endpoint of the executed legal-boundary sweep.\",\"sensitivity_checked\":false},{\"field\":\"sweep_stop\",\"value\":917.0,\"source_kind\":\"assumption\",\"source_ref\":\"approved diagnostic run\",\"reason\":\"Upper endpoint of the executed legal-boundary sweep.\",\"sensitivity_checked\":false},{\"field\":\"sweep_points\",\"value\":2,\"source_kind\":\"assumption\",\"source_ref\":\"approved diagnostic run\",\"reason\":\"Number of points in the executed sweep.\",\"sensitivity_checked\":false}]\n</parameter_provenance>\n<reproduction_outcome>partial</reproduction_outcome>",
+  "planning_answer": "Research is paused at the human-review stage (plan_review). No formal physical result has been computed yet. Click Approve plan, or describe the changes you want in Conversation.",
+  "elapsed_s": 146.53,
+  "stop_rule": null,
+  "model_calls": 25,
+  "llm_usage": {
+    "calls": 25,
+    "prompt_tokens": 528002,
+    "completion_tokens": 10925,
+    "total_tokens": 538927,
+    "cost_usd": 0.11107376000000001,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 12618,
+        "completion_tokens": 147,
+        "cost_usd": 0.0004293,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.6
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 13746,
+        "completion_tokens": 22,
+        "cost_usd": 0.00032508,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.05
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 15790,
+        "completion_tokens": 37,
+        "cost_usd": 0.00036074,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.45
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 16533,
+        "completion_tokens": 28,
+        "cost_usd": 0.00131355,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.09
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 17149,
+        "completion_tokens": 28,
+        "cost_usd": 0.00146755,
+        "reasoning_chars": 0,
+        "elapsed_s": 1.98
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 19373,
+        "completion_tokens": 146,
+        "cost_usd": 0.00216055,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.02
+      },
+      {
+        "turn": 1,
+        "index": 7,
+        "prompt_tokens": 21597,
+        "completion_tokens": 24,
+        "cost_usd": 0.00256348,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.1
+      },
+      {
+        "turn": 1,
+        "index": 8,
+        "prompt_tokens": 22160,
+        "completion_tokens": 304,
+        "cost_usd": 0.00303747,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.89
+      },
+      {
+        "turn": 1,
+        "index": 9,
+        "prompt_tokens": 23908,
+        "completion_tokens": 269,
+        "cost_usd": 0.00342557,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.6
+      },
+      {
+        "turn": 1,
+        "index": 10,
+        "prompt_tokens": 24108,
+        "completion_tokens": 1400,
+        "cost_usd": 0.0077005,
+        "reasoning_chars": 0,
+        "elapsed_s": 12.92
+      },
+      {
+        "turn": 1,
+        "index": 11,
+        "prompt_tokens": 25636,
+        "completion_tokens": 370,
+        "cost_usd": 0.0068465,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.98
+      },
+      {
+        "turn": 1,
+        "index": 12,
+        "prompt_tokens": 26138,
+        "completion_tokens": 90,
+        "cost_usd": 0.006636,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.55
+      },
+      {
+        "turn": 1,
+        "index": 13,
+        "prompt_tokens": 26599,
+        "completion_tokens": 1239,
+        "cost_usd": 0.00813005,
+        "reasoning_chars": 0,
+        "elapsed_s": 9.95
+      },
+      {
+        "turn": 1,
+        "index": 14,
+        "prompt_tokens": 28008,
+        "completion_tokens": 241,
+        "cost_usd": 0.0072847,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.58
+      },
+      {
+        "turn": 1,
+        "index": 15,
+        "prompt_tokens": 27092,
+        "completion_tokens": 224,
+        "cost_usd": 0.0070353,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.36
+      },
+      {
+        "turn": 1,
+        "index": 16,
+        "prompt_tokens": 27745,
+        "completion_tokens": 210,
+        "cost_usd": 0.00718175,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.45
+      },
+      {
+        "turn": 1,
+        "index": 17,
+        "prompt_tokens": 28272,
+        "completion_tokens": 210,
+        "cost_usd": 0.0073135,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.69
+      },
+      {
+        "turn": 1,
+        "index": 18,
+        "prompt_tokens": 28637,
+        "completion_tokens": 217,
+        "cost_usd": 0.00741315,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.27
+      },
+      {
+        "turn": 1,
+        "index": 19,
+        "prompt_tokens": 32327,
+        "completion_tokens": 281,
+        "cost_usd": 0.0084188,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.95
+      },
+      {
+        "turn": 2,
+        "index": 1,
+        "prompt_tokens": 13041,
+        "completion_tokens": 42,
+        "cost_usd": 0.0033105,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.41
+      },
+      {
+        "turn": 2,
+        "index": 2,
+        "prompt_tokens": 13763,
+        "completion_tokens": 84,
+        "cost_usd": 0.0035414,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.69
+      },
+      {
+        "turn": 2,
+        "index": 3,
+        "prompt_tokens": 14070,
+        "completion_tokens": 31,
+        "cost_usd": 0.00355455,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.07
+      },
+      {
+        "turn": 2,
+        "index": 4,
+        "prompt_tokens": 14249,
+        "completion_tokens": 1583,
+        "cost_usd": 0.0054617,
+        "reasoning_chars": 0,
+        "elapsed_s": 17.32
+      },
+      {
+        "turn": 2,
+        "index": 5,
+        "prompt_tokens": 16783,
+        "completion_tokens": 2113,
+        "cost_usd": 0.00345462,
+        "reasoning_chars": 0,
+        "elapsed_s": 20.91
+      },
+      {
+        "turn": 2,
+        "index": 6,
+        "prompt_tokens": 18660,
+        "completion_tokens": 1585,
+        "cost_usd": 0.00270745,
+        "reasoning_chars": 0,
+        "elapsed_s": 16.05
+      }
+    ]
+  },
+  "tool_calls": 20,
+  "interventions": 1,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": false,
+    "approval_policy": "not_applicable_safe_refusal",
+    "review_actions": [
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_review",
+        "after": "plan_approved",
+        "status": "needs_input",
+        "summary": "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_approved",
+        "after": "pseudo_preview",
+        "status": "needs_input",
+        "summary": "Pseudo-data preview v001 is ready for layout review only. It is not model output and must not support a scientific conclusion. Confirm the figure package, or revise the plan in chat."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "pseudo_preview",
+        "after": "chart_selected",
+        "status": "needs_input",
+        "summary": "1 chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "chart_selected",
+        "after": "approved",
+        "status": "success",
+        "summary": "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs."
+      }
+    ],
+    "review_error": null,
+    "final_phase": "completed",
+    "plan_version": 1
+  },
+  "research": {
+    "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and report the brightness temperature.",
+    "plan_version": 1,
+    "phase": "completed",
+    "plan": {
+      "plan_version": 1,
+      "title": "Determine whether the requested passive brightness-temperature simulation is executable under the registered SMRT model without altering the user-fixed density; if not, document the constrained partial scope.",
+      "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and report the brightness temperature.",
+      "objective": "Determine whether the requested passive brightness-temperature simulation is executable under the registered SMRT model without altering the user-fixed density; if not, document the constrained partial scope.",
+      "hypothesis": "The requested run cannot be executed exactly because 2000 kg/m3 exceeds SMRT's declared snow-density range; no brightness temperature will be reported for that out-of-range configuration.",
+      "steps": [
+        "Validate the user-fixed frequency, thickness, density, and passive brightness-temperature observable against SMRT v1.5.1.",
+        "Do not execute an out-of-range run or substitute a different density without explicit user confirmation.",
+        "Report the exact requested configuration as unavailable and identify the legal density range.",
+        "If the user later authorizes a partial scope, create a revised plan using an explicitly chosen legal density and separately provenance all implementation choices."
+      ],
+      "parameters": {
+        "frequency_ghz": 37,
+        "thickness_m": 1,
+        "density_kg_m3": 2000,
+        "output": "tb",
+        "model": "smrt"
+      },
+      "paper_conditions": {
+        "frequency_ghz": 37,
+        "thickness_m": 1,
+        "density_kg_m3": 2000,
+        "observable": "brightness temperature"
+      },
+      "condition_provenance": {
+        "frequency_ghz": "user-question",
+        "thickness_m": "user-question",
+        "density_kg_m3": "user-question",
+        "observable": "user-question"
+      },
+      "literature_evidence": [
+        {
+          "evidence_ref": "smrt-v1#03",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "bundled",
+          "title": "SMRT description - Model architecture"
+        }
+      ],
+      "reproduction_targets": [
+        {
+          "id": "requested_tb",
+          "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+          "source_id": "smrt-v1#03",
+          "reference_models": [
+            "smrt"
+          ],
+          "requested_outputs": [
+            "tb_h",
+            "tb_v"
+          ],
+          "evidence_refs": [
+            "smrt-v1#03"
+          ],
+          "target_quantity": "Passive horizontally and vertically polarized brightness temperature for the requested one-metre, 37 GHz snowpack configuration.",
+          "expected_comparison": "Compare the planned SMRT diagnostic output, if executed at the legal density boundary, against the requested configuration metadata; do not claim numerical agreement with 2000 kg/m3 because that density is outside the registered model range.",
+          "status": "partial",
+          "availability_reason": "The exact requested density 2000 kg/m3 is outside SMRT's declared range of 1–917 kg/m3. No source figure asset is available for this single-configuration target, and the legal-boundary diagnostic cannot reproduce the requested density.",
+          "source_type": "result",
+          "run_ids": [],
+          "chart_ids": []
+        }
+      ],
+      "selected_models": [
+        {
+          "model": "smrt",
+          "version": "1.5.1",
+          "purpose": "Passive snow brightness temperature; legal-boundary diagnostic",
+          "capability_status": "partial",
+          "instruction_ref": "guideline:smrt@1.0"
+        }
+      ],
+      "parameter_mapping": [
+        {
+          "model": "smrt",
+          "paper_concept": "sensor frequency",
+          "paper_value": 37,
+          "model_input": "frequency_ghz",
+          "mapped_value": 37,
+          "units": "GHz",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Explicitly fixed in the user question",
+          "evidence_ref": "",
+          "rationale": "The registered input was mapped to the opened paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "snowpack thickness",
+          "paper_value": 1,
+          "model_input": "thickness_m",
+          "mapped_value": 1,
+          "units": "m",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Explicitly fixed in the user question",
+          "evidence_ref": "",
+          "rationale": "The registered input was mapped to the opened paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "requested snow density",
+          "paper_value": 2000,
+          "model_input": "density_kg_m3",
+          "mapped_value": 2000,
+          "units": "kg m-3",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Explicitly fixed in the user question; not executable",
+          "evidence_ref": "",
+          "rationale": "The registered input was mapped to the opened paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "diagnostic legal density",
+          "paper_value": null,
+          "model_input": "density_kg_m3",
+          "mapped_value": 917,
+          "units": "kg m-3",
+          "provenance_class": "model_assumption",
+          "confidence": "high",
+          "confidence_basis": "Registered model upper bound; diagnostic substitution, not reproduction",
+          "evidence_ref": "",
+          "rationale": "The registered input was retained as a model assumption without paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "passive observable",
+          "paper_value": "brightness temperature",
+          "model_input": "output",
+          "mapped_value": "tb",
+          "units": "none",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "confidence_basis": "Explicitly requested",
+          "evidence_ref": "",
+          "rationale": "The registered input was mapped to the opened paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "electromagnetic theory",
+          "paper_value": null,
+          "model_input": "electromagnetic_model",
+          "mapped_value": "iba",
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Not specified by user",
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "microstructure representation",
+          "paper_value": null,
+          "model_input": "microstructure_model",
+          "mapped_value": "exponential",
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Not specified by user",
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "incidence angle",
+          "paper_value": null,
+          "model_input": "angle_deg",
+          "mapped_value": 55,
+          "units": "degree",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Not specified by user",
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "snow temperature",
+          "paper_value": null,
+          "model_input": "temperature_k",
+          "mapped_value": 265,
+          "units": "K",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Not specified by user",
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "DORT streams",
+          "paper_value": null,
+          "model_input": "dort_streams",
+          "mapped_value": 32,
+          "units": "count",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "Not specified by user",
+          "evidence_ref": "",
+          "rationale": "The registered backend supplied this default; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "corr_length_m",
+          "paper_value": null,
+          "model_input": "corr_length_m",
+          "mapped_value": 0.00015,
+          "units": "m",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "radius_m",
+          "paper_value": null,
+          "model_input": "radius_m",
+          "mapped_value": 0.0002,
+          "units": "m",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "stickiness",
+          "paper_value": null,
+          "model_input": "stickiness",
+          "mapped_value": 0.2,
+          "units": "none",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "sweep_parameter",
+          "paper_value": null,
+          "model_input": "sweep_parameter",
+          "mapped_value": "density_kg_m3",
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "sweep_start",
+          "paper_value": null,
+          "model_input": "sweep_start",
+          "mapped_value": 916.0,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "sweep_stop",
+          "paper_value": null,
+          "model_input": "sweep_stop",
+          "mapped_value": 917.0,
+          "units": "same as the swept parameter",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "sweep_points",
+          "paper_value": null,
+          "model_input": "sweep_points",
+          "mapped_value": 2,
+          "units": "count",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        }
+      ],
+      "parameter_resolution": [
+        {
+          "run_id": "legal_boundary_validation",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "tb",
+            "frequency_ghz": 37,
+            "thickness_m": 1,
+            "density_kg_m3": 917,
+            "electromagnetic_model": "iba",
+            "microstructure_model": "exponential",
+            "angle_deg": 55,
+            "temperature_k": 265,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 916,
+            "sweep_stop": 917,
+            "sweep_points": 2
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "exponential",
+            "output": "tb",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 917.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0002,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 916.0,
+            "sweep_stop": 917.0,
+            "sweep_points": 2
+          },
+          "defaulted_parameters": [
+            "corr_length_m",
+            "radius_m",
+            "stickiness"
+          ]
+        }
+      ],
+      "outputs": [
+        "tb_h",
+        "tb_v"
+      ],
+      "runs": [
+        {
+          "id": "legal_boundary_validation",
+          "label": "Legal-boundary validation run",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "exponential",
+            "output": "tb",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 917.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0002,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 916.0,
+            "sweep_stop": 917.0,
+            "sweep_points": 2
+          },
+          "requested_parameters": {
+            "output": "tb",
+            "frequency_ghz": 37,
+            "thickness_m": 1,
+            "density_kg_m3": 917,
+            "electromagnetic_model": "iba",
+            "microstructure_model": "exponential",
+            "angle_deg": 55,
+            "temperature_k": 265,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 916,
+            "sweep_stop": 917,
+            "sweep_points": 2
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "exponential",
+            "output": "tb",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 917.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0002,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 916.0,
+            "sweep_stop": 917.0,
+            "sweep_points": 2
+          },
+          "defaulted_parameters": [
+            "corr_length_m",
+            "radius_m",
+            "stickiness"
+          ],
+          "stage": "diagnostic",
+          "target_ids": []
+        }
+      ],
+      "charts": [
+        {
+          "id": "diagnostic_tb_at_legal_density",
+          "label": "Diagnostic TB at legal density boundary",
+          "kind": "scatter",
+          "x": "density_kg_m3",
+          "y": "tb_h",
+          "ys": [
+            "tb_h",
+            "tb_v"
+          ],
+          "required": true,
+          "purpose": "diagnostic",
+          "x_label": "Snow density (kg m^-3)",
+          "y_label": "Brightness temperature (K)",
+          "target_ids": []
+        }
+      ],
+      "quantities": [
+        "tb_h",
+        "tb_v"
+      ],
+      "controls": [
+        "Do not interpret the 917 kg/m3 diagnostic as the requested 2000 kg/m3 result.",
+        "Do not claim exact reproduction.",
+        "Keep all unspecified inputs identified as defaults or assumptions."
+      ],
+      "metrics": [
+        "Plan validity: all executable run inputs must satisfy registered SMRT ranges and legal combinations.",
+        "Reproduction acceptance: exact requested configuration is accepted only if density 2000 kg/m3 is executable; otherwise outcome remains partial and no exact TB is reported.",
+        "Diagnostic acceptance: if executed, the legal-boundary run must return quality-controlled tb_h and tb_v outputs at 37 GHz, 1 m, and 917 kg/m3.",
+        "Provenance acceptance: every run parameter must be assigned user_specified, model_assumption, backend_default, or other approved provenance class; the 917 kg/m3 diagnostic must not be presented as the requested density."
+      ],
+      "diagnostics": [
+        "Validate that the legal upper-bound configuration executes and returns passive TB outputs.",
+        "Record that the requested 2000 kg/m3 configuration remains unavailable."
+      ],
+      "success_criteria": [
+        "The legal-boundary diagnostic executes with quality control.",
+        "The exact requested configuration remains labeled partial and is not numerically claimed.",
+        "All run parameters and provenance are reported.",
+        "No out-of-range run is scheduled."
+      ],
+      "stop_conditions": [
+        "Do not generalize the diagnostic output to 2000 kg/m3.",
+        "If the legal-boundary run fails, report failed without substituting another configuration."
+      ],
+      "assumptions": [
+        "Using the registered upper density bound only as a diagnostic substitution.",
+        "Unspecified model inputs use registered defaults."
+      ],
+      "limitations": [
+        "The requested density is outside the model range.",
+        "The diagnostic density differs from the user-fixed density.",
+        "Angle, temperature, microstructure, and electromagnetic theory were not specified by the user."
+      ],
+      "baseline_run_id": "legal_boundary_validation",
+      "automatic_repairs": [
+        {
+          "field": "literature_evidence",
+          "from": [],
+          "to": [
+            {
+              "evidence_ref": "smrt-v1#03",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "bundled",
+              "title": "SMRT description - Model architecture"
+            }
+          ],
+          "reason": "bind the proposal to paper sections or figures opened in this session",
+          "provenance": "session_evidence_ledger"
+        },
+        {
+          "field": "parameter_mapping[0].rationale",
+          "from": "",
+          "to": "The registered input was mapped to the opened paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "user_specified",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[1].rationale",
+          "from": "",
+          "to": "The registered input was mapped to the opened paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "user_specified",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[2].rationale",
+          "from": "",
+          "to": "The registered input was mapped to the opened paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "user_specified",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[3].rationale",
+          "from": "",
+          "to": "The registered input was retained as a model assumption without paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[4].rationale",
+          "from": "",
+          "to": "The registered input was mapped to the opened paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "user_specified",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[5].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[6].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[7].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[8].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[9].rationale",
+          "from": "",
+          "to": "The registered backend supplied this default; it is not paper evidence.",
+          "reason": "add an auditable explanation for the paper-to-model mapping",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.corr_length_m",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "corr_length_m",
+            "paper_value": null,
+            "model_input": "corr_length_m",
+            "mapped_value": 0.00015,
+            "units": "m",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.radius_m",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "radius_m",
+            "paper_value": null,
+            "model_input": "radius_m",
+            "mapped_value": 0.0002,
+            "units": "m",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.stickiness",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "stickiness",
+            "paper_value": null,
+            "model_input": "stickiness",
+            "mapped_value": 0.2,
+            "units": "none",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.sweep_parameter",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "sweep_parameter",
+            "paper_value": null,
+            "model_input": "sweep_parameter",
+            "mapped_value": "density_kg_m3",
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.sweep_start",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "sweep_start",
+            "paper_value": null,
+            "model_input": "sweep_start",
+            "mapped_value": 916.0,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.sweep_stop",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "sweep_stop",
+            "paper_value": null,
+            "model_input": "sweep_stop",
+            "mapped_value": 917.0,
+            "units": "same as the swept parameter",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.sweep_points",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "sweep_points",
+            "paper_value": null,
+            "model_input": "sweep_points",
+            "mapped_value": 2,
+            "units": "count",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        }
+      ],
+      "validation_warnings": [
+        {
+          "code": "paper_context_difference",
+          "field": "runs[legal_boundary_validation].parameters.density_kg_m3",
+          "source": "paper_conditions.density_kg_m3",
+          "expected": 2000,
+          "actual": 917.0,
+          "repair": "none",
+          "provenance": "user-question",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        }
+      ],
+      "capability_gaps": [],
+      "capability_review": {
+        "status": "ready",
+        "supported": [
+          {
+            "model": "smrt",
+            "version": "1.5.1",
+            "runnable_here": true,
+            "parameters": [
+              "angle_deg",
+              "corr_length_m",
+              "density_kg_m3",
+              "dort_streams",
+              "electromagnetic_model",
+              "frequency_ghz",
+              "microstructure_model",
+              "output",
+              "radius_m",
+              "stickiness",
+              "sweep_parameter",
+              "sweep_points",
+              "sweep_start",
+              "sweep_stop",
+              "temperature_k",
+              "thickness_m"
+            ],
+            "combinations": [
+              {
+                "when": {
+                  "electromagnetic_model": [
+                    "dmrt_qca_shortrange",
+                    "dmrt_qcacp_shortrange"
+                  ]
+                },
+                "allow": {
+                  "microstructure_model": [
+                    "sticky_hard_spheres",
+                    "non_sticky_hard_spheres"
+                  ]
+                },
+                "reason": "DMRT is implemented for the sticky-hard-sphere family, including its none-sticky limit; pairing it with an autocorrelation-function microstructure has no analytical basis in SMRT."
+              },
+              {
+                "when": {
+                  "microstructure_model": [
+                    "exponential",
+                    "teubner_strey",
+                    "gaussian_random_field"
+                  ]
+                },
+                "allow": {
+                  "electromagnetic_model": [
+                    "iba",
+                    "iba_original",
+                    "symsce_torquato21"
+                  ]
+                },
+                "reason": "Autocorrelation-function microstructures do not expose the sphere radius required by SMRT's Rayleigh implementation and are not valid for sphere-based DMRT formulations."
+              },
+              {
+                "when": {
+                  "electromagnetic_model": [
+                    "rayleigh"
+                  ]
+                },
+                "allow": {
+                  "microstructure_model": [
+                    "independent_sphere",
+                    "sticky_hard_spheres"
+                  ]
+                },
+                "reason": "SMRT's Rayleigh implementation reads a particle radius, so it requires a sphere-based microstructure rather than an autocorrelation-function microstructure."
+              }
+            ],
+            "outputs": [
+              "effective_permittivity",
+              "ka_per_m",
+              "ks_per_m",
+              "sigma_hh_db",
+              "sigma_hv_db",
+              "sigma_vv_db",
+              "single_scattering_albedo",
+              "tb_h",
+              "tb_v"
+            ],
+            "source": "list_models + read_model_instruction",
+            "configuration": {},
+            "configuration_options": [],
+            "reference_model": true,
+            "configurations": [],
+            "asked_as": [
+              "SMRT"
+            ],
+            "target_ids": [
+              "requested_tb"
+            ]
+          }
+        ],
+        "unavailable": [],
+        "not_comparable": [],
+        "requested_models": [
+          "SMRT"
+        ],
+        "requested_outputs": [
+          "tb_h",
+          "tb_v"
+        ],
+        "supported_outputs": [
+          "effective_permittivity",
+          "ka_per_m",
+          "ks_per_m",
+          "sigma_hh_db",
+          "sigma_hv_db",
+          "sigma_vv_db",
+          "single_scattering_albedo",
+          "tb_h",
+          "tb_v"
+        ],
+        "unavailable_outputs": [],
+        "resource_gaps": [],
+        "resolved_names": [
+          {
+            "asked": "SMRT",
+            "registered": "smrt",
+            "configuration": null,
+            "configuration_options": null
+          }
+        ],
+        "evidence": [
+          "research-planning#00",
+          "research-reporting#00",
+          "smrt-v1#03"
+        ],
+        "targets": [
+          "requested_tb"
+        ],
+        "target_reports": [
+          {
+            "status": "ready",
+            "supported": [
+              {
+                "model": "smrt",
+                "version": "1.5.1",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "corr_length_m",
+                  "density_kg_m3",
+                  "dort_streams",
+                  "electromagnetic_model",
+                  "frequency_ghz",
+                  "microstructure_model",
+                  "output",
+                  "radius_m",
+                  "stickiness",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "temperature_k",
+                  "thickness_m"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "electromagnetic_model": [
+                        "dmrt_qca_shortrange",
+                        "dmrt_qcacp_shortrange"
+                      ]
+                    },
+                    "allow": {
+                      "microstructure_model": [
+                        "sticky_hard_spheres",
+                        "non_sticky_hard_spheres"
+                      ]
+                    },
+                    "reason": "DMRT is implemented for the sticky-hard-sphere family, including its none-sticky limit; pairing it with an autocorrelation-function microstructure has no analytical basis in SMRT."
+                  },
+                  {
+                    "when": {
+                      "microstructure_model": [
+                        "exponential",
+                        "teubner_strey",
+                        "gaussian_random_field"
+                      ]
+                    },
+                    "allow": {
+                      "electromagnetic_model": [
+                        "iba",
+                        "iba_original",
+                        "symsce_torquato21"
+                      ]
+                    },
+                    "reason": "Autocorrelation-function microstructures do not expose the sphere radius required by SMRT's Rayleigh implementation and are not valid for sphere-based DMRT formulations."
+                  },
+                  {
+                    "when": {
+                      "electromagnetic_model": [
+                        "rayleigh"
+                      ]
+                    },
+                    "allow": {
+                      "microstructure_model": [
+                        "independent_sphere",
+                        "sticky_hard_spheres"
+                      ]
+                    },
+                    "reason": "SMRT's Rayleigh implementation reads a particle radius, so it requires a sphere-based microstructure rather than an autocorrelation-function microstructure."
+                  }
+                ],
+                "outputs": [
+                  "effective_permittivity",
+                  "ka_per_m",
+                  "ks_per_m",
+                  "sigma_hh_db",
+                  "sigma_hv_db",
+                  "sigma_vv_db",
+                  "single_scattering_albedo",
+                  "tb_h",
+                  "tb_v"
+                ],
+                "source": "list_models + read_model_instruction",
+                "configuration": {},
+                "configuration_options": [],
+                "reference_model": true,
+                "configurations": [],
+                "asked_as": [
+                  "SMRT"
+                ]
+              }
+            ],
+            "unavailable": [],
+            "not_comparable": [],
+            "requested_models": [
+              "SMRT"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v"
+            ],
+            "supported_outputs": [
+              "effective_permittivity",
+              "ka_per_m",
+              "ks_per_m",
+              "sigma_hh_db",
+              "sigma_hv_db",
+              "sigma_vv_db",
+              "single_scattering_albedo",
+              "tb_h",
+              "tb_v"
+            ],
+            "unavailable_outputs": [],
+            "resource_gaps": [],
+            "resolved_names": [
+              {
+                "asked": "SMRT",
+                "registered": "smrt",
+                "configuration": null,
+                "configuration_options": null
+              }
+            ],
+            "evidence": [
+              "research-planning#00",
+              "research-reporting#00",
+              "smrt-v1#03"
+            ],
+            "targets": [
+              "requested_tb"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "requested_tb",
+            "label": "requested_tb",
+            "target_key": "target:requestedtb"
+          }
+        ],
+        "target_check_complete": true,
+        "missing_targets": [],
+        "user_decision": null,
+        "confirmed_scope": null
+      },
+      "reference_sections": [
+        "research-planning#00",
+        "research-reporting#00",
+        "smrt-v1#03"
+      ],
+      "reference_paper_sections": [
+        "SMRT description - Model architecture"
+      ],
+      "approval_state": "plan_review",
+      "outcome_scope": "full"
+    },
+    "selected_chart": {
+      "id": "diagnostic_tb_at_legal_density",
+      "label": "Diagnostic TB at legal density boundary",
+      "kind": "scatter",
+      "x": "density_kg_m3",
+      "y": "tb_h",
+      "ys": [
+        "tb_h",
+        "tb_v"
+      ],
+      "required": true,
+      "purpose": "diagnostic",
+      "x_label": "Snow density (kg m^-3)",
+      "y_label": "Brightness temperature (K)",
+      "target_ids": []
+    },
+    "selected_charts": [
+      "diagnostic_tb_at_legal_density"
+    ],
+    "pseudo": {
+      "label": "PSEUDO-DATA - layout demonstration only - preview v001",
+      "points": [
+        {
+          "density_kg_m3": 916.0,
+          "1_tb_h": 0.22103677,
+          "2_tb_v": 0.29103677
+        },
+        {
+          "density_kg_m3": 916.25,
+          "1_tb_h": 0.36023244,
+          "2_tb_v": 0.43023244
+        },
+        {
+          "density_kg_m3": 916.5,
+          "1_tb_h": 0.478528,
+          "2_tb_v": 0.548528
+        },
+        {
+          "density_kg_m3": 916.75,
+          "1_tb_h": 0.59357994,
+          "2_tb_v": 0.66357994
+        },
+        {
+          "density_kg_m3": 917.0,
+          "1_tb_h": 0.72602689,
+          "2_tb_v": 0.79602689
+        }
+      ]
+    },
+    "preview_version": 1,
+    "plan_card_expanded": true,
+    "review_log": [],
+    "execution_resume_sent": false,
+    "proposed_by": "llm"
+  },
+  "successful_runs": [
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 917.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 916.0,
+        "sweep_stop": 917.0,
+        "sweep_points": 2
+      },
+      "handle": "res_12cdbaa94b2c",
+      "planned_run_id": "legal_boundary_validation"
+    }
+  ],
+  "numeric_results": [
+    {
+      "handle": "res_12cdbaa94b2c",
+      "planned_run_id": "legal_boundary_validation",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 917.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 916.0,
+        "sweep_stop": 917.0,
+        "sweep_points": 2
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          916.0,
+          917.0
+        ]
+      },
+      "series": {
+        "tb_v": [
+          199.32256331142042,
+          199.2696002331264
+        ],
+        "tb_h": [
+          156.3343228460383,
+          156.27595013057237
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    }
+  ],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "SMRT snow brightness temperature 37 GHz model configuration",
+        "scenario": "snow",
+        "kind": "paper"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": ""
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "03"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.5.1",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "smrt",
+        "section": "all"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "check",
+        "question": "Simulate a one metre snowpack at 37 GHz with density 2000 kg/m3 and report brightness temperature.",
+        "reference_models": [
+          "SMRT"
+        ],
+        "requested_outputs": [
+          "tb_h",
+          "tb_v"
+        ],
+        "local_models": [
+          "smrt"
+        ],
+        "targets": [
+          {
+            "id": "requested_tb",
+            "reference_models": [
+              "SMRT"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v"
+            ],
+            "evidence_refs": [
+              "smrt-v1#03"
+            ]
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and report the brightness temperature.",
+        "objective": "Determine whether the requested passive brightness-temperature simulation is executable under the registered SMRT model without altering the user-fixed density; if not, document the constrained partial scope.",
+        "hypothesis": "The requested run cannot be executed exactly because 2000 kg/m3 exceeds SMRT's declared snow-density range; no brightness temperature will be reported for that out-of-range configuration.",
+        "steps": [
+          "Validate the user-fixed frequency, thickness, density, and passive brightness-temperature observable against SMRT v1.5.1.",
+          "Do not execute an out-of-range run or substitute a different density without explicit user confirmation.",
+          "Report the exact requested configuration as unavailable and identify the legal density range.",
+          "If the user later authorizes a partial scope, create a revised plan using an explicitly chosen legal density and separately provenance all implementation choices."
+        ],
+        "parameters": {
+          "frequency_ghz": 37,
+          "thickness_m": 1,
+          "density_kg_m3": 2000,
+          "output": "tb",
+          "model": "smrt"
+        },
+        "paper_conditions": {
+          "frequency_ghz": 37,
+          "thickness_m": 1,
+          "density_kg_m3": 2000,
+          "observable": "brightness temperature"
+        },
+        "condition_provenance": {
+          "frequency_ghz": "user-question",
+          "thickness_m": "user-question",
+          "density_kg_m3": "user-question",
+          "observable": "user-question"
+        },
+        "literature_evidence": [
+          {
+            "ref": "smrt-v1#03",
+            "role": "SMRT passive radiative-transfer architecture and brightness-temperature observable"
+          }
+        ],
+        "reproduction_targets": [
+          {
+            "id": "requested_tb",
+            "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+            "reference_models": [
+              "SMRT"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v"
+            ],
+            "evidence_refs": [
+              "smrt-v1#03"
+            ],
+            "status": "partial",
+            "availability_reason": "The requested density 2000 kg/m3 exceeds SMRT's declared density range of 1–917 kg/m3; exact execution is unavailable without changing a user-fixed value."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "smrt",
+            "version": "1.5.1",
+            "purpose": "Passive snow brightness temperature",
+            "capability_status": "partial: requested density is out of range"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "smrt",
+            "paper_concept": "sensor frequency",
+            "paper_value": 37,
+            "model_input": "frequency_ghz",
+            "mapped_value": 37,
+            "units": "GHz",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Explicitly fixed in the user question"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "snowpack thickness",
+            "paper_value": 1,
+            "model_input": "thickness_m",
+            "mapped_value": 1,
+            "units": "m",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Explicitly fixed in the user question"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "snow density",
+            "paper_value": 2000,
+            "model_input": "density_kg_m3",
+            "mapped_value": 2000,
+            "units": "kg m-3",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Explicitly fixed in the user question; rejected by model bounds"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "passive observable",
+            "paper_value": "brightness temperature",
+            "model_input": "output",
+            "mapped_value": "tb",
+            "units": "none",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Explicitly requested by the user"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "electromagnetic theory",
+            "paper_value": null,
+            "model_input": "electromagnetic_model",
+            "mapped_value": "iba",
+            "units": "none",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "No theory specified; retained only as a prospective default and not executed"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "microstructure representation",
+            "paper_value": null,
+            "model_input": "microstructure_model",
+            "mapped_value": "exponential",
+            "units": "none",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "No microstructure specified; retained only as a prospective default and not executed"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "incidence angle",
+            "paper_value": null,
+            "model_input": "angle_deg",
+            "mapped_value": 55,
+            "units": "degree",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "No angle specified; retained only as a prospective default and not executed"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "snow temperature",
+            "paper_value": null,
+            "model_input": "temperature_k",
+            "mapped_value": 265,
+            "units": "K",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "No temperature specified; retained only as a prospective default and not executed"
+          },
+          {
+            "model": "smrt",
+            "paper_concept": "DORT streams",
+            "paper_value": null,
+            "model_input": "dort_streams",
+            "mapped_value": 32,
+            "units": "count",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "No solver resolution specified; retained only as a prospective default and not executed"
+          }
+        ],
+        "outputs": [
+          "tb_h",
+          "tb_v"
+        ],
+        "runs": [],
+        "charts": [
+          {
+            "id": "availability_diagnostic",
+            "label": "Requested configuration availability diagnostic",
+            "kind": "scatter",
+            "x": "density_kg_m3",
+            "y": "tb_v",
+            "required": false,
+            "purpose": "diagnostic",
+            "x_label": "Snow density (kg m^-3)",
+            "y_label": "Brightness temperature TB_V (K)"
+          }
+        ],
+        "controls": [
+          "Do not replace the requested density without explicit confirmation.",
+          "Do not report a model brightness temperature when no legal run exists.",
+          "Keep paper-reported architecture separate from model execution."
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "Check density against the registered 1–917 kg/m3 range.",
+          "Record that no physical-model run or chart data are generated for the requested configuration."
+        ],
+        "success_criteria": [
+          "The plan explicitly preserves all user-fixed values.",
+          "The plan identifies the density-bound failure before execution.",
+          "No out-of-range model run is scheduled.",
+          "The target is labeled partial rather than reproduced."
+        ],
+        "quantities": [
+          "tb_h",
+          "tb_v"
+        ],
+        "assumptions": [
+          "No unrequested density substitution is allowed.",
+          "The paper's SMRT architecture is used only as methodological context, not as evidence for an executable numeric result."
+        ],
+        "limitations": [
+          "Exact requested brightness temperature is unavailable because density 2000 kg/m3 is outside SMRT's declared range.",
+          "Incidence angle, snow temperature, electromagnetic theory, microstructure, and solver resolution are unspecified; no numeric result can be uniquely identified even at a legal density.",
+          "No source figure or digitized reference data are available for this single-point request."
+        ],
+        "stop_conditions": [
+          "Stop before formal execution if the requested density remains 2000 kg/m3.",
+          "Do not claim reproduction or report TB values unless the user approves a revised legal-density scope."
+        ],
+        "baseline_run_id": ""
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "blocked_requested_run",
+              "label": "Requested out-of-range configuration (validation only)",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 2000,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "blocked_requested_run",
+          "charts": [],
+          "reproduction_targets": [
+            {
+              "id": "requested_tb",
+              "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+              "reference_models": [
+                "SMRT"
+              ],
+              "requested_outputs": [
+                "tb_h",
+                "tb_v"
+              ],
+              "evidence_refs": [
+                "smrt-v1#03"
+              ],
+              "status": "unavailable",
+              "availability_reason": "The requested density 2000 kg/m3 exceeds SMRT's declared density range of 1–917 kg/m3; the planned validation run is expected to be rejected and is not a scientific result."
+            }
+          ],
+          "limitations": [
+            "Exact requested brightness temperature is unavailable because density 2000 kg/m3 is outside SMRT's declared range.",
+            "Incidence angle, snow temperature, electromagnetic theory, microstructure, and solver resolution are unspecified; the listed values are implementation choices for validation only and are not evidence-backed physical inputs."
+          ],
+          "success_criteria": [
+            "The plan preserves all user-fixed values.",
+            "The density-bound validation failure is recorded before any scientific execution.",
+            "No out-of-range brightness temperature is reported as a physical result."
+          ],
+          "stop_conditions": [
+            "Stop if the validation run is rejected for the declared density bound.",
+            "Do not claim reproduction or report TB values unless the user approves a revised legal-density scope."
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "availability_diagnostic",
+              "label": "Requested configuration availability diagnostic",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "legal_boundary_validation",
+              "label": "Legal-boundary validation run",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 917,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "legal_boundary_validation",
+          "reproduction_targets": [
+            {
+              "id": "requested_tb",
+              "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+              "reference_models": [
+                "SMRT"
+              ],
+              "requested_outputs": [
+                "tb_h",
+                "tb_v"
+              ],
+              "evidence_refs": [
+                "smrt-v1#03"
+              ],
+              "status": "partial",
+              "availability_reason": "The exact requested density 2000 kg/m3 is outside SMRT's declared range of 1–917 kg/m3. The planned legal-boundary run is diagnostic only and cannot reproduce the requested density."
+            }
+          ],
+          "parameter_mapping": [
+            {
+              "model": "smrt",
+              "paper_concept": "sensor frequency",
+              "paper_value": 37,
+              "model_input": "frequency_ghz",
+              "mapped_value": 37,
+              "units": "GHz",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly fixed in the user question"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "snowpack thickness",
+              "paper_value": 1,
+              "model_input": "thickness_m",
+              "mapped_value": 1,
+              "units": "m",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly fixed in the user question"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "requested snow density",
+              "paper_value": 2000,
+              "model_input": "density_kg_m3",
+              "mapped_value": 2000,
+              "units": "kg m-3",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly fixed in the user question; not executable"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "diagnostic legal density",
+              "paper_value": null,
+              "model_input": "density_kg_m3",
+              "mapped_value": 917,
+              "units": "kg m-3",
+              "provenance_class": "model_assumption",
+              "confidence": "high",
+              "confidence_basis": "Registered model upper bound; diagnostic substitution, not reproduction"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "passive observable",
+              "paper_value": "brightness temperature",
+              "model_input": "output",
+              "mapped_value": "tb",
+              "units": "none",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly requested"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "electromagnetic theory",
+              "paper_value": null,
+              "model_input": "electromagnetic_model",
+              "mapped_value": "iba",
+              "units": "none",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "microstructure representation",
+              "paper_value": null,
+              "model_input": "microstructure_model",
+              "mapped_value": "exponential",
+              "units": "none",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "incidence angle",
+              "paper_value": null,
+              "model_input": "angle_deg",
+              "mapped_value": 55,
+              "units": "degree",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "snow temperature",
+              "paper_value": null,
+              "model_input": "temperature_k",
+              "mapped_value": 265,
+              "units": "K",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "DORT streams",
+              "paper_value": null,
+              "model_input": "dort_streams",
+              "mapped_value": 32,
+              "units": "count",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            }
+          ],
+          "paper_conditions": {
+            "frequency_ghz": 37,
+            "thickness_m": 1,
+            "density_kg_m3": 2000,
+            "observable": "brightness temperature"
+          },
+          "condition_provenance": {
+            "frequency_ghz": "user-question",
+            "thickness_m": "user-question",
+            "density_kg_m3": "user-question",
+            "observable": "user-question"
+          },
+          "literature_evidence": [
+            {
+              "ref": "smrt-v1#03",
+              "role": "SMRT passive radiative-transfer architecture and brightness-temperature observable"
+            }
+          ],
+          "selected_models": [
+            {
+              "model": "smrt",
+              "version": "1.5.1",
+              "purpose": "Passive snow brightness temperature; legal-boundary diagnostic",
+              "capability_status": "partial"
+            }
+          ],
+          "outputs": [
+            "tb_h",
+            "tb_v"
+          ],
+          "charts": [
+            {
+              "id": "diagnostic_tb_at_legal_density",
+              "label": "Diagnostic TB at legal density boundary",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ],
+          "controls": [
+            "Do not interpret the 917 kg/m3 diagnostic as the requested 2000 kg/m3 result.",
+            "Do not claim exact reproduction.",
+            "Keep all unspecified inputs identified as defaults or assumptions."
+          ],
+          "metrics": [],
+          "diagnostics": [
+            "Validate that the legal upper-bound configuration executes and returns passive TB outputs.",
+            "Record that the requested 2000 kg/m3 configuration remains unavailable."
+          ],
+          "success_criteria": [
+            "The legal-boundary diagnostic executes with quality control.",
+            "The exact requested configuration remains labeled partial and is not numerically claimed.",
+            "All run parameters and provenance are reported."
+          ],
+          "assumptions": [
+            "Using the registered upper density bound only as a diagnostic substitution.",
+            "Unspecified model inputs use registered defaults."
+          ],
+          "limitations": [
+            "The requested density is outside the model range.",
+            "The diagnostic density differs from the user-fixed density.",
+            "Angle, temperature, microstructure, and electromagnetic theory were not specified by the user."
+          ],
+          "stop_conditions": [
+            "Do not generalize the diagnostic output to 2000 kg/m3.",
+            "If the legal-boundary run fails, report failed without substituting another configuration."
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "metrics": [
+            "Plan validity: all executable run inputs must satisfy registered SMRT ranges and legal combinations.",
+            "Reproduction acceptance: exact requested configuration is accepted only if density 2000 kg/m3 is executable; otherwise outcome remains partial and no exact TB is reported.",
+            "Diagnostic acceptance: if executed, the legal-boundary run must return quality-controlled tb_h and tb_v outputs at 37 GHz, 1 m, and 917 kg/m3.",
+            "Provenance acceptance: every run parameter must be assigned user_specified, model_assumption, backend_default, or other approved provenance class; the 917 kg/m3 diagnostic must not be presented as the requested density."
+          ],
+          "success_criteria": [
+            "The legal-boundary diagnostic executes with quality control.",
+            "The exact requested configuration remains labeled partial and is not numerically claimed.",
+            "All run parameters and provenance are reported.",
+            "No out-of-range run is scheduled."
+          ],
+          "limitations": [
+            "The requested density is outside the model range.",
+            "The diagnostic density differs from the user-fixed density.",
+            "Angle, temperature, microstructure, and electromagnetic theory were not specified by the user."
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "reproduction_targets": [
+            {
+              "id": "requested_tb",
+              "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+              "source_id": "smrt-v1#03",
+              "reference_models": [
+                "SMRT"
+              ],
+              "requested_outputs": [
+                "tb_h",
+                "tb_v"
+              ],
+              "evidence_refs": [
+                "smrt-v1#03"
+              ],
+              "target_quantity": "Passive horizontally and vertically polarized brightness temperature for the requested one-metre, 37 GHz snowpack configuration.",
+              "expected_comparison": "Compare the planned SMRT diagnostic output, if executed at the legal density boundary, against the requested configuration metadata; do not claim numerical agreement with 2000 kg/m3 because that density is outside the registered model range.",
+              "status": "partial",
+              "availability_reason": "The exact requested density 2000 kg/m3 is outside SMRT's declared range of 1–917 kg/m3. No source figure asset is available for this single-configuration target, and the legal-boundary diagnostic cannot reproduce the requested density."
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "legal_boundary_validation",
+              "label": "Legal-boundary validation run",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 917,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 917,
+                "sweep_stop": 917,
+                "sweep_points": 2
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "charts": [
+            {
+              "id": "diagnostic_tb_at_legal_density",
+              "label": "Diagnostic TB at legal density boundary",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_plan",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "legal_boundary_validation",
+              "label": "Legal-boundary validation run",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 917,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 916,
+                "sweep_stop": 917,
+                "sweep_points": 2
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "charts": [
+            {
+              "id": "diagnostic_tb_at_legal_density",
+              "label": "Diagnostic TB at legal density boundary",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ]
+        }
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "legal_boundary_validation"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "exponential",
+        "output": "tb",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 917.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0002,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 916.0,
+        "sweep_stop": 917.0,
+        "sweep_points": 2
+      },
+      "handle": "res_12cdbaa94b2c",
+      "planned_run_id": "legal_boundary_validation",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "diagnostic_tb_at_legal_density",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "diagnostic_tb_at_legal_density",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "diagnostic_tb_at_legal_density",
+        "action": "review"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [],
+        "n_series": 2,
+        "point_counts": [
+          2,
+          2
+        ],
+        "redrawn": false
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 12618,
+      "completion_tokens": 147,
+      "cost_usd": 0.0004293,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.6
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13746,
+      "completion_tokens": 22,
+      "cost_usd": 0.00032508,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.05
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 15790,
+      "completion_tokens": 37,
+      "cost_usd": 0.00036074,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.45
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "4 of 8 item(s) match.",
+      "arguments": {
+        "query": "SMRT snow brightness temperature 37 GHz model configuration",
+        "scenario": "snow",
+        "kind": "paper"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 16533,
+      "completion_tokens": 28,
+      "cost_usd": 0.00131355,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.09
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Section index for smrt-v1 (bundled). Call again with a section_id to read one.",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": ""
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 17149,
+      "completion_tokens": 28,
+      "cost_usd": 0.00146755,
+      "reasoning_chars": 0,
+      "elapsed_s": 1.98
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "smrt-v1 section 03: SMRT description - Model architecture (6060 chars, bundled)",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "03"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19373,
+      "completion_tokens": 146,
+      "cost_usd": 0.00216055,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.02
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for smrt v1.5.1.",
+      "arguments": {
+        "model": "smrt"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 21597,
+      "completion_tokens": 24,
+      "cost_usd": 0.00256348,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.1
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Read model instruction smrt v1.0.",
+      "arguments": {
+        "model": "smrt",
+        "section": "all"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 22160,
+      "completion_tokens": 304,
+      "cost_usd": 0.00303747,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.89
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability check by reproduction target\n\nrequested_tb [requested_tb]\nSupported: smrt@1.5.1\nUnavailable: none\nNot comparable: none\n\nUnified summary\nSupported: smrt@1.5.1 (effective_permittivity, ka_per_m, ks_per_m, sigma_hh_db, sigma_hv_db, sigma_vv_db, single_scattering_albedo, tb_h, tb_v)\nUnavailable: none\nNot comparable: none\nOutputs no registered model declares: none\n\nThe capability checkpoint is complete; a research plan may now be proposed.",
+      "arguments": {
+        "action": "check",
+        "question": "Simulate a one metre snowpack at 37 GHz with density 2000 kg/m3 and report brightness temperature.",
+        "reference_models": [
+          "SMRT"
+        ],
+        "requested_outputs": [
+          "tb_h",
+          "tb_v"
+        ],
+        "local_models": [
+          "smrt"
+        ],
+        "targets": [
+          {
+            "id": "requested_tb",
+            "reference_models": [
+              "SMRT"
+            ],
+            "requested_outputs": [
+              "tb_h",
+              "tb_v"
+            ],
+            "evidence_refs": [
+              "smrt-v1#03"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 23908,
+      "completion_tokens": 269,
+      "cost_usd": 0.00342557,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.6
+    },
+    {
+      "kind": "research_block",
+      "turn": 1,
+      "rule": "plan_required",
+      "intervention": 1,
+      "detail": "No LLM-authored research proposal has been submitted."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 24108,
+      "completion_tokens": 1400,
+      "cost_usd": 0.0077005,
+      "reasoning_chars": 0,
+      "elapsed_s": 12.92
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "A proposal requires at least one explicit registered physical-model run.",
+      "arguments": {
+        "_truncated": "{\"action\": \"propose\", \"question\": \"Simulate a one metre snowpack at 37 GHz with a density of 2000 kg/m3 and report the brightness temperature.\", \"objective\": \"Determine whether the requested passive brightness-temperature simulation is executable under the registered SMRT model without altering the user-fixed density; if not, document the constrained partial scope.\", \"hypothesis\": \"The requested run cannot be executed exactly because 2000 kg/m3 exceeds SMRT's declared snow-density range; no brightness temperature will be reported for that out-of-range configuration.\", \"steps\": [\"Validate the user-fixed frequency, thickness, density, and passive brightness-temperature observable against SMRT v1.5.1.\", \"Do not execute an out-of-range run or substitute a different density without explicit user confirmation.\", \"Report the exact requested configuration as unavailable and identify the legal density range.\", \"If the user later authorizes a partial scope, create a revised plan using an explicitly chosen legal density and separately provenance all implementation choices.\"], \"parameters\": {\"frequency_ghz\": 37, \"thickness_m\": 1, \"density_kg_m3\": 2000, \"output\": \"tb\", \"model\": \"smrt\"}, \"paper_conditions\": {\"frequency_ghz\": 37, \"thickness_m\": 1, \"density_kg_m3\": 2000, \"observable\": \"brightness temperature\"}, \"condition_provenance\": {\"frequency_ghz\": \"user-question\", \"thickness_m\": \"user-question\", \"density_kg_m3\": \"user-question\", \"observable\": \"user-question\"}, \"literature_evidence\": [{\"ref\": \"smrt-v1#03\", \"role\": \"SMRT passive radiative-transfer architecture and brightness-temperature observable\"}], \"reproduction_targets\": [{\"id\": \"requested_tb\", \"label\": \"Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3\", \"reference_models\": [\"SMRT\"], \"requested_outputs\": [\"tb_h\", \"tb_v\"], \"evidence_refs\": [\"smrt-v1#03\"], \"status\": \"partial\", \"availability_reason\": \"The requested density 2000 kg/m3 exceeds SMRT's declared density range of 1–917 kg/m3; exact execution is unavailable without changing a user-fixed value.\"}], \"selected_models\": [{\"model\": \"smrt\", \"version\": \"1.5.1\", \"purpose\": \"Passive snow brightness temperature\", \"capability_status\": \"partial: requested density is out of range\"}], \"parameter_mapping\": [{\"model\": \"smrt\", \"paper_concept\": \"sensor frequency\", \"paper_value\": 37, \"model_input\": \"frequency_ghz\", \"mapped_value\": 37, \"units\": \"GHz\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\", \"confidence_basis\": \"Explicitly fixed in the user question\"}, {\"model\": \"smrt\", \"paper_concept\": \"snowpack thickness\", \"paper_value\": 1, \"model_input\": \"thickness_m\", \"mapped_value\": 1, \"units\": \"m\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\", \"confidence_basis\": \"Explicitly fixed in the user question\"}, {\"model\": \"smrt\", \"paper_concept\": \"snow density\", \"paper_value\": 2000, \"model_input\": \"density_kg_m3\", \"mapped_value\": 2000, \"units\": \"kg m-3\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\", \"confidence_basis\": \"Explicitly fixed in the user question; rejected by model bounds\"}, {\"model\": \"smrt\", \"paper_concept\": \"passive observable\", \"paper_value\": \"brightness temperature\", \"model_input\": \"output\", \"mapped_value\": \"tb\", \"units\": \"none\", \"provenance_class\": \"user_specified\", \"confidence\": \"high\", \"confidence_basis\": \"Explicitly requested by the user\"}, {\"model\": \"smrt\", \"paper_concept\": \"electromagnetic theory\", \"paper_value\": null, \"model_input\": \"electromagnetic_model\", \"mapped_value\": \"iba\", \"units\": \"none\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"No theory specified; retained only as a prospective default and not executed\"}, {\"model\": \"smrt\", \"paper_concept\": \"microstructure representation\", \"paper_value\": null, \"model_input\": \"microstructure_model\", \"mapped_value\": \"exponential\", \"units\": \"none\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"No microstructure specified; retained only as a prospective default and not executed\"}, {\"model\": \"smrt\", \"paper_concept\": \"incidence angle\", \"paper_value\": null, \"model_input\": \"angle_deg\", \"mapped_value\": 55, \"units\": \"degree\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"No angle specified; retained only as a prospective default and not executed\"}, {\"model\": \"smrt\", \"paper_concept\": \"snow temperature\", \"paper_value\": null, \"model_input\": \"temperature_k\", \"mapped_value\": 265, \"units\": \"K\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"No temperature specified; retained only as a prospective default and not executed\"}, {\"model\": \"smrt\", \"paper_concept\": \"DORT streams\", \"paper_value\": null, \"model_input\": \"dort_streams\", \"mapped_value\": 32, \"units\": \"count\", \"provenance_class\": \"backend_default\", \"confidence\": \"medium\", \"confidence_basis\": \"No solver resolution specified; retained only as a prospective default and not executed\"}], \"outputs\": [\"tb_h\", \"tb_v\"], \"runs\": [], \"charts\": [{\"id\": \"availability_diagnostic\", \"label\": \"Requested configuration availability diagnostic\", \"kind\": \"scatter\", \"x\": \"density_kg_m3\", \"y\": \"tb_v\", \"required\": false, \"purpose\": \"diagnostic\", \"x_label\": \"Snow density (kg m^-3)\", \"y_label\": \"Brightness temperature TB_V (K)\"}], \"controls\": [\"Do not replace the requested density without explicit confirmation.\", \"Do not report a model brightness temperature when no legal run exists.\", \"Keep paper-reported architecture separate from model execution.\"], \"metrics\": [], \"diagnostics\": [\"Check density against the registered 1–917 kg/m3 range.\", \"Record that no physical-model run or chart data are generated for the requested configuration.\"], \"success_criteria\": [\"The plan explicitly preserves all user-fixed values.\", \"The plan identifies the density-bound failure before execution.\", \"No out-of-range model run is scheduled.\", \"The target is labeled partial rather than reproduced.\"], \"quantities\": [\"tb_h\", \"tb_v\"], \"assumptions\": [\"No unrequested "
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 25636,
+      "completion_tokens": 370,
+      "cost_usd": 0.0068465,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.98
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "A proposal requires at least one chart option with x and y fields.",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "blocked_requested_run",
+              "label": "Requested out-of-range configuration (validation only)",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 2000,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "blocked_requested_run",
+          "charts": [],
+          "reproduction_targets": [
+            {
+              "id": "requested_tb",
+              "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+              "reference_models": [
+                "SMRT"
+              ],
+              "requested_outputs": [
+                "tb_h",
+                "tb_v"
+              ],
+              "evidence_refs": [
+                "smrt-v1#03"
+              ],
+              "status": "unavailable",
+              "availability_reason": "The requested density 2000 kg/m3 exceeds SMRT's declared density range of 1–917 kg/m3; the planned validation run is expected to be rejected and is not a scientific result."
+            }
+          ],
+          "limitations": [
+            "Exact requested brightness temperature is unavailable because density 2000 kg/m3 is outside SMRT's declared range.",
+            "Incidence angle, snow temperature, electromagnetic theory, microstructure, and solver resolution are unspecified; the listed values are implementation choices for validation only and are not evidence-backed physical inputs."
+          ],
+          "success_criteria": [
+            "The plan preserves all user-fixed values.",
+            "The density-bound validation failure is recorded before any scientific execution.",
+            "No out-of-range brightness temperature is reported as a physical result."
+          ],
+          "stop_conditions": [
+            "Stop if the validation run is rejected for the declared density bound.",
+            "Do not claim reproduction or report TB values unless the user approves a revised legal-density scope."
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 26138,
+      "completion_tokens": 90,
+      "cost_usd": 0.006636,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.55
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The proposed execution plan is invalid: planned run 1: density_kg_m3 = 2000.0 is outside the physical range 1.0 to 917.0 kg m-3",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "charts": [
+            {
+              "id": "availability_diagnostic",
+              "label": "Requested configuration availability diagnostic",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 26599,
+      "completion_tokens": 1239,
+      "cost_usd": 0.00813005,
+      "reasoning_chars": 0,
+      "elapsed_s": 9.95
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The proposal is a computation checklist, not yet a scientific protocol. Add: acceptance metrics.",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "legal_boundary_validation",
+              "label": "Legal-boundary validation run",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 917,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "baseline_run_id": "legal_boundary_validation",
+          "reproduction_targets": [
+            {
+              "id": "requested_tb",
+              "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+              "reference_models": [
+                "SMRT"
+              ],
+              "requested_outputs": [
+                "tb_h",
+                "tb_v"
+              ],
+              "evidence_refs": [
+                "smrt-v1#03"
+              ],
+              "status": "partial",
+              "availability_reason": "The exact requested density 2000 kg/m3 is outside SMRT's declared range of 1–917 kg/m3. The planned legal-boundary run is diagnostic only and cannot reproduce the requested density."
+            }
+          ],
+          "parameter_mapping": [
+            {
+              "model": "smrt",
+              "paper_concept": "sensor frequency",
+              "paper_value": 37,
+              "model_input": "frequency_ghz",
+              "mapped_value": 37,
+              "units": "GHz",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly fixed in the user question"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "snowpack thickness",
+              "paper_value": 1,
+              "model_input": "thickness_m",
+              "mapped_value": 1,
+              "units": "m",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly fixed in the user question"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "requested snow density",
+              "paper_value": 2000,
+              "model_input": "density_kg_m3",
+              "mapped_value": 2000,
+              "units": "kg m-3",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly fixed in the user question; not executable"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "diagnostic legal density",
+              "paper_value": null,
+              "model_input": "density_kg_m3",
+              "mapped_value": 917,
+              "units": "kg m-3",
+              "provenance_class": "model_assumption",
+              "confidence": "high",
+              "confidence_basis": "Registered model upper bound; diagnostic substitution, not reproduction"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "passive observable",
+              "paper_value": "brightness temperature",
+              "model_input": "output",
+              "mapped_value": "tb",
+              "units": "none",
+              "provenance_class": "user_specified",
+              "confidence": "high",
+              "confidence_basis": "Explicitly requested"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "electromagnetic theory",
+              "paper_value": null,
+              "model_input": "electromagnetic_model",
+              "mapped_value": "iba",
+              "units": "none",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "microstructure representation",
+              "paper_value": null,
+              "model_input": "microstructure_model",
+              "mapped_value": "exponential",
+              "units": "none",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "incidence angle",
+              "paper_value": null,
+              "model_input": "angle_deg",
+              "mapped_value": 55,
+              "units": "degree",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "snow temperature",
+              "paper_value": null,
+              "model_input": "temperature_k",
+              "mapped_value": 265,
+              "units": "K",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            },
+            {
+              "model": "smrt",
+              "paper_concept": "DORT streams",
+              "paper_value": null,
+              "model_input": "dort_streams",
+              "mapped_value": 32,
+              "units": "count",
+              "provenance_class": "backend_default",
+              "confidence": "medium",
+              "confidence_basis": "Not specified by user"
+            }
+          ],
+          "paper_conditions": {
+            "frequency_ghz": 37,
+            "thickness_m": 1,
+            "density_kg_m3": 2000,
+            "observable": "brightness temperature"
+          },
+          "condition_provenance": {
+            "frequency_ghz": "user-question",
+            "thickness_m": "user-question",
+            "density_kg_m3": "user-question",
+            "observable": "user-question"
+          },
+          "literature_evidence": [
+            {
+              "ref": "smrt-v1#03",
+              "role": "SMRT passive radiative-transfer architecture and brightness-temperature observable"
+            }
+          ],
+          "selected_models": [
+            {
+              "model": "smrt",
+              "version": "1.5.1",
+              "purpose": "Passive snow brightness temperature; legal-boundary diagnostic",
+              "capability_status": "partial"
+            }
+          ],
+          "outputs": [
+            "tb_h",
+            "tb_v"
+          ],
+          "charts": [
+            {
+              "id": "diagnostic_tb_at_legal_density",
+              "label": "Diagnostic TB at legal density boundary",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ],
+          "controls": [
+            "Do not interpret the 917 kg/m3 diagnostic as the requested 2000 kg/m3 result.",
+            "Do not claim exact reproduction.",
+            "Keep all unspecified inputs identified as defaults or assumptions."
+          ],
+          "metrics": [],
+          "diagnostics": [
+            "Validate that the legal upper-bound configuration executes and returns passive TB outputs.",
+            "Record that the requested 2000 kg/m3 configuration remains unavailable."
+          ],
+          "success_criteria": [
+            "The legal-boundary diagnostic executes with quality control.",
+            "The exact requested configuration remains labeled partial and is not numerically claimed.",
+            "All run parameters and provenance are reported."
+          ],
+          "assumptions": [
+            "Using the registered upper density bound only as a diagnostic substitution.",
+            "Unspecified model inputs use registered defaults."
+          ],
+          "limitations": [
+            "The requested density is outside the model range.",
+            "The diagnostic density differs from the user-fixed density.",
+            "Angle, temperature, microstructure, and electromagnetic theory were not specified by the user."
+          ],
+          "stop_conditions": [
+            "Do not generalize the diagnostic output to 2000 kg/m3.",
+            "If the legal-boundary run fails, report failed without substituting another configuration."
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 28008,
+      "completion_tokens": 241,
+      "cost_usd": 0.0072847,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.58
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.002,
+      "summary": "Reproduction plan incomplete: 0 evidence issue(s), 3 target coverage issue(s), and 0 parameter mapping issue(s).",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "metrics": [
+            "Plan validity: all executable run inputs must satisfy registered SMRT ranges and legal combinations.",
+            "Reproduction acceptance: exact requested configuration is accepted only if density 2000 kg/m3 is executable; otherwise outcome remains partial and no exact TB is reported.",
+            "Diagnostic acceptance: if executed, the legal-boundary run must return quality-controlled tb_h and tb_v outputs at 37 GHz, 1 m, and 917 kg/m3.",
+            "Provenance acceptance: every run parameter must be assigned user_specified, model_assumption, backend_default, or other approved provenance class; the 917 kg/m3 diagnostic must not be presented as the requested density."
+          ],
+          "success_criteria": [
+            "The legal-boundary diagnostic executes with quality control.",
+            "The exact requested configuration remains labeled partial and is not numerically claimed.",
+            "All run parameters and provenance are reported.",
+            "No out-of-range run is scheduled."
+          ],
+          "limitations": [
+            "The requested density is outside the model range.",
+            "The diagnostic density differs from the user-fixed density.",
+            "Angle, temperature, microstructure, and electromagnetic theory were not specified by the user."
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 27092,
+      "completion_tokens": 224,
+      "cost_usd": 0.0070353,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.36
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.001,
+      "summary": "The proposed chart cannot be produced by the planned runs: no planned run produces tb_v over x=density_kg_m3",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "reproduction_targets": [
+            {
+              "id": "requested_tb",
+              "label": "Requested 37 GHz brightness temperature at 1 m and 2000 kg/m3",
+              "source_id": "smrt-v1#03",
+              "reference_models": [
+                "SMRT"
+              ],
+              "requested_outputs": [
+                "tb_h",
+                "tb_v"
+              ],
+              "evidence_refs": [
+                "smrt-v1#03"
+              ],
+              "target_quantity": "Passive horizontally and vertically polarized brightness temperature for the requested one-metre, 37 GHz snowpack configuration.",
+              "expected_comparison": "Compare the planned SMRT diagnostic output, if executed at the legal density boundary, against the requested configuration metadata; do not claim numerical agreement with 2000 kg/m3 because that density is outside the registered model range.",
+              "status": "partial",
+              "availability_reason": "The exact requested density 2000 kg/m3 is outside SMRT's declared range of 1–917 kg/m3. No source figure asset is available for this single-configuration target, and the legal-boundary diagnostic cannot reproduce the requested density."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 27745,
+      "completion_tokens": 210,
+      "cost_usd": 0.00718175,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.45
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.002,
+      "summary": "The proposed execution plan is invalid: planned run 1: sweep_start and sweep_stop are equal, which is not a sweep",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "legal_boundary_validation",
+              "label": "Legal-boundary validation run",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 917,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 917,
+                "sweep_stop": 917,
+                "sweep_points": 2
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "charts": [
+            {
+              "id": "diagnostic_tb_at_legal_density",
+              "label": "Diagnostic TB at legal density boundary",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 28272,
+      "completion_tokens": 210,
+      "cost_usd": 0.0073135,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.69
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.002,
+      "summary": "The plan does not measure every quantity or attribution requested by the question: required brightness-temperature chart is missing tb_h, tb_v",
+      "arguments": {
+        "action": "revise_plan",
+        "changes": {
+          "runs": [
+            {
+              "id": "legal_boundary_validation",
+              "label": "Legal-boundary validation run",
+              "model": "smrt",
+              "parameters": {
+                "output": "tb",
+                "frequency_ghz": 37,
+                "thickness_m": 1,
+                "density_kg_m3": 917,
+                "electromagnetic_model": "iba",
+                "microstructure_model": "exponential",
+                "angle_deg": 55,
+                "temperature_k": 265,
+                "dort_streams": 32,
+                "sweep_parameter": "density_kg_m3",
+                "sweep_start": 916,
+                "sweep_stop": 917,
+                "sweep_points": 2
+              },
+              "stage": "diagnostic"
+            }
+          ],
+          "charts": [
+            {
+              "id": "diagnostic_tb_at_legal_density",
+              "label": "Diagnostic TB at legal density boundary",
+              "kind": "scatter",
+              "x": "density_kg_m3",
+              "y": "tb_v",
+              "required": false,
+              "purpose": "diagnostic",
+              "x_label": "Snow density (kg m^-3)",
+              "y_label": "Brightness temperature TB_V (K)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 28637,
+      "completion_tokens": 217,
+      "cost_usd": 0.00741315,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.27
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "plan_review",
+      "detail": "LLM-authored research plan v001 is ready for human review. Backend applied 18 auditable reference/presentation repair(s); review them explicitly."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 32327,
+      "completion_tokens": 281,
+      "cost_usd": 0.0084188,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.95
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "plan_review"
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 2,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 13041,
+      "completion_tokens": 42,
+      "cost_usd": 0.0033105,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.41
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.138,
+      "summary": "Approved run legal_boundary_validation: smrt ran in 0.14s: 2 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "legal_boundary_validation"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 13763,
+      "completion_tokens": 84,
+      "cost_usd": 0.0035414,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.69
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.081,
+      "summary": "Approved chart diagnostic_tb_at_legal_density: Drew a scatter chart with 2 series over 4 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "diagnostic_tb_at_legal_density",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 14070,
+      "completion_tokens": 31,
+      "cost_usd": 0.00355455,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.07
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Figure 1 render check (Render QA) passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 2 series; point counts [2, 2].",
+      "arguments": {
+        "chart_id": "diagnostic_tb_at_legal_density",
+        "action": "review"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 14249,
+      "completion_tokens": 1583,
+      "cost_usd": 0.0054617,
+      "reasoning_chars": 0,
+      "elapsed_s": 17.32
+    },
+    {
+      "kind": "research_block",
+      "turn": 2,
+      "rule": "research_reporting_contract",
+      "detail": "The final report is being checked against the recorded provenance ledger and result state."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 16783,
+      "completion_tokens": 2113,
+      "cost_usd": 0.00345462,
+      "reasoning_chars": 0,
+      "elapsed_s": 20.91
+    },
+    {
+      "kind": "harness_warning",
+      "turn": 2,
+      "rule": "report_completeness",
+      "detail": "The report must give a separate conclusion based on each generated figure, covering its visible curves, axes, units, legend and qualitative patterns. The report must give a separate conclusion from the actual executed result arrays and conditions, not only describe the chart."
+    },
+    {
+      "kind": "harness_block",
+      "turn": 2,
+      "rule": "citation_integrity",
+      "intervention": 1,
+      "detail": "unresolved markers",
+      "unresolved": [
+        "paper-smrt-v1#03"
+      ]
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 18660,
+      "completion_tokens": 1585,
+      "cost_usd": 0.00270745,
+      "reasoning_chars": 0,
+      "elapsed_s": 16.05
+    },
+    {
+      "kind": "harness_warning",
+      "turn": 2,
+      "rule": "report_completeness",
+      "detail": "The report must give a separate conclusion based on each generated figure, covering its visible curves, axes, units, legend and qualitative patterns. The report must give a separate conclusion from the actual executed result arrays and conditions, not only describe the chart."
+    },
+    {
+      "kind": "research_complete",
+      "turn": 2,
+      "detail": "A registered model run, figure and validated report are complete."
+    },
+    {
+      "kind": "harness_pass",
+      "turn": 2,
+      "rule": "citation_integrity",
+      "markers": [
+        "model:smrt@1.5.1",
+        "model:smrt@1.5.1"
+      ]
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "research-planning#00",
+      "research-reporting#00",
+      "smrt-v1#03"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "smrt@1.0"
+    ],
+    "paper_figures": [],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [
+      "model:smrt@1.5.1",
+      "model:smrt@1.5.1"
+    ],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [
+    {
+      "planned_chart_id": "diagnostic_tb_at_legal_density",
+      "figure_number": 1,
+      "title": "Figure 1. Diagnostic TB at legal density boundary",
+      "subtitle": "f 37 GHz · angle 55 ° · T 265 K · thickness 1 m · corr. length 150 µm · DORT 32 streams · exponential",
+      "x_label": "Snow density (kg m^-3)",
+      "y_label": "Brightness temperature (K)",
+      "kind": "scatter",
+      "series": [
+        {
+          "label": "Legal-boundary validation run · tb_h",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 2,
+          "handle": "res_12cdbaa94b2c",
+          "x": "density_kg_m3",
+          "y": "tb_h"
+        },
+        {
+          "label": "Legal-boundary validation run · tb_v",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 2,
+          "handle": "res_12cdbaa94b2c",
+          "x": "density_kg_m3",
+          "y": "tb_v"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [],
+        "n_series": 2,
+        "point_counts": [
+          2,
+          2
+        ],
+        "redrawn": false
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/figures/4ce477980d454fff6793eca2_p-smrt-density-above-ice_p1-reproduction-first_openai-gpt-5.6-luna_r3_full.png"
+    }
+  ],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1",
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "parameter_provenance": [
+    {
+      "field": "frequency_ghz",
+      "value": 37,
+      "source_kind": "user",
+      "source_ref": "user question",
+      "reason": "User-specified frequency retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "thickness_m",
+      "value": 1,
+      "source_kind": "user",
+      "source_ref": "user question",
+      "reason": "User-specified snow thickness retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "density_kg_m3",
+      "value": 2000,
+      "source_kind": "user",
+      "source_ref": "user question",
+      "reason": "Original requested density; not evaluated because it was outside the registered model range.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "density_kg_m3",
+      "value": 917,
+      "source_kind": "assumption",
+      "source_ref": "approved legal-boundary validation run",
+      "reason": "Upper legal-boundary value used by the executed diagnostic.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "output",
+      "value": "tb",
+      "source_kind": "user",
+      "source_ref": "user question",
+      "reason": "User requested passive brightness temperature.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "electromagnetic_model",
+      "value": "iba",
+      "source_kind": "model_default",
+      "source_ref": "registered SMRT default",
+      "reason": "Backend default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "microstructure_model",
+      "value": "exponential",
+      "source_kind": "model_default",
+      "source_ref": "registered SMRT default",
+      "reason": "Backend default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "angle_deg",
+      "value": 55,
+      "source_kind": "model_default",
+      "source_ref": "registered SMRT default",
+      "reason": "Backend default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "temperature_k",
+      "value": 265,
+      "source_kind": "model_default",
+      "source_ref": "registered SMRT default",
+      "reason": "Backend default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "dort_streams",
+      "value": 32,
+      "source_kind": "model_default",
+      "source_ref": "registered SMRT default",
+      "reason": "Backend default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "corr_length_m",
+      "value": 0.00015,
+      "source_kind": "model_default",
+      "source_ref": "registered model parameter resolution",
+      "reason": "Registered model default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "radius_m",
+      "value": 0.0002,
+      "source_kind": "model_default",
+      "source_ref": "registered model parameter resolution",
+      "reason": "Registered model default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "stickiness",
+      "value": 0.2,
+      "source_kind": "model_default",
+      "source_ref": "registered model parameter resolution",
+      "reason": "Registered model default retained in the approved run.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_parameter",
+      "value": "density_kg_m3",
+      "source_kind": "assumption",
+      "source_ref": "approved diagnostic run",
+      "reason": "Density was varied to test the legal boundary.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_start",
+      "value": 916.0,
+      "source_kind": "assumption",
+      "source_ref": "approved diagnostic run",
+      "reason": "Lower endpoint of the executed legal-boundary sweep.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_stop",
+      "value": 917.0,
+      "source_kind": "assumption",
+      "source_ref": "approved diagnostic run",
+      "reason": "Upper endpoint of the executed legal-boundary sweep.",
+      "sensitivity_checked": false
+    },
+    {
+      "field": "sweep_points",
+      "value": 2,
+      "source_kind": "assumption",
+      "source_ref": "approved diagnostic run",
+      "reason": "Number of points in the executed sweep.",
+      "sensitivity_checked": false
+    }
+  ],
+  "provenance_parse_error": null,
+  "reproduction_outcome": "partial",
+  "archived_report_path": "evaluation/results/competition/reports/046c96eeb73578f92e9b6a91_p-smrt-density-above-ice_p1-reproduction-first_openai-gpt-5.6-luna_r3_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/046c96eeb73578f92e9b6a91_p-smrt-density-above-ice_p1-reproduction-first_openai-gpt-5.6-luna_r3_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  }
+}
