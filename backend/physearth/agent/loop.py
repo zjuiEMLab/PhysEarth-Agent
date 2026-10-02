@@ -1555,6 +1555,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             detail="A registered model run, figure and validated report are complete.",
                         )
                     )
+                    sources = research.parameter_sources_table(session)
+                    if sources:
+                        answer = "%s\n\n%s" % (answer.rstrip(), sources)
             events.append(
                 _event("harness_pass", rule="citation_integrity", markers=check.get("markers", []))
             )

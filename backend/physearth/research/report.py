@@ -3,7 +3,8 @@
 import json
 import re
 
-from physearth.research.charts import _normal_name
+from physearth import registry
+from physearth.research.charts import _asked_values, _normal_name, _parameter_phrase
 
 
 def report_generation_prompt(session):
@@ -57,6 +58,24 @@ def report_generation_prompt(session):
         figure_state.append("- No formal figure was recorded.")
 
     gaps = plan.get("capability_gaps") or []
+    asked = []
+    for name in _asked_values(project.get("question") or plan.get("question"), plan.get("runs")):
+        unit = ""
+        for run in plan.get("runs") or ():
+            entry = registry.get(str(run.get("model") or ""))
+            spec = ((entry.card.get("parameters") or {}).get(name) or {}) if entry else {}
+            unit = unit or spec.get("unit") or ""
+        asked.append(
+            "%s (%s, in %s)" % (_parameter_phrase(name), name, unit or "its declared unit")
+        )
+    asked_line = (
+        "11. The question asks for a value or range of %s. State it as numbers with that "
+        "unit, read from the recorded results, in the opening answer; if the results do not "
+        "identify it, say so there." % "; ".join(asked)
+        if asked else
+        "11. Answer every quantity the question asks for with a number and unit from the "
+        "recorded results, or say it is not identifiable."
+    )
     return "\n".join(
         [
             "READER-FACING REPRODUCTION REPORT (be concise; use the recorded state; do not add new experiments)",
@@ -107,6 +126,10 @@ def report_generation_prompt(session):
             "name the observed differences and their consequences.",
             "10. Preserve any machine-readable provenance/outcome appendix required by the user or "
             "evaluation protocol, filling it only from the recorded run state.",
+            asked_line,
+            "12. Quote every configuration value exactly as the ledger records it; do not round "
+            "it or substitute a nominal value. A parameter-source table built from the ledger is "
+            "appended to the report automatically, so do not reproduce the ledger row by row.",
             "AUTHORITATIVE PARAMETER LEDGER:\n" + "\n".join(ledger),
             "RECORDED FORMAL FIGURES:\n" + "\n".join(figure_state),
             "UNAVAILABLE OR UNRUN COMPARISONS: %s" % (", ".join(map(str, gaps)) or "none recorded"),
@@ -289,3 +312,46 @@ def safe_report(session):
     else:
         lines.append("No additional scientific interpretation is published by this fallback.")
     return "\n\n".join(lines)
+
+
+def parameter_sources_table(session):
+    """Every input of the approved runs, its value and where it came from, from the ledger.
+
+    Written by the system, not the model: copying the ledger into prose was where reports
+    left a source unlabelled or promoted a guessed value to a paper value.
+    """
+    plan = ((session.get("research") or {}).get("plan") or {})
+    mappings = plan.get("parameter_mapping") or []
+    if isinstance(mappings, dict):
+        mappings = list(mappings.values())
+    rows = []
+    for item in mappings:
+        if not isinstance(item, dict) or not item.get("model_input"):
+            continue
+        value = item.get("mapped_value")
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value, ensure_ascii=False, sort_keys=True)
+        rows.append(
+            "| %s | %s | %s | %s | %s |"
+            % tuple(
+                str(cell).replace("|", "/").replace("\n", " ")
+                for cell in (
+                    item.get("model") or "",
+                    item["model_input"],
+                    "" if value is None else value,
+                    item.get("provenance_class") or "unknown",
+                    item.get("evidence_ref") or "-",
+                )
+            )
+        )
+    if not rows:
+        return ""
+    return "\n".join(
+        [
+            "**Parameter sources** (from the approved plan's parameter ledger)",
+            "",
+            "| Model | Input | Value | Source | Evidence |",
+            "| --- | --- | --- | --- | --- |",
+            *rows,
+        ]
+    )

@@ -119,6 +119,7 @@ from physearth.research.propose import (
     propose,
 )
 from physearth.research.report import (
+    parameter_sources_table,
     report_generation_prompt,
     report_problem,
     report_warnings,

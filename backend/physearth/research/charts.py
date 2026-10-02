@@ -229,6 +229,67 @@ def _normal_name(value):
     return re.sub(r"[^a-z0-9]", "", str(value).lower())
 
 
+def _parameter_phrase(name):
+    """How a question names a declared parameter: its name without the unit suffix."""
+    tokens = str(name or "").split("_")
+    while len(tokens) > 1 and (len(tokens[-1]) <= 3 or any(c.isdigit() for c in tokens[-1])):
+        tokens.pop()
+    return " ".join(tokens)
+
+
+def _asked_values(question, runs):
+    """Swept parameters the question asks a value of: at what X, an X range or threshold."""
+    text = " ".join(str(question or "").lower().split())
+    asked = []
+    for name in _asked_sweep_axes(question, runs):
+        bare = re.escape(_parameter_phrase(name)).replace(r"\ ", r"[- ]")
+        named = r"(?:[a-z]+-)?" + bare
+        if any(re.search(item, text) for item in (
+            r"\bat\s+(?:what|which)\s+" + named + r"\b",
+            r"\b" + bare + r"[- ](?:range|threshold)\b",
+        )):
+            asked.append(name)
+    return asked
+
+
+def _asked_sweep_axes(question, runs):
+    """Sweepable parameters of the planned models that the question asks results along.
+
+    Only the declared sweep_parameter values count, named the way the card names them
+    without units (density_kg_m3 is "density"), and only in a phrase that asks for a
+    dependence: against, versus, as X rises, changes with X, at what X, an X range. A
+    parameter merely mentioned, or held at a value, is not an axis.
+    """
+    text = " ".join(str(question or "").lower().split())
+    asked = []
+    for model in dict.fromkeys(str(run.get("model") or "").strip() for run in runs or ()):
+        entry = registry.get(model)
+        if entry is None:
+            continue
+        declared = (entry.card.get("parameters") or {}).get("sweep_parameter") or {}
+        for name in declared.get("enum") or ():
+            phrase = _parameter_phrase(name)
+            if name == "none" or len(phrase) < 5:
+                continue
+            bare = re.escape(phrase).replace(r"\ ", r"[- ]")
+            named = r"(?:[a-z]+-)?" + bare
+            # After "against" or "versus" a qualifier may precede it: incidence angle.
+            qualified = r"(?:[a-z]+[- ])?" + bare
+            patterns = (
+                r"\bat\s+(?:what|which)\s+" + named + r"\b",
+                r"\b(?:what|which)\s+" + named + r"[- ](?:range|threshold)\b",
+                r"\b" + bare + r"[- ](?:range|sweep|dependence|threshold|axis)\b",
+                r"\b(?:versus|vs\.?|against|function of|across the|over the|range of|sweep)\s+"
+                r"(?:the\s+)?" + qualified + r"\b",
+                r"\b(?:increasing|decreasing|varying|changing)\s+" + named + r"\b",
+                r"\b(?:changes?|varies|vary|varying)\s+with\s+(?:the\s+)?" + named + r"\b",
+                r"\b" + bare + r"\s+(?:increases|decreases|varies|changes|rises|falls)\b",
+            )
+            if name not in asked and any(re.search(item, text) for item in patterns):
+                asked.append(name)
+    return asked
+
+
 def _question_coverage_problems(question, runs, charts):
     """Reject polished-looking plans that omit an observable named in the question."""
     text = str(question or "").lower()
@@ -258,6 +319,14 @@ def _question_coverage_problems(question, runs, charts):
         problems.append("scattering attribution requires ks_per_m")
     if asks_backscatter and not outputs.intersection({"sigma_vv_db", "sigma_hh_db", "sigma_hv_db"}):
         problems.append("no required backscatter chart")
+    axes = {chart.get("x") for chart in required_charts}
+    for name in _asked_sweep_axes(question, runs):
+        if name not in axes:
+            problems.append(
+                "the question asks how results change with %s, but no required chart has "
+                "x=%s; sweep %s in the compared runs and plot against it"
+                % (_parameter_phrase(name), name, name)
+            )
     if "dort" in text:
         has_stream_sweep = any(
             (run.get("parameters") or {}).get("sweep_parameter") == "dort_streams"
