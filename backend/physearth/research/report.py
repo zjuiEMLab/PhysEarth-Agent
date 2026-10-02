@@ -74,8 +74,9 @@ def report_generation_prompt(session):
         )
     asked_line = (
         "11. The question asks for a value or range of %s. State it as numbers with that "
-        "unit, read from the recorded results, in the opening answer; if the results do not "
-        "identify it, say so there." % "; ".join(asked)
+        "unit in the opening answer: the value the opened paper evidence reports, with its "
+        "marker, and the value the recorded results show, each labelled as such; if neither "
+        "identifies it, say so there." % "; ".join(asked)
         if asked else
         "11. Answer every quantity the question asks for with a number and unit from the "
         "recorded results, or say it is not identifiable."
