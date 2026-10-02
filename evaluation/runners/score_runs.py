@@ -7,7 +7,7 @@ them (evaluation/results/competition/scores.json for the default). No language m
 the judge verdicts are read from the record, where the run stored them.
 
     python evaluation/runners/score_runs.py
-    python evaluation/runners/score_runs.py evaluation/results/competition/final-2026-10-02
+    python evaluation/runners/score_runs.py evaluation/results/competition/final-02bb07a
 """
 
 import json

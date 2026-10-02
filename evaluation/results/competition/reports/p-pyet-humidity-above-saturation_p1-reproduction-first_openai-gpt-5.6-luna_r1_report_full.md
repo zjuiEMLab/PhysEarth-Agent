@@ -2,4 +2,4 @@
 
 <!-- Generated artifact; this file is human-editable. -->
 
-Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 3 evidence issue(s), 1 target coverage issue(s), and 0 parameter mapping issue(s). Structured repair gaps: [{"field": "literature_evidence", "source": "session.sections_read", "expected": "at least one opened paper section", "repair": "Call read_literature for the relevant paper section before proposing the plan."}, {"field": "literature_evidence[0].evidence_ref", "source": "research-reporting#00", "expected": "a section or source figure opened in this session", "repair": "Read the cited section or figure, then use its returned citation reference."}, {"field": "reproduction_targets[0].evidence_refs", "source": "research-reporting#00", "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."}]
+Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: No approved proposal exists yet; the most recent rejected draft and validation error are retained.

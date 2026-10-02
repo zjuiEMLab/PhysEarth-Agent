@@ -1393,7 +1393,7 @@ def _q1_comparison_legacy(data=None):
         "caption/format matching. The official notebook recipe remains diagnostic-only because "
         "the paper does not fully define its parameters; those numeric checks are shown as N/A. "
         "<b>Correct report</b> requires deterministic evidence checks and a label-blinded "
-        "judge score of at least 8/10 with factuality 2. Published-pixel similarity is "
+        "judge score of at least 8/16 with factuality at least 1. Published-pixel similarity is "
         "diagnostic only.</p>"
         f"{_q1_reference_panel()}{body}{status}</section></div>"
     )

@@ -4,54 +4,65 @@
 
 ## Research result and conclusion
 
-The generated chart shows two brightness-temperature curves with the same qualitative pattern: both increase rapidly at low frequency and approach a high-frequency plateau. The H-polarized curve remains below the V-polarized curve. This is a spectral-shape result, not evidence of numerical solver convergence.
+Figure 1 shows two distinct brightness-temperature curves over the legal snow-density range of 50–917 kg m⁻³. V polarization remains above H polarization, and both curves rise through most of the range before turning downward near the highest densities; they do not converge. The run therefore provides a legal-density diagnostic, not an exact reproduction of the paper condition at 2000 kg m⁻³. [model:smrt@1.5.1]
 
-The requested **2000 kg m⁻³ density was not simulated**. The approved diagnostic used **917 kg m⁻³**, the legal upper boundary of the registered SMRT model. Consequently, the result is a **partial reproduction** and cannot identify the brightness temperature at 2000 kg m⁻³. [model:smrt@1.5.1]
+The requested 2000 kg m⁻³ condition is not identifiable from this run because it lies beyond the executed range. The calibrated outcome is therefore **partial**.
 
-## Supporting results
+## Conclusion supported by the generated figure
 
-### Conclusion from the generated chart
+The generated figure contains two series with density on the x-axis in kg m⁻³ and brightness temperature on the y-axis in K. It shows:
 
-The reviewed chart contains two series, H and V brightness temperature, with frequency in GHz on the horizontal axis and brightness temperature in K on the vertical axis. Visually, both curves rise sharply and then flatten. The displayed ordering is H below V.
+- two separated polarization curves;
+- V-polarized brightness temperature above H-polarized brightness temperature across the plotted range;
+- increasing brightness temperature through intermediate densities;
+- a downturn near the upper-density boundary.
 
-This visual interpretation supports the same qualitative pattern as the recorded arrays, but it does not establish numerical agreement with a paper result or prove convergence with respect to the radiative-transfer solver.
+No source-paper figure comparison was recorded for this run, so the figure supports these generated-curve conclusions only. The passed render check establishes that the plotted arrays were finite, sufficiently populated, and legible; it does not establish agreement with the source figure.
 
-### Conclusion from the recorded result
+## Conclusion supported by the result arrays
 
-The formal run completed successfully and passed quality control. It used 10 frequency samples from 1 to 250 GHz. The recorded endpoint values were:
+The executed sweep used 10 density points from 50.0 to 917.0 kg m⁻³. V-polarized brightness temperature ranged from 21.7003 to a maximum of 203.3855 K; H-polarized brightness temperature ranged from 20.1491 to a maximum of 164.9813 K. At the final density, 917.0 kg m⁻³, the values were 199.2696 K for V polarization and 156.2760 K for H polarization. [model:smrt@1.5.1]
 
-- At 1 GHz: H = 1.0745 K; V = 1.3702 K.
-- At 250 GHz: H = 206.7223 K; V = 263.5836 K.
+The recorded arrays describe both series as non-monotonic. No bias, RMSE, correlation, or other numerical comparison with paper data was supplied; such metrics are **not scoreable**.
 
-The recorded series were flagged as not strictly monotonic because of small high-frequency variations after the main rise. [model:smrt@1.5.1]
+## Comparison of image-supported and array-supported conclusions
 
-No measured comparison, bias, RMSE, correlation, or other validation statistic was recorded. Numerical agreement is therefore **not scoreable**.
+| Aspect | Generated image | Result arrays |
+|---|---|---|
+| Curves | Two separated curves | Two polarization series |
+| Ordering | V visibly above H | V maximum and endpoint both exceed H |
+| Shape | Rise followed by upper-range downturn | Both series recorded as non-monotonic |
+| Convergence | No visible convergence | No convergence statistic was calculated |
+| Paper agreement | Not assessed | Not scoreable |
+| Exact target | Not shown | 2000 kg m⁻³ was not run |
 
-| Question | Chart interpretation | Recorded-result interpretation | Assessment |
-|---|---|---|---|
-| Are there two polarization curves? | Yes | Yes: H and V outputs | Agreement |
-| Is V above H? | Yes | Yes at the recorded endpoints and across the displayed sweep | Same qualitative ordering |
-| Do the curves flatten at high frequency? | Yes | Yes, with small residual high-frequency variation | Same qualitative pattern |
-| Is solver convergence demonstrated? | No | No convergence sweep was run | Not established |
-| Was 2000 kg m⁻³ reproduced? | Not identifiable from the chart | No; the run used 917 kg m⁻³ | Partial outcome |
+The image and arrays support the same qualitative pattern: separated H/V curves with an upper-range downturn. This is a diagnostic result only; it does not establish qualitative or numerical reproduction of a source-paper figure.
 
-## Guessed/assumed parameters
+## Assumed/guessed parameters
 
-The following values were not paper-explicit and are therefore treated as guessed or assumed:
+The following values were not paper-explicit in the authoritative ledger and are therefore treated as guessed, assumed, or backend-supplied:
 
-- **Model assumptions:** `density_kg_m3=917`, `electromagnetic_model=iba`, `microstructure_model=exponential`, `sweep_parameter=frequency_ghz`, `sweep_start=1.0`, `sweep_stop=250.0`, and `sweep_points=10`.
-- **Backend defaults:** `angle_deg=55`, `temperature_k=265`, `corr_length_m=0.00015`, `dort_streams=32`, `radius_m=0.0002`, and `stickiness=0.2`.
-- **User-specified values:** `frequency_ghz=37`, `thickness_m=1`, and `output=tb`. The approved diagnostic also swept frequency, so the recorded result contains values at multiple frequencies.
+- `electromagnetic_model = iba` — provenance class `model_assumption`
+- `microstructure_model = exponential` — provenance class `model_assumption`
+- `output = tb` — provenance class `model_assumption`
+- `angle_deg = 55.0` — provenance class `model_assumption`
+- `temperature_k = 265.0` — provenance class `model_assumption`
+- `corr_length_m = 0.00015` — provenance class `model_assumption`
+- `radius_m = 0.0002` — provenance class `backend_default`
+- `stickiness = 0.2` — provenance class `backend_default`
+- `dort_streams = 32` — provenance class `model_assumption`
+- `sweep_parameter = density_kg_m3` — provenance class `model_assumption`
+- `sweep_start = 50.0` — provenance class `model_assumption`
+- `sweep_stop = 917.0` — provenance class `model_assumption`
+- `sweep_points = 10` — provenance class `model_assumption`
 
-The SMRT paper section supplied model context, but it did not make the diagnostic’s assumed parameter choices paper-explicit. [smrt-v1#02]
+The ledger identifies `frequency_ghz = 37.0` and `thickness_m = 1.0` as `paper_inferred`, not paper-explicit. It identifies `density_kg_m3 = 917.0` as `user_specified`; the paper comparison value was 2000 kg m⁻³, but that condition was not executed.
 
 ## Limitations
 
-This run does not provide a result for 2000 kg m⁻³ and should not be extrapolated to that density. The first frequency interval is broad, from 1 to 28.67 GHz, so the low-frequency transition is only coarsely sampled. The run also did not test solver-stream convergence or compare against measurements.
-
-The direct conclusion is therefore: **the legal-boundary diagnostic shows ordered H/V brightness-temperature curves with rapid increase and high-frequency flattening, but the requested 2000 kg m⁻³ result remains unidentifiable.**
+The legal-density diagnostic cannot answer the original question at 2000 kg m⁻³. The model run used the registered SMRT configuration and produced no measured-data comparison. The source figure was not available as a recorded comparison artifact for this report, so no claim of visual correspondence or reproduction success is made. The result remains **partial**.
 
 <parameter_provenance>
-[{"field":"frequency_ghz","value":37,"source_kind":"user","source_ref":"user question","reason":"The requested frequency is fixed by the user; the paper section establishes SMRT context but does not specify this numerical case.","sensitivity_checked":false},{"field":"thickness_m","value":1,"source_kind":"user","source_ref":"user question","reason":"The requested thickness is fixed by the user and passed to the legal-boundary diagnostic.","sensitivity_checked":false},{"field":"density_kg_m3","value":917,"source_kind":"assumption","source_ref":"smrt-v1#02; registered legal upper boundary","reason":"The requested 2000 kg/m3 is outside the registered model range; the diagnostic uses the declared upper boundary and is not a reproduction of the requested density.","sensitivity_checked":false},{"field":"electromagnetic_model","value":"iba","source_kind":"assumption","source_ref":"smrt-v1#02; approved run state","reason":"Preserved from the existing run and explicitly labeled as an assumption.","sensitivity_checked":false},{"field":"microstructure_model","value":"exponential","source_kind":"assumption","source_ref":"smrt-v1#02; approved run state","reason":"Preserved from the existing run and explicitly labeled as an assumption.","sensitivity_checked":false},{"field":"output","value":"tb","source_kind":"user","source_ref":"user question","reason":"The requested observable is passive brightness temperature.","sensitivity_checked":false},{"field":"angle_deg","value":55,"source_kind":"model_default","source_ref":"registered SMRT default","reason":"Backend default; not paper evidence or a user-specified condition.","sensitivity_checked":false},{"field":"temperature_k","value":265,"source_kind":"model_default","source_ref":"registered SMRT default","reason":"Backend default; not paper evidence or a user-specified condition.","sensitivity_checked":false},{"field":"corr_length_m","value":0.00015,"source_kind":"model_default","source_ref":"registered SMRT default","reason":"Backend default; not paper evidence or a user-specified condition.","sensitivity_checked":false},{"field":"dort_streams","value":32,"source_kind":"model_default","source_ref":"registered SMRT default","reason":"Backend default; no convergence test was recorded.","sensitivity_checked":false},{"field":"radius_m","value":0.0002,"source_kind":"model_default","source_ref":"registered SMRT parameter resolution","reason":"Inserted by the registered model; not paper evidence.","sensitivity_checked":false},{"field":"stickiness","value":0.2,"source_kind":"model_default","source_ref":"registered SMRT default","reason":"Inserted by the registered model; not paper evidence.","sensitivity_checked":false},{"field":"sweep_parameter","value":"frequency_ghz","source_kind":"assumption","source_ref":"approved run state","reason":"The submitted diagnostic retained a frequency sweep without attached paper or user evidence.","sensitivity_checked":false},{"field":"sweep_start","value":1.0,"source_kind":"assumption","source_ref":"approved run state","reason":"Retained diagnostic sweep lower bound without attached paper or user evidence.","sensitivity_checked":false},{"field":"sweep_stop","value":250.0,"source_kind":"assumption","source_ref":"approved run state","reason":"Retained diagnostic sweep upper bound without attached paper or user evidence.","sensitivity_checked":false},{"field":"sweep_points","value":10,"source_kind":"assumption","source_ref":"approved run state","reason":"Retained diagnostic sample count without attached paper or user evidence.","sensitivity_checked":false}]
+[{"field":"electromagnetic_model","value":"iba","source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"microstructure_model","value":"exponential","source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"output","value":"tb","source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"frequency_ghz","value":37.0,"source_kind":"paper","provenance_class":"paper_inferred","source_ref":"user question","source_span":"paper condition mapped to frequency_ghz = 37","reason":"Paper condition mapped to the registered model input.","sensitivity_checked":false},{"field":"angle_deg","value":55.0,"source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"thickness_m","value":1.0,"source_kind":"paper","provenance_class":"paper_inferred","source_ref":"user question","source_span":"paper condition mapped to thickness_m = 1","reason":"Paper condition mapped to the registered model input.","sensitivity_checked":false},{"field":"density_kg_m3","value":917.0,"source_kind":"user","provenance_class":"user_specified","source_ref":"user question","reason":"The submitted experiment differs from the paper condition; the paper value remains comparison context.","sensitivity_checked":false},{"field":"temperature_k","value":265.0,"source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"corr_length_m","value":0.00015,"source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"radius_m","value":0.0002,"source_kind":"model_default","provenance_class":"backend_default","source_ref":"registered model parameter resolution","reason":"The registered model inserted this value; it is not paper evidence.","sensitivity_checked":false},{"field":"stickiness","value":0.2,"source_kind":"model_default","provenance_class":"backend_default","source_ref":"registered model parameter resolution","reason":"The registered model inserted this value; it is not paper evidence.","sensitivity_checked":false},{"field":"dort_streams","value":32,"source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"sweep_parameter","value":"density_kg_m3","source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"sweep_start","value":50.0,"source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"sweep_stop","value":917.0,"source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false},{"field":"sweep_points","value":10,"source_kind":"assumption","provenance_class":"model_assumption","source_ref":"approved run ledger; no attached paper or user evidence","reason":"The submitted run retained this value without attached paper/user evidence; confirm it during plan review.","sensitivity_checked":false}]
 </parameter_provenance>
 <reproduction_outcome>partial</reproduction_outcome>

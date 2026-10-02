@@ -2,4 +2,4 @@
 
 <!-- Generated artifact; this file is human-editable. -->
 
-Stopped after 3 consecutive failed plot calls with no state progress. Last error: series 1: 'raw_result_available' is not a live result handle. Use the handle returned by run_model or read_reference_dataset in this conversation.
+Stopped after 3 consecutive failed plot calls with no state progress. Last error: series 1: 'raw_ab12' is not a live result handle. Use the handle returned by run_model or read_reference_dataset in this conversation.

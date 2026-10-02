@@ -2,21 +2,4 @@
 
 <!-- Generated artifact; this file is human-editable. -->
 
-Capability check by reproduction target
-
-benchmark [benchmark]
-Supported: prosail@2.0.5
-Unavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant
-Not comparable: prosail is not equivalent to PROSAIL Fortran reference / test_rsot_prosail5
-
-lai_sweep [lai_sweep]
-Supported: prosail@2.0.5
-Unavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant
-Not comparable: prosail is not equivalent to PROSAIL Fortran reference / test_rsot_prosail5
-
-Unified summary
-Supported: prosail@2.0.5 (ndvi, reflectance_green, reflectance_nir, reflectance_red, reflectance_swir)
-Unavailable: PROSAIL Fortran reference / test_rsot_prosail5: not registered in the current model registry; resembles prosail, which is not the same model -- confirm which was meant
-Not comparable: prosail is not an equivalent implementation of PROSAIL Fortran reference / test_rsot_prosail5
-
-Exact reproduction is not possible with the currently registered models. Would you like me to generate a partial plan using only the supported components?
+Stopped after 5 consecutive failed research_plan calls with no state progress. Last error: Reproduction plan incomplete: 4 evidence issue(s), 2 target coverage issue(s), and 0 parameter mapping issue(s). Structured repair gaps: [{"field": "literature_evidence", "source": "session.sections_read", "expected": "at least one opened paper section", "repair": "Call read_literature for the relevant paper section before proposing the plan."}, {"field": "literature_evidence", "source": "research_plan", "expected": "opened section/figure references", "repair": "Add the paper section references and explain their role in the reproduction."}, {"field": "reproduction_targets[0].evidence_refs", "source": "prosail-v2.0.5, research-planning#00, research-reporting#00", "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."}, {"field": "reproduction_targets[1].evidence_refs", "source": "prosail-v2.0.5, research-planning#00, research-reporting#00", "expected": "opened evidence reference", "repair": "Use the citation returned by read_literature or read_paper_figure."}]

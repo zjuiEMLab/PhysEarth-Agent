@@ -1,0 +1,1061 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "pywatershed-sagehen-wy1981",
+  "suite": "tier2",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "02e18ed4b5a7232e1e4ab8da930801983e5f14f2c49fbddd08d98bb421fc88ee",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 1,
+  "build": "02bb07a",
+  "question": "pywatershed 3.0.0, the USGS Python implementation of PRMS, ships the Sagehen Creek domain (Sierra Nevada, test_data/sagehen_5yr) as its worked example. Run the example for water year 1981 (1 October 1980 to 30 September 1981) and plot, on one chart, the monthly basin-mean snow water equivalent, snowmelt and surface runoff. Say in which month the snowpack peaks and how large it is, when melt is strongest, how much of the melt leaves as surface runoff, and what that implies about how water reaches the stream in this basin.",
+  "answer": "Capability check by reproduction target\n\nsagehen_wy1981_monthly [sagehen_wy1981_monthly]\nSupported: pywatershed@3.0.0\nUnavailable: pywatershed PRMS Sagehen worked example: not registered in the current model registry; resembles pywatershed, which is not the same model -- confirm which was meant\nNot comparable: pywatershed is not equivalent to pywatershed PRMS Sagehen worked example\n\nsupported_sagehen_series [supported_sagehen_series]\nSupported: pywatershed@3.0.0\nUnavailable: PRMS Sagehen worked example: not registered in the current model registry\nNot comparable: pywatershed is not equivalent to PRMS Sagehen worked example\n\nprms_sagehen_worked_example [prms_sagehen_worked_example]\nSupported: pywatershed@3.0.0\nUnavailable: PRMS Sagehen worked example: not registered in the current model registry\nNot comparable: pywatershed is not equivalent to PRMS Sagehen worked example\n\nUnified summary\nSupported: pywatershed@3.0.0 (time_index, value)\nUnavailable: pywatershed PRMS Sagehen worked example: not registered in the current model registry; resembles pywatershed, which is not the same model -- confirm which was meant; PRMS Sagehen worked example: not registered in the current model registry\nNot comparable: pywatershed is not an equivalent implementation of pywatershed PRMS Sagehen worked example; pywatershed is not an equivalent implementation of PRMS Sagehen worked example\nOutputs no registered model declares: snowmelt, snowpack_water_equivalent, surface_runoff\n\nExact reproduction is not possible with the currently registered models. Would you like me to generate a partial plan using only the supported components?",
+  "planning_answer": "Capability check by reproduction target\n\nsagehen_wy1981_monthly [sagehen_wy1981_monthly]\nSupported: pywatershed@3.0.0\nUnavailable: pywatershed PRMS Sagehen worked example: not registered in the current model registry; resembles pywatershed, which is not the same model -- confirm which was meant\nNot comparable: pywatershed is not equivalent to pywatershed PRMS Sagehen worked example\n\nsupported_sagehen_series [supported_sagehen_series]\nSupported: pywatershed@3.0.0\nUnavailable: PRMS Sagehen worked example: not registered in the current model registry\nNot comparable: pywatershed is not equivalent to PRMS Sagehen worked example\n\nprms_sagehen_worked_example [prms_sagehen_worked_example]\nSupported: pywatershed@3.0.0\nUnavailable: PRMS Sagehen worked example: not registered in the current model registry\nNot comparable: pywatershed is not equivalent to PRMS Sagehen worked example\n\nUnified summary\nSupported: pywatershed@3.0.0 (time_index, value)\nUnavailable: pywatershed PRMS Sagehen worked example: not registered in the current model registry; resembles pywatershed, which is not the same model -- confirm which was meant; PRMS Sagehen worked example: not registered in the current model registry\nNot comparable: pywatershed is not an equivalent implementation of pywatershed PRMS Sagehen worked example; pywatershed is not an equivalent implementation of PRMS Sagehen worked example\nOutputs no registered model declares: snowmelt, snowpack_water_equivalent, surface_runoff\n\nExact reproduction is not possible with the currently registered models. Would you like me to generate a partial plan using only the supported components?",
+  "elapsed_s": 39.85,
+  "stop_rule": null,
+  "model_calls": 8,
+  "llm_usage": {
+    "calls": 8,
+    "prompt_tokens": 119314,
+    "completion_tokens": 2638,
+    "total_tokens": 121952,
+    "cost_usd": 0.024474140000000002,
+    "cost_complete": true,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 12723,
+        "completion_tokens": 71,
+        "cost_usd": 0.00043335,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.2
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 13851,
+        "completion_tokens": 22,
+        "cost_usd": 0.00066229,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.35
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 15895,
+        "completion_tokens": 67,
+        "cost_usd": 0.00120085,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.38
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 16805,
+        "completion_tokens": 27,
+        "cost_usd": 0.0042335,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.24
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 17214,
+        "completion_tokens": 362,
+        "cost_usd": 0.00473775,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.89
+      },
+      {
+        "turn": 2,
+        "index": 1,
+        "prompt_tokens": 12557,
+        "completion_tokens": 315,
+        "cost_usd": 0.0035171,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.8
+      },
+      {
+        "turn": 2,
+        "index": 2,
+        "prompt_tokens": 13961,
+        "completion_tokens": 1591,
+        "cost_usd": 0.0053993,
+        "reasoning_chars": 0,
+        "elapsed_s": 14.75
+      },
+      {
+        "turn": 2,
+        "index": 3,
+        "prompt_tokens": 16308,
+        "completion_tokens": 183,
+        "cost_usd": 0.00429,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.17
+      }
+    ]
+  },
+  "tool_calls": 8,
+  "interventions": 2,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": true,
+    "approval_policy": "scripted_accept_unmodified_plan",
+    "review_actions": [
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "confirm_reported_partial_scope",
+        "before": "capability waiting_user",
+        "summary": "Yes. I confirm the partial scope exactly as your capability check reported it. Generate the research plan for the supported components only, and name everything outside that scope as unavailable in the report.",
+        "after": "capability waiting_user"
+      }
+    ],
+    "review_error": null,
+    "final_phase": null,
+    "plan_version": null
+  },
+  "research": null,
+  "successful_runs": [],
+  "numeric_results": [],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "pywatershed"
+      },
+      "status": "success",
+      "model": null,
+      "version": "3.0.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "pywatershed",
+        "section": "1.0"
+      },
+      "status": "success",
+      "model": "pywatershed",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    },
+    {
+      "turn": 2,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Reproduce the supported components of the requested PRMS Sagehen worked-example scope using the registered pywatershed model only; explicitly report the worked example as unavailable.",
+        "reference_models": [
+          "PRMS Sagehen worked example"
+        ],
+        "requested_outputs": [
+          "supported Sagehen hydrologic time series available from pywatershed"
+        ],
+        "local_models": [
+          "pywatershed"
+        ],
+        "targets": [
+          {
+            "id": "supported_components",
+            "reference_models": [
+              "PRMS Sagehen worked example"
+            ],
+            "requested_outputs": [
+              "snowpack_water_equivalent",
+              "snowmelt",
+              "surface_runoff",
+              "soil_zone_flow",
+              "groundwater_flow",
+              "precipitation"
+            ],
+            "evidence_refs": []
+          },
+          {
+            "id": "prms_sagehen_worked_example",
+            "reference_models": [
+              "PRMS Sagehen worked example"
+            ],
+            "requested_outputs": [
+              "paper/example-specific outputs"
+            ],
+            "evidence_refs": [],
+            "status": "unavailable",
+            "availability_reason": "The paper/reference worked example is not available in the current environment; no exact paper target can be reproduced."
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_plan",
+      "arguments": {
+        "action": "propose",
+        "question": "Generate the supported partial Sagehen hydrology result using registered pywatershed only, while documenting the unavailable PRMS Sagehen worked example and unavailable named hydrologic outputs.",
+        "objective": "Run the registered pywatershed Sagehen fixture for water year 1981 and report its supported time_index/value series; do not claim reproduction of the unavailable PRMS Sagehen worked example.",
+        "hypothesis": "The registered pywatershed run will produce a quality-controlled monthly precipitation time series for the Sagehen fixture.",
+        "steps": [
+          "Run pywatershed for water year 1981 with monthly aggregation and budget checking enabled.",
+          "Plot the returned time series against time_index.",
+          "Report the computed series separately from the unavailable reference example."
+        ],
+        "parameters": {
+          "model": "pywatershed",
+          "variable": "precipitation",
+          "water_year_start": 1981,
+          "water_year_end": 1981,
+          "aggregation": "monthly",
+          "budget_check": true
+        },
+        "paper_conditions": {
+          "reference_example": "PRMS Sagehen worked example unavailable"
+        },
+        "condition_provenance": {
+          "reference_example": "capability-check"
+        },
+        "literature_evidence": [],
+        "reproduction_targets": [
+          {
+            "id": "supported_sagehen_series",
+            "label": "Supported pywatershed Sagehen monthly series",
+            "reference_models": [],
+            "requested_outputs": [
+              "time_index",
+              "value"
+            ],
+            "evidence_refs": [],
+            "status": "planned",
+            "run_ids": [
+              "run_precipitation_1981"
+            ],
+            "chart_ids": [
+              "chart_precipitation_1981"
+            ]
+          },
+          {
+            "id": "prms_sagehen_worked_example",
+            "label": "PRMS Sagehen worked example",
+            "reference_models": [
+              "pywatershed PRMS Sagehen worked example"
+            ],
+            "requested_outputs": [
+              "snowpack_water_equivalent",
+              "snowmelt",
+              "surface_runoff"
+            ],
+            "evidence_refs": [],
+            "status": "unavailable",
+            "availability_reason": "The reference worked example is not registered or available in the current environment; the local pywatershed implementation is not an equivalent reference model."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "pywatershed",
+            "version": "3.0.0",
+            "purpose": "Supported Sagehen hydrologic time series",
+            "status": "supported"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "pywatershed",
+            "paper_concept": "Sagehen water year",
+            "model_input": "water_year_start",
+            "mapped_value": 1981,
+            "units": "year",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Confirmed partial scope and registered model range",
+            "rationale": "Use the first available fixture year."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Sagehen water year end",
+            "model_input": "water_year_end",
+            "mapped_value": 1981,
+            "units": "year",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Confirmed partial scope and registered model range",
+            "rationale": "Single-year supported run."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Reported variable",
+            "model_input": "variable",
+            "mapped_value": "precipitation",
+            "units": "model-native series",
+            "provenance_class": "model_assumption",
+            "confidence": "medium",
+            "confidence_basis": "Named output components are unavailable in the capability check; precipitation is a registered variable.",
+            "rationale": "Use a registered variable while avoiding unavailable named outputs."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Temporal aggregation",
+            "model_input": "aggregation",
+            "mapped_value": "monthly",
+            "units": "month",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Requested supported partial scope",
+            "rationale": "Monthly series is the supported reporting product."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Mass-budget enforcement",
+            "model_input": "budget_check",
+            "mapped_value": true,
+            "units": "boolean",
+            "provenance_class": "model_assumption",
+            "confidence": "high",
+            "confidence_basis": "Registered model constraint",
+            "rationale": "Keep budget checking enabled."
+          }
+        ],
+        "outputs": [
+          "time_index",
+          "value"
+        ],
+        "runs": [
+          {
+            "id": "run_precipitation_1981",
+            "label": "Sagehen WY1981 monthly precipitation",
+            "model": "pywatershed",
+            "parameters": {
+              "variable": "precipitation",
+              "water_year_start": 1981,
+              "water_year_end": 1981,
+              "aggregation": "monthly",
+              "budget_check": true
+            },
+            "stage": "main"
+          }
+        ],
+        "charts": [
+          {
+            "id": "chart_precipitation_1981",
+            "label": "Supported Sagehen monthly precipitation series",
+            "kind": "line",
+            "x": "time_index",
+            "y": "value",
+            "required": true,
+            "purpose": "result",
+            "x_label": "Time",
+            "y_label": "Model value"
+          }
+        ],
+        "success_criteria": [
+          "The planned run completes with budget checking enabled.",
+          "The chart renders the returned time_index/value series legibly.",
+          "The report states that the result is not a reproduction of the unavailable PRMS Sagehen worked example."
+        ],
+        "quantities": [
+          "time_index",
+          "value"
+        ],
+        "controls": [
+          "budget_check=true",
+          "single water year 1981",
+          "monthly aggregation"
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "run quality-control status",
+          "chart render legibility"
+        ],
+        "stop_conditions": [
+          "Stop if the registered model rejects the validated parameters or fails quality control."
+        ],
+        "baseline_run_id": "run_precipitation_1981",
+        "assumptions": [
+          "Precipitation is used because the capability checkpoint did not support the requested named outputs.",
+          "The registered pywatershed Sagehen fixture is treated as a local supported model, not as the unavailable PRMS Sagehen worked example."
+        ],
+        "limitations": [
+          "No paper or worked-example evidence is available for direct reproduction.",
+          "snowpack_water_equivalent, snowmelt, and surface_runoff are unavailable as requested output components in the capability checkpoint.",
+          "The local pywatershed model is not comparable to the unavailable reference implementation.",
+          "The generic value output is reported only with its model variable and units supplied by the model result; no unsupported conversion is inferred."
+        ]
+      },
+      "status": "terminal_error",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "research_capability_check",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 12723,
+      "completion_tokens": 71,
+      "cost_usd": 0.00043335,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.2
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 13851,
+      "completion_tokens": 22,
+      "cost_usd": 0.00066229,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.35
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.003,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 15895,
+      "completion_tokens": 67,
+      "cost_usd": 0.00120085,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.38
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability declaration for pywatershed v3.0.0.",
+      "arguments": {
+        "model": "pywatershed"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 16805,
+      "completion_tokens": 27,
+      "cost_usd": 0.0042335,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.24
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction pywatershed v1.0.",
+      "arguments": {
+        "model": "pywatershed",
+        "section": "1.0"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 17214,
+      "completion_tokens": 362,
+      "cost_usd": 0.00473775,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.89
+    },
+    {
+      "kind": "harness_block",
+      "turn": 1,
+      "rule": "physical_domain",
+      "tool": "research_capability_check",
+      "intervention": 1,
+      "detail": "capability review requires user confirmation",
+      "problems": []
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "capability_review",
+      "detail": "Capability review requires the user's partial-scope decision."
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 2,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 12557,
+      "completion_tokens": 315,
+      "cost_usd": 0.0035171,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.8
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Capability check by reproduction target\n\nsagehen_wy1981_monthly [sagehen_wy1981_monthly]\nSupported: pywatershed@3.0.0\nUnavailable: pywatershed PRMS Sagehen worked example: not registered in the current model registry; resembles pywatershed, which is not the same model -- confirm which was meant\nNot comparable: pywatershed is not equivalent to pywatershed PRMS Sagehen worked example\n\nUnified summary\nSupported: pywatershed@3.0.0 (time_index, value)\nUnavailable: pywatershed PRMS Sagehen worked example: not registered in the current model registry; resembles pywatershed, which is not the same model -- confirm which was meant\nNot comparable: pywatershed is not an equivalent implementation of pywatershed PRMS Sagehen worked example\nOutputs no registered model declares: snowmelt, snowpack_water_e",
+      "arguments": {
+        "action": "confirm_partial",
+        "question": "Reproduce the supported components of the requested PRMS Sagehen worked-example scope using the registered pywatershed model only; explicitly report the worked example as unavailable.",
+        "reference_models": [
+          "PRMS Sagehen worked example"
+        ],
+        "requested_outputs": [
+          "supported Sagehen hydrologic time series available from pywatershed"
+        ],
+        "local_models": [
+          "pywatershed"
+        ],
+        "targets": [
+          {
+            "id": "supported_components",
+            "reference_models": [
+              "PRMS Sagehen worked example"
+            ],
+            "requested_outputs": [
+              "snowpack_water_equivalent",
+              "snowmelt",
+              "surface_runoff",
+              "soil_zone_flow",
+              "groundwater_flow",
+              "precipitation"
+            ],
+            "evidence_refs": []
+          },
+          {
+            "id": "prms_sagehen_worked_example",
+            "reference_models": [
+              "PRMS Sagehen worked example"
+            ],
+            "requested_outputs": [
+              "paper/example-specific outputs"
+            ],
+            "evidence_refs": [],
+            "status": "unavailable",
+            "availability_reason": "The paper/reference worked example is not available in the current environment; no exact paper target can be reproduced."
+          }
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 13961,
+      "completion_tokens": 1591,
+      "cost_usd": 0.0053993,
+      "reasoning_chars": 0,
+      "elapsed_s": 14.75
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "research_plan",
+      "status": "terminal_error",
+      "elapsed_s": 0.0,
+      "summary": "Every reproduction target needs its own capability check before planning.",
+      "arguments": {
+        "action": "propose",
+        "question": "Generate the supported partial Sagehen hydrology result using registered pywatershed only, while documenting the unavailable PRMS Sagehen worked example and unavailable named hydrologic outputs.",
+        "objective": "Run the registered pywatershed Sagehen fixture for water year 1981 and report its supported time_index/value series; do not claim reproduction of the unavailable PRMS Sagehen worked example.",
+        "hypothesis": "The registered pywatershed run will produce a quality-controlled monthly precipitation time series for the Sagehen fixture.",
+        "steps": [
+          "Run pywatershed for water year 1981 with monthly aggregation and budget checking enabled.",
+          "Plot the returned time series against time_index.",
+          "Report the computed series separately from the unavailable reference example."
+        ],
+        "parameters": {
+          "model": "pywatershed",
+          "variable": "precipitation",
+          "water_year_start": 1981,
+          "water_year_end": 1981,
+          "aggregation": "monthly",
+          "budget_check": true
+        },
+        "paper_conditions": {
+          "reference_example": "PRMS Sagehen worked example unavailable"
+        },
+        "condition_provenance": {
+          "reference_example": "capability-check"
+        },
+        "literature_evidence": [],
+        "reproduction_targets": [
+          {
+            "id": "supported_sagehen_series",
+            "label": "Supported pywatershed Sagehen monthly series",
+            "reference_models": [],
+            "requested_outputs": [
+              "time_index",
+              "value"
+            ],
+            "evidence_refs": [],
+            "status": "planned",
+            "run_ids": [
+              "run_precipitation_1981"
+            ],
+            "chart_ids": [
+              "chart_precipitation_1981"
+            ]
+          },
+          {
+            "id": "prms_sagehen_worked_example",
+            "label": "PRMS Sagehen worked example",
+            "reference_models": [
+              "pywatershed PRMS Sagehen worked example"
+            ],
+            "requested_outputs": [
+              "snowpack_water_equivalent",
+              "snowmelt",
+              "surface_runoff"
+            ],
+            "evidence_refs": [],
+            "status": "unavailable",
+            "availability_reason": "The reference worked example is not registered or available in the current environment; the local pywatershed implementation is not an equivalent reference model."
+          }
+        ],
+        "selected_models": [
+          {
+            "model": "pywatershed",
+            "version": "3.0.0",
+            "purpose": "Supported Sagehen hydrologic time series",
+            "status": "supported"
+          }
+        ],
+        "parameter_mapping": [
+          {
+            "model": "pywatershed",
+            "paper_concept": "Sagehen water year",
+            "model_input": "water_year_start",
+            "mapped_value": 1981,
+            "units": "year",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Confirmed partial scope and registered model range",
+            "rationale": "Use the first available fixture year."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Sagehen water year end",
+            "model_input": "water_year_end",
+            "mapped_value": 1981,
+            "units": "year",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Confirmed partial scope and registered model range",
+            "rationale": "Single-year supported run."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Reported variable",
+            "model_input": "variable",
+            "mapped_value": "precipitation",
+            "units": "model-native series",
+            "provenance_class": "model_assumption",
+            "confidence": "medium",
+            "confidence_basis": "Named output components are unavailable in the capability check; precipitation is a registered variable.",
+            "rationale": "Use a registered variable while avoiding unavailable named outputs."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Temporal aggregation",
+            "model_input": "aggregation",
+            "mapped_value": "monthly",
+            "units": "month",
+            "provenance_class": "user_specified",
+            "confidence": "high",
+            "confidence_basis": "Requested supported partial scope",
+            "rationale": "Monthly series is the supported reporting product."
+          },
+          {
+            "model": "pywatershed",
+            "paper_concept": "Mass-budget enforcement",
+            "model_input": "budget_check",
+            "mapped_value": true,
+            "units": "boolean",
+            "provenance_class": "model_assumption",
+            "confidence": "high",
+            "confidence_basis": "Registered model constraint",
+            "rationale": "Keep budget checking enabled."
+          }
+        ],
+        "outputs": [
+          "time_index",
+          "value"
+        ],
+        "runs": [
+          {
+            "id": "run_precipitation_1981",
+            "label": "Sagehen WY1981 monthly precipitation",
+            "model": "pywatershed",
+            "parameters": {
+              "variable": "precipitation",
+              "water_year_start": 1981,
+              "water_year_end": 1981,
+              "aggregation": "monthly",
+              "budget_check": true
+            },
+            "stage": "main"
+          }
+        ],
+        "charts": [
+          {
+            "id": "chart_precipitation_1981",
+            "label": "Supported Sagehen monthly precipitation series",
+            "kind": "line",
+            "x": "time_index",
+            "y": "value",
+            "required": true,
+            "purpose": "result",
+            "x_label": "Time",
+            "y_label": "Model value"
+          }
+        ],
+        "success_criteria": [
+          "The planned run completes with budget checking enabled.",
+          "The chart renders the returned time_index/value series legibly.",
+          "The report states that the result is not a reproduction of the unavailable PRMS Sagehen worked example."
+        ],
+        "quantities": [
+          "time_index",
+          "value"
+        ],
+        "controls": [
+          "budget_check=true",
+          "single water year 1981",
+          "monthly aggregation"
+        ],
+        "metrics": [],
+        "diagnostics": [
+          "run quality-control status",
+          "chart render legibility"
+        ],
+        "stop_conditions": [
+          "Stop if the registered model rejects the validated parameters or fails quality control."
+        ],
+        "baseline_run_id": "run_precipitation_1981",
+        "assumptions": [
+          "Precipitation is used because the capability checkpoint did not support the requested named outputs.",
+          "The registered pywatershed Sagehen fixture is treated as a local supported model, not as the unavailable PRMS Sagehen worked example."
+        ],
+        "limitations": [
+          "No paper or worked-example evidence is available for direct reproduction.",
+          "snowpack_water_equivalent, snowmelt, and surface_runoff are unavailable as requested output components in the capability checkpoint.",
+          "The local pywatershed model is not comparable to the unavailable reference implementation.",
+          "The generic value output is reported only with its model variable and units supplied by the model result; no unsupported conversion is inferred."
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 16308,
+      "completion_tokens": 183,
+      "cost_usd": 0.00429,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.17
+    },
+    {
+      "kind": "harness_block",
+      "turn": 2,
+      "rule": "physical_domain",
+      "tool": "research_capability_check",
+      "intervention": 1,
+      "detail": "capability review requires user confirmation",
+      "problems": []
+    },
+    {
+      "kind": "research_wait",
+      "turn": 2,
+      "phase": "capability_review",
+      "detail": "Capability review requires the user's partial-scope decision."
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "research-planning#00",
+      "research-reporting#00"
+    ],
+    "models": [
+      "pywatershed@3.0.0"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "pywatershed@1.0"
+    ],
+    "paper_figures": [],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "parameter_provenance": [],
+  "provenance_parse_error": "appendix_missing",
+  "reproduction_outcome": null,
+  "archived_report_path": "evaluation/results/competition/reports/pywatershed-sagehen-wy1981_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/reports/pywatershed-sagehen-wy1981_p1-reproduction-first_openai-gpt-5.6-luna_r1_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  },
+  "dashboard_metrics": {
+    "evaluation_complete": false,
+    "successful": false,
+    "figure_result_correct": "not_scoreable",
+    "report_correct": "fail",
+    "overall_correct": "not_scoreable",
+    "figure_result": {
+      "passed": null,
+      "complete": true,
+      "status": "not_scoreable",
+      "numeric": {
+        "passed": null,
+        "status": "not_scoreable",
+        "threshold_normalized_rmse": 0.05,
+        "curves": [
+          {
+            "curve": "snowpack_water_equivalent",
+            "present": false
+          },
+          {
+            "curve": "snowmelt",
+            "present": false
+          },
+          {
+            "curve": "surface_runoff",
+            "present": false
+          }
+        ]
+      },
+      "numeric_b3": {
+        "oracle_package": "pywatershed",
+        "oracle_package_version": "3.0.0",
+        "curves": [
+          {
+            "curve": "snowpack_water_equivalent",
+            "present": false
+          },
+          {
+            "curve": "snowmelt",
+            "present": false
+          },
+          {
+            "curve": "surface_runoff",
+            "present": false
+          }
+        ],
+        "published": []
+      },
+      "plot": {
+        "passed": false
+      }
+    },
+    "figure_judgement": {
+      "complete": false,
+      "passed": false,
+      "status": "not_scoreable",
+      "error": "reference or candidate figure image is unavailable",
+      "attempts": [],
+      "usage": {
+        "prompt_tokens": null,
+        "completion_tokens": null,
+        "total_tokens": null
+      }
+    },
+    "deterministic_report": {
+      "passed": false,
+      "checks": {
+        "report_exists": true,
+        "outcome_declared": false,
+        "evidence_resolved": false,
+        "computed_result_identified": false,
+        "model_version_qualified": true,
+        "calibrated_outcome": false
+      },
+      "unresolved_markers": [],
+      "visual_validation": "not_passed",
+      "plot_checks_are_diagnostic": true
+    },
+    "report_judgement": {
+      "complete": true,
+      "passed": false,
+      "standard": "report-judge-standard-v3",
+      "total": 7,
+      "maximum": 16,
+      "scores": {
+        "source_fidelity": 1,
+        "answer": 0,
+        "factuality": 2,
+        "technical_completeness": 0,
+        "assumed_parameters": 1,
+        "evidence": 0,
+        "calibration": 2,
+        "clarity": 1
+      },
+      "factual_errors": [],
+      "summary": "The report clearly declines because the exact Sagehen example and requested outputs are unavailable in its model registry, which is consistent with the supplied capability results. It does not run the example, plot the curves, answer the hydrologic questions, or provide resolving evidence. Its distinction between the supported package and the configured example is understandable but repetitive and",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 583,
+          "elapsed_s": 13.265,
+          "usage": {
+            "prompt_tokens": 2007,
+            "completion_tokens": 1485,
+            "total_tokens": 3492
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2007,
+        "completion_tokens": 1485,
+        "total_tokens": 3492
+      }
+    },
+    "judge_usage": {
+      "prompt_tokens": 2007,
+      "completion_tokens": 1485,
+      "total_tokens": 3492
+    },
+    "figure_judge_usage": {
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "total_tokens": null
+    }
+  }
+}
