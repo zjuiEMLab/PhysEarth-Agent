@@ -358,7 +358,8 @@ def research_plan(
                 corrected[key] = {**dict(corrected.get(key) or {}), **value}
             elif key in research.ITEM_IDENTITY and isinstance(value, list):
                 corrected[key] = research.merge_items(
-                    corrected.get(key), value, research.ITEM_IDENTITY[key]
+                    corrected.get(key), value, research.ITEM_IDENTITY[key],
+                    research.ITEM_COMPLETE.get(key, ()),
                 )
             elif value is not None:
                 corrected[key] = value

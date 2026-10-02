@@ -141,6 +141,14 @@ ITEM_IDENTITY = {
     "reproduction_targets": ("id",),
     "parameter_mapping": ("model", "model_input"),
 }
+# What a list item needs to stand on its own. A list made only of such items is the whole
+# list the model means; one that has a partial item is a patch.
+ITEM_COMPLETE = {
+    "runs": ("model", "parameters"),
+    "charts": ("x", ("y", "ys")),
+    "reproduction_targets": ("evidence_refs",),
+    "parameter_mapping": ("model_input", "provenance_class"),
+}
 
 
 # A field a patch changes takes with it what was derived from the old value: a chart's
@@ -148,21 +156,36 @@ ITEM_IDENTITY = {
 _DEPENDENT_FIELDS = {"y": ("ys", "y_label"), "x": ("x_label",)}
 
 
-def merge_items(retained, supplied, keys):
-    """Patch a retained list by item identity instead of replacing it.
+def _is_complete(item, complete):
+    return all(
+        any(item.get(name) not in (None, "", [], {}) for name in (
+            field if isinstance(field, tuple) else (field,)
+        ))
+        for field in complete
+    )
 
-    A repair names the items it fixes: one run's sweep, one target's source. Replacing
-    the whole list with those items silently dropped every other run or target, and the
-    next validation refused the plan for what had been lost. An item whose identity is
-    already retained is updated field by field (a run's parameters key by key, None
-    deleting one); a new identity is appended; ``remove: true`` drops it. A list whose
-    items do not all carry the identity, or an empty list, is a full replacement, as before.
+
+def merge_items(retained, supplied, keys, complete=()):
+    """Patch a retained list by item identity when the change is a patch.
+
+    A repair often names only the items it fixes: one run's sweep, one target's source.
+    Replacing the whole list with those items dropped every other run or target, and the
+    next validation refused the plan for what had been lost. So a list holding a partial
+    item is a patch: an item whose identity is retained is updated field by field (a run's
+    parameters key by key, None deleting one), a new identity is appended, and
+    ``remove: true`` drops one. A list of complete items is what the model means the list
+    to be and replaces it -- merging that kept every item the model had deliberately left
+    out, and a refused item could then never be removed. A list without identities, or an
+    empty one, also replaces.
     """
     def identity(item):
         return tuple(str(item.get(key) or "").strip() for key in keys)
 
-    if not supplied or not isinstance(retained, list) or not all(
-        isinstance(item, dict) and all(identity(item)) for item in supplied
+    if (
+        not supplied
+        or not isinstance(retained, list)
+        or not all(isinstance(item, dict) and all(identity(item)) for item in supplied)
+        or all(_is_complete(item, complete) and "remove" not in item for item in supplied)
     ):
         return supplied
     merged = [dict(item) if isinstance(item, dict) else item for item in retained]

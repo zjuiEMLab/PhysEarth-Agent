@@ -75,7 +75,7 @@ def test_every_failing_check_is_reported_in_one_refusal():
     codes = [item["error_code"] for item in result["data"]["checks"]]
     assert codes == ["plan_quality", "chart_axis_mismatch"]
     assert result["data"]["error_code"] == "plan_quality"
-    assert "limitations" in result["data"]["problems"]
+    assert "limitations (limitations)" in result["data"]["problems"]
     assert any("angle_deg" in str(item) for item in result["data"]["problems"])
     assert "Also failing" in result["summary"]
 
@@ -160,6 +160,25 @@ def test_a_draft_repair_can_remove_one_item():
     assert merged == [{"id": "a", "label": "A"}]
     replaced = _merge_items(copy.deepcopy(retained), [{"label": "no id"}], ("id",))
     assert replaced == [{"label": "no id"}]
+
+
+def test_a_list_of_complete_items_replaces_and_drops_what_it_leaves_out():
+    from physearth.research import ITEM_COMPLETE, ITEM_IDENTITY
+    from physearth.research import merge_items as _merge_items
+
+    retained = [
+        {"model": "smrt", "model_input": "density_kg_m3", "provenance_class": "paper_explicit"},
+        {
+            "model": "smrt", "model_input": "registered defaults",
+            "provenance_class": "backend_default",
+        },
+    ]
+    corrected = [retained[0]]
+    keys, complete = ITEM_IDENTITY["parameter_mapping"], ITEM_COMPLETE["parameter_mapping"]
+    assert _merge_items(copy.deepcopy(retained), corrected, keys, complete) == corrected
+    patch = [{"model": "smrt", "model_input": "density_kg_m3", "paper_value": 300}]
+    merged = _merge_items(copy.deepcopy(retained), patch, keys, complete)
+    assert len(merged) == 2 and merged[0]["paper_value"] == 300
 
 
 def test_a_renamed_target_still_finds_its_capability_check():

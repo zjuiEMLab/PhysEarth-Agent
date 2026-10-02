@@ -71,11 +71,13 @@ A reproduction plan is refused until these are in the session, in this order.
    unavailable, list Supported, Unavailable and Not comparable components, ask the user
    whether to plan a partial reproduction, and only after explicit confirmation call
    research_capability_check(action=confirm_partial).
-3. **Mapping.** Translate each paper concept into an exact registered model input. Mark it
-   paper_explicit, paper_inferred, user_specified, model_assumption or backend_default, give
-   its confidence as high, medium or low, and attach the opened evidence reference when the
-   value comes from the paper. Run inputs you leave unmapped are mapped by their source and
-   shown at review.
+3. **Mapping.** Translate each paper concept you set into one entry for one exact registered
+   model input, named as list_models returns it; never write a catch-all entry such as
+   "remaining parameters" or "defaults". Mark each entry paper_explicit, paper_inferred,
+   user_specified, model_assumption or backend_default, give its confidence as high, medium
+   or low, and attach the opened evidence reference when the value comes from the paper.
+   Inputs you do not set take the declared default and are listed as backend_default at
+   review without an entry from you.
 4. **Plan.** Include literature_evidence, reproduction_targets (each with the id its
    capability check used), selected_models, parameter_mapping, paper_conditions and
    condition_provenance, explicit runs and charts, quantities, controls, metrics, diagnostics,

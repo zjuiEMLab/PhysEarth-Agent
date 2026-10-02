@@ -45,6 +45,7 @@ from physearth.research.charts import (
     _validate_chart_runs,
 )
 from physearth.research.common import (
+    ITEM_COMPLETE,
     ITEM_IDENTITY,
     PARAMETER_CONFIDENCE,
     PARAMETER_PROVENANCE,

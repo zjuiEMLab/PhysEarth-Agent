@@ -220,17 +220,19 @@ def propose(
             "submitted_runs",
         ))
         baseline_run_id = chosen
+    # Named by field, so the repair goes to the field: "controlled conditions" alone was
+    # answered with a controlled_conditions key the plan does not have, seven times running.
     quality_problems = [
-        label
-        for label, values in (
-            ("quantities of interest", quantities),
-            ("controlled conditions", controls),
-            ("acceptance metrics", metrics),
-            ("diagnostics or robustness checks", diagnostics),
-            ("success criteria", success_criteria),
-            ("stop conditions", stop_conditions),
-            ("assumptions", assumptions),
-            ("limitations", limitations),
+        "%s (%s)" % (field, label)
+        for field, label, values in (
+            ("quantities", "quantities of interest", quantities),
+            ("controls", "controlled conditions", controls),
+            ("metrics", "acceptance metrics", metrics),
+            ("diagnostics", "diagnostics or robustness checks", diagnostics),
+            ("success_criteria", "success criteria", success_criteria),
+            ("stop_conditions", "stop conditions", stop_conditions),
+            ("assumptions", "assumptions", assumptions),
+            ("limitations", "limitations", limitations),
         )
         if not values
     ]

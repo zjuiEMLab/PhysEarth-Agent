@@ -8,6 +8,7 @@ from physearth.harness import audit
 from physearth.research.approval import _clear_previews
 from physearth.research.charts import _chart_y_names, _run_produces_chart, _validate_chart_runs
 from physearth.research.common import (
+    ITEM_COMPLETE,
     ITEM_IDENTITY,
     _clean_list,
     _fail,
@@ -160,7 +161,9 @@ def revise(session, changes=None, note=""):
                     }
                     for run in retained
                 ]
-            changes[key] = merge_items(retained, changes[key], identity)
+            changes[key] = merge_items(
+                retained, changes[key], identity, ITEM_COMPLETE.get(key, ())
+            )
     # Apply revisions to a copy. A provider can submit valid chart changes together with
     # invalid runs; mutating the live plan before run validation leaves a half-revised
     # package whose selected chart IDs no longer exist and causes a figure-gate loop.
