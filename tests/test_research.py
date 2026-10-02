@@ -1649,3 +1649,26 @@ def test_approve_and_run_is_one_human_step_from_plan_review():
     assert box["research"]["selected_charts"] == required
     assert "required figures for execution" in box["research"]["review_log"][-1]["note"]
     assert app.review_click(box, "satisfied_figures")[3] == ""
+
+
+def test_a_missing_figure_forces_the_plot_call(monkeypatch):
+    from tests.test_approval import _Chunk, _Delta, _fake_client
+
+    box = session.new_session("m")
+    box["research_required"] = True
+    _proposal(box)
+    research.review_action(box, "satisfied_figures")
+    planned = box["research"]["plan"]["runs"][0]
+    result = tools.call(
+        "run_planned_model", {"run_id": planned["id"]}, owner=box["id"], session=box,
+    )
+    agent._record_tool_result("run_planned_model", result, session.new_state(box), [])
+    script = [[_Chunk(_Delta(content="The report is ready."))] for _ in range(6)]
+    client, _sent = _fake_client(script)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+    agent.run("Continue the approved research.", session=box)
+    forced = [
+        choice for choice in client.tool_choices
+        if isinstance(choice, dict) and choice["function"]["name"] == "plot_planned_chart"
+    ]
+    assert forced, client.tool_choices

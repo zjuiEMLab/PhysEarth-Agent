@@ -290,8 +290,14 @@ def _asked_sweep_axes(question, runs):
     return asked
 
 
-def _question_coverage_problems(question, runs, charts):
-    """Reject polished-looking plans that omit an observable named in the question."""
+def _question_coverage_problems(question, runs, charts, asked_question=""):
+    """Reject polished-looking plans that omit an observable named in the question.
+
+    It reads the user's own question as well: the plan's question is the model's
+    restatement, and one run restated a density question into a frequency sweep, another
+    a six-formulation comparison into a single Penman run.
+    """
+    question = "%s\n%s" % (question or "", asked_question or "")
     text = str(question or "").lower()
     required_charts = [chart for chart in charts if chart.get("required", True)]
     outputs = {

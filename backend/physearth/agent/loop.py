@@ -1413,6 +1413,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             ),
                         }
                     )
+                    # A reminder alone was answered with research_plan(action='status')
+                    # three times running; the next call has to be the plot.
+                    forced_tool_name = "plot_planned_chart"
                     yield transcript(segments), events, state
                     continue
                 messages.append(
@@ -1430,6 +1433,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         ),
                     }
                 )
+                forced_tool_name = "plot_planned_chart"
                 yield transcript(segments), events, state
                 continue
 

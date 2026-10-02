@@ -59,7 +59,11 @@ def report_generation_prompt(session):
 
     gaps = plan.get("capability_gaps") or []
     asked = []
-    for name in _asked_values(project.get("question") or plan.get("question"), plan.get("runs")):
+    asked_text = "%s\n%s" % (
+        project.get("question") or plan.get("question") or "",
+        (session.get("research_context") or {}).get("question") or "",
+    )
+    for name in _asked_values(asked_text, plan.get("runs")):
         unit = ""
         for run in plan.get("runs") or ():
             entry = registry.get(str(run.get("model") or ""))

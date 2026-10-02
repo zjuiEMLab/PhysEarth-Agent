@@ -347,7 +347,10 @@ def propose(
                 ],
             },
         )
-    question_problems = _question_coverage_problems(question, runs, charts)
+    question_problems = _question_coverage_problems(
+        question, runs, charts,
+        ((session.get("research_context") or {}).get("question") or ""),
+    )
     if question_problems:
         refuse(
             "The plan does not measure every quantity or attribution requested by the question: %s"
