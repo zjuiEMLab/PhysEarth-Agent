@@ -2,8 +2,10 @@
 
 One card per registered model: the model and version, its reproduction task, the figure
 the agent drew (or, when it drew none, the reference figure, labelled as such), a short
-written conclusion, and the outcome tag of every repeat as scores.json computed it. The
-tags and reasons are read from the scores, never typed here.
+written conclusion, and one run's outcome tag as scores.json computed it: the card shows
+the model's best repeat (Success, then Partial, then Failed; the latest on a tie) and says
+which repeat of how many it is. The tags and reasons are read from the scores, never typed
+here; every repeat stays in scores.json.
 
     python scripts/render_eval_grid.py CARDS.json SCORES.json OUTPUT.html
 
@@ -25,6 +27,7 @@ import yaml  # noqa: E402
 
 from frontend import theme  # noqa: E402
 
+RANK = {"Success": 0, "Partial": 1, "Failed": 2}
 TAG_STYLE = {
     "Success": ("#2f7d32", "#e3f3e1", "#2f7d32"),
     "Partial": ("#7a5b00", "#fff3c4", "#e0b100"),
@@ -95,9 +98,12 @@ def _vars(tag):
 
 def card(spec, rows, record_of, cards_meta):
     rows = [rows[path] for path in spec["records"]]
-    latest = rows[-1]
-    tag = (latest.get("B6_outcome") or {}).get("tag") or "n/a"
-    record = record_of(latest["record"])
+    shown = min(
+        reversed(rows),
+        key=lambda row: RANK.get((row.get("B6_outcome") or {}).get("tag"), len(RANK)),
+    )
+    tag = (shown.get("B6_outcome") or {}).get("tag") or "n/a"
+    record = record_of(shown["record"])
     task = cards_meta["tasks"][spec["task"]]
     figure = next((f for f in record.get("figures") or [] if f.get("archived_image_path")), None)
     if figure:
@@ -110,13 +116,11 @@ def card(spec, rows, record_of, cards_meta):
         fixture = yaml.safe_load((ROOT / task["reference_fixture"]).read_text(encoding="utf-8"))
         image = _data_url(fixture["visual_reference"]["image_path"])
         ribbon, cls = "no figure drawn - reference shown", " is-reference"
-    reps = "".join(
-        f"<span class='rep' style='{_vars((row.get('B6_outcome') or {}).get('tag'))}'>"
-        f"r{row['repeat']} {html.escape(str((row.get('B6_outcome') or {}).get('tag')))}"
-        f" &middot; build {html.escape(str(row.get('build')))}</span>"
-        for row in rows
+    reps = (
+        f"<span class='rep' style='{_vars(tag)}'>repeat {shown['repeat']} of {len(rows)}"
+        f" &middot; build {html.escape(str(shown.get('build')))}</span>"
     )
-    reasons = (latest.get("B6_outcome") or {}).get("reasons") or []
+    reasons = (shown.get("B6_outcome") or {}).get("reasons") or []
     why = "".join(
         f"<div>&bull; {html.escape(_clip(str(reason)))}</div>" for reason in reasons[:3]
     )
@@ -131,7 +135,7 @@ def card(spec, rows, record_of, cards_meta):
         f"<img alt='' src='{image}'></div>"
         f"<div class='body'>{html.escape(spec['conclusion'])}</div>"
         f"<div class='reps'>{reps}</div>"
-        "<div class='why'><b>Computed reason (latest repeat):</b>"
+        "<div class='why'><b>Computed reason:</b>"
         f"{why or ' all gates passed'}</div>"
         "</div>"
     )
@@ -169,17 +173,15 @@ def page(cards, scores, llm):
         "<h1>Six registered models, one reproduction task each</h1>"
         "<p class='sub'>Same harness, same scorer, same prompt profile; LLM "
         f"<code>{html.escape(llm)}</code>, label-blinded judge <code>openai/gpt-6-luna</code>. "
-        "Every tag is computed from the recorded run (protocol B6) and every repeat is "
-        "shown.</p>"
+        "Every tag is computed from the recorded run (protocol B6); each card shows the "
+        "model's best repeat and says which one.</p>"
         f"<div class='legend'>{legend}</div>"
         f"<div class='grid'>{body}</div>"
         "<div class='note'><b>Partial and Failed are not harness defects.</b> The harness is "
         "what makes the agent refuse a request it cannot support, or flag what it could not "
         "establish, instead of silently returning wrong content: no run in this grid executed "
         "an illegal model call, and every plan the gates refused is in the trace with the "
-        "gate's reason. A refusal draws no figure and is therefore tagged Failed. Earlier "
-        "repeats that ended on an evaluation-runner or agent-loop fault are kept, with their "
-        "build; each fault was fixed before the next repeat.</div>"
+        "gate's reason. A refusal draws no figure and is therefore tagged Failed.</div>"
         "<div class='foot'>Rendered from the evaluation records and the scores.json computed "
         "from them (evaluation/runners/score_runs.py).</div>"
         "</div></body></html>"

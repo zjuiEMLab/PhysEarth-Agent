@@ -534,6 +534,12 @@ def deterministic_report_checks(record, figure_score, figure_judgement=None, fix
     literature_markers = {str(value) for value in markers.get("literature", [])}
     model_markers = {str(value) for value in markers.get("model", [])}
     citation_check = record.get("citation_check") or {}
+    # A [figure:paper#figNN] marker resolves only to a source figure the run opened, so it
+    # is source evidence just as a section marker is.
+    figure_markers = {
+        str(value) for value in citation_check.get("markers") or ()
+        if str(value).startswith("figure:")
+    }
     unresolved = list(citation_check.get("unresolved") or [])
     declared = str(record.get("reproduction_outcome") or "")
     judged_figure_status = (figure_judgement or {}).get("status")
@@ -549,7 +555,7 @@ def deterministic_report_checks(record, figure_score, figure_judgement=None, fix
             term.lower() in answer.lower() for term in report_terms.get("source") or ()
         )
     ) if raw_mode else (
-        bool(literature_markers)
+        bool(literature_markers or figure_markers)
         and bool(model_markers)
         and citation_check.get("passed") is True
     )

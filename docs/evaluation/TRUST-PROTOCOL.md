@@ -13,8 +13,9 @@ Rules that hold for all three:
   None of the last three is ever presented as a result.
 - Tasks describe their source; they never type the expected answer. Verdicts (A6, B6) are
   computed. A failed or refused run stays in the evidence with its reason.
-- Every repeat counts and keeps its own tag; nothing is cherry-picked or regenerated to
-  pass.
+- Every repeat counts and keeps its own tag in `scores.json` and the status table; nothing
+  is regenerated to pass. The slide grid shows one run per model, its best repeat, and
+  names which repeat of how many it is.
 
 Frozen on 2026-10-02; the B2 and B5 pass rules were lowered the same day, since the
 project is a showcase without human labelling. Definitions live in code and in
@@ -45,7 +46,7 @@ reproduction task (`evaluation/tasks/tier2/`, listed under `model_grid` in
 | B2 Figure, visual judge | Label-blinded comparison of the candidate figure with the reference image (the paper figure, or the oracle rendering): line count, patterns, grouping, correspondence, 0-2 each; pass at 5 of 8 with line count, patterns and correspondence at least 1 (was 6 of 8 with line count 2, patterns 2, grouping and correspondence at least 1). The judge is told the candidate is a new run with assumed parameters, so spacing, curvature and magnitude may differ, and that the same trend drawn in another chart form is a partial match | `standards/q1_figure3.yaml` (`visual_judge`), `metrics/judge.py` |
 | B3 Figure, numeric error | Normalised RMSE and maximum error per curve against a reference series. SMRT Q1: the authors' notebook, "as chosen" and "with notebook settings". PROSAIL, pyET, pywatershed: an upstream oracle that calls the authors' package directly, never an adapter, plus the difference from any published value (FAO-56 Example 18). tau-omega and water cloud have no reference series and are judge-only | `metrics/figure3.py`, `metrics/reference_series.py`, `runners/build_references.py` |
 | B4 Provenance | The agent's own source labels checked against the system-recorded `defaulted_parameters`; a parameter counts only if moving it changes an output | `metrics/provenance_check.py` |
-| B5 Report judge | Eight dimensions 0-2: source fidelity, answer, factuality, technical completeness, assumed parameters, evidence, calibration, clarity; pass at 8 of 16 with factuality at least 1 and the deterministic report checks passed (v2: 12 of 16 with factuality 2). The figure verdict is context, not report evidence: a figure that failed B2 no longer lowers factuality, and the system's automatic render check (Render QA) is named so it cannot be read as a visual comparison. Dimensions, schema and pass rule are read from the standard | `standards/report_judge.yaml` (v3); v1, five dimensions, is kept for calibration only |
+| B5 Report judge | Eight dimensions 0-2: source fidelity, answer, factuality, technical completeness, assumed parameters, evidence, calibration, clarity; pass at 8 of 16 with factuality at least 1 and the deterministic report checks passed (v2: 12 of 16 with factuality 2); the evidence check accepts an opened section or an opened source-figure marker, both resolved by the citation check. The figure verdict is context, not report evidence: a figure that failed B2 no longer lowers factuality, and the system's automatic render check (Render QA) is named so it cannot be read as a visual comparison. Dimensions, schema and pass rule are read from the standard | `standards/report_judge.yaml` (v3); v1, five dimensions, is kept for calibration only |
 | B6 Outcome tag | Success = ran, drew a figure, B2 and B5 passed. Partial = ran and drew a figure, but a judge did not pass or a parameter source is unresolved (B4). Failed = stopped by a rule in the last turn, no successful model run, or no figure. Computed, never typed, with the gate's or judge's reason verbatim | `competition_score.outcome_tag` |
 | B7 Comparators | Direct LLM with the harness off (`no-harness`, Q1); other LLMs with the harness on (robustness, Q1); coding agents through the merged plugin | `competition.yaml`, `integrations/geoai/` |
 

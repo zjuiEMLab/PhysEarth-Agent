@@ -448,6 +448,23 @@ def test_report_checks_reject_unresolved_evidence_and_unsupported_success_claim(
     assert unresolved["passed"] is False
     assert unresolved["checks"]["evidence_resolved"] is False
 
+    figure_only = {
+        **base,
+        "markers": {"literature": [], "model": ["smrt@1.5.1"], "data": []},
+        "citation_check": {
+            "passed": True,
+            "unresolved": [],
+            "markers": ["model:smrt@1.5.1", "figure:smrt-v1#fig03"],
+        },
+    }
+    assert figure3.deterministic_report_checks(figure_only, {"passed": False})["checks"][
+        "evidence_resolved"
+    ] is True
+    no_source = {**figure_only, "citation_check": {"passed": True, "unresolved": []}}
+    assert figure3.deterministic_report_checks(no_source, {"passed": False})["checks"][
+        "evidence_resolved"
+    ] is False
+
 
 def test_visual_figure_review_can_validate_success_when_metadata_check_differs():
     base = {
@@ -764,6 +781,37 @@ def test_false_premise_runner_disables_research_plan_gate(monkeypatch, tmp_path)
     assert captured["research_required"] is False
     assert record["workflow"]["approval_policy"] == "not_applicable_safe_refusal"
     assert record["workflow"]["review_actions"] == []
+
+
+def test_the_scripted_reviewer_answers_a_repeated_capability_question(monkeypatch, tmp_path):
+    """A failed plan can send the agent back to the capability check, which asks again."""
+    competition = _load_runner("competition")
+    monkeypatch.setattr(competition.common, "REPO", tmp_path)
+    monkeypatch.setattr(competition, "REPORTS", tmp_path / "reports")
+    monkeypatch.setattr(competition, "FIGURES", tmp_path / "figures")
+    prompts = []
+
+    def fake_run(prompt, model, session, switches):
+        prompts.append(prompt)
+        session["capability_review"] = {"status": "waiting_user"}
+        return "Would you like a partial plan?", [{"kind": "research_wait"}], {}
+
+    monkeypatch.setattr(competition.agent, "run", fake_run)
+    monkeypatch.setattr(competition.approval, "set_mode", lambda *args: None)
+    record = competition.run_one(
+        {"id": "partial-task", "suite": "tier2", "quality": "complete", "question": "q"},
+        {"id": "p1", "version": "1", "title": "t", "instructions": "i", "_path": "p.yaml"},
+        {"name": "full", "switches": {}},
+        "model",
+        1,
+        "build",
+        batch_approved=True,
+    )
+    answers = [item for item in record["workflow"]["review_actions"]
+               if item["policy"] == "confirm_reported_partial_scope"]
+    assert len(answers) == competition.CAPABILITY_CONFIRMATIONS
+    assert prompts[1:] == [competition.CAPABILITY_CONFIRMATION] * len(answers)
+    assert sorted({event["turn"] for event in record["event_log"]}) == [1, 2, 3, 4]
 
 
 def test_full_reproduction_is_ineligible_when_provenance_is_missing():

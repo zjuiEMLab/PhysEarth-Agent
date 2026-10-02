@@ -68,7 +68,8 @@ CONTINUATION = (
 
 
 # What the scripted reviewer answers when the capability check asks whether to plan the
-# supported components only.
+# supported components only, and how many times in one cell it answers.
+CAPABILITY_CONFIRMATIONS = 3
 CAPABILITY_CONFIRMATION = (
     "Yes. I confirm the partial scope exactly as your capability check reported it. "
     "Generate the research plan for the supported components only, and name everything "
@@ -512,14 +513,16 @@ def run_one(
     first_events = [{**event, "turn": 1} for event in first_events]
     review_error = None
     capability_log = []
-    if (
+    while (
         batch_approved
+        and len(capability_log) < CAPABILITY_CONFIRMATIONS
         and not session.get("research")
         and (session.get("capability_review") or {}).get("status") == "waiting_user"
     ):
         # The capability check stopped to ask whether a partial scope is acceptable. The
         # scripted reviewer answers as it answers a plan: it accepts what was reported,
-        # unmodified, and the agent records that consent itself.
+        # unmodified, and the agent records that consent itself. A failed plan can send
+        # the agent back to the check, which asks again; a person would answer again.
         capability_log.append(
             {
                 "actor": "scripted_human_reviewer",
@@ -532,7 +535,8 @@ def run_one(
             CAPABILITY_CONFIRMATION, model=llm, session=session,
             switches=config_entry["switches"],
         )
-        first_events += [{**event, "turn": 2} for event in more_events]
+        turn = max((event["turn"] for event in first_events), default=1) + 1
+        first_events += [{**event, "turn": turn} for event in more_events]
         status = (session.get("capability_review") or {}).get("status")
         capability_log[-1]["after"] = f"capability {status}"
     next_turn = max((event["turn"] for event in first_events), default=1) + 1
