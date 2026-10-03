@@ -3,8 +3,8 @@
 import json
 import re
 
-from physearth import registry
-from physearth.research.charts import _asked_values, _normal_name, _parameter_phrase
+from physearth.research import asked as asked_values
+from physearth.research.charts import _normal_name
 
 
 def report_generation_prompt(session):
@@ -58,20 +58,10 @@ def report_generation_prompt(session):
         figure_state.append("- No formal figure was recorded.")
 
     gaps = plan.get("capability_gaps") or []
-    asked = []
-    asked_text = "%s\n%s" % (
-        project.get("question") or plan.get("question") or "",
-        (session.get("research_context") or {}).get("question") or "",
-    )
-    for name in _asked_values(asked_text, plan.get("runs")):
-        unit = ""
-        for run in plan.get("runs") or ():
-            entry = registry.get(str(run.get("model") or ""))
-            spec = ((entry.card.get("parameters") or {}).get(name) or {}) if entry else {}
-            unit = unit or spec.get("unit") or ""
-        asked.append(
-            "%s (%s, in %s)" % (_parameter_phrase(name), name, unit or "its declared unit")
-        )
+    asked = [
+        "%s (%s, in %s)" % (item["phrase"], item["name"], item["unit"] or "its declared unit")
+        for item in asked_values.asked_quantities(session)
+    ]
     asked_line = (
         "11. The question asks for a value or range of %s. State it as numbers with that "
         "unit in the opening answer: the value the opened paper evidence reports, with its "
@@ -135,6 +125,7 @@ def report_generation_prompt(session):
             "12. Quote every configuration value exactly as the ledger records it; do not round "
             "it or substitute a nominal value. A parameter-source table built from the ledger is "
             "appended to the report automatically, so do not reproduce the ledger row by row.",
+            asked_values.evidence_block(session),
             "AUTHORITATIVE PARAMETER LEDGER:\n" + "\n".join(ledger),
             "RECORDED FORMAL FIGURES:\n" + "\n".join(figure_state),
             "UNAVAILABLE OR UNRUN COMPARISONS: %s" % (", ".join(map(str, gaps)) or "none recorded"),

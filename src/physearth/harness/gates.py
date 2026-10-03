@@ -240,9 +240,26 @@ def check_budget(state):
     return {"rule": "budget", "passed": True, "scope": "", "reason": ""}
 
 
+def check_asked_value(text, state):
+    """The report states what the question asked a value of, or says it is not identifiable."""
+    from physearth.research import asked
+
+    return asked.check(text, state.get("session") or {}, state)
+
+
+def asked_value_correction(check):
+    from physearth.research import asked
+
+    return asked.correction(check)
+
+
 def final_checks(text, state):
-    """The checks a final answer must pass, in the order the agent loop applies them."""
-    return [
+    """The checks a final answer must pass, in the order the agent loop applies them.
+
+    The asked-value check joins only for the report of an approved plan that has run; for an
+    ordinary answer it does not apply and is not listed.
+    """
+    checks = [
         check_evidence(
             text,
             state["sections_read"],
@@ -260,6 +277,10 @@ def final_checks(text, state):
         ),
         check_abstract_depth(text),
     ]
+    asked_value = check_asked_value(text, state)
+    if not asked_value.get("skipped"):
+        checks.append(asked_value)
+    return checks
 
 
 def correction(check):
@@ -267,6 +288,7 @@ def correction(check):
         "evidence_gate": evidence_correction,
         "citation_integrity": citation_correction,
         "abstract_depth": abstract_depth_correction,
+        "asked_value": asked_value_correction,
     }[check["rule"]](check)
 
 

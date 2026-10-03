@@ -76,9 +76,16 @@ scoring_policy:
 report_terms:
   source: ["10.5194/gmd-11-2763-2018", picard, soil moisture and ocean salinity]
   version: [version, "1.5.1", "2018"]
+# What the report is judged against: statements the manuscript makes, each tied to the section
+# that makes it. The authors' notebook is not a source for these.
 report_facts:
-  - The notebook's AMSR-E 37V channel has an actual centre frequency of 36.5 GHz.
-  - The six curves approach the same first-order behavior as density tends to zero.
-  - The paper places the useful sparse-medium range at approximately 10–20 kg m-3.
-  - Microstructure affects the low-density departure more strongly than electromagnetic-theory choice.
-  - The reproduced values may differ from the 2018 figure because the installed SMRT version differs from the paper code.
+  - "All of Figure 3's formulations show the same behaviour as independent spheres with Rayleigh or Mie theory as density tends to zero: the linear trend at the origin is the same for several microstructures (independent spheres, non-sticky hard spheres, sticky hard spheres) and several theories (Rayleigh, DMRT QCA-CP, IBA). [smrt-v1#08]"
+  - "The sparse medium approximation is valid only for very low densities, in the range 10-20 kg m-3, which the paper calls unrealistic for snow. [smrt-v1#08]"
+  - "In Figure 3 the influence of microstructure on deviations from the sparse-medium assumption for the scattering coefficient at low densities is more severe than the influence of the electromagnetic theory. [smrt-v1#08]"
+  - "Figure 3 is computed for 100 um radius spheres, and the paper's comparisons use a single 37 GHz snowpack-sensor configuration unless stated otherwise. [smrt-v1#08, smrt-v1#07]"
+# Details from the authors' notebook or from this environment. The judge is told they are
+# context: an omission or a difference from them is neither a factual error nor a reason to
+# lower the answer score, because the manuscript does not state them.
+diagnostic_notes:
+  - "In the authors' notebook the AMSR-E 37V channel is centred at 36.5 GHz; the manuscript says only 37 GHz."
+  - "The reproduced values may differ from the 2018 figure because the installed SMRT version differs from the paper code."
