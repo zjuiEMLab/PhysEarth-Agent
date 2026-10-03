@@ -239,7 +239,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
         session["research_required"] = True
         context = session.setdefault("research_context", {})
         context["reproduction_case"] = "paper-reproduction"
-        context["question"] = question
+        research.asked.remember_question(session, question)
         events.append(
             _event(
                 "research_mode_selected",

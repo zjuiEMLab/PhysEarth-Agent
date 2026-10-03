@@ -58,6 +58,26 @@ def test_a_report_that_never_states_the_range_is_refused_with_the_source_passage
 def test_a_report_that_states_the_value_passes():
     session = _session()
     assert asked.check("Valid for about 10–20 kg m⁻³ [smrt-v1#08].", session)["passed"]
+    assert asked.check("Converges for densities of 10 to 20 kg/m3 [smrt-v1#08].", session)["passed"]
+
+
+def test_the_reports_own_sweep_range_is_not_the_papers_value():
+    """The first live check: every report quoted its 1-100 kg m-3 sweep, which is a number
+    with the right unit, and the gate let it through while the paper's 10-20 never appeared."""
+    session = _session()
+    text = "The sweep ran from 1.0 to 100.0 kg m-3 and the curves separate as density grows."
+    assert asked.states_value(text, "kg m-3")
+    assert not asked.check(text, session)["passed"]
+    assert asked.required_spans(session, asked.asked_quantities(session)[0]) == ["10-20"]
+
+
+def test_the_question_survives_a_later_approval_turn():
+    session = session_state.new_session()
+    asked.remember_question(session, "Reproduce Figure 3 and say under what density range curves converge.")
+    asked.remember_question(session, "The reviewer approved the plan; proceed with execution.")
+    assert "density range" in session["research_context"]["question"]
+    asked.remember_question(session, "Reproduce Figure 4 of the same paper at 37 GHz.")
+    assert "Figure 4" in session["research_context"]["question"]
 
 
 def test_not_identifiable_is_accepted_only_when_no_opened_source_gives_a_value():

@@ -57,12 +57,13 @@ def _compact(text):
     text = str(text or "").translate(_SUPERSCRIPTS).lower()
     text = re.sub(r"[\^·*_]", " ", text)
     text = re.sub(r"([a-z]+)\s*-\s*(\d)", r"/\1\2", text)
-    return re.sub(r"\s+", "", text)
+    return re.sub(r"(?<=\d)to(?=\d)", "-", re.sub(r"\s+", "", text))
 
 
 def _raw(text):
     """Only case, exponents and spaces normalised: PDF text often runs units together, 'kgm-3'."""
-    return re.sub(r"\s+", "", str(text or "").translate(_SUPERSCRIPTS).lower())
+    squeezed = re.sub(r"\s+", "", str(text or "").translate(_SUPERSCRIPTS).lower())
+    return re.sub(r"(?<=\d)to(?=\d)", "-", squeezed)
 
 
 def states_value(text, unit):
@@ -91,15 +92,16 @@ _CUES = re.compile(
     r"only\s+for|\d\s*[-–]\s*\d",
     re.IGNORECASE,
 )
+_NUMBER = r"\d+(?:\.\d+)?"
+_SPAN = r"(" + _NUMBER + r"(?:-" + _NUMBER + r")?)"
 
 
-def source_passages(session, quantity, limit=MAX_PASSAGES):
-    """Sentences from the sections this session opened that give the quantity as a number.
+def _candidates(session, quantity):
+    """(cue count, marker, sentence) for every opened-section sentence that gives the quantity.
 
     A sentence qualifies when it carries a number with the quantity's unit and names the
     quantity, so a passage about something else that happens to quote a density is not
-    offered. Sentences that speak of a range, threshold or limit come first. Each comes
-    with the marker the report must cite it by.
+    offered. Sentences that speak of a range, threshold or limit rank first.
     """
     stem = quantity["phrase"].lower().split()[0][:5]
     found = []
@@ -112,7 +114,44 @@ def source_passages(session, quantity, limit=MAX_PASSAGES):
             if stem in sentence.lower() and states_value(sentence, quantity["unit"]):
                 found.append((len(_CUES.findall(sentence)), key, sentence[:MAX_PASSAGE_CHARS]))
     found.sort(key=lambda item: -item[0])
-    return [(key, sentence) for _, key, sentence in found[:limit]]
+    return found
+
+
+def source_passages(session, quantity, limit=MAX_PASSAGES):
+    """The passages to offer: marker and sentence, range and threshold sentences first."""
+    return [(key, sentence) for _, key, sentence in _candidates(session, quantity)[:limit]]
+
+
+def _spans(text, unit):
+    spans = []
+    for form in (_compact, _raw):
+        for match in re.finditer(_SPAN + re.escape(form(unit)), form(text)):
+            if match.group(1) not in spans:
+                spans.append(match.group(1))
+    return spans
+
+
+def required_spans(session, quantity):
+    """The numbers the opened sources give for the quantity, e.g. '10-20'.
+
+    Taken from the sentences that speak of a range, threshold or limit when there are any,
+    otherwise from the best sentence. A report that gives only its own sweep range does not
+    state what the paper says.
+    """
+    candidates = _candidates(session, quantity)
+    cued = [item for item in candidates if item[0] > 0][:2] or candidates[:1]
+    spans = []
+    for _, _, sentence in cued:
+        for span in _spans(sentence, quantity["unit"]):
+            if span not in spans:
+                spans.append(span)
+    return spans
+
+
+def states_source_value(text, spans, unit):
+    return any(
+        (span + form(unit)) in form(text) for span in spans for form in (_compact, _raw)
+    )
 
 
 def evidence_block(session):
@@ -141,20 +180,25 @@ def applies(session, state=None):
 
 
 def check(text, session, state=None):
-    """The gate: every asked quantity is stated with its unit, or honestly left open.
+    """The gate: every asked quantity is answered from the evidence, or honestly left open.
 
-    'Left open' is accepted only when the opened sources hold no passage that gives it.
+    When an opened source gives the quantity as a number or range, the report must state that
+    value with its unit; a different number with the same unit (its own sweep range) does not
+    count. When none does, any value with the unit, or an honest "not identifiable", will do.
     """
     if not applies(session, state):
         return {"rule": "asked_value", "passed": True, "skipped": True, "missing": []}
     missing = []
     for quantity in asked_quantities(session):
-        if states_value(text, quantity["unit"]):
+        spans = required_spans(session, quantity)
+        if spans:
+            if states_source_value(text, spans, quantity["unit"]):
+                continue
+        elif states_value(text, quantity["unit"]) or declares_unidentified(text):
             continue
-        passages = source_passages(session, quantity)
-        if not passages and declares_unidentified(text):
-            continue
-        missing.append({**quantity, "passages": passages})
+        missing.append(
+            {**quantity, "passages": source_passages(session, quantity), "spans": spans}
+        )
     return {"rule": "asked_value", "passed": not missing, "missing": missing}
 
 
@@ -169,8 +213,11 @@ def correction(result):
             part += " The sources opened in this session say: " + " ".join(
                 '[%s] "%s"' % (key, sentence) for key, sentence in item["passages"]
             )
-            part += " State that value with its marker, labelled as the paper's, and give " \
-                    "the value the recorded results show separately."
+            part += (
+                " State that value (%s) with its marker, labelled as the paper's, and give "
+                "the value the recorded results show separately."
+                % ", ".join("%s %s" % (span, item["unit"]) for span in item["spans"])
+            )
         else:
             part += (
                 " No opened source gives it; say plainly that it is not identifiable from the "
@@ -181,3 +228,16 @@ def correction(result):
         "Revise the final report before finishing. " + " ".join(parts)
         + " Keep every other part of the report as it is."
     )
+
+
+def remember_question(session, question):
+    """Keep the user's reproduction question for the whole session.
+
+    A later turn that only approves or continues ("proceed with execution") must not replace
+    the question the report is going to be held to.
+    """
+    context = session.setdefault("research_context", {})
+    from physearth.research.normalise import is_reproduction_question
+
+    if is_reproduction_question(question) or not context.get("question"):
+        context["question"] = question
