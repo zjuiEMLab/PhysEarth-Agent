@@ -231,13 +231,13 @@ def correction(result):
 
 
 def remember_question(session, question):
-    """Keep the user's reproduction question for the whole session.
+    """Keep the user's reproduction question for as long as its project is in progress.
 
-    A later turn that only approves or continues ("proceed with execution") must not replace
-    the question the report is going to be held to.
+    The turns that follow a plan ("the plan is approved, execute every run") are not new
+    questions, and the report is held to the question the project began with. A new question
+    is remembered when none is held, or when the project it belonged to is finished.
     """
     context = session.setdefault("research_context", {})
-    from physearth.research.normalise import is_reproduction_question
-
-    if is_reproduction_question(question) or not context.get("question"):
+    project = session.get("research") or {}
+    if not context.get("question") or not project or project.get("phase") == "completed":
         context["question"] = question

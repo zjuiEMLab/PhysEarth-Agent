@@ -71,13 +71,24 @@ def test_the_reports_own_sweep_range_is_not_the_papers_value():
     assert asked.required_spans(session, asked.asked_quantities(session)[0]) == ["10-20"]
 
 
-def test_the_question_survives_a_later_approval_turn():
+def test_the_question_survives_the_turns_that_continue_its_project():
     session = session_state.new_session()
-    asked.remember_question(session, "Reproduce Figure 3 and say under what density range curves converge.")
-    asked.remember_question(session, "The reviewer approved the plan; proceed with execution.")
+    asked.remember_question(
+        session, "Reproduce Figure 3 and say under what density range curves converge."
+    )
+    session["research"] = {"phase": "plan_review"}
+    # A scripted or typed continuation is still a reproduction-looking message.
+    for follow_up in (
+        "The research plan and formal execution are now approved. Execute every run and report.",
+        "Revise the plan to use 30 sweep points.",
+    ):
+        asked.remember_question(session, follow_up)
     assert "density range" in session["research_context"]["question"]
+    # Once the project is finished, the next question replaces it.
+    session["research"]["phase"] = "completed"
     asked.remember_question(session, "Reproduce Figure 4 of the same paper at 37 GHz.")
     assert "Figure 4" in session["research_context"]["question"]
+
 
 
 def test_not_identifiable_is_accepted_only_when_no_opened_source_gives_a_value():
