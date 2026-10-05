@@ -72,3 +72,42 @@ def correction(result):
         "parameter ledger, which is authoritative: " + "; ".join(lines) + ". Keep the rest of the "
         "report as it is, and make the report's own prose and table say the same."
     )
+
+
+_TAGGED = re.compile(r"<([a-z][a-z_]*)>(.*?)</\1>", re.DOTALL | re.IGNORECASE)
+
+
+def required_appendix(session):
+    """The machine-readable tags the user's own request asked the report to end with.
+
+    A request that spells out tagged blocks (``<tag> ... </tag>``) is asking for them; the
+    spec is whatever the request wrote, so nothing here names a tag.
+    """
+    question = ((session or {}).get("research_context") or {}).get("question") or ""
+    spec = {}
+    for match in _TAGGED.finditer(question):
+        spec.setdefault(match.group(1).lower(), match.group(0))
+    return spec
+
+
+def check_appendix(text, session, state=None):
+    """Every tagged block the request spelled out appears in the final report."""
+    spec = required_appendix(session)
+    if not spec or not asked.applies(session, state):
+        return {"rule": "required_appendix", "passed": True, "skipped": True, "missing": {}}
+    present = {m.group(1).lower() for m in _TAGGED.finditer(str(text or ""))}
+    missing = {tag: block for tag, block in spec.items() if tag not in present}
+    return {"rule": "required_appendix", "passed": not missing, "missing": missing}
+
+
+def appendix_correction(result):
+    return (
+        "The request asked the report to end with these tagged blocks, and %s %s missing. Add "
+        "them at the very end, filled from the recorded run state and the plan ledger, in "
+        "exactly this form, and keep the rest of the report as it is:\n%s"
+        % (
+            ", ".join("<%s>" % tag for tag in result["missing"]),
+            "is" if len(result["missing"]) == 1 else "are",
+            "\n".join(result["missing"].values()),
+        )
+    )

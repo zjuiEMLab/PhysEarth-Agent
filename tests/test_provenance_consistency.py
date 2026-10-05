@@ -55,3 +55,42 @@ def test_the_gate_carries_it_and_knows_its_correction():
     bad = [c for c in checks if c["rule"] == "provenance_consistency"]
     assert bad and not bad[0]["passed"]
     assert "Revise the parameter_provenance block" in gates.correction(bad[0])
+
+
+REQUEST = (
+    "Reproduce the figure.\nEnd the report with these tags:\n"
+    "<parameter_provenance>[{\"field\":\"x\"}]</parameter_provenance>\n"
+    "<reproduction_outcome>reproduced|partial</reproduction_outcome>"
+)
+
+
+def _asked_for_appendix():
+    session = _session()
+    session["research_context"] = {"question": REQUEST}
+    return session
+
+
+def test_the_tags_the_request_spelled_out_are_required_in_the_report():
+    session = _asked_for_appendix()
+    assert set(consistency.required_appendix(session)) == {"parameter_provenance", "reproduction_outcome"}
+    result = consistency.check_appendix("A report with no tags.", session)
+    assert not result["passed"] and set(result["missing"]) == {
+        "parameter_provenance", "reproduction_outcome"}
+    assert "<reproduction_outcome>reproduced|partial</reproduction_outcome>" in (
+        consistency.appendix_correction(result))
+
+
+def test_a_report_with_the_tags_passes_and_a_request_without_tags_asks_for_nothing():
+    session = _asked_for_appendix()
+    text = _report(("radius_m", "paper")) + "\n<reproduction_outcome>partial</reproduction_outcome>"
+    assert consistency.check_appendix(text, session)["passed"]
+    assert consistency.check_appendix("No tags.", _session())["skipped"]
+
+
+def test_the_gate_carries_the_appendix_check():
+    session = _asked_for_appendix()
+    state = session_state.new_state(session)
+    state["model_runs"] = 3
+    failed = [c for c in gates.final_checks("No tags.", state) if c["rule"] == "required_appendix"]
+    assert failed and not failed[0]["passed"]
+    assert "tagged blocks" in gates.correction(failed[0])

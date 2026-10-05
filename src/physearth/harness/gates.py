@@ -253,6 +253,18 @@ def check_provenance_consistency(text, state):
     return consistency.check(text, state.get("session") or {}, state)
 
 
+def check_required_appendix(text, state):
+    from physearth.research import consistency
+
+    return consistency.check_appendix(text, state.get("session") or {}, state)
+
+
+def required_appendix_correction(check):
+    from physearth.research import consistency
+
+    return consistency.appendix_correction(check)
+
+
 def provenance_consistency_correction(check):
     from physearth.research import consistency
 
@@ -289,7 +301,11 @@ def final_checks(text, state):
         ),
         check_abstract_depth(text),
     ]
-    for extra in (check_asked_value(text, state), check_provenance_consistency(text, state)):
+    for extra in (
+        check_asked_value(text, state),
+        check_required_appendix(text, state),
+        check_provenance_consistency(text, state),
+    ):
         if not extra.get("skipped"):
             checks.append(extra)
     return checks
@@ -302,6 +318,7 @@ def correction(check):
         "abstract_depth": abstract_depth_correction,
         "asked_value": asked_value_correction,
         "provenance_consistency": provenance_consistency_correction,
+        "required_appendix": required_appendix_correction,
     }[check["rule"]](check)
 
 
