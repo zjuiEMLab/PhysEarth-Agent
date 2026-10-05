@@ -17,7 +17,13 @@ from physearth.agent.constants import (
     RETRY_BACKOFF_S,
 )
 from physearth.agent.faults import _dead_for_today, _fault, _rate_limited, _upstream_text
-from physearth.agent.messages import _compact_messages, _messages, prune_superseded, transcript
+from physearth.agent.messages import (
+    _compact_messages,
+    _messages,
+    prune_superseded,
+    published,
+    transcript,
+)
 from physearth.agent.messages import request as _request
 from physearth.agent.results import _allowed_marker_correction, _record_tool_result
 from physearth.agent.trace import _event
@@ -1113,7 +1119,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 yield "", events, state
                 continue
 
-        answer = transcript(segments, completion.content or "")
+        answer = published(segments, completion.content or "", session)
 
         # If this turn has explicitly entered research mode but the model tries to answer
         # an executable question without proposing a plan, return that attempt to the model

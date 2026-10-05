@@ -19,6 +19,24 @@ def transcript(segments, current=""):
     return SEGMENT_BREAK.join(parts)
 
 
+REPORT_MIN_CHARS = 600
+
+
+def published(segments, current, session=None):
+    """What the turn publishes: the report alone once a research plan has run.
+
+    While a plan executes the model narrates each round of tool calls ("Executing the approved
+    runs now", "Rendering the selected charts"). That is useful live and wrong in a report: it
+    came first and made every report open with progress chatter. Once the plan is approved and
+    the model has written a report-sized message, that message is what is published; everything
+    else stays in the trace.
+    """
+    project = (session or {}).get("research") or {}
+    if project.get("phase") in ("approved", "completed") and len((current or "").strip()) >= REPORT_MIN_CHARS:
+        return current.strip()
+    return transcript(segments, current)
+
+
 def _messages(question, history, state):
     messages = [{"role": "system", "content": prompt.build(state, tail=False)}]
     for turn in history or []:
