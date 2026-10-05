@@ -2,7 +2,7 @@ from pathlib import Path
 
 from apps.studio.views import evaluation as evals
 from physearth import harness, prompt, research, session, tools
-from physearth.corpus import live
+from physearth.corpus import knowledge, live
 from physearth.ingest import jats
 
 FIXTURE = Path(__file__).parent / "fixtures" / "jats_sample.xml"
@@ -334,7 +334,10 @@ def test_plan_revision_returns_field_diff_and_invalidated_review_state():
 
 def _q1_resources(box):
     tools.call("read_research_guideline", {}, session=box)
-    tools.call("read_literature", {"slug": "smrt-v1", "section_id": "08"}, session=box)
+    # The whole paper: a reproduction that assumes a value is refused while an unopened section
+    # of the paper it cites still gives one, so a plan that is meant to be accepted has read it.
+    for item in knowledge.section_index("smrt-v1"):
+        tools.call("read_literature", {"slug": "smrt-v1", "section_id": item["id"]}, session=box)
     tools.call("list_models", {"model": "smrt"}, session=box)
     tools.call("read_model_instruction", {"model": "smrt"}, session=box)
     capability = tools.call(

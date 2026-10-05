@@ -247,6 +247,18 @@ def check_asked_value(text, state):
     return asked.check(text, state.get("session") or {}, state)
 
 
+def check_provenance_consistency(text, state):
+    from physearth.research import consistency
+
+    return consistency.check(text, state.get("session") or {}, state)
+
+
+def provenance_consistency_correction(check):
+    from physearth.research import consistency
+
+    return consistency.correction(check)
+
+
 def asked_value_correction(check):
     from physearth.research import asked
 
@@ -277,9 +289,9 @@ def final_checks(text, state):
         ),
         check_abstract_depth(text),
     ]
-    asked_value = check_asked_value(text, state)
-    if not asked_value.get("skipped"):
-        checks.append(asked_value)
+    for extra in (check_asked_value(text, state), check_provenance_consistency(text, state)):
+        if not extra.get("skipped"):
+            checks.append(extra)
     return checks
 
 
@@ -289,6 +301,7 @@ def correction(check):
         "citation_integrity": citation_correction,
         "abstract_depth": abstract_depth_correction,
         "asked_value": asked_value_correction,
+        "provenance_consistency": provenance_consistency_correction,
     }[check["rule"]](check)
 
 

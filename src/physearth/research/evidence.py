@@ -306,10 +306,29 @@ def _swept_names(runs, model):
     }
 
 
-def _unopened_sections_naming(session, unit):
-    """Sections of papers already opened that give a number in `unit` and are still unopened."""
+def _gives_value(sentence, unit, stem, numbers):
+    """A sentence that bears on the parameter: it names it, or gives the value in play.
+
+    A number in the right unit is not enough on its own, since a paper quotes many unrelated
+    frequencies, lengths and temperatures. The sentence must name the parameter, or give a
+    number equal to the assumed value or to the card default.
+    """
+    if not asked.states_value(sentence, unit):
+        return False
+    if stem and stem in sentence.lower():
+        return True
+    for span in asked._spans(sentence, unit):
+        for part in span.split("-"):
+            if any(_same_number(part, number) for number in numbers):
+                return True
+    return False
+
+
+def _unopened_sections_naming(session, name, unit, numbers):
+    """Sections of papers already opened that bear on the parameter and are still unopened."""
     if len(str(unit or "").strip()) < 2 or str(unit).strip().lower() == "none":
         return []
+    stem = name.split("_")[0].lower()[:5] if name else ""
     opened = set(session.get("sections_read") or ())
     found = []
     for slug in sorted({str(key).partition("#")[0] for key in opened}):
@@ -319,7 +338,7 @@ def _unopened_sections_naming(session, unit):
                 continue
             section = knowledge.read_section(slug, item["id"])
             for sentence in asked._sentences((section or {}).get("text")):
-                if asked.states_value(sentence, unit):
+                if _gives_value(sentence, unit, stem, numbers):
                     found.append((key, sentence[: asked.MAX_PASSAGE_CHARS]))
                     break
     return found[:_MAX_UNOPENED_SECTIONS]
@@ -346,10 +365,15 @@ def _unstated_value_problems(session, parameter_mapping, runs):
         spec = ((entry.card.get("parameters") or {}).get(name) or {}) if entry else {}
         if not spec or name in _swept_names(runs, model):
             continue
+        if spec.get("type") not in ("number", "integer"):
+            continue  # a choice of formulation is a design decision, not a value to default
+        if name.startswith("sweep") or str(spec.get("unit") or "") in ("count", "same as the swept parameter"):
+            continue  # how a sweep or a solver is sampled is numerics, not physics
         default = spec.get("default")
         value = item.get("mapped_value")
         unit = spec.get("unit") or ""
-        for key, sentence in _unopened_sections_naming(session, unit):
+        numbers = [number for number in (value, default) if number is not None]
+        for key, sentence in _unopened_sections_naming(session, name, unit, numbers):
             problems.append({
                 "field": "parameter_mapping[%d]" % index,
                 "source": key,
