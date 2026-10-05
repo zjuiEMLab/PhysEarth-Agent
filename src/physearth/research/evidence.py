@@ -2,6 +2,9 @@
 
 import re
 
+from physearth import registry
+from physearth.corpus import knowledge
+from physearth.research import asked
 from physearth.research.common import PARAMETER_PROVENANCE
 from physearth.research.coverage import _target_coverage
 from physearth.research.mapping import (
@@ -281,6 +284,91 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
             })
     if not outputs:
         problems.append({"field": "outputs", "source": "research_plan", "expected": "model outputs used to evaluate the target", "repair": "Declare the quantities/outputs that will be compared."})
+    problems.extend(_unstated_value_problems(session, parameter_mapping, runs))
+    return problems
+
+
+_MAX_UNOPENED_SECTIONS = 3
+
+
+def _same_number(left, right):
+    try:
+        return abs(float(left) - float(right)) <= 1e-9 * max(1.0, abs(float(right)))
+    except (TypeError, ValueError):
+        return left == right
+
+
+def _swept_names(runs, model):
+    return {
+        str((run.get("parameters") or {}).get("sweep_parameter") or "")
+        for run in runs or ()
+        if str(run.get("model") or "") == model
+    }
+
+
+def _unopened_sections_naming(session, unit):
+    """Sections of papers already opened that give a number in `unit` and are still unopened."""
+    if len(str(unit or "").strip()) < 2 or str(unit).strip().lower() == "none":
+        return []
+    opened = set(session.get("sections_read") or ())
+    found = []
+    for slug in sorted({str(key).partition("#")[0] for key in opened}):
+        for item in knowledge.section_index(slug) or ():
+            key = "%s#%s" % (slug, item["id"])
+            if key in opened:
+                continue
+            section = knowledge.read_section(slug, item["id"])
+            for sentence in asked._sentences((section or {}).get("text")):
+                if asked.states_value(sentence, unit):
+                    found.append((key, sentence[: asked.MAX_PASSAGE_CHARS]))
+                    break
+    return found[:_MAX_UNOPENED_SECTIONS]
+
+
+def _unstated_value_problems(session, parameter_mapping, runs):
+    """A value the paper did not state is the card's default, not an invented one.
+
+    A reproduction fills what the source leaves open, and the honest fill is the registered
+    model's own default, labelled as such. Two things are refused before the plan runs: an
+    assumed value that differs from the card's default without evidence, and an assumption
+    made while unopened sections of the same paper still give a value in that parameter's unit.
+    The second is closed by reading the section; nothing here knows which section or value.
+    """
+    problems = []
+    for index, item in enumerate(parameter_mapping or ()):
+        if not isinstance(item, dict) or item.get("provenance_class") != "model_assumption":
+            continue
+        if item.get("evidence_ref") or item.get("paper_value") not in (None, ""):
+            continue
+        name = str(item.get("model_input") or "")
+        model = str(item.get("model") or "")
+        entry = registry.get(model, session) if model else None
+        spec = ((entry.card.get("parameters") or {}).get(name) or {}) if entry else {}
+        if not spec or name in _swept_names(runs, model):
+            continue
+        default = spec.get("default")
+        value = item.get("mapped_value")
+        unit = spec.get("unit") or ""
+        for key, sentence in _unopened_sections_naming(session, unit):
+            problems.append({
+                "field": "parameter_mapping[%d]" % index,
+                "source": key,
+                "expected": "unopened sections that give a value in %s read before %s is assumed"
+                % (unit, name),
+                "repair": "Read %s before labelling %s a model assumption; it says: \"%s\". "
+                "Cite it if it states the value."
+                % (key, name, sentence),
+            })
+        if default is not None and value is not None and not _same_number(value, default):
+            problems.append({
+                "field": "parameter_mapping[%d].mapped_value" % index,
+                "source": "registered_model_declaration",
+                "actual": value,
+                "expected": "the card default %s %s, or a value an opened source states" % (default, unit),
+                "repair": "%s = %s is labelled model_assumption with no evidence. Use the card default "
+                "%s (provenance_class backend_default), or cite the opened section that states %s."
+                % (name, value, default, value),
+            })
     return problems
 
 def legend_coverage_warnings(session, targets, runs):
