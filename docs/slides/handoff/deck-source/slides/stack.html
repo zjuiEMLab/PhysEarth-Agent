@@ -1,0 +1,38 @@
+<section id="stack" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:40px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#2F6690; font-weight:600">Technical part · 3 of 3 · the software</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">What the agent is built from</h2>
+  </div>
+  <div style="display:flex; gap:32px">
+    <div style="flex:1; display:flex; flex-direction:column; gap:12px">
+      <div style="display:flex; gap:24px; align-items:center; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:18px 24px">
+        <p style="width:170px; font-size:24px; font-weight:600; color:#2F6690">Interface</p>
+        <p style="flex:1; font-size:24px; color:#3D4656">PhysEarth Studio (Gradio): conversation, editable plan, run trace</p>
+      </div>
+      <div style="display:flex; gap:24px; align-items:center; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:18px 24px">
+        <p style="width:170px; font-size:24px; font-weight:600; color:#2F6690">Agent</p>
+        <p style="flex:1; font-size:24px; color:#3D4656">loop, layered prompts, session store of result handles</p>
+      </div>
+      <div style="display:flex; gap:24px; align-items:center; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:18px 24px">
+        <p style="width:170px; font-size:24px; font-weight:600; color:#2F6690">21 tools</p>
+        <p style="flex:1; font-size:24px; color:#3D4656">read 7 · plan 4 · run 3 · draw 2 · register 3 · raw baseline 2</p>
+      </div>
+      <div style="display:flex; gap:24px; align-items:center; background:#F6E3D6; border:2px solid #B4491C; border-radius:12px; padding:18px 24px">
+        <p style="width:170px; font-size:24px; font-weight:600; color:#B4491C">Harness</p>
+        <p style="flex:1; font-size:24px; color:#3D4656">validation, approval, gates, audit log, budget, untrusted text</p>
+      </div>
+      <div style="display:flex; gap:24px; align-items:center; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:18px 24px">
+        <p style="width:170px; font-size:24px; font-weight:600; color:#2F6690">Content</p>
+        <p style="flex:1; font-size:24px; color:#3D4656">models/ cards and adapters · knowledge/ papers, notes, data</p>
+      </div>
+    </div>
+    <div style="width:420px; display:flex; flex-direction:column; gap:16px; background:#14213D; border-radius:12px; padding:32px">
+      <p style="font-size:28px; font-weight:600; color:#F7F5EF">Any LLM</p>
+      <p style="font-size:24px; line-height:1.5; color:#C9D3E0">through one OpenAI-compatible client: Qwen, DeepSeek or GLM, on ModelScope, DashScope or OpenRouter</p>
+      <p style="font-size:24px; line-height:1.5; color:#C9D3E0">The LLM has no tools of its own; it sees handles, never arrays</p>
+    </div>
+  </div>
+  <p style="position:absolute; left:128px; bottom:64px; width:1600px; font-size:24px; color:#5F6673">frontend/ imports only physearth.api · backend/physearth/{agent, tools, harness, research, corpus, registry, ingest}</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:60px; text-align:right; font-size:24px; color:#5F6673">6</p>
+  <aside>~40 s. Top to bottom. The Studio is a Gradio app whose views are plain strings, so they are testable without a browser, and it talks to the package only through physearth.api, a boundary a test enforces. The agent loop assembles a layered prompt and keeps a session store; model runs return handles and a bounded preview. The 21 tools fall into six groups: seven read papers, figures, datasets and live literature; four plan; three run; two draw; three register new models; two are the raw baseline used in evaluation. The harness is the orange row, and it is code the LLM cannot switch off. The LLM itself is swappable through one OpenAI-compatible client, configured by environment variables.</aside>
+</section>

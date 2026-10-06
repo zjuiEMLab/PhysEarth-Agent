@@ -1,0 +1,20 @@
+<section id="cases" data-section="More reproduction cases, plugins for coding agents, and further suggestions" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:40px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#B4491C; font-weight:600">Suggestion 1 · more reproduction cases</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">Each case should break something different</h2>
+  </div>
+  <table style="font-size:24px; color:#14213D">
+    <tr><th style="width:30%; text-align:left">Case</th><th style="width:18%; text-align:left">Model</th><th style="width:22%; text-align:left">Gold</th><th style="width:30%; text-align:left">What it stresses</th></tr>
+    <tr><td>SMRT Q2 to Q4, Figs 4 to 6</td><td>smrt + legacy</td><td>paper figures</td><td>true cross-model comparison</td></tr>
+    <tr><td>TVC Ku-band, TC 2024</td><td>smrt</td><td>23,658 measurements</td><td>model against measurement</td></tr>
+    <tr><td>MEMLS3&amp;a, GMD 2015</td><td>smrt, memls</td><td>paper figures</td><td>layered snow, backscatter</td></tr>
+    <tr><td>S-1 forward operator, HESS 2021</td><td>water_cloud</td><td>paper figures</td><td>fitted operator validity</td></tr>
+    <tr><td>VOD sensitivity, BG 2023</td><td>tau_omega</td><td>paper figures</td><td>vegetation, multi-frequency</td></tr>
+    <tr><td>FAO-56 worked examples</td><td>pyet</td><td>printed ET0 values</td><td>exact numbers, not microwave</td></tr>
+    <tr><td>pywatershed, HESS 30, 5195 (2026)</td><td>pywatershed</td><td>Zenodo inputs, paper figures</td><td>multi-year hydrology</td></tr>
+    <tr><td>Counterfactual Figure 3</td><td>smrt</td><td>oracle rerun</td><td>configuring, not recalling</td></tr>
+  </table>
+  <p style="position:absolute; left:128px; bottom:64px; width:1600px; font-size:24px; color:#5F6673">Five of these papers are already in knowledge/literature; SMRT ships memls_legacy and dmrt_qms_legacy wrappers</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:60px; text-align:right; font-size:24px; color:#5F6673">16</p>
+  <aside>~60 s. Selection principle: stratify by domain, by the kind of gold standard (figure, measurement, printed number, oracle), and by how completely the paper states its configuration. Q2 to Q4 already existed and were removed at HEAD; restore them and label them "partial" until DMRT-QMS, MEMLS and HUT are registered, which SMRT's own legacy wrappers make possible with Octave or MATLAB. TVC is the strongest new case because the measurements are already bundled and it exercises the measured-versus-simulated rules. FAO-56 and the 2026 pywatershed paper, whose inputs are on Zenodo (record 17180693), give numeric gold outside microwave physics, which supports the generality claim. First step for all of them: run scripts/extract_figure_metadata.py on the seven papers that have no extracted figures.</aside>
+</section>

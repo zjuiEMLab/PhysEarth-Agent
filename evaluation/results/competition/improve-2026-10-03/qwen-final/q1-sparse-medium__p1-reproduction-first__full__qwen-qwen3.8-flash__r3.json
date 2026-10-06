@@ -1,0 +1,5572 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "q1-sparse-medium",
+  "suite": "tier2",
+  "quality": "complete",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "81cfdf8838ad0726bf160c048fe2f7b44e72f84c76132f49311294908541c7f3",
+  "provider": "openrouter",
+  "llm": "qwen/qwen3.8-flash",
+  "repeat": 3,
+  "build": "8bdaaed+dirty",
+  "question": "Reproduce Figure 3, \"Sparse-medium scattering coefficient comparison\", from the paper \"SMRT: an active-passive microwave radiative transfer model for snow with multiple microstructure and scattering formulations (v1.0)\" by Picard et al. (2018, DOI: 10.5194/gmd-11-2763-2018), Section 3.1.1. Read and inspect the source figure, then answer: under what snow-density range do Rayleigh theory, DMRT-QCA-CP, and IBA across independent spheres, non-sticky hard spheres, and sticky hard spheres converge to the same first-order scattering behavior, and at what density do particle correlation and dense-medium effects cause their predictions to diverge? Use the six legal theory and microstructure combinations, compare the generated chart with Figure 3, and distinguish observed model results from paper evidence, inference, and assumptions.",
+  "answer": "## Research result and conclusion\n\nThe generated figure shows all seven curves sharing one value at the left end of the sweep and fanning out monotonically to the right, so the convergence at low density and the progressive divergence with density that Fig. 3 depicts are both reproduced [figure:smrt-v1#fig03]. The curve ordering, however, is not: in the reproduced chart the two independent-sphere curves sit at the top of the fan at 100 kg m⁻³, above both sticky-hard-sphere curves, which are in turn above the two hard-sphere curves — whereas the source figure presents the ordering SHS > IND > HS [figure:smrt-v1#fig03]. The pairing the caption itself calls out as tight, independent spheres under IBA against independent spheres under Rayleigh, is reproduced, and the structure-driven spread (non-sticky hardest, sticky intermediate) is reproduced. Every required curve is present and the figure rendered legibly, so this is a **qualitative partial reproduction**: pattern, origin and IND-pair agreement hold; the IND-vs-SHS ordering does not, under this configuration.\n\nOn density itself, the quantity the question asks about: the opened paper evidence states that the sparse-medium approximation is valid only at 10–20 kg m⁻³, which the paper calls unrealistic for snow modelling, and fixes 300 kg m⁻³ as the density of the separate Fig. 4 configuration [smrt-v1#08]. The recorded runs sweep 1.0 to 100.0 kg m⁻³, whose upper limit 100.0 kg m⁻³ is Fig. 3's last x-axis tick, and hold 300.0 kg m⁻³ only as the unswept backend default [model:smrt@1.5.1]. So no result here lies inside the 10–20 kg m⁻³ range in which the paper says the independent-sphere approximation is valid, and none reaches 300 kg m⁻³.\n\n## Supporting results\n\n**What the inspected source figure supports.** X axis density in kg m⁻³ with ticks to 100; y axis a logarithmic scattering coefficient in m⁻¹ labelled from 1e-4 up to 1e0; six legend entries crossing IND/HS/SHS with Rayleigh/IBA; all curves converging at the left, rising and separating into a fan at the right, with the SHS group placed above IND and IND above HS; the caption noting that the IBA and Rayleigh curves for IND are very close [figure:smrt-v1#fig03]. The bitmap carries no values and was not digitized, so it supplies count, axes, units, legend, grouping, ordering, shape and visible separation but no numerical target.\n\n**What the result arrays support.** At the swept endpoints, ks rises from 1.398e-4 to 1.398e-2 m⁻¹ for IND + rayleigh, 1.394e-4 to 1.343e-2 for IND + iba, 1.395e-4 to 1.068e-2 for SHS + dmrt (τ 0.5), 1.390e-4 to 9.43e-3 for SHS + iba, 1.389e-4 to 7.25e-3 for HS + dmrt and 1.384e-4 to 6.42e-3 for HS + iba [model:smrt@1.5.1]. The renderer's pair statistics against IND + rayleigh over the shared interval are RMSE 0.0003 (r = 0.9999) for the IND + iba curve, RMSE 0.0015 and 0.0022 for the two SHS curves and 0.0033 and 0.0037 for the two HS curves — that is, the closest pair in the fan is the IND pair, as the source states. Single-scattering albedo at the top of the sweep falls from 0.1460 (IND, constant across the sweep) to 0.0985 (SHS + dmrt) and 0.0691 (HS + dmrt), so the structural change is a genuine change in scattering efficiency rather than in absorption: ka is set by the electromagnetic theory alone (0.0817 rayleigh, 0.0932 iba, 0.0977 dmrt at 100 kg m⁻³) and is identical across the three microstructures within a theory [model:smrt@1.5.1]. The 10 GHz diagnostic falls to 7.46e-5 m⁻¹ at 100 kg m⁻³, 187.4× below its 37 GHz counterpart, i.e. the ν⁴ law of the independent-sphere Rayleigh limit recovered on the computed arrays [model:smrt@1.5.1].\n\n**The two readings compared.**\n\n| Feature | Generated figure (image) | Result arrays | Status |\n| --- | --- | --- | --- |\n| Common origin at low density | curves meet at the left | six curves within 1.0% of one another at 1.0 kg m⁻³ | reproduced |\n| Monotonic rise with density | rising fan | every curve monotonic increasing | reproduced |\n| IND IBA ≈ IND Rayleigh | \"very close\" | RMSE 0.0003, r = 0.9999 | reproduced |\n| Structure separates the curves | distinct groups | albedo 0.1460 → 0.0985 → 0.0691 at 100 kg m⁻³ | reproduced |\n| Ordering SHS > IND > HS | caption's claim | IND > SHS > HS at 100 kg m⁻³ | **disagreement** |\n| Absolute magnitude | axis labelled to 1e0 m⁻¹ | maximum 1.398e-2 m⁻¹ | not scoreable; no digitized values |\n\nThe disagreement is qualified by two assumptions rather than resolved by a test. Frequency is not stated for this figure, so the whole fan sits on an assumed 37.0 GHz slice, and the 10 GHz arm shows how far that slice can be moved vertically — by nearly 200× — without changing its shape. Range is the other: with radius fixed at 0.0001 and density the only free structural parameter, the sweep reaches 1.398e-2 m⁻¹ while the source axis is labelled to 1e0 m⁻¹, so the published panel may extend past 100.0 kg m⁻³ or use a different radius, which the extracted image cannot show [figure:smrt-v1#fig03]. Within the computed range the IND curves grow linearly while the SHS curves grow sublinearly, so the IND–SHS gap widens with density instead of closing; both explanations are untested here.\n\n## Assumed parameters\n\nValues below are quoted exactly as recorded; the full parameter-source table is appended to this report. **paper_inferred:** sweep_start = 1.0, against the figure's origin at 0 kg m⁻³, since ks vanishes identically at zero density. **model_assumption:** frequency_ghz = 37.0 for the six main curves and 10.0 for the diagnostic, neither stated for Fig. 3; temperature_k = 265.0, where the paper uses 256 K only for Figs. 4–5 [smrt-v1#08]; electromagnetic_model = rayleigh and microstructure_model = independent_sphere retained as the reference corner of the design; sweep_points = 21. **user_specified:** stickiness = 0.5, named in the conversation — the paper gives τ=0 and 0.5 for Fig. 3 and 0.5 for Fig. 4, so 0.5 is used only on the sticky-hard-sphere arms and this run is a submitted experiment that differs from the paper's own τ-conditioned comparison. **backend_default:** angle_deg = 55.0, thickness_m = 1.0, density_kg_m3 = 300.0, corr_length_m = 0.00015, dort_streams = 32; all five are inert for a coefficients output, which carries no radiative-transfer solution, except density_kg_m3 and corr_length_m, both overridden by the sweep [model:smrt@1.5.1]. Paper-explicit inputs are radius_m = 0.0001, sweep_stop = 100.0, output = coefficients and the swept variable density_kg_m3. No parameter is unrecorded, and at least one — frequency_ghz = 37.0 — is assumed, so this is not a run with nothing guessed.\n\n## Limitations\n\nThe ordering inversion is a qualitative claim of the figure that the reproduced curves contradict, and it is reported as such rather than smoothed over; the paper's own statement that the sparse-medium approximation holds only at 10–20 kg m⁻³ means the IND curves at the top of the fan are outside the regime in which that theory is claimed valid [smrt-v1#08]. The entire sweep sits below the declared density floor of the registered model, so these curves diagnose model architecture rather than predict real snow, and each is a single homogeneous layer of one grain size [model:smrt@1.5.1]. Version differences are unquantified: SMRT v1.5.1 derives the sticky and hard-sphere structure factor from density and radius internally, which is a different microstructure mapping from the paper's reference implementation, and no cross-run against that implementation is available here [smrt-v1#05]. Absolute agreement with Fig. 3 is not scoreable because the source bitmap was not digitized. The automatic render check passed (7 series, 21 points each, redrawn in a wider publication layout) and establishes only that the plotted arrays are finite and legible; it is not evidence that the figure matches the source. Of the two charts originally chosen, only fig03_ks_vs_density was in the confirmed package, so the 10 GHz arm appears as the seventh series of that chart rather than in a chart of its own; the declared comparisons list is empty, and the remaining open arms are IBA versus Rayleigh at fixed structure across the two frequencies, and the τ=0 versus τ=0.5 contrast.\n\nOutcome: qualitative partial reproduction — all required curves generated and legible; convergence, monotonic divergence and the tight IND Rayleigh/IBA pairing reproduced; SHS > IND > HS ordering not reproduced under frequency_ghz = 37.0, radius_m = 0.0001, sweep 1.0–100.0 kg m⁻³. Target fig03 status: planned, partial correspondence. Render check: passed (legibility only).\n\n**Parameter sources** (from the approved plan's parameter ledger)\n\n| Model | Input | Value | Source | Evidence |\n| --- | --- | --- | --- | --- |\n| smrt | radius_m | 0.0001 | paper_explicit | smrt-v1#fig03 |\n| smrt | sweep_parameter | density_kg_m3 | paper_explicit | smrt-v1#fig03 |\n| smrt | sweep_start | 1.0 | paper_inferred | smrt-v1#fig03 |\n| smrt | sweep_stop | 100.0 | paper_explicit | smrt-v1#fig03 |\n| smrt | output | coefficients | paper_explicit | smrt-v1#fig03 |\n| smrt | frequency_ghz | 37.0 | model_assumption | - |\n| smrt | temperature_k | 265.0 | model_assumption | - |\n| smrt | stickiness | 0.5 | user_specified | smrt-v1#08 |\n| smrt | electromagnetic_model | rayleigh | model_assumption | - |\n| smrt | microstructure_model | independent_sphere | model_assumption | - |\n| smrt | angle_deg | 55.0 | backend_default | - |\n| smrt | thickness_m | 1.0 | backend_default | - |\n| smrt | density_kg_m3 | 300.0 | backend_default | - |\n| smrt | corr_length_m | 0.00015 | backend_default | - |\n| smrt | dort_streams | 32 | backend_default | - |\n| smrt | sweep_points | 21 | model_assumption | - |",
+  "planning_answer": "Research is paused at the human-review stage (plan_review). No formal physical result has been computed yet. Click Approve plan, or describe the changes you want in Conversation.",
+  "elapsed_s": 493.33,
+  "stop_rule": null,
+  "model_calls": 14,
+  "llm_usage": {
+    "calls": 14,
+    "prompt_tokens": 296215,
+    "completion_tokens": 29030,
+    "total_tokens": 325245,
+    "cost_usd": 0.030015678,
+    "cost_complete": true,
+    "failed_attempts": 0,
+    "failed_attempt_faults": [],
+    "cached_prompt_tokens": 209408,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 9717,
+        "cached_prompt_tokens": 9472,
+        "completion_tokens": 232,
+        "cost_usd": 0.000297342,
+        "reasoning_chars": 0,
+        "elapsed_s": 4.9,
+        "first_token_s": 3.33,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 15200,
+        "cached_prompt_tokens": 9472,
+        "completion_tokens": 65,
+        "cost_usd": 0.001041302,
+        "reasoning_chars": 0,
+        "elapsed_s": 8.2,
+        "first_token_s": 7.41,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 18521,
+        "cached_prompt_tokens": 9472,
+        "completion_tokens": 67,
+        "cost_usd": 0.001540392,
+        "reasoning_chars": 0,
+        "elapsed_s": 5.38,
+        "first_token_s": 5.24,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 19193,
+        "cached_prompt_tokens": 18176,
+        "completion_tokens": 199,
+        "cost_usd": 0.000536896,
+        "reasoning_chars": 0,
+        "elapsed_s": 9.95,
+        "first_token_s": 9.01,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 22493,
+        "cached_prompt_tokens": 18944,
+        "completion_tokens": 494,
+        "cost_usd": 0.001067634,
+        "reasoning_chars": 0,
+        "elapsed_s": 15.37,
+        "first_token_s": 14.07,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 19926,
+        "cached_prompt_tokens": 8960,
+        "completion_tokens": 1246,
+        "cost_usd": 0.00237388,
+        "reasoning_chars": 0,
+        "elapsed_s": 24.66,
+        "first_token_s": 24.64,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 7,
+        "prompt_tokens": 22157,
+        "cached_prompt_tokens": 19456,
+        "completion_tokens": 5017,
+        "cost_usd": 0.003074436,
+        "reasoning_chars": 0,
+        "elapsed_s": 65.94,
+        "first_token_s": 62.99,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 8,
+        "prompt_tokens": 25064,
+        "cached_prompt_tokens": 21760,
+        "completion_tokens": 6993,
+        "cost_usd": 0.00413047,
+        "reasoning_chars": 0,
+        "elapsed_s": 89.85,
+        "first_token_s": 39.62,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 9,
+        "prompt_tokens": 26211,
+        "cached_prompt_tokens": 8960,
+        "completion_tokens": 737,
+        "cost_usd": 0.0030774,
+        "reasoning_chars": 0,
+        "elapsed_s": 23.88,
+        "first_token_s": 17.07,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 1,
+        "prompt_tokens": 10113,
+        "cached_prompt_tokens": 9216,
+        "completion_tokens": 626,
+        "cost_usd": 0.000576226,
+        "reasoning_chars": 0,
+        "elapsed_s": 12.86,
+        "first_token_s": 9.66,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 2,
+        "prompt_tokens": 29088,
+        "cached_prompt_tokens": 9216,
+        "completion_tokens": 362,
+        "cost_usd": 0.003298396,
+        "reasoning_chars": 0,
+        "elapsed_s": 11.41,
+        "first_token_s": 10.41,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 3,
+        "prompt_tokens": 30710,
+        "cached_prompt_tokens": 27904,
+        "completion_tokens": 157,
+        "cost_usd": 0.000941154,
+        "reasoning_chars": 0,
+        "elapsed_s": 6.95,
+        "first_token_s": 6.53,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 4,
+        "prompt_tokens": 30979,
+        "cached_prompt_tokens": 29440,
+        "completion_tokens": 8756,
+        "cost_usd": 0.00481721,
+        "reasoning_chars": 0,
+        "elapsed_s": 140.33,
+        "first_token_s": 89.13,
+        "attempt": 1
+      },
+      {
+        "turn": 2,
+        "index": 5,
+        "prompt_tokens": 16843,
+        "cached_prompt_tokens": 8960,
+        "completion_tokens": 4079,
+        "cost_usd": 0.00324294,
+        "reasoning_chars": 0,
+        "elapsed_s": 72.51,
+        "first_token_s": 35.29,
+        "attempt": 1
+      }
+    ]
+  },
+  "tool_calls": 25,
+  "interventions": 1,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": true,
+    "approval_policy": "scripted_accept_unmodified_plan",
+    "review_actions": [
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_review",
+        "after": "plan_approved",
+        "status": "needs_input",
+        "summary": "Plan approved for preview only. No physical model run or scientific figure is approved yet; generate the display-only pseudo-data preview next."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "plan_approved",
+        "after": "pseudo_preview",
+        "status": "needs_input",
+        "summary": "Pseudo-data preview v001 is ready for layout review only. It is not model output and must not support a scientific conclusion. Confirm the figure package, or revise the plan in chat."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "pseudo_preview",
+        "after": "chart_selected",
+        "status": "needs_input",
+        "summary": "1 chart(s) confirmed. The pseudo-data preview was discarded; ask the user to approve formal execution."
+      },
+      {
+        "actor": "scripted_human_reviewer",
+        "policy": "accept_unmodified_plan",
+        "before": "chart_selected",
+        "after": "approved",
+        "status": "success",
+        "summary": "Formal execution approved. The agent may now call the registered physical models and must build the selected figures from their real outputs."
+      }
+    ],
+    "review_error": null,
+    "final_phase": "completed",
+    "plan_version": 1
+  },
+  "research": {
+    "question": "Reproduce Fig. 3 of SMRT v1.0 (smrt-v1): scattering coefficient as a function of density for sparse media described by different microstructures, sphere radius 100 µm, comparing independent spheres (Rayleigh, IBA), non-sticky hard spheres (DMRT QCA-CP, IBA) and sticky hard spheres (DMRT QCA-CP, IBA).",
+    "plan_version": 1,
+    "phase": "completed",
+    "plan": {
+      "plan_version": 1,
+      "title": "Regenerate the six ks(density) curves of Fig. 3 with the registered SMRT model and compare the reproduced shape — the common origin, the linear low-density trend, and the SHS > IND > HS divergence — against the source figure.",
+      "question": "Reproduce Fig. 3 of SMRT v1.0 (smrt-v1): scattering coefficient as a function of density for sparse media described by different microstructures, sphere radius 100 µm, comparing independent spheres (Rayleigh, IBA), non-sticky hard spheres (DMRT QCA-CP, IBA) and sticky hard spheres (DMRT QCA-CP, IBA).",
+      "objective": "Regenerate the six ks(density) curves of Fig. 3 with the registered SMRT model and compare the reproduced shape — the common origin, the linear low-density trend, and the SHS > IND > HS divergence — against the source figure.",
+      "hypothesis": "The three microstructures share the same linear trend as density tends to zero and diverge in a fixed order (sticky hard spheres highest, non-sticky hard spheres lowest), so the deviation from the sparse-medium limit is controlled by the microstructure rather than by the electromagnetic theory [smrt-v1#08].",
+      "steps": [
+        "Read Sect. 3.1.1/3.1.2 and Sect. 2.3 of smrt-v1 and open Fig. 3 with its visual inspection to fix the observable, axes, units, legend series and plotted range.",
+        "Declare the registered smrt model and confirm each of the six legend series corresponds to a legal electromagnetic-model / microstructure pair.",
+        "Sweep density from the sparse-medium limit to 100 kg/m3 at radius 100 µm for each of the six configurations, taking the coefficients output so only ks is computed.",
+        "Plot the six reproduced curves together and compare shape and ordering with the source figure; run one frequency diagnostic to bound how much of any vertical offset is due to the unstated frequency."
+      ],
+      "parameters": {},
+      "paper_conditions": {
+        "figure": "smrt-v1 Fig. 3, Sect. 3.1.1",
+        "observable": "scattering coefficient ks (m^-1)",
+        "abscissa": "density (kg m^-3), plotted 0-100",
+        "ordinate": "scattering coefficient (m^-1), plotted 0.000-0.025",
+        "sphere_radius_um": 100,
+        "microstructure_families": [
+          "IND",
+          "HS",
+          "SHS"
+        ],
+        "electromagnetic_theories": [
+          "Rayleigh",
+          "IBA",
+          "DMRT QCA-CP"
+        ],
+        "legend_series": 6,
+        "panels": 1,
+        "frequency": "not stated",
+        "temperature": "not stated",
+        "stickiness": "not stated",
+        "radius_m": 0.0001,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "output": "coefficients"
+      },
+      "condition_provenance": {
+        "figure": "smrt-v1#fig03",
+        "observable": "smrt-v1#fig-fig03",
+        "abscissa": "smrt-v1#fig-fig03",
+        "ordinate": "smrt-v1#fig-fig03",
+        "sphere_radius_um": "smrt-v1#fig03",
+        "microstructure_families": "smrt-v1#fig03",
+        "electromagnetic_theories": "smrt-v1#fig03",
+        "legend_series": "smrt-v1#fig-fig03",
+        "panels": "smrt-v1#fig-fig03",
+        "frequency": "agent assumption: model default 37 GHz, unstated in the paper",
+        "temperature": "agent assumption: model default 265 K, unstated in the paper",
+        "stickiness": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+        "radius_m": "smrt-v1#fig03",
+        "sweep_parameter": "smrt-v1#fig03",
+        "sweep_start": "smrt-v1#fig03",
+        "sweep_stop": "smrt-v1#fig03",
+        "output": "smrt-v1#fig03"
+      },
+      "literature_evidence": [
+        {
+          "evidence_ref": "smrt-v1#08",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "bundled",
+          "title": "Model validation and exploration of the microstructure - Comparison with other reference models"
+        },
+        {
+          "evidence_ref": "smrt-v1#05",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "bundled",
+          "title": "SMRT description - Microstructure representations"
+        },
+        {
+          "evidence_ref": "smrt-v1#fig03",
+          "purpose": "paper evidence read during reproduction analysis",
+          "source": "https://gmd.copernicus.org/articles/11/2763/2018/gmd-11-2763-2018-f03.pdf",
+          "title": ""
+        }
+      ],
+      "reproduction_targets": [
+        {
+          "id": "fig03",
+          "label": "Sparse-medium scattering coefficient comparison",
+          "reference_models": [
+            "smrt"
+          ],
+          "requested_outputs": [
+            "ks_per_m"
+          ],
+          "evidence_refs": [
+            "smrt-v1#fig03",
+            "smrt-v1#fig03",
+            "smrt-v1#08",
+            "smrt-v1#05"
+          ],
+          "run_ids": [
+            "r_ind_rayleigh",
+            "r_ind_iba",
+            "r_hs_dmrt",
+            "r_hs_iba",
+            "r_shs_dmrt",
+            "r_shs_iba",
+            "d_ind_rayleigh_10ghz"
+          ],
+          "chart_ids": [
+            "fig03_ks_vs_density",
+            "fig03_frequency_diagnostic"
+          ],
+          "status": "planned",
+          "source_type": "result",
+          "source_id": "smrt-v1#fig03",
+          "target_quantity": "ks_per_m",
+          "expected_comparison": "Compare the planned ks_per_m against smrt-v1#fig03: axes, trend and legend series.",
+          "availability_reason": ""
+        }
+      ],
+      "selected_models": [
+        {
+          "model": "smrt",
+          "version": "1.5.1",
+          "role": "Reproduces the six ks(density) curves of Fig. 3 as the same model family, not as a substitute for a different reference code.",
+          "output": "coefficients",
+          "configurations": [
+            {
+              "label": "Independent spheres (Rayleigh)",
+              "electromagnetic_model": "rayleigh",
+              "microstructure_model": "independent_sphere"
+            },
+            {
+              "label": "Independent spheres (IBA)",
+              "electromagnetic_model": "iba",
+              "microstructure_model": "independent_sphere"
+            },
+            {
+              "label": "Non-sticky hard spheres (DMRT QCA-CP)",
+              "electromagnetic_model": "dmrt_qcacp_shortrange",
+              "microstructure_model": "non_sticky_hard_spheres"
+            },
+            {
+              "label": "Non-sticky hard spheres (IBA)",
+              "electromagnetic_model": "iba",
+              "microstructure_model": "non_sticky_hard_spheres"
+            },
+            {
+              "label": "Sticky hard spheres (DMRT QCA-CP)",
+              "electromagnetic_model": "dmrt_qcacp_shortrange",
+              "microstructure_model": "sticky_hard_spheres"
+            },
+            {
+              "label": "Sticky hard spheres (IBA)",
+              "electromagnetic_model": "iba",
+              "microstructure_model": "sticky_hard_spheres"
+            }
+          ],
+          "capability_status": "runnable",
+          "instruction_ref": "guideline:smrt@1.0"
+        }
+      ],
+      "parameter_mapping": [
+        {
+          "model": "smrt",
+          "paper_concept": "sphere radius",
+          "paper_value": "100 micrometres",
+          "model_input": "radius_m",
+          "mapped_value": 0.0001,
+          "units": "m",
+          "provenance_class": "paper_explicit",
+          "confidence": "high",
+          "evidence_ref": "smrt-v1#fig03",
+          "rationale": "Stated in the Fig. 3 caption and repeated in Sect. 3.1.1.",
+          "confidence_basis": "explicitly supported by opened paper evidence"
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "x axis: density",
+          "paper_value": "density swept across the plotted range",
+          "model_input": "sweep_parameter",
+          "mapped_value": "density_kg_m3",
+          "provenance_class": "paper_explicit",
+          "confidence": "high",
+          "evidence_ref": "smrt-v1#fig03",
+          "rationale": "The figure's abscissa is Density (kg m^-3).",
+          "units": "none",
+          "confidence_basis": "explicitly supported by opened paper evidence"
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "x axis lower limit",
+          "paper_value": "0 kg m^-3 (curves drawn from the origin)",
+          "model_input": "sweep_start",
+          "mapped_value": 1.0,
+          "units": "kg m-3",
+          "provenance_class": "paper_inferred",
+          "confidence": "medium",
+          "evidence_ref": "smrt-v1#fig03",
+          "rationale": "The declared density minimum is 1 kg m-3; the sparse-medium limit is approached from above and the plotted curves start just right of zero.",
+          "confidence_basis": "inferred from opened paper evidence"
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "x axis upper limit",
+          "paper_value": "100 kg m^-3",
+          "model_input": "sweep_stop",
+          "mapped_value": 100.0,
+          "units": "kg m-3",
+          "provenance_class": "paper_explicit",
+          "confidence": "high",
+          "evidence_ref": "smrt-v1#fig03",
+          "rationale": "Last x-axis tick of the source figure.",
+          "confidence_basis": "explicitly supported by opened paper evidence"
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "y axis: scattering coefficient",
+          "paper_value": "scattering coefficient in m^-1",
+          "model_input": "output",
+          "mapped_value": "coefficients",
+          "provenance_class": "paper_explicit",
+          "confidence": "high",
+          "evidence_ref": "smrt-v1#fig03",
+          "rationale": "The figure plots ks from the electromagnetic theory alone, so the coefficients output is the right observable; no radiative-transfer solution, hence no dependence on thickness, angle or stream count.",
+          "units": "none",
+          "confidence_basis": "explicitly supported by opened paper evidence"
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "frequency",
+          "paper_value": "not stated for Fig. 3",
+          "model_input": "frequency_ghz",
+          "mapped_value": 37.0,
+          "units": "GHz",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "rationale": "Neither the caption nor Sect. 3.1.1 states a frequency for this figure and the source image carries no frequency annotation. The declared default is taken, and a diagnostic run at 10 GHz bounds how much of any vertical offset this causes.",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": ""
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "temperature",
+          "paper_value": "not stated for Fig. 3",
+          "model_input": "temperature_k",
+          "mapped_value": 265.0,
+          "units": "K",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "rationale": "Declared default. Sect. 3.1.2 uses 256 K for Figs. 4-5 but that is a different figure; temperature enters ks only through the loss tangent of ice, so the effect here is second order.",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": ""
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "stickiness of the sticky hard sphere model",
+          "paper_value": "not stated for Fig. 3",
+          "model_input": "stickiness",
+          "mapped_value": 0.5,
+          "units": "none",
+          "provenance_class": "user_specified",
+          "confidence": "high",
+          "evidence_ref": "smrt-v1#08",
+          "rationale": "The submitted experiment differs from the paper condition; the paper value remains comparison context.",
+          "confidence_basis": "directly specified by the user"
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "electromagnetic_model",
+          "paper_value": null,
+          "model_input": "electromagnetic_model",
+          "mapped_value": "rayleigh",
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "microstructure_model",
+          "paper_value": null,
+          "model_input": "microstructure_model",
+          "mapped_value": "independent_sphere",
+          "units": "none",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "angle_deg",
+          "paper_value": null,
+          "model_input": "angle_deg",
+          "mapped_value": 55.0,
+          "units": "degree",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "thickness_m",
+          "paper_value": null,
+          "model_input": "thickness_m",
+          "mapped_value": 1.0,
+          "units": "m",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "density_kg_m3",
+          "paper_value": null,
+          "model_input": "density_kg_m3",
+          "mapped_value": 300.0,
+          "units": "kg m-3",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "corr_length_m",
+          "paper_value": null,
+          "model_input": "corr_length_m",
+          "mapped_value": 0.00015,
+          "units": "m",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "dort_streams",
+          "paper_value": null,
+          "model_input": "dort_streams",
+          "mapped_value": 32,
+          "units": "count",
+          "provenance_class": "backend_default",
+          "confidence": "medium",
+          "confidence_basis": "provided by the registered model backend, not by the paper",
+          "evidence_ref": "",
+          "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+        },
+        {
+          "model": "smrt",
+          "paper_concept": "sweep_points",
+          "paper_value": null,
+          "model_input": "sweep_points",
+          "mapped_value": 21,
+          "units": "count",
+          "provenance_class": "model_assumption",
+          "confidence": "low",
+          "confidence_basis": "not supported by paper or user evidence; requires review",
+          "evidence_ref": "",
+          "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+        }
+      ],
+      "parameter_resolution": [
+        {
+          "run_id": "r_ind_rayleigh",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ]
+        },
+        {
+          "run_id": "r_ind_iba",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "iba",
+            "microstructure_model": "independent_sphere",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ]
+        },
+        {
+          "run_id": "r_hs_dmrt",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ]
+        },
+        {
+          "run_id": "r_hs_iba",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "iba",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ]
+        },
+        {
+          "run_id": "r_shs_dmrt",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "sticky_hard_spheres",
+            "stickiness": 0.5,
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.5,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "thickness_m"
+          ]
+        },
+        {
+          "run_id": "r_shs_iba",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "iba",
+            "microstructure_model": "sticky_hard_spheres",
+            "stickiness": 0.5,
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.5,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "thickness_m"
+          ]
+        },
+        {
+          "run_id": "d_ind_rayleigh_10ghz",
+          "model": "smrt",
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "radius_m": 0.0001,
+            "frequency_ghz": 10,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 10.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ]
+        }
+      ],
+      "outputs": [
+        "coefficients",
+        "ks_per_m"
+      ],
+      "runs": [
+        {
+          "id": "r_ind_rayleigh",
+          "label": "Independent spheres, Rayleigh theory",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ],
+          "stage": "main",
+          "target_ids": [
+            "fig03"
+          ]
+        },
+        {
+          "id": "r_ind_iba",
+          "label": "Independent spheres, IBA",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "iba",
+            "microstructure_model": "independent_sphere",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ],
+          "stage": "main",
+          "target_ids": [
+            "fig03"
+          ]
+        },
+        {
+          "id": "r_hs_dmrt",
+          "label": "Non-sticky hard spheres, DMRT QCA-CP",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ],
+          "stage": "main",
+          "target_ids": [
+            "fig03"
+          ]
+        },
+        {
+          "id": "r_hs_iba",
+          "label": "Non-sticky hard spheres, IBA",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "iba",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "non_sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ],
+          "stage": "main",
+          "target_ids": [
+            "fig03"
+          ]
+        },
+        {
+          "id": "r_shs_dmrt",
+          "label": "Sticky hard spheres, DMRT QCA-CP, tau 0.5",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.5,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "sticky_hard_spheres",
+            "stickiness": 0.5,
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "dmrt_qcacp_shortrange",
+            "microstructure_model": "sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.5,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "thickness_m"
+          ],
+          "stage": "main",
+          "target_ids": [
+            "fig03"
+          ]
+        },
+        {
+          "id": "r_shs_iba",
+          "label": "Sticky hard spheres, IBA, tau 0.5",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.5,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "iba",
+            "microstructure_model": "sticky_hard_spheres",
+            "stickiness": 0.5,
+            "radius_m": 0.0001,
+            "frequency_ghz": 37,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "iba",
+            "microstructure_model": "sticky_hard_spheres",
+            "output": "coefficients",
+            "frequency_ghz": 37.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.5,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "thickness_m"
+          ],
+          "stage": "main",
+          "target_ids": [
+            "fig03"
+          ]
+        },
+        {
+          "id": "d_ind_rayleigh_10ghz",
+          "label": "Diagnostic: independent spheres, Rayleigh, 10 GHz",
+          "model": "smrt",
+          "parameters": {
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 10.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "requested_parameters": {
+            "output": "coefficients",
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "radius_m": 0.0001,
+            "frequency_ghz": 10,
+            "temperature_k": 265,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1,
+            "sweep_stop": 100,
+            "sweep_points": 21
+          },
+          "resolved_parameters": {
+            "electromagnetic_model": "rayleigh",
+            "microstructure_model": "independent_sphere",
+            "output": "coefficients",
+            "frequency_ghz": 10.0,
+            "angle_deg": 55.0,
+            "thickness_m": 1.0,
+            "density_kg_m3": 300.0,
+            "temperature_k": 265.0,
+            "corr_length_m": 0.00015,
+            "radius_m": 0.0001,
+            "stickiness": 0.2,
+            "dort_streams": 32,
+            "sweep_parameter": "density_kg_m3",
+            "sweep_start": 1.0,
+            "sweep_stop": 100.0,
+            "sweep_points": 21
+          },
+          "defaulted_parameters": [
+            "angle_deg",
+            "corr_length_m",
+            "density_kg_m3",
+            "dort_streams",
+            "stickiness",
+            "thickness_m"
+          ],
+          "stage": "diagnostic",
+          "target_ids": [
+            "fig03"
+          ]
+        }
+      ],
+      "charts": [
+        {
+          "id": "fig03_ks_vs_density",
+          "label": "Reproduced Fig. 3: scattering coefficient vs density, six configurations",
+          "kind": "line",
+          "x": "density_kg_m3",
+          "y": "ks_per_m",
+          "ys": [
+            "ks_per_m"
+          ],
+          "required": true,
+          "purpose": "Reproduce the six curves of the source figure and check the shared low-density trend and the SHS > IND > HS ordering.",
+          "x_label": "Density (kg m^-3)",
+          "y_label": "Scattering coefficient (m^-1)",
+          "target_ids": [
+            "fig03"
+          ]
+        },
+        {
+          "id": "fig03_frequency_diagnostic",
+          "label": "Diagnostic: independent spheres (Rayleigh) at 37 GHz and 10 GHz",
+          "kind": "line",
+          "x": "density_kg_m3",
+          "y": "ks_per_m",
+          "ys": [
+            "ks_per_m"
+          ],
+          "required": false,
+          "purpose": "Show how much of the vertical level depends on the frequency the paper does not state for this figure.",
+          "x_label": "Density (kg m^-3)",
+          "y_label": "Scattering coefficient (m^-1)",
+          "target_ids": [
+            "fig03"
+          ]
+        }
+      ],
+      "quantities": [
+        "Scattering coefficient ks (m^-1) from the electromagnetic theory alone",
+        "Density (kg m^-3) as the swept control variable"
+      ],
+      "controls": [
+        "Sphere radius fixed at 100 µm for all six curves, as the figure states.",
+        "Frequency, temperature and stickiness held at one value across all six runs, so the only difference between curves is the microstructure / electromagnetic-theory pair.",
+        "Coefficients output, so no radiative-transfer solution and no dependence on layer thickness, incidence angle or stream count.",
+        "Identical density grid of 21 points from 1 to 100 kg m^-3 for every run."
+      ],
+      "metrics": [
+        "Qualitative: the density at which the curves visually separate, read off the reproduced grid.",
+        "Pairwise difference in ks between the Rayleigh and IBA independent-sphere curves at 100 kg m^-3.",
+        "Pairwise difference in ks between DMRT QCA-CP and IBA for the same microstructure at 100 kg m^-3.",
+        "Ratio of ks at 10 GHz to ks at 37 GHz for the independent-sphere Rayleigh curve, to bound the frequency assumption."
+      ],
+      "diagnostics": [
+        "Frequency sensitivity at 10 GHz for the independent-sphere Rayleigh configuration, since the figure states no frequency.",
+        "Cross-check that the two hard-sphere families and the independent-sphere family all converge towards the same origin as density tends to the lower bound, which is the technical validation the paper claims."
+      ],
+      "success_criteria": [
+        "All six curves are produced on the declared density range with finite, non-negative ks.",
+        "Every curve starts near zero at the sparse-medium limit and rises monotonically with density.",
+        "The three microstructure families coincide at low density and diverge at high density, with sticky hard spheres uppermost and non-sticky hard spheres lowest, as the source figure shows.",
+        "For each microstructure family the Rayleigh/IBA or DMRT/IBA pair remains close together compared with the separation between families."
+      ],
+      "stop_conditions": [
+        "A DMRT short-range run fails to converge for the sticky hard spheres at the chosen stickiness; the plan then reports that configuration as unavailable rather than substituting another theory.",
+        "Any run returns ks outside the declared valid range of 0 to 1000 m^-1."
+      ],
+      "assumptions": [
+        "Frequency 37 GHz (model default) — not stated for Fig. 3; ks scales strongly with frequency, so absolute values on the y axis are conditional on this choice.",
+        "Temperature 265 K (model default) — not stated for Fig. 3; a second-order effect on ks through the loss tangent of ice.",
+        "Stickiness tau = 0.5 for both sticky-hard-sphere curves — not stated for Fig. 3, taken from the comparisons in the same section; the SHS curves depend on it appreciably.",
+        "Sweep starts at 1 kg m^-3, the declared lower bound, rather than at the 0 the axis of the source figure shows.",
+        "21 density points on a linear grid, chosen by the agent to resolve the curvature."
+      ],
+      "limitations": [
+        "The density range 1 to 100 kg m^-3 is the sparse-medium limit, well below natural snow; the result is a statement about the formulations, not about a snowpack, as the paper itself notes.",
+        "No numeric agreement with the source figure can be claimed: the figure has not been digitized, and its frequency, temperature and stickiness are unstated, so only shape, ordering and the low-density convergence are comparable.",
+        "The registered implementation is SMRT v1.5.1 while the figure was produced with v1.0; a difference between the two cannot be attributed to the physics without checking the implementation history.",
+        "This reproduces Fig. 3 only. Figs. 4 to 8, which compare SMRT against DMRT-ML, DMRT-QMS and MEMLS, are not in scope and no external reference code is registered here."
+      ],
+      "baseline_run_id": "r_ind_rayleigh",
+      "automatic_repairs": [
+        {
+          "field": "literature_evidence",
+          "from": [],
+          "to": [
+            {
+              "evidence_ref": "smrt-v1#08",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "bundled",
+              "title": "Model validation and exploration of the microstructure - Comparison with other reference models"
+            },
+            {
+              "evidence_ref": "smrt-v1#05",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "bundled",
+              "title": "SMRT description - Microstructure representations"
+            },
+            {
+              "evidence_ref": "smrt-v1#fig03",
+              "purpose": "paper evidence read during reproduction analysis",
+              "source": "https://gmd.copernicus.org/articles/11/2763/2018/gmd-11-2763-2018-f03.pdf",
+              "title": ""
+            }
+          ],
+          "reason": "bind the proposal to paper sections or figures opened in this session",
+          "provenance": "session_evidence_ledger"
+        },
+        {
+          "field": "reproduction_targets[0].source_id",
+          "from": null,
+          "to": "smrt-v1#fig03",
+          "reason": "identify the target by its opened source figure or checked target",
+          "provenance": "session_evidence_ledger"
+        },
+        {
+          "field": "reproduction_targets[0].target_quantity",
+          "from": null,
+          "to": "ks_per_m",
+          "reason": "name the quantity by the target's requested outputs",
+          "provenance": "submitted_plan_fields"
+        },
+        {
+          "field": "reproduction_targets[0].expected_comparison",
+          "from": null,
+          "to": "Compare the planned ks_per_m against smrt-v1#fig03: axes, trend and legend series.",
+          "reason": "state the comparison implied by the target's quantity and source",
+          "provenance": "submitted_plan_fields"
+        },
+        {
+          "field": "reproduction_targets[0].reference_models",
+          "from": [
+            "Independent spheres (Rayleigh)",
+            "Independent spheres (IBA)",
+            "Non-sticky hard spheres (DMRT QCA-CP)",
+            "Non-sticky hard spheres (IBA)",
+            "Sticky hard spheres (DMRT QCA-CP)",
+            "Sticky hard spheres (IBA)"
+          ],
+          "to": [
+            "smrt"
+          ],
+          "reason": "carry the evidence-backed capability resolution into the executable plan",
+          "provenance": "capability_review"
+        },
+        {
+          "field": "outputs",
+          "from": [],
+          "to": [
+            "coefficients",
+            "ks_per_m"
+          ],
+          "reason": "derive compared outputs from declared charts and run inputs",
+          "provenance": "submitted_plan_fields"
+        },
+        {
+          "field": "paper_conditions.radius_m",
+          "from": null,
+          "to": 0.0001,
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "paper_conditions.sweep_parameter",
+          "from": null,
+          "to": "density_kg_m3",
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "paper_conditions.sweep_start",
+          "from": null,
+          "to": 1.0,
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_inferred"
+        },
+        {
+          "field": "paper_conditions.sweep_stop",
+          "from": null,
+          "to": 100.0,
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "paper_conditions.output",
+          "from": null,
+          "to": "coefficients",
+          "reason": "promote an evidence-backed paper mapping into the explicit condition ledger",
+          "provenance": "paper_explicit"
+        },
+        {
+          "field": "parameter_mapping[0].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[1].units",
+          "from": "",
+          "to": "none",
+          "reason": "copy the declared unit for the registered model input",
+          "provenance": "registered_model_declaration",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[1].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[2].confidence_basis",
+          "from": "",
+          "to": "inferred from opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_inferred",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[3].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[4].units",
+          "from": "",
+          "to": "none",
+          "reason": "copy the declared unit for the registered model input",
+          "provenance": "registered_model_declaration",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping[4].confidence_basis",
+          "from": "",
+          "to": "explicitly supported by opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_explicit",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[5].confidence_basis",
+          "from": "",
+          "to": "not supported by paper or user evidence; requires review",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "model_assumption",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[6].confidence_basis",
+          "from": "",
+          "to": "not supported by paper or user evidence; requires review",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "model_assumption",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping[7].confidence_basis",
+          "from": "",
+          "to": "inferred from opened paper evidence",
+          "reason": "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",
+          "provenance": "paper_inferred",
+          "source": "provenance_classification"
+        },
+        {
+          "field": "parameter_mapping.smrt.electromagnetic_model",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "electromagnetic_model",
+            "paper_value": null,
+            "model_input": "electromagnetic_model",
+            "mapped_value": "rayleigh",
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.microstructure_model",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "microstructure_model",
+            "paper_value": null,
+            "model_input": "microstructure_model",
+            "mapped_value": "independent_sphere",
+            "units": "none",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.angle_deg",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "angle_deg",
+            "paper_value": null,
+            "model_input": "angle_deg",
+            "mapped_value": 55.0,
+            "units": "degree",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.thickness_m",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "thickness_m",
+            "paper_value": null,
+            "model_input": "thickness_m",
+            "mapped_value": 1.0,
+            "units": "m",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.density_kg_m3",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "density_kg_m3",
+            "paper_value": null,
+            "model_input": "density_kg_m3",
+            "mapped_value": 300.0,
+            "units": "kg m-3",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.corr_length_m",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "corr_length_m",
+            "paper_value": null,
+            "model_input": "corr_length_m",
+            "mapped_value": 0.00015,
+            "units": "m",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.dort_streams",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "dort_streams",
+            "paper_value": null,
+            "model_input": "dort_streams",
+            "mapped_value": 32,
+            "units": "count",
+            "provenance_class": "backend_default",
+            "confidence": "medium",
+            "confidence_basis": "provided by the registered model backend, not by the paper",
+            "evidence_ref": "",
+            "rationale": "The registered model inserted this value during parameter resolution; it is not paper evidence."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "backend_default",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "parameter_mapping.smrt.sweep_points",
+          "from": null,
+          "to": {
+            "model": "smrt",
+            "paper_concept": "sweep_points",
+            "paper_value": null,
+            "model_input": "sweep_points",
+            "mapped_value": 21,
+            "units": "count",
+            "provenance_class": "model_assumption",
+            "confidence": "low",
+            "confidence_basis": "not supported by paper or user evidence; requires review",
+            "evidence_ref": "",
+            "rationale": "The submitted run retained this value without attached paper/user evidence; confirm it during plan review."
+          },
+          "reason": "map every resolved run input to an exact declared model parameter",
+          "provenance": "model_assumption",
+          "source": "registered_model_declaration"
+        },
+        {
+          "field": "baseline_run_id",
+          "from": null,
+          "to": "r_ind_rayleigh",
+          "reason": "name a planned run as the baseline; change it at review if another run is the reference",
+          "provenance": "submitted_runs"
+        }
+      ],
+      "validation_warnings": [
+        {
+          "code": "paper_context_difference",
+          "field": "runs[r_ind_rayleigh].parameters.stickiness",
+          "source": "paper_conditions.stickiness",
+          "expected": "not stated",
+          "actual": 0.2,
+          "repair": "none",
+          "provenance": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[r_ind_iba].parameters.stickiness",
+          "source": "paper_conditions.stickiness",
+          "expected": "not stated",
+          "actual": 0.2,
+          "repair": "none",
+          "provenance": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[r_hs_dmrt].parameters.stickiness",
+          "source": "paper_conditions.stickiness",
+          "expected": "not stated",
+          "actual": 0.2,
+          "repair": "none",
+          "provenance": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[r_hs_iba].parameters.stickiness",
+          "source": "paper_conditions.stickiness",
+          "expected": "not stated",
+          "actual": 0.2,
+          "repair": "none",
+          "provenance": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[r_shs_dmrt].parameters.stickiness",
+          "source": "paper_conditions.stickiness",
+          "expected": "not stated",
+          "actual": 0.5,
+          "repair": "none",
+          "provenance": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[r_shs_iba].parameters.stickiness",
+          "source": "paper_conditions.stickiness",
+          "expected": "not stated",
+          "actual": 0.5,
+          "repair": "none",
+          "provenance": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        },
+        {
+          "code": "paper_context_difference",
+          "field": "runs[d_ind_rayleigh_10ghz].parameters.stickiness",
+          "source": "paper_conditions.stickiness",
+          "expected": "not stated",
+          "actual": 0.2,
+          "repair": "none",
+          "provenance": "agent assumption: tau = 0.5 taken from the neighbouring comparisons in smrt-v1#08",
+          "category": "paper_context",
+          "blocking": false,
+          "message": "The run differs from the paper reference condition; it is an exploratory extension and is not an exact reproduction of that source condition."
+        }
+      ],
+      "capability_gaps": [],
+      "capability_review": {
+        "status": "ready",
+        "supported": [
+          {
+            "model": "smrt",
+            "version": "1.5.1",
+            "runnable_here": true,
+            "parameters": [
+              "angle_deg",
+              "corr_length_m",
+              "density_kg_m3",
+              "dort_streams",
+              "electromagnetic_model",
+              "frequency_ghz",
+              "microstructure_model",
+              "output",
+              "radius_m",
+              "stickiness",
+              "sweep_parameter",
+              "sweep_points",
+              "sweep_start",
+              "sweep_stop",
+              "temperature_k",
+              "thickness_m"
+            ],
+            "combinations": [
+              {
+                "when": {
+                  "electromagnetic_model": [
+                    "dmrt_qca_shortrange",
+                    "dmrt_qcacp_shortrange"
+                  ]
+                },
+                "allow": {
+                  "microstructure_model": [
+                    "sticky_hard_spheres",
+                    "non_sticky_hard_spheres"
+                  ]
+                },
+                "reason": "DMRT is implemented for the sticky-hard-sphere family, including its none-sticky limit; pairing it with an autocorrelation-function microstructure has no analytical basis in SMRT."
+              },
+              {
+                "when": {
+                  "microstructure_model": [
+                    "exponential",
+                    "teubner_strey",
+                    "gaussian_random_field"
+                  ]
+                },
+                "allow": {
+                  "electromagnetic_model": [
+                    "iba",
+                    "iba_original",
+                    "symsce_torquato21"
+                  ]
+                },
+                "reason": "Autocorrelation-function microstructures do not expose the sphere radius required by SMRT's Rayleigh implementation and are not valid for sphere-based DMRT formulations."
+              },
+              {
+                "when": {
+                  "electromagnetic_model": [
+                    "rayleigh"
+                  ]
+                },
+                "allow": {
+                  "microstructure_model": [
+                    "independent_sphere",
+                    "sticky_hard_spheres"
+                  ]
+                },
+                "reason": "SMRT's Rayleigh implementation reads a particle radius, so it requires a sphere-based microstructure rather than an autocorrelation-function microstructure."
+              }
+            ],
+            "outputs": [
+              "effective_permittivity",
+              "ka_per_m",
+              "ks_per_m",
+              "sigma_hh_db",
+              "sigma_hv_db",
+              "sigma_vv_db",
+              "single_scattering_albedo",
+              "tb_h",
+              "tb_v"
+            ],
+            "source": "list_models + read_model_instruction",
+            "configuration": {
+              "electromagnetic_model": "rayleigh",
+              "microstructure_model": "independent_sphere"
+            },
+            "configuration_options": [],
+            "reference_model": true,
+            "configurations": [
+              {
+                "electromagnetic_model": "rayleigh",
+                "microstructure_model": "independent_sphere"
+              },
+              {
+                "electromagnetic_model": "iba",
+                "microstructure_model": "independent_sphere"
+              },
+              {
+                "microstructure_model": "non_sticky_hard_spheres"
+              },
+              {
+                "electromagnetic_model": "iba",
+                "microstructure_model": "non_sticky_hard_spheres"
+              },
+              {
+                "microstructure_model": "sticky_hard_spheres"
+              },
+              {
+                "electromagnetic_model": "iba",
+                "microstructure_model": "sticky_hard_spheres"
+              }
+            ],
+            "asked_as": [
+              "Independent spheres (Rayleigh)",
+              "Independent spheres (IBA)",
+              "Non-sticky hard spheres (DMRT QCA-CP)",
+              "Non-sticky hard spheres (IBA)",
+              "Sticky hard spheres (DMRT QCA-CP)",
+              "Sticky hard spheres (IBA)"
+            ],
+            "target_ids": [
+              "fig03"
+            ]
+          }
+        ],
+        "unavailable": [],
+        "not_comparable": [],
+        "requested_models": [
+          "Independent spheres (Rayleigh)",
+          "Independent spheres (IBA)",
+          "Non-sticky hard spheres (DMRT QCA-CP)",
+          "Non-sticky hard spheres (IBA)",
+          "Sticky hard spheres (DMRT QCA-CP)",
+          "Sticky hard spheres (IBA)"
+        ],
+        "requested_outputs": [
+          "ks_per_m"
+        ],
+        "supported_outputs": [
+          "effective_permittivity",
+          "ka_per_m",
+          "ks_per_m",
+          "sigma_hh_db",
+          "sigma_hv_db",
+          "sigma_vv_db",
+          "single_scattering_albedo",
+          "tb_h",
+          "tb_v"
+        ],
+        "unavailable_outputs": [],
+        "resource_gaps": [],
+        "resolved_names": [
+          {
+            "asked": "Independent spheres (Rayleigh)",
+            "registered": "smrt",
+            "configuration": {
+              "electromagnetic_model": "rayleigh",
+              "microstructure_model": "independent_sphere"
+            },
+            "configuration_options": null
+          },
+          {
+            "asked": "Independent spheres (IBA)",
+            "registered": "smrt",
+            "configuration": {
+              "electromagnetic_model": "iba",
+              "microstructure_model": "independent_sphere"
+            },
+            "configuration_options": null
+          },
+          {
+            "asked": "Non-sticky hard spheres (DMRT QCA-CP)",
+            "registered": "smrt",
+            "configuration": {
+              "microstructure_model": "non_sticky_hard_spheres"
+            },
+            "configuration_options": null
+          },
+          {
+            "asked": "Non-sticky hard spheres (IBA)",
+            "registered": "smrt",
+            "configuration": {
+              "electromagnetic_model": "iba",
+              "microstructure_model": "non_sticky_hard_spheres"
+            },
+            "configuration_options": null
+          },
+          {
+            "asked": "Sticky hard spheres (DMRT QCA-CP)",
+            "registered": "smrt",
+            "configuration": {
+              "microstructure_model": "sticky_hard_spheres"
+            },
+            "configuration_options": null
+          },
+          {
+            "asked": "Sticky hard spheres (IBA)",
+            "registered": "smrt",
+            "configuration": {
+              "electromagnetic_model": "iba",
+              "microstructure_model": "sticky_hard_spheres"
+            },
+            "configuration_options": null
+          }
+        ],
+        "evidence": [
+          "research-planning#00",
+          "smrt-v1#08",
+          "smrt-v1#fig03",
+          "smrt-v1#fig-fig03",
+          "smrt-v1#05"
+        ],
+        "targets": [
+          "fig03"
+        ],
+        "target_reports": [
+          {
+            "status": "ready",
+            "supported": [
+              {
+                "model": "smrt",
+                "version": "1.5.1",
+                "runnable_here": true,
+                "parameters": [
+                  "angle_deg",
+                  "corr_length_m",
+                  "density_kg_m3",
+                  "dort_streams",
+                  "electromagnetic_model",
+                  "frequency_ghz",
+                  "microstructure_model",
+                  "output",
+                  "radius_m",
+                  "stickiness",
+                  "sweep_parameter",
+                  "sweep_points",
+                  "sweep_start",
+                  "sweep_stop",
+                  "temperature_k",
+                  "thickness_m"
+                ],
+                "combinations": [
+                  {
+                    "when": {
+                      "electromagnetic_model": [
+                        "dmrt_qca_shortrange",
+                        "dmrt_qcacp_shortrange"
+                      ]
+                    },
+                    "allow": {
+                      "microstructure_model": [
+                        "sticky_hard_spheres",
+                        "non_sticky_hard_spheres"
+                      ]
+                    },
+                    "reason": "DMRT is implemented for the sticky-hard-sphere family, including its none-sticky limit; pairing it with an autocorrelation-function microstructure has no analytical basis in SMRT."
+                  },
+                  {
+                    "when": {
+                      "microstructure_model": [
+                        "exponential",
+                        "teubner_strey",
+                        "gaussian_random_field"
+                      ]
+                    },
+                    "allow": {
+                      "electromagnetic_model": [
+                        "iba",
+                        "iba_original",
+                        "symsce_torquato21"
+                      ]
+                    },
+                    "reason": "Autocorrelation-function microstructures do not expose the sphere radius required by SMRT's Rayleigh implementation and are not valid for sphere-based DMRT formulations."
+                  },
+                  {
+                    "when": {
+                      "electromagnetic_model": [
+                        "rayleigh"
+                      ]
+                    },
+                    "allow": {
+                      "microstructure_model": [
+                        "independent_sphere",
+                        "sticky_hard_spheres"
+                      ]
+                    },
+                    "reason": "SMRT's Rayleigh implementation reads a particle radius, so it requires a sphere-based microstructure rather than an autocorrelation-function microstructure."
+                  }
+                ],
+                "outputs": [
+                  "effective_permittivity",
+                  "ka_per_m",
+                  "ks_per_m",
+                  "sigma_hh_db",
+                  "sigma_hv_db",
+                  "sigma_vv_db",
+                  "single_scattering_albedo",
+                  "tb_h",
+                  "tb_v"
+                ],
+                "source": "list_models + read_model_instruction",
+                "configuration": {
+                  "electromagnetic_model": "rayleigh",
+                  "microstructure_model": "independent_sphere"
+                },
+                "configuration_options": [],
+                "reference_model": true,
+                "configurations": [
+                  {
+                    "electromagnetic_model": "rayleigh",
+                    "microstructure_model": "independent_sphere"
+                  },
+                  {
+                    "electromagnetic_model": "iba",
+                    "microstructure_model": "independent_sphere"
+                  },
+                  {
+                    "microstructure_model": "non_sticky_hard_spheres"
+                  },
+                  {
+                    "electromagnetic_model": "iba",
+                    "microstructure_model": "non_sticky_hard_spheres"
+                  },
+                  {
+                    "microstructure_model": "sticky_hard_spheres"
+                  },
+                  {
+                    "electromagnetic_model": "iba",
+                    "microstructure_model": "sticky_hard_spheres"
+                  }
+                ],
+                "asked_as": [
+                  "Independent spheres (Rayleigh)",
+                  "Independent spheres (IBA)",
+                  "Non-sticky hard spheres (DMRT QCA-CP)",
+                  "Non-sticky hard spheres (IBA)",
+                  "Sticky hard spheres (DMRT QCA-CP)",
+                  "Sticky hard spheres (IBA)"
+                ]
+              }
+            ],
+            "unavailable": [],
+            "not_comparable": [],
+            "requested_models": [
+              "Independent spheres (Rayleigh)",
+              "Independent spheres (IBA)",
+              "Non-sticky hard spheres (DMRT QCA-CP)",
+              "Non-sticky hard spheres (IBA)",
+              "Sticky hard spheres (DMRT QCA-CP)",
+              "Sticky hard spheres (IBA)"
+            ],
+            "requested_outputs": [
+              "ks_per_m"
+            ],
+            "supported_outputs": [
+              "effective_permittivity",
+              "ka_per_m",
+              "ks_per_m",
+              "sigma_hh_db",
+              "sigma_hv_db",
+              "sigma_vv_db",
+              "single_scattering_albedo",
+              "tb_h",
+              "tb_v"
+            ],
+            "unavailable_outputs": [],
+            "resource_gaps": [],
+            "resolved_names": [
+              {
+                "asked": "Independent spheres (Rayleigh)",
+                "registered": "smrt",
+                "configuration": {
+                  "electromagnetic_model": "rayleigh",
+                  "microstructure_model": "independent_sphere"
+                },
+                "configuration_options": null
+              },
+              {
+                "asked": "Independent spheres (IBA)",
+                "registered": "smrt",
+                "configuration": {
+                  "electromagnetic_model": "iba",
+                  "microstructure_model": "independent_sphere"
+                },
+                "configuration_options": null
+              },
+              {
+                "asked": "Non-sticky hard spheres (DMRT QCA-CP)",
+                "registered": "smrt",
+                "configuration": {
+                  "microstructure_model": "non_sticky_hard_spheres"
+                },
+                "configuration_options": null
+              },
+              {
+                "asked": "Non-sticky hard spheres (IBA)",
+                "registered": "smrt",
+                "configuration": {
+                  "electromagnetic_model": "iba",
+                  "microstructure_model": "non_sticky_hard_spheres"
+                },
+                "configuration_options": null
+              },
+              {
+                "asked": "Sticky hard spheres (DMRT QCA-CP)",
+                "registered": "smrt",
+                "configuration": {
+                  "microstructure_model": "sticky_hard_spheres"
+                },
+                "configuration_options": null
+              },
+              {
+                "asked": "Sticky hard spheres (IBA)",
+                "registered": "smrt",
+                "configuration": {
+                  "electromagnetic_model": "iba",
+                  "microstructure_model": "sticky_hard_spheres"
+                },
+                "configuration_options": null
+              }
+            ],
+            "evidence": [
+              "research-planning#00",
+              "smrt-v1#08",
+              "smrt-v1#fig03",
+              "smrt-v1#fig-fig03",
+              "smrt-v1#05"
+            ],
+            "targets": [
+              "fig03"
+            ],
+            "user_decision": null,
+            "confirmed_scope": null,
+            "id": "fig03",
+            "label": "Sparse-medium scattering coefficient comparison",
+            "target_key": "figure:3"
+          }
+        ],
+        "target_check_complete": true,
+        "missing_targets": [],
+        "user_decision": null,
+        "confirmed_scope": null
+      },
+      "reference_sections": [
+        "research-planning#00",
+        "smrt-v1#05",
+        "smrt-v1#08",
+        "smrt-v1#fig-fig03"
+      ],
+      "reference_paper_sections": [
+        "SMRT description - Microstructure representations"
+      ],
+      "approval_state": "plan_review",
+      "outcome_scope": "full"
+    },
+    "selected_chart": {
+      "id": "fig03_ks_vs_density",
+      "label": "Reproduced Fig. 3: scattering coefficient vs density, six configurations",
+      "kind": "line",
+      "x": "density_kg_m3",
+      "y": "ks_per_m",
+      "ys": [
+        "ks_per_m"
+      ],
+      "required": true,
+      "purpose": "Reproduce the six curves of the source figure and check the shared low-density trend and the SHS > IND > HS ordering.",
+      "x_label": "Density (kg m^-3)",
+      "y_label": "Scattering coefficient (m^-1)",
+      "target_ids": [
+        "fig03"
+      ]
+    },
+    "selected_charts": [
+      "fig03_ks_vs_density"
+    ],
+    "pseudo": {
+      "label": "PSEUDO-DATA - layout demonstration only - preview v001",
+      "points": [
+        {
+          "density_kg_m3": 1.0,
+          "1_ks_per_m": 0.22103677,
+          "2_ks_per_m": 0.33103677,
+          "3_ks_per_m": 0.44103677,
+          "4_ks_per_m": 0.55103677,
+          "5_ks_per_m": 0.66103677,
+          "6_ks_per_m": 0.77103677,
+          "7_ks_per_m": 0.88103677
+        },
+        {
+          "density_kg_m3": 6.21052632,
+          "1_ks_per_m": 0.2516798,
+          "2_ks_per_m": 0.3616798,
+          "3_ks_per_m": 0.4716798,
+          "4_ks_per_m": 0.5816798,
+          "5_ks_per_m": 0.6916798,
+          "6_ks_per_m": 0.8016798,
+          "7_ks_per_m": 0.9116798
+        },
+        {
+          "density_kg_m3": 11.42105263,
+          "1_ks_per_m": 0.26142274,
+          "2_ks_per_m": 0.37142274,
+          "3_ks_per_m": 0.48142274,
+          "4_ks_per_m": 0.59142274,
+          "5_ks_per_m": 0.70142274,
+          "6_ks_per_m": 0.81142274,
+          "7_ks_per_m": 0.92142274
+        },
+        {
+          "density_kg_m3": 16.63157895,
+          "1_ks_per_m": 0.26792204,
+          "2_ks_per_m": 0.37792204,
+          "3_ks_per_m": 0.48792204,
+          "4_ks_per_m": 0.59792204,
+          "5_ks_per_m": 0.70792204,
+          "6_ks_per_m": 0.81792204,
+          "7_ks_per_m": 0.92792204
+        },
+        {
+          "density_kg_m3": 21.84210526,
+          "1_ks_per_m": 0.29181637,
+          "2_ks_per_m": 0.40181637,
+          "3_ks_per_m": 0.51181637,
+          "4_ks_per_m": 0.62181637,
+          "5_ks_per_m": 0.73181637,
+          "6_ks_per_m": 0.84181637,
+          "7_ks_per_m": 0.95181637
+        },
+        {
+          "density_kg_m3": 27.05263158,
+          "1_ks_per_m": 0.33775145,
+          "2_ks_per_m": 0.44775145,
+          "3_ks_per_m": 0.55775145,
+          "4_ks_per_m": 0.66775145,
+          "5_ks_per_m": 0.77775145,
+          "6_ks_per_m": 0.88775145,
+          "7_ks_per_m": 0.99775145
+        },
+        {
+          "density_kg_m3": 32.26315789,
+          "1_ks_per_m": 0.39010888,
+          "2_ks_per_m": 0.50010888,
+          "3_ks_per_m": 0.61010888,
+          "4_ks_per_m": 0.72010888,
+          "5_ks_per_m": 0.83010888,
+          "6_ks_per_m": 0.94010888,
+          "7_ks_per_m": 1.05010888
+        },
+        {
+          "density_kg_m3": 37.47368421,
+          "1_ks_per_m": 0.42736554,
+          "2_ks_per_m": 0.53736554,
+          "3_ks_per_m": 0.64736554,
+          "4_ks_per_m": 0.75736554,
+          "5_ks_per_m": 0.86736554,
+          "6_ks_per_m": 0.97736554,
+          "7_ks_per_m": 1.08736554
+        },
+        {
+          "density_kg_m3": 42.68421053,
+          "1_ks_per_m": 0.44188191,
+          "2_ks_per_m": 0.55188191,
+          "3_ks_per_m": 0.66188191,
+          "4_ks_per_m": 0.77188191,
+          "5_ks_per_m": 0.88188191,
+          "6_ks_per_m": 0.99188191,
+          "7_ks_per_m": 1.10188191
+        },
+        {
+          "density_kg_m3": 47.89473684,
+          "1_ks_per_m": 0.44692579,
+          "2_ks_per_m": 0.55692579,
+          "3_ks_per_m": 0.66692579,
+          "4_ks_per_m": 0.77692579,
+          "5_ks_per_m": 0.88692579,
+          "6_ks_per_m": 0.99692579,
+          "7_ks_per_m": 1.10692579
+        },
+        {
+          "density_kg_m3": 53.10526316,
+          "1_ks_per_m": 0.46447393,
+          "2_ks_per_m": 0.57447393,
+          "3_ks_per_m": 0.68447393,
+          "4_ks_per_m": 0.79447393,
+          "5_ks_per_m": 0.90447393,
+          "6_ks_per_m": 1.01447393,
+          "7_ks_per_m": 1.12447393
+        },
+        {
+          "density_kg_m3": 58.31578947,
+          "1_ks_per_m": 0.50500673,
+          "2_ks_per_m": 0.61500673,
+          "3_ks_per_m": 0.72500673,
+          "4_ks_per_m": 0.83500673,
+          "5_ks_per_m": 0.94500673,
+          "6_ks_per_m": 1.05500673,
+          "7_ks_per_m": 1.16500673
+        },
+        {
+          "density_kg_m3": 63.52631579,
+          "1_ks_per_m": 0.5578726,
+          "2_ks_per_m": 0.6678726,
+          "3_ks_per_m": 0.7778726,
+          "4_ks_per_m": 0.8878726,
+          "5_ks_per_m": 0.9978726,
+          "6_ks_per_m": 1.1078726,
+          "7_ks_per_m": 1.2178726
+        },
+        {
+          "density_kg_m3": 68.73684211,
+          "1_ks_per_m": 0.60108097,
+          "2_ks_per_m": 0.71108097,
+          "3_ks_per_m": 0.82108097,
+          "4_ks_per_m": 0.93108097,
+          "5_ks_per_m": 1.04108097,
+          "6_ks_per_m": 1.15108097,
+          "7_ks_per_m": 1.26108097
+        },
+        {
+          "density_kg_m3": 73.94736842,
+          "1_ks_per_m": 0.62152035,
+          "2_ks_per_m": 0.73152035,
+          "3_ks_per_m": 0.84152035,
+          "4_ks_per_m": 0.95152035,
+          "5_ks_per_m": 1.06152035,
+          "6_ks_per_m": 1.17152035,
+          "7_ks_per_m": 1.28152035
+        },
+        {
+          "density_kg_m3": 79.15789474,
+          "1_ks_per_m": 0.62701294,
+          "2_ks_per_m": 0.73701294,
+          "3_ks_per_m": 0.84701294,
+          "4_ks_per_m": 0.95701294,
+          "5_ks_per_m": 1.06701294,
+          "6_ks_per_m": 1.17701294,
+          "7_ks_per_m": 1.28701294
+        },
+        {
+          "density_kg_m3": 84.36842105,
+          "1_ks_per_m": 0.63912296,
+          "2_ks_per_m": 0.74912296,
+          "3_ks_per_m": 0.85912296,
+          "4_ks_per_m": 0.96912296,
+          "5_ks_per_m": 1.07912296,
+          "6_ks_per_m": 1.18912296,
+          "7_ks_per_m": 1.29912296
+        },
+        {
+          "density_kg_m3": 89.57894737,
+          "1_ks_per_m": 0.67333058,
+          "2_ks_per_m": 0.78333058,
+          "3_ks_per_m": 0.89333058,
+          "4_ks_per_m": 1.00333058,
+          "5_ks_per_m": 1.11333058,
+          "6_ks_per_m": 1.22333058,
+          "7_ks_per_m": 1.33333058
+        },
+        {
+          "density_kg_m3": 94.78947368,
+          "1_ks_per_m": 0.72479956,
+          "2_ks_per_m": 0.83479956,
+          "3_ks_per_m": 0.94479956,
+          "4_ks_per_m": 1.05479956,
+          "5_ks_per_m": 1.16479956,
+          "6_ks_per_m": 1.27479956,
+          "7_ks_per_m": 1.38479956
+        },
+        {
+          "density_kg_m3": 100.0,
+          "1_ks_per_m": 0.77282363,
+          "2_ks_per_m": 0.88282363,
+          "3_ks_per_m": 0.99282363,
+          "4_ks_per_m": 1.10282363,
+          "5_ks_per_m": 1.21282363,
+          "6_ks_per_m": 1.32282363,
+          "7_ks_per_m": 1.43282363
+        }
+      ]
+    },
+    "preview_version": 1,
+    "plan_card_expanded": true,
+    "review_log": [],
+    "execution_resume_sent": false,
+    "proposed_by": "llm"
+  },
+  "successful_runs": [
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_3c22fc8b1551",
+      "planned_run_id": "r_ind_rayleigh"
+    },
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_992b4df3934a",
+      "planned_run_id": "r_ind_iba"
+    },
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_b1f4a4e519ec",
+      "planned_run_id": "r_hs_dmrt"
+    },
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_373781d58924",
+      "planned_run_id": "r_hs_iba"
+    },
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_f73f1cad6c78",
+      "planned_run_id": "r_shs_dmrt"
+    },
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_1b174017823e",
+      "planned_run_id": "r_shs_iba"
+    },
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 10.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_7ca82f298418",
+      "planned_run_id": "d_ind_rayleigh_10ghz"
+    }
+  ],
+  "numeric_results": [
+    {
+      "handle": "res_3c22fc8b1551",
+      "planned_run_id": "r_ind_rayleigh",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          1.0,
+          5.95,
+          10.9,
+          15.850000000000001,
+          20.8,
+          25.75,
+          30.700000000000003,
+          35.65,
+          40.6,
+          45.550000000000004,
+          50.5,
+          55.45,
+          60.400000000000006,
+          65.35000000000001,
+          70.3,
+          75.25,
+          80.2,
+          85.15,
+          90.10000000000001,
+          95.05,
+          100.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          0.00013980647568598967,
+          0.0008318485303316386,
+          0.0015238905849772873,
+          0.0022159326396229365,
+          0.002907974694268585,
+          0.0036000167489142337,
+          0.004292058803559883,
+          0.004984100858205531,
+          0.005676142912851181,
+          0.00636818496749683,
+          0.007060227022142478,
+          0.007752269076788127,
+          0.008444311131433778,
+          0.009136353186079424,
+          0.009828395240725072,
+          0.010520437295370723,
+          0.011212479350016371,
+          0.011904521404662022,
+          0.012596563459307672,
+          0.013288605513953318,
+          0.013980647568598967
+        ],
+        "ka_per_m": [
+          0.0008174629761891332,
+          0.004863904708325342,
+          0.00891034644046155,
+          0.012956788172597761,
+          0.017003229904733966,
+          0.021049671636870177,
+          0.02509611336900639,
+          0.029142555101142595,
+          0.033188996833278805,
+          0.03723543856541502,
+          0.04128188029755122,
+          0.04532832202968743,
+          0.049374763761823655,
+          0.05342120549395986,
+          0.057467647226096055,
+          0.061514088958232266,
+          0.06556053069036849,
+          0.0696069724225047,
+          0.0736534141546409,
+          0.07769985588677711,
+          0.08174629761891333
+        ],
+        "effective_permittivity": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "single_scattering_albedo": [
+          0.1460471504779906,
+          0.14604715047799066,
+          0.14604715047799063,
+          0.14604715047799063,
+          0.14604715047799066,
+          0.14604715047799063,
+          0.14604715047799063,
+          0.1460471504779906,
+          0.14604715047799066,
+          0.1460471504779906,
+          0.14604715047799063,
+          0.14604715047799063,
+          0.14604715047799063,
+          0.14604715047799058,
+          0.14604715047799063,
+          0.14604715047799063,
+          0.1460471504779906,
+          0.1460471504779906,
+          0.14604715047799066,
+          0.1460471504779906,
+          0.1460471504779906
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    },
+    {
+      "handle": "res_992b4df3934a",
+      "planned_run_id": "r_ind_iba",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          1.0,
+          5.95,
+          10.9,
+          15.850000000000001,
+          20.8,
+          25.75,
+          30.700000000000003,
+          35.65,
+          40.6,
+          45.550000000000004,
+          50.5,
+          55.45,
+          60.400000000000006,
+          65.35000000000001,
+          70.3,
+          75.25,
+          80.2,
+          85.15,
+          90.10000000000001,
+          95.05,
+          100.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          0.00013942584889482432,
+          0.0008282524053900975,
+          0.0015148291474398772,
+          0.0021991080209327815,
+          0.002881039737868019,
+          0.0035605737682979106,
+          0.004237658332934271,
+          0.004912240396427934,
+          0.005584265661355186,
+          0.006253678562917406,
+          0.006920422264386174,
+          0.007584438653301878,
+          0.008245668338442787,
+          0.008904050647600118,
+          0.009559523626139238,
+          0.010212024036395756,
+          0.01086148735790463,
+          0.011507847788464554,
+          0.01215103824607466,
+          0.012790990371731436,
+          0.013427634533094483
+        ],
+        "ka_per_m": [
+          0.0008185990305244909,
+          0.004904161099596918,
+          0.009045564059686954,
+          0.013242939371632704,
+          0.01749640100574293,
+          0.02180604512224486,
+          0.026171949766145085,
+          0.03059417457727696,
+          0.03507276051628068,
+          0.03960772960725022,
+          0.044199084697752855,
+          0.048846809236904015,
+          0.05355086707214958,
+          0.058311202265379364,
+          0.06312773892895963,
+          0.06800038108224071,
+          0.07292901252905087,
+          0.07791349675665488,
+          0.08295367685660987,
+          0.08804937546790362,
+          0.09320039474272054
+        ],
+        "effective_permittivity": [
+          1.0013788012811902,
+          1.008238261413549,
+          1.0151551396848588,
+          1.0221296920898149,
+          1.0291621683721712,
+          1.0362528118672887,
+          1.0434018593471954,
+          1.0506095408683849,
+          1.0578760796225595,
+          1.0652016917905311,
+          1.0725865863995003,
+          1.0800309651839093,
+          1.0875350224500884,
+          1.09509894494489,
+          1.1027229117285176,
+          1.110407094051736,
+          1.1181516552376634,
+          1.1259567505683226,
+          1.133822527176134,
+          1.1417491239405253,
+          1.1497366713898196
+        ],
+        "single_scattering_albedo": [
+          0.1455346848396402,
+          0.14448580945347794,
+          0.14344438864431425,
+          0.1424103919012406,
+          0.14138378681195907,
+          0.14036453906852245,
+          0.1393526124745608,
+          0.1383479689533795,
+          0.13735056855749359,
+          0.13636036947913344,
+          0.13537732806209754,
+          0.13440139881468435,
+          0.13343253442375705,
+          0.13247068577020435,
+          0.13151580194525644,
+          0.13056783026817356,
+          0.12962671630504913,
+          0.12869240388862668,
+          0.12776483513940595,
+          0.12684395048777153,
+          0.12592968869715468
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    },
+    {
+      "handle": "res_b1f4a4e519ec",
+      "planned_run_id": "r_hs_dmrt",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          1.0,
+          5.95,
+          10.9,
+          15.850000000000001,
+          20.8,
+          25.75,
+          30.700000000000003,
+          35.65,
+          40.6,
+          45.550000000000004,
+          50.5,
+          55.45,
+          60.400000000000006,
+          65.35000000000001,
+          70.3,
+          75.25,
+          80.2,
+          85.15,
+          90.10000000000001,
+          95.05,
+          100.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          0.00013888028002194273,
+          0.0007996326617271816,
+          0.0014176454343985618,
+          0.001995122122846004,
+          0.002534143266806785,
+          0.003036674492700499,
+          0.003504573986473272,
+          0.003939599416656824,
+          0.004343414352303699,
+          0.004717594216441718,
+          0.005063631812069887,
+          0.005382942454451984,
+          0.005676868740515618,
+          0.005946684983499461,
+          0.006193601338580915,
+          0.006418767643033794,
+          0.006623276992487361,
+          0.006808169073063615,
+          0.006974433267540665,
+          0.007123011552209319,
+          0.007254801199743284
+        ],
+        "ka_per_m": [
+          0.0008190729299507528,
+          0.004920939680576512,
+          0.009101850598678518,
+          0.013361882929154363,
+          0.01770106661392248,
+          0.022119383741854768,
+          0.026616768085912425,
+          0.031193104729955012,
+          0.03584822978737094,
+          0.04058193021333834,
+          0.04539394371217282,
+          0.05028395874085637,
+          0.05525161460946439,
+          0.0602965016788276,
+          0.06541816165538353,
+          0.07061608798277516,
+          0.07588972632937975,
+          0.08123847517055119,
+          0.08666168646399247,
+          0.09215866641629812,
+          0.09772867633834433
+        ],
+        "effective_permittivity": [
+          1.0013790672951592,
+          1.0082476826946531,
+          1.0151867409356916,
+          1.0221964660253156,
+          1.0292770654598242,
+          1.0364287299729882,
+          1.0436516333031416,
+          1.050945931979804,
+          1.058311765130439,
+          1.0657492543079004,
+          1.0732585033390605,
+          1.0808395981950583,
+          1.0884926068835474,
+          1.0962175793632511,
+          1.104014547481081,
+          1.1118835249320014,
+          1.1198245072417554,
+          1.1278374717725055,
+          1.1359223777513727,
+          1.1440791663217889,
+          1.152307760617511
+        ],
+        "single_scattering_albedo": [
+          0.14497605788689952,
+          0.1397819333240294,
+          0.1347636265027312,
+          0.12991609471315008,
+          0.12523434556614818,
+          0.12071344661339724,
+          0.11634853380872945,
+          0.11213481889172357,
+          0.10806759577213106,
+          0.1041422459910055,
+          0.10035424333135126,
+          0.0966991576478423,
+          0.0931726579817694,
+          0.08977051502387007,
+          0.08648860298416228,
+          0.08332290092438775,
+          0.08026949360516246,
+          0.07732457189653026,
+          0.0744844327972717,
+          0.07174547910510505,
+          0.06910421877681915
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    },
+    {
+      "handle": "res_373781d58924",
+      "planned_run_id": "r_hs_iba",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          1.0,
+          5.95,
+          10.9,
+          15.850000000000001,
+          20.8,
+          25.75,
+          30.700000000000003,
+          35.65,
+          40.6,
+          45.550000000000004,
+          50.5,
+          55.45,
+          60.400000000000006,
+          65.35000000000001,
+          70.3,
+          75.25,
+          80.2,
+          85.15,
+          90.10000000000001,
+          95.05,
+          100.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          0.00013837141449503308,
+          0.0007917379089424292,
+          0.0013949388275014045,
+          0.0019510375162901986,
+          0.0024629087603199812,
+          0.002933251448072766,
+          0.00336460029478612,
+          0.003759336701526519,
+          0.004119698820226162,
+          0.004447790888617209,
+          0.0047455918933700676,
+          0.005014963614638308,
+          0.005257658100611956,
+          0.005475324616498163,
+          0.005669516108557047,
+          0.0058416952203973775,
+          0.005993239895605096,
+          0.006125448597942544,
+          0.006239545177788728,
+          0.006336683411126987,
+          0.0064179512352543905
+        ],
+        "ka_per_m": [
+          0.0008185990305244909,
+          0.004904161099596918,
+          0.009045564059686954,
+          0.013242939371632704,
+          0.01749640100574293,
+          0.02180604512224486,
+          0.026171949766145085,
+          0.03059417457727696,
+          0.03507276051628068,
+          0.03960772960725022,
+          0.044199084697752855,
+          0.048846809236904015,
+          0.05355086707214958,
+          0.058311202265379364,
+          0.06312773892895963,
+          0.06800038108224071,
+          0.07292901252905087,
+          0.07791349675665488,
+          0.08295367685660987,
+          0.08804937546790362,
+          0.09320039474272054
+        ],
+        "effective_permittivity": [
+          1.0013788012811902,
+          1.008238261413549,
+          1.0151551396848588,
+          1.0221296920898149,
+          1.0291621683721712,
+          1.0362528118672887,
+          1.0434018593471954,
+          1.0506095408683849,
+          1.0578760796225595,
+          1.0652016917905311,
+          1.0725865863995003,
+          1.0800309651839093,
+          1.0875350224500884,
+          1.09509894494489,
+          1.1027229117285176,
+          1.110407094051736,
+          1.1181516552376634,
+          1.1259567505683226,
+          1.133822527176134,
+          1.1417491239405253,
+          1.1497366713898196
+        ],
+        "single_scattering_albedo": [
+          0.1445931953438855,
+          0.13900139517141158,
+          0.13360839440149452,
+          0.12840861419507632,
+          0.12339648961747661,
+          0.118566485499515,
+          0.11391311063225924,
+          0.10943093039360068,
+          0.10511457790526456,
+          0.10095876381790629,
+          0.09695828482051455,
+          0.09310803096773122,
+          0.08940299191599446,
+          0.08583826215585606,
+          0.08240904532405156,
+          0.07911065767511032,
+          0.07593853078796263,
+          0.07288821357879459,
+          0.06995537368727818,
+          0.06713579829886068,
+          0.06442539446171254
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    },
+    {
+      "handle": "res_f73f1cad6c78",
+      "planned_run_id": "r_shs_dmrt",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          1.0,
+          5.95,
+          10.9,
+          15.850000000000001,
+          20.8,
+          25.75,
+          30.700000000000003,
+          35.65,
+          40.6,
+          45.550000000000004,
+          50.5,
+          55.45,
+          60.400000000000006,
+          65.35000000000001,
+          70.3,
+          75.25,
+          80.2,
+          85.15,
+          90.10000000000001,
+          95.05,
+          100.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          0.00013948683147462236,
+          0.0008205050338530908,
+          0.001485733592730769,
+          0.0021350697031589268,
+          0.0027684185575962516,
+          0.003385693524165144,
+          0.0039868163188887034,
+          0.004571717171329341,
+          0.00514033498305096,
+          0.005692617478329804,
+          0.006228521346545358,
+          0.0067480123756914,
+          0.007251065576458894,
+          0.007737665296356335,
+          0.008207805323350473,
+          0.008661488978529731,
+          0.009098729197314751,
+          0.009519548598765611,
+          0.00992397954256202,
+          0.01031206417326312,
+          0.010683854451484216
+        ],
+        "ka_per_m": [
+          0.0008190729292383155,
+          0.004920939655693972,
+          0.00910185051629873,
+          0.013361882757315919,
+          0.017701066322002128,
+          0.022119383300543846,
+          0.026616767467197013,
+          0.03119310390709907,
+          0.035848228734902315,
+          0.040581928907037004,
+          0.04539394212906111,
+          0.05028395685919083,
+          0.055251612408729014,
+          0.06029649913972798,
+          0.06541815875984178,
+          0.07061608471392541,
+          0.07588972267156377,
+          0.08123847110931418,
+          0.0866616819860786,
+          0.09215866150964576,
+          0.09772867099208067
+        ],
+        "effective_permittivity": [
+          1.0013790672939589,
+          1.0082476826528075,
+          1.015186740797395,
+          1.0221964657373486,
+          1.0292770649714913,
+          1.0364287292360603,
+          1.043651632271803,
+          1.0509459306106037,
+          1.0583117633822452,
+          1.0657492521418583,
+          1.073258500718553,
+          1.08083959508567,
+          1.088492603253028,
+          1.0962175751814836,
+          1.1040145427200496,
+          1.1118835195657613,
+          1.1198245012464023,
+          1.1278374651261478,
+          1.1359223704341024,
+          1.1440791583156527,
+          1.1523077519064828
+        ],
+        "single_scattering_albedo": [
+          0.14551709469932028,
+          0.14290915931784753,
+          0.14032791403882952,
+          0.13777352086511502,
+          0.1352461272904572,
+          0.1327458665360744,
+          0.13027285780501816,
+          0.12782720655316732,
+          0.12540900477562864,
+          0.12301833130729413,
+          0.120655252136283,
+          0.11831982072897004,
+          0.1160120783653026,
+          0.11373205448309132,
+          0.11147976702995999,
+          0.10925522282165967,
+          0.10705841790543978,
+          0.1048893379272149,
+          0.10274795850126528,
+          0.10063424558125357,
+          0.09854815583136463
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    },
+    {
+      "handle": "res_1b174017823e",
+      "planned_run_id": "r_shs_iba",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          1.0,
+          5.95,
+          10.9,
+          15.850000000000001,
+          20.8,
+          25.75,
+          30.700000000000003,
+          35.65,
+          40.6,
+          45.550000000000004,
+          50.5,
+          55.45,
+          60.400000000000006,
+          65.35000000000001,
+          70.3,
+          75.25,
+          80.2,
+          85.15,
+          90.10000000000001,
+          95.05,
+          100.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          0.00013897092541448574,
+          0.0008122405345183019,
+          0.001461409348903123,
+          0.0020868234518789373,
+          0.002688831685104372,
+          0.0032677854857835072,
+          0.0038240387241241357,
+          0.00435794754111186,
+          0.0048698701866553215,
+          0.005360166858151235,
+          0.005829199539524843,
+          0.006277331840789179,
+          0.006704928838177735,
+          0.0071123569148974575,
+          0.007499983602542304,
+          0.007868177423223004,
+          0.008217307732454323,
+          0.008547744562840463,
+          0.008859858468615476,
+          0.00915402037107365,
+          0.00943060140493349
+        ],
+        "ka_per_m": [
+          0.0008185990305244909,
+          0.004904161099596918,
+          0.009045564059686954,
+          0.013242939371632704,
+          0.01749640100574293,
+          0.02180604512224486,
+          0.026171949766145085,
+          0.03059417457727696,
+          0.03507276051628068,
+          0.03960772960725022,
+          0.044199084697752855,
+          0.048846809236904015,
+          0.05355086707214958,
+          0.058311202265379364,
+          0.06312773892895963,
+          0.06800038108224071,
+          0.07292901252905087,
+          0.07791349675665488,
+          0.08295367685660987,
+          0.08804937546790362,
+          0.09320039474272054
+        ],
+        "effective_permittivity": [
+          1.0013788012811902,
+          1.008238261413549,
+          1.0151551396848588,
+          1.0221296920898149,
+          1.0291621683721712,
+          1.0362528118672887,
+          1.0434018593471954,
+          1.0506095408683849,
+          1.0578760796225595,
+          1.0652016917905311,
+          1.0725865863995003,
+          1.0800309651839093,
+          1.0875350224500884,
+          1.09509894494489,
+          1.1027229117285176,
+          1.110407094051736,
+          1.1181516552376634,
+          1.1259567505683226,
+          1.133822527176134,
+          1.1417491239405253,
+          1.1497366713898196
+        ],
+        "single_scattering_albedo": [
+          0.1451287444354008,
+          0.14208947979982514,
+          0.13908946868641867,
+          0.13612888052503486,
+          0.13320786172178156,
+          0.13032653593572568,
+          0.12748500438199142,
+          0.12468334615994833,
+          0.1219216186052903,
+          0.11919985766457582,
+          0.11651807829102638,
+          0.11387627486007933,
+          0.11127442160345889,
+          0.10871247306034082,
+          0.10619036454413636,
+          0.10370801262365323,
+          0.10126531561718284,
+          0.09886215409809426,
+          0.09649839141071906,
+          0.0941738741950722,
+          0.09188843291909388
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    },
+    {
+      "handle": "res_7ca82f298418",
+      "planned_run_id": "d_ind_rayleigh_10ghz",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 10.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          1.0,
+          5.95,
+          10.9,
+          15.850000000000001,
+          20.8,
+          25.75,
+          30.700000000000003,
+          35.65,
+          40.6,
+          45.550000000000004,
+          50.5,
+          55.45,
+          60.400000000000006,
+          65.35000000000001,
+          70.3,
+          75.25,
+          80.2,
+          85.15,
+          90.10000000000001,
+          95.05,
+          100.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          7.459673453645143e-07,
+          4.43850570491886e-06,
+          8.131044064473206e-06,
+          1.1823582424027554e-05,
+          1.5516120783581896e-05,
+          1.920865914313624e-05,
+          2.290119750269059e-05,
+          2.6593735862244932e-05,
+          3.028627422179928e-05,
+          3.397881258135363e-05,
+          3.7671350940907965e-05,
+          4.1363889300462314e-05,
+          4.505642766001667e-05,
+          4.874896601957101e-05,
+          5.2441504379125354e-05,
+          5.6134042738679696e-05,
+          5.982658109823405e-05,
+          6.35191194577884e-05,
+          6.721165781734274e-05,
+          7.090419617689709e-05,
+          7.459673453645143e-05
+        ],
+        "ka_per_m": [
+          6.194903173536249e-05,
+          0.0003685967388254069,
+          0.0006752444459154512,
+          0.0009818921530054955,
+          0.00128853986009554,
+          0.0015951875671855844,
+          0.0019018352742756286,
+          0.002208482981365673,
+          0.002515130688455717,
+          0.002821778395545762,
+          0.0031284261026358062,
+          0.00343507380972585,
+          0.0037417215168158956,
+          0.004048369223905939,
+          0.004355016930995983,
+          0.004661664638086029,
+          0.004968312345176073,
+          0.005274960052266116,
+          0.005581607759356162,
+          0.005888255466446205,
+          0.00619490317353625
+        ],
+        "effective_permittivity": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "single_scattering_albedo": [
+          0.01189835483375629,
+          0.011898354833756288,
+          0.01189835483375629,
+          0.011898354833756291,
+          0.011898354833756288,
+          0.011898354833756286,
+          0.01189835483375629,
+          0.011898354833756288,
+          0.011898354833756291,
+          0.011898354833756288,
+          0.011898354833756286,
+          0.01189835483375629,
+          0.011898354833756288,
+          0.011898354833756288,
+          0.011898354833756288,
+          0.011898354833756284,
+          0.011898354833756286,
+          0.011898354833756291,
+          0.011898354833756288,
+          0.01189835483375629,
+          0.011898354833756288
+        ]
+      },
+      "units": {
+        "tb_v": "K",
+        "tb_h": "K",
+        "sigma_vv_db": "dB",
+        "sigma_hh_db": "dB",
+        "sigma_hv_db": "dB",
+        "ks_per_m": "m-1",
+        "ka_per_m": "m-1",
+        "effective_permittivity": "none",
+        "single_scattering_albedo": "none"
+      }
+    }
+  ],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "SMRT sparse medium scattering coefficient Rayleigh DMRT-QCA-CP IBA sticky hard spheres",
+        "kind": "paper"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.5.1",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_model_instruction",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.0",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "research-planning"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_literature",
+      "arguments": {
+        "query": "SMRT model sections figure list",
+        "kind": "paper"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_paper_figure",
+      "arguments": {
+        "paper": "smrt-v1",
+        "figure_id": "fig03"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "inspect_paper_figure",
+      "arguments": {
+        "paper": "smrt-v1",
+        "figure_id": "fig03",
+        "focus": "axes, units, legend series, any annotation of frequency or temperature, density range where curves overlap and where they diverge"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "read_literature",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "05"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.5.1",
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "research_capability_check",
+      "arguments": {
+        "action": "check",
+        "question": "Reproduce Fig. 3 of smrt-v1: scattering coefficient versus density (0-100 kg m-3, sphere radius 100 micrometres) for independent spheres (Rayleigh), independent spheres (IBA), non-sticky hard spheres (DMRT QCA-CP), non-sticky hard spheres (IBA), sticky hard spheres (DMRT QCA-CP), sticky hard spheres (IBA).",
+        "targets": [
+          {
+            "id": "fig03",
+            "label": "Sparse-medium scattering coefficient comparison",
+            "reference_models": [
+              "Independent spheres (Rayleigh)",
+              "Independent spheres (IBA)",
+              "Non-sticky hard spheres (DMRT QCA-CP)",
+              "Non-sticky hard spheres (IBA)",
+              "Sticky hard spheres (DMRT QCA-CP)",
+              "Sticky hard spheres (IBA)"
+            ],
+            "requested_outputs": [
+              "ks_per_m"
+            ],
+            "evidence_refs": [
+              "smrt-v1#fig03",
+              "smrt-v1#08",
+              "smrt-v1#05"
+            ]
+          }
+        ],
+        "local_models": [
+          "smrt"
+        ],
+        "requested_outputs": [
+          "ks_per_m"
+        ],
+        "reference_models": [
+          "Independent spheres (Rayleigh)",
+          "Independent spheres (IBA)",
+          "Non-sticky hard spheres (DMRT QCA-CP)",
+          "Non-sticky hard spheres (IBA)",
+          "Sticky hard spheres (DMRT QCA-CP)",
+          "Sticky hard spheres (IBA)"
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "r_ind_rayleigh"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_3c22fc8b1551",
+      "planned_run_id": "r_ind_rayleigh",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "r_ind_iba"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_992b4df3934a",
+      "planned_run_id": "r_ind_iba",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "r_hs_dmrt"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_b1f4a4e519ec",
+      "planned_run_id": "r_hs_dmrt",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "r_hs_iba"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "non_sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_373781d58924",
+      "planned_run_id": "r_hs_iba",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "r_shs_dmrt"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "dmrt_qcacp_shortrange",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_f73f1cad6c78",
+      "planned_run_id": "r_shs_dmrt",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "r_shs_iba"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "iba",
+        "microstructure_model": "sticky_hard_spheres",
+        "output": "coefficients",
+        "frequency_ghz": 37.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.5,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_1b174017823e",
+      "planned_run_id": "r_shs_iba",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "run_planned_model",
+      "arguments": {
+        "run_id": "d_ind_rayleigh_10ghz"
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "output": "coefficients",
+        "frequency_ghz": 10.0,
+        "angle_deg": 55.0,
+        "thickness_m": 1.0,
+        "density_kg_m3": 300.0,
+        "temperature_k": 265.0,
+        "corr_length_m": 0.00015,
+        "radius_m": 0.0001,
+        "stickiness": 0.2,
+        "dort_streams": 32,
+        "sweep_parameter": "density_kg_m3",
+        "sweep_start": 1.0,
+        "sweep_stop": 100.0,
+        "sweep_points": 21
+      },
+      "handle": "res_7ca82f298418",
+      "planned_run_id": "d_ind_rayleigh_10ghz",
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 2,
+      "name": "read_research_guideline",
+      "arguments": {
+        "topic": "research-reporting"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "chart_id": "fig03_ks_vs_density",
+        "action": "render"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": "fig03_ks_vs_density",
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "arguments": {},
+      "status": "needs_input",
+      "problems": []
+    },
+    {
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "arguments": {
+        "action": "review",
+        "chart_id": "fig03_ks_vs_density"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [
+          "crowded legend with 7 series",
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 7,
+        "point_counts": [
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21
+        ],
+        "redrawn": true
+      },
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "research_mode_selected",
+      "turn": 1,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 9717,
+      "cached_prompt_tokens": 9472,
+      "completion_tokens": 232,
+      "first_token_s": 3.33,
+      "attempt": 1,
+      "cost_usd": 0.000297342,
+      "reasoning_chars": 0,
+      "elapsed_s": 4.9
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "planning"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "5 of 10 item(s) match.",
+      "arguments": {
+        "query": "SMRT sparse medium scattering coefficient Rayleigh DMRT-QCA-CP IBA sticky hard spheres",
+        "kind": "paper"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "Capability declaration for smrt v1.5.1.",
+      "arguments": {
+        "model": "smrt"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_model_instruction",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Read model instruction smrt v1.0.",
+      "arguments": {
+        "model": "smrt"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 15200,
+      "cached_prompt_tokens": 9472,
+      "completion_tokens": 65,
+      "first_token_s": 7.41,
+      "attempt": 1,
+      "cost_usd": 0.001041302,
+      "reasoning_chars": 0,
+      "elapsed_s": 8.2
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-planning is open and must govern the plan.",
+      "arguments": {
+        "topic": "research-planning"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "9 of 10 item(s) match.",
+      "arguments": {
+        "query": "SMRT model sections figure list",
+        "kind": "paper"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 18521,
+      "cached_prompt_tokens": 9472,
+      "completion_tokens": 67,
+      "first_token_s": 5.24,
+      "attempt": 1,
+      "cost_usd": 0.001540392,
+      "reasoning_chars": 0,
+      "elapsed_s": 5.38
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Section index for smrt-v1 (bundled). Call again with a section_id to read one.",
+      "arguments": {
+        "slug": "smrt-v1"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19193,
+      "cached_prompt_tokens": 18176,
+      "completion_tokens": 199,
+      "first_token_s": 9.01,
+      "attempt": 1,
+      "cost_usd": 0.000536896,
+      "reasoning_chars": 0,
+      "elapsed_s": 9.95
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "smrt-v1 section 08: Model validation and exploration of the microstructure - Comparison with other reference models (8681 chars, bundled)",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "08"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_paper_figure",
+      "status": "success",
+      "elapsed_s": 0.0,
+      "summary": "Source-paper figure fig03 is available. It is not model output and has not been digitized.",
+      "arguments": {
+        "paper": "smrt-v1",
+        "figure_id": "fig03"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 22493,
+      "cached_prompt_tokens": 18944,
+      "completion_tokens": 494,
+      "first_token_s": 14.07,
+      "attempt": 1,
+      "cost_usd": 0.001067634,
+      "reasoning_chars": 0,
+      "elapsed_s": 15.37
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "inspect_paper_figure",
+      "status": "success",
+      "elapsed_s": 0.009,
+      "summary": "Inspected source-paper figure fig03. The source image is attached for visual review; extracted axes and legend text are included as an audit aid. Numeric curve digitization was not performed.",
+      "arguments": {
+        "paper": "smrt-v1",
+        "figure_id": "fig03",
+        "focus": "axes, units, legend series, any annotation of frequency or temperature, density range where curves overlap and where they diverge"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_literature",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "smrt-v1 section 05: SMRT description - Microstructure representations (5616 chars, bundled)",
+      "arguments": {
+        "slug": "smrt-v1",
+        "section_id": "05"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 19926,
+      "cached_prompt_tokens": 8960,
+      "completion_tokens": 1246,
+      "first_token_s": 24.64,
+      "attempt": 1,
+      "cost_usd": 0.00237388,
+      "reasoning_chars": 0,
+      "elapsed_s": 24.66
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "list_models",
+      "status": "success",
+      "elapsed_s": 0.002,
+      "summary": "Capability declaration for smrt v1.5.1.",
+      "arguments": {
+        "model": "smrt"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 22157,
+      "cached_prompt_tokens": 19456,
+      "completion_tokens": 5017,
+      "first_token_s": 62.99,
+      "attempt": 1,
+      "cost_usd": 0.003074436,
+      "reasoning_chars": 0,
+      "elapsed_s": 65.94
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "research_capability_check",
+      "status": "success",
+      "elapsed_s": 0.01,
+      "summary": "Capability check by reproduction target\n\nSparse-medium scattering coefficient comparison [fig03]\nSupported: smrt@1.5.1\nUnavailable: none\nNot comparable: none\n\nUnified summary\nSupported: smrt@1.5.1 (effective_permittivity, ka_per_m, ks_per_m, sigma_hh_db, sigma_hv_db, sigma_vv_db, single_scattering_albedo, tb_h, tb_v)\nUnavailable: none\nNot comparable: none\nOutputs no registered model declares: none\n\nThe capability checkpoint is complete; a research plan may now be proposed.",
+      "arguments": {
+        "action": "check",
+        "question": "Reproduce Fig. 3 of smrt-v1: scattering coefficient versus density (0-100 kg m-3, sphere radius 100 micrometres) for independent spheres (Rayleigh), independent spheres (IBA), non-sticky hard spheres (DMRT QCA-CP), non-sticky hard spheres (IBA), sticky hard spheres (DMRT QCA-CP), sticky hard spheres (IBA).",
+        "targets": [
+          {
+            "id": "fig03",
+            "label": "Sparse-medium scattering coefficient comparison",
+            "reference_models": [
+              "Independent spheres (Rayleigh)",
+              "Independent spheres (IBA)",
+              "Non-sticky hard spheres (DMRT QCA-CP)",
+              "Non-sticky hard spheres (IBA)",
+              "Sticky hard spheres (DMRT QCA-CP)",
+              "Sticky hard spheres (IBA)"
+            ],
+            "requested_outputs": [
+              "ks_per_m"
+            ],
+            "evidence_refs": [
+              "smrt-v1#fig03",
+              "smrt-v1#08",
+              "smrt-v1#05"
+            ]
+          }
+        ],
+        "local_models": [
+          "smrt"
+        ],
+        "requested_outputs": [
+          "ks_per_m"
+        ],
+        "reference_models": [
+          "Independent spheres (Rayleigh)",
+          "Independent spheres (IBA)",
+          "Non-sticky hard spheres (DMRT QCA-CP)",
+          "Non-sticky hard spheres (IBA)",
+          "Sticky hard spheres (DMRT QCA-CP)",
+          "Sticky hard spheres (IBA)"
+        ]
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 25064,
+      "cached_prompt_tokens": 21760,
+      "completion_tokens": 6993,
+      "first_token_s": 39.62,
+      "attempt": 1,
+      "cost_usd": 0.00413047,
+      "reasoning_chars": 0,
+      "elapsed_s": 89.85
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "plan_review",
+      "detail": "LLM-authored research plan v001 is ready for human review. Backend applied 30 auditable reference/presentation repair(s); review them explicitly."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 26211,
+      "cached_prompt_tokens": 8960,
+      "completion_tokens": 737,
+      "first_token_s": 17.07,
+      "attempt": 1,
+      "cost_usd": 0.0030774,
+      "reasoning_chars": 0,
+      "elapsed_s": 23.88
+    },
+    {
+      "kind": "research_wait",
+      "turn": 1,
+      "phase": "plan_review"
+    },
+    {
+      "kind": "research_mode_selected",
+      "turn": 2,
+      "rule": "agent_preflight_reproduction",
+      "detail": "The agent selected the reviewed research workflow before the first model request because this question matches a registered paper reproduction."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 10113,
+      "cached_prompt_tokens": 9216,
+      "completion_tokens": 626,
+      "first_token_s": 9.66,
+      "attempt": 1,
+      "cost_usd": 0.000576226,
+      "reasoning_chars": 0,
+      "elapsed_s": 12.86
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.008,
+      "summary": "Approved run r_ind_rayleigh: smrt ran in 0.00s: 21 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "r_ind_rayleigh"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.009,
+      "summary": "Approved run r_ind_iba: smrt ran in 0.01s: 21 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "r_ind_iba"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.003,
+      "summary": "Approved run r_hs_dmrt: smrt ran in 0.00s: 21 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "r_hs_dmrt"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.006,
+      "summary": "Approved run r_hs_iba: smrt ran in 0.01s: 21 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "r_hs_iba"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.003,
+      "summary": "Approved run r_shs_dmrt: smrt ran in 0.00s: 21 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "r_shs_dmrt"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.006,
+      "summary": "Approved run r_shs_iba: smrt ran in 0.00s: 21 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "r_shs_iba"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "run_planned_model",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.002,
+      "summary": "Approved run d_ind_rayleigh_10ghz: smrt ran in 0.00s: 21 point(s) over density_kg_m3. Quality control passed.",
+      "arguments": {
+        "run_id": "d_ind_rayleigh_10ghz"
+      }
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "read_research_guideline",
+      "status": "success",
+      "elapsed_s": 0.001,
+      "summary": "Research guideline research-reporting is open and must govern the plan.",
+      "arguments": {
+        "topic": "research-reporting"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 29088,
+      "cached_prompt_tokens": 9216,
+      "completion_tokens": 362,
+      "first_token_s": 10.41,
+      "attempt": 1,
+      "cost_usd": 0.003298396,
+      "reasoning_chars": 0,
+      "elapsed_s": 11.41
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.16,
+      "summary": "Approved chart fig03_ks_vs_density: Drew a line chart with 7 series over 147 point(s). It is on screen; do not restate its values.",
+      "arguments": {
+        "chart_id": "fig03_ks_vs_density",
+        "action": "render"
+      }
+    },
+    {
+      "kind": "harness_block",
+      "turn": 2,
+      "rule": "physical_domain",
+      "tool": "plot_planned_chart",
+      "intervention": 1,
+      "detail": "unknown planned chart_id",
+      "problems": []
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 30710,
+      "cached_prompt_tokens": 27904,
+      "completion_tokens": 157,
+      "first_token_s": 6.53,
+      "attempt": 1,
+      "cost_usd": 0.000941154,
+      "reasoning_chars": 0,
+      "elapsed_s": 6.95
+    },
+    {
+      "kind": "tool_call",
+      "turn": 2,
+      "name": "plot_planned_chart",
+      "status": "success",
+      "elapsed_s": 0.16,
+      "summary": "Figure 1 render check (Render QA) redrawn with a publication layout and passed. Render QA checks only that the plotted arrays are legible; it is not a comparison with the source figure. 7 series; point counts [21, 21, 21, 21, 21, 21, 21].",
+      "arguments": {
+        "action": "review",
+        "chart_id": "fig03_ks_vs_density"
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 30979,
+      "cached_prompt_tokens": 29440,
+      "completion_tokens": 8756,
+      "first_token_s": 89.13,
+      "attempt": 1,
+      "cost_usd": 0.00481721,
+      "reasoning_chars": 0,
+      "elapsed_s": 140.33
+    },
+    {
+      "kind": "research_block",
+      "turn": 2,
+      "rule": "research_reporting_contract",
+      "detail": "The final report is being checked against the recorded provenance ledger and result state."
+    },
+    {
+      "kind": "model_call",
+      "turn": 2,
+      "prompt_tokens": 16843,
+      "cached_prompt_tokens": 8960,
+      "completion_tokens": 4079,
+      "first_token_s": 35.29,
+      "attempt": 1,
+      "cost_usd": 0.00324294,
+      "reasoning_chars": 0,
+      "elapsed_s": 72.51
+    },
+    {
+      "kind": "harness_warning",
+      "turn": 2,
+      "rule": "report_completeness",
+      "detail": "The report must give a separate conclusion based on each generated figure, covering its visible curves, axes, units, legend and qualitative patterns. The report must give a separate conclusion from the actual executed result arrays and conditions, not only describe the chart."
+    },
+    {
+      "kind": "research_complete",
+      "turn": 2,
+      "detail": "A registered model run, figure and validated report are complete."
+    },
+    {
+      "kind": "harness_pass",
+      "turn": 2,
+      "rule": "citation_integrity",
+      "markers": [
+        "smrt-v1#08",
+        "smrt-v1#08",
+        "smrt-v1#08",
+        "smrt-v1#05",
+        "model:smrt@1.5.1",
+        "model:smrt@1.5.1",
+        "model:smrt@1.5.1",
+        "model:smrt@1.5.1"
+      ]
+    }
+  ],
+  "evidence": {
+    "sections": [
+      "research-planning#00",
+      "research-reporting#00",
+      "smrt-v1#05",
+      "smrt-v1#08",
+      "smrt-v1#fig-fig03"
+    ],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [
+      "research-planning",
+      "research-reporting"
+    ],
+    "guidelines": [
+      "smrt@1.0"
+    ],
+    "paper_figures": [
+      "smrt-v1#fig03"
+    ],
+    "raw_pdf_pages": []
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [
+      "smrt-v1#08",
+      "smrt-v1#08",
+      "smrt-v1#08",
+      "smrt-v1#05",
+      "model:smrt@1.5.1",
+      "model:smrt@1.5.1",
+      "model:smrt@1.5.1",
+      "model:smrt@1.5.1",
+      "model:smrt@1.5.1",
+      "model:smrt@1.5.1",
+      "figure:smrt-v1#fig03",
+      "figure:smrt-v1#fig03",
+      "figure:smrt-v1#fig03",
+      "figure:smrt-v1#fig03"
+    ],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [
+    {
+      "planned_chart_id": "fig03_ks_vs_density",
+      "figure_number": 1,
+      "title": "Figure 1. Reproduced Fig. 3: scattering coefficient vs density, six configurations",
+      "subtitle": "angle 55 ° · T 265 K · thickness 1 m · corr. length 150 µm · DORT 32 streams",
+      "x_label": "Density (kg m^-3)",
+      "y_label": "Scattering coefficient (m^-1)",
+      "kind": "line",
+      "series": [
+        {
+          "label": "Independent spheres, Rayleigh theory · ks_per_m",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 21,
+          "handle": "res_3c22fc8b1551",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        },
+        {
+          "label": "Independent spheres, IBA · ks_per_m",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 21,
+          "handle": "res_992b4df3934a",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        },
+        {
+          "label": "Non-sticky hard spheres, DMRT QCA-CP · ks_per_m",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 21,
+          "handle": "res_b1f4a4e519ec",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        },
+        {
+          "label": "Non-sticky hard spheres, IBA · ks_per_m",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 21,
+          "handle": "res_373781d58924",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        },
+        {
+          "label": "Sticky hard spheres, DMRT QCA-CP, tau 0.5 · ks_per_m",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 21,
+          "handle": "res_f73f1cad6c78",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        },
+        {
+          "label": "Sticky hard spheres, IBA, tau 0.5 · ks_per_m",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 21,
+          "handle": "res_1b174017823e",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        },
+        {
+          "label": "Diagnostic: independent spheres, Rayleigh, 10 GHz · ks_per_m",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 21,
+          "handle": "res_7ca82f298418",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        }
+      ],
+      "quality_review": {
+        "reviewed": true,
+        "passed": true,
+        "issues": [],
+        "warnings": [],
+        "redraw_reasons": [
+          "crowded legend with 7 series",
+          "long series labels need a wider publication layout"
+        ],
+        "n_series": 7,
+        "point_counts": [
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21
+        ],
+        "redrawn": true
+      },
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/improve-2026-10-03/qwen-final/figures/ba08fcbd551db459bcd250ff_q1-sparse-medium_p1-reproduction-first_qwen-qwen3.8-flash_r3_full.png"
+    }
+  ],
+  "markers": {
+    "literature": [
+      "smrt-v1#08",
+      "smrt-v1#08",
+      "smrt-v1#08",
+      "smrt-v1#05"
+    ],
+    "model": [
+      "smrt@1.5.1",
+      "smrt@1.5.1",
+      "smrt@1.5.1",
+      "smrt@1.5.1",
+      "smrt@1.5.1",
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "parameter_provenance": [],
+  "provenance_parse_error": "appendix_missing",
+  "reproduction_outcome": null,
+  "archived_report_path": "evaluation/results/competition/improve-2026-10-03/qwen-final/reports/935767faf5cf6d5b8a5717cb_q1-sparse-medium_p1-reproduction-first_qwen-qwen3.8-flash_r3_report_full.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/improve-2026-10-03/qwen-final/reports/935767faf5cf6d5b8a5717cb_q1-sparse-medium_p1-reproduction-first_qwen-qwen3.8-flash_r3_report_full.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  },
+  "dashboard_metrics": {
+    "evaluation_complete": false,
+    "successful": true,
+    "figure_result_correct": "pass",
+    "report_correct": "not_scoreable",
+    "overall_correct": "not_scoreable",
+    "figure_result": {
+      "passed": false,
+      "complete": true,
+      "status": "fail",
+      "structural_passed": false,
+      "oracle_smrt_version": "1.5.1",
+      "recipe": {
+        "passed": null,
+        "status": "diagnostic_only",
+        "curves": [
+          {
+            "curve": "independent_rayleigh",
+            "present": true,
+            "experiment_exact": false,
+            "axis_exact": false,
+            "version_matched": true,
+            "stickiness_match": true
+          },
+          {
+            "curve": "independent_iba",
+            "present": true,
+            "experiment_exact": false,
+            "axis_exact": false,
+            "version_matched": true,
+            "stickiness_match": true
+          },
+          {
+            "curve": "non_sticky_dmrt",
+            "present": true,
+            "experiment_exact": false,
+            "axis_exact": false,
+            "version_matched": true,
+            "stickiness_match": true
+          },
+          {
+            "curve": "non_sticky_iba",
+            "present": true,
+            "experiment_exact": false,
+            "axis_exact": false,
+            "version_matched": true,
+            "stickiness_match": true
+          },
+          {
+            "curve": "sticky_dmrt",
+            "present": true,
+            "experiment_exact": false,
+            "axis_exact": false,
+            "version_matched": true,
+            "stickiness_match": false
+          },
+          {
+            "curve": "sticky_iba",
+            "present": true,
+            "experiment_exact": false,
+            "axis_exact": false,
+            "version_matched": true,
+            "stickiness_match": false
+          }
+        ]
+      },
+      "numeric": {
+        "passed": null,
+        "status": "not_scoreable",
+        "curves": [
+          {
+            "curve": "independent_rayleigh",
+            "normalized_rmse": null,
+            "normalized_max_absolute_error": null,
+            "within": null,
+            "comparable": false
+          },
+          {
+            "curve": "independent_iba",
+            "normalized_rmse": null,
+            "normalized_max_absolute_error": null,
+            "within": null,
+            "comparable": false
+          },
+          {
+            "curve": "non_sticky_dmrt",
+            "normalized_rmse": null,
+            "normalized_max_absolute_error": null,
+            "within": null,
+            "comparable": false
+          },
+          {
+            "curve": "non_sticky_iba",
+            "normalized_rmse": null,
+            "normalized_max_absolute_error": null,
+            "within": null,
+            "comparable": false
+          },
+          {
+            "curve": "sticky_dmrt",
+            "normalized_rmse": null,
+            "normalized_max_absolute_error": null,
+            "within": null,
+            "comparable": false
+          },
+          {
+            "curve": "sticky_iba",
+            "normalized_rmse": null,
+            "normalized_max_absolute_error": null,
+            "within": null,
+            "comparable": false
+          }
+        ]
+      },
+      "numeric_b3": {
+        "oracle_smrt_version": "1.5.1",
+        "curves": [
+          {
+            "curve": "independent_rayleigh",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.030759197007705043,
+              "normalized_max_absolute_error": 0.05233518932995259,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.0023290224041794347,
+              "normalized_max_absolute_error": 0.003962711654855531
+            }
+          },
+          {
+            "curve": "independent_iba",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.03085145667475975,
+              "normalized_max_absolute_error": 0.05193373355441712,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.00248923371766503,
+              "normalized_max_absolute_error": 0.0042688681387272566
+            }
+          },
+          {
+            "curve": "non_sticky_dmrt",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.03588950131303612,
+              "normalized_max_absolute_error": 0.05175380438955029,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.003172458663989447,
+              "normalized_max_absolute_error": 0.004823180392148366
+            }
+          },
+          {
+            "curve": "non_sticky_iba",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.037318684504520847,
+              "normalized_max_absolute_error": 0.052201046169746565,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.0031194462457344234,
+              "normalized_max_absolute_error": 0.00452383548499583
+            }
+          },
+          {
+            "curve": "sticky_dmrt",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.2684909149093686,
+              "normalized_max_absolute_error": 0.586073260658674,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.0023167072242067013,
+              "normalized_max_absolute_error": 0.004551453860024103
+            }
+          },
+          {
+            "curve": "sticky_iba",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 0.27111896969009835,
+              "normalized_max_absolute_error": 0.5814174443313238,
+              "points_compared": 20,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": 0.002238692743080409,
+              "normalized_max_absolute_error": 0.004245776981437957
+            }
+          }
+        ]
+      },
+      "plot": {
+        "passed": false,
+        "status": "fail",
+        "checks": {
+          "rendered": true,
+          "title": false,
+          "caption": false,
+          "axes": true,
+          "legend": false,
+          "quality": true
+        },
+        "figure": {
+          "planned_chart_id": "fig03_ks_vs_density",
+          "figure_number": 1,
+          "title": "Figure 1. Reproduced Fig. 3: scattering coefficient vs density, six configurations",
+          "subtitle": "angle 55 ° · T 265 K · thickness 1 m · corr. length 150 µm · DORT 32 streams",
+          "x_label": "Density (kg m^-3)",
+          "y_label": "Scattering coefficient (m^-1)",
+          "kind": "line",
+          "series": [
+            {
+              "label": "Independent spheres, Rayleigh theory · ks_per_m",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 21,
+              "handle": "res_3c22fc8b1551",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            },
+            {
+              "label": "Independent spheres, IBA · ks_per_m",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 21,
+              "handle": "res_992b4df3934a",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            },
+            {
+              "label": "Non-sticky hard spheres, DMRT QCA-CP · ks_per_m",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 21,
+              "handle": "res_b1f4a4e519ec",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            },
+            {
+              "label": "Non-sticky hard spheres, IBA · ks_per_m",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 21,
+              "handle": "res_373781d58924",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            },
+            {
+              "label": "Sticky hard spheres, DMRT QCA-CP, tau 0.5 · ks_per_m",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 21,
+              "handle": "res_f73f1cad6c78",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            },
+            {
+              "label": "Sticky hard spheres, IBA, tau 0.5 · ks_per_m",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 21,
+              "handle": "res_1b174017823e",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            },
+            {
+              "label": "Diagnostic: independent spheres, Rayleigh, 10 GHz · ks_per_m",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 21,
+              "handle": "res_7ca82f298418",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            }
+          ],
+          "quality_review": {
+            "reviewed": true,
+            "passed": true,
+            "issues": [],
+            "warnings": [],
+            "redraw_reasons": [
+              "crowded legend with 7 series",
+              "long series labels need a wider publication layout"
+            ],
+            "n_series": 7,
+            "point_counts": [
+              21,
+              21,
+              21,
+              21,
+              21,
+              21,
+              21
+            ],
+            "redrawn": true
+          },
+          "provenance": [
+            "model_run"
+          ],
+          "archived_image_path": "evaluation/results/competition/improve-2026-10-03/qwen-final/figures/ba08fcbd551db459bcd250ff_q1-sparse-medium_p1-reproduction-first_qwen-qwen3.8-flash_r3_full.png"
+        }
+      }
+    },
+    "figure_judgement": {
+      "complete": true,
+      "passed": true,
+      "status": "pass",
+      "total": 5,
+      "scores": {
+        "line_count": 1,
+        "patterns": 1,
+        "grouping": 1,
+        "visual_correspondence": 2
+      },
+      "observations": [
+        "Both figures plot scattering coefficient against density (0-100 kg m^-3) with curves fanning out from the origin, organized as solid/dashed theory-vs-IBA pairs.",
+        "The reference shows exactly 6 curves; the candidate shows 7 visible lines because an additional flat near-zero diagnostic line runs across the panel, so the expected set of 6 is present but not cleanly isolated.",
+        "Curve ordering differs materially: in the reference the sticky-hard-sphere pair is clearly the steepest (reaching ~0.025), independent spheres are intermediate (~0.013), and non-sticky hard spheres are lowest (~0.007). In the candidate the independent-sphere pair is topmost (~0.014), the sticky pair is intermediate (~0.010), and non-sticky is lowest.",
+        "Pairwise structure is preserved in both: each configuration's two variants stay close together and separate progressively with increasing density.",
+        "Shape differences: the reference sticky curves grow superlinearly and the non-sticky curves visibly saturate/flatten, whereas the candidate's curves are mostly near-linear with only mild flattening of the lowest pair.",
+        "Reference curves span up to ~0.025 while candidate maxima are ~0.014; magnitude scaling differs but is allowed as a new model run.",
+        "Both use the same axis labels and quantity, so the figure is recognizable as the same comparison at a glance."
+      ],
+      "summary": "The candidate reproduces the same figure concept - scattering coefficient versus density for three sphere configurations, each as a theory/IBA pair rising from the origin and fanning apart. However, it draws 7 lines (an extra flat diagnostic line beyond the expected 6), and the relative ordering is altered: the independent-sphere pair tops the plot while the sticky-hard-sphere pair falls to intermediate, inverting the reference hierarchy where sticky spheres dominate by a large margin. Curve shapes are also flatter/more linear than the reference's superlinear sticky and saturating non-sticky behavior. Overall it is a recognizable but partially incorrect qualitative reproduction.",
+      "judge_model": "anthropic/claude-opus-5",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "anthropic/claude-opus-5",
+          "response_model": "anthropic/claude-opus-5",
+          "finish_reason": "stop",
+          "response_chars": 2142,
+          "elapsed_s": 35.406,
+          "usage": {
+            "prompt_tokens": 3350,
+            "completion_tokens": 1516,
+            "total_tokens": 4866,
+            "cost_usd": 0.05465
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 3350,
+        "completion_tokens": 1516,
+        "total_tokens": 4866,
+        "cost_usd": 0.05465
+      }
+    },
+    "deterministic_report": {
+      "passed": false,
+      "checks": {
+        "report_exists": true,
+        "outcome_declared": false,
+        "evidence_resolved": true,
+        "computed_result_identified": true,
+        "model_version_qualified": true,
+        "calibrated_outcome": true
+      },
+      "unresolved_markers": [],
+      "visual_validation": "pass",
+      "plot_checks_are_diagnostic": true
+    },
+    "report_judgement": {
+      "complete": false,
+      "passed": false,
+      "error": "judge failed after three attempts",
+      "attempts": [
+        {
+          "status": "error",
+          "error": "JudgeResponseError: judge response was not valid JSON",
+          "model": "anthropic/claude-opus-5",
+          "response_model": "anthropic/claude-opus-5",
+          "finish_reason": "length",
+          "response_chars": 0,
+          "elapsed_s": 42.665,
+          "usage": {
+            "prompt_tokens": 8968,
+            "completion_tokens": 3000,
+            "total_tokens": 11968,
+            "cost_usd": 0.11984
+          },
+          "response_excerpt": ""
+        },
+        {
+          "status": "error",
+          "error": "PermissionDeniedError: Error code: 403 - {'error': {'message': 'This model is not available in your region.', 'code': 403, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 11}, {'step': 'Filter by Regional Surcharge', 'endpoint_count': 6}], 'failed_routing_step': 'Gate Endpoints with Geo Restrictions'}}}"
+        },
+        {
+          "status": "error",
+          "error": "PermissionDeniedError: Error code: 403 - {'error': {'message': 'This model is not available in your region.', 'code': 403, 'metadata': {'routing_funnel': [{'step': 'Initial Endpoints', 'endpoint_count': 11}, {'step': 'Filter by Regional Surcharge', 'endpoint_count': 6}], 'failed_routing_step': 'Gate Endpoints with Geo Restrictions'}}}"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": null,
+        "completion_tokens": null,
+        "total_tokens": null,
+        "cost_usd": null
+      }
+    },
+    "judge_usage": {
+      "prompt_tokens": 3350,
+      "completion_tokens": 1516,
+      "total_tokens": 4866,
+      "cost_usd": 0.05465
+    },
+    "figure_judge_usage": {
+      "prompt_tokens": 3350,
+      "completion_tokens": 1516,
+      "total_tokens": 4866,
+      "cost_usd": 0.05465
+    }
+  }
+}

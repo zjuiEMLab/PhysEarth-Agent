@@ -1,0 +1,23 @@
+<section id="provenance" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:40px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#B4491C; font-weight:600">Key difference from other agents</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">Every parameter must say where it came from</h2>
+  </div>
+  <div style="display:flex; gap:16px; align-items:center">
+    <p style="font-size:24px; background:#E3ECF4; border:1px solid #2F6690; border-radius:24px; padding:8px 20px">from the paper</p>
+    <p style="font-size:24px; background:#E3ECF4; border:1px solid #2F6690; border-radius:24px; padding:8px 20px">derived from it</p>
+    <p style="font-size:24px; background:#E3ECF4; border:1px solid #2F6690; border-radius:24px; padding:8px 20px">from the user</p>
+    <p style="font-size:24px; background:#F6E3D6; border:1px solid #B4491C; border-radius:24px; padding:8px 20px">model default</p>
+    <p style="font-size:24px; background:#F6E3D6; border:1px solid #B4491C; border-radius:24px; padding:8px 20px">guessed</p>
+  </div>
+  <table style="font-size:24px; color:#14213D">
+    <tr><th style="width:12%; text-align:left">Q1 run</th><th style="width:44%; text-align:left">Agent said "paper"; the system recorded a default</th><th style="width:44%; text-align:left">Defaults the agent never labelled</th></tr>
+    <tr><td>r1</td><td>frequency, temperature, thickness</td><td>stickiness, angle, correlation length, streams</td></tr>
+    <tr><td>r2</td><td>none</td><td>stickiness, frequency, temperature, thickness, 3 more</td></tr>
+    <tr><td>r3</td><td>none</td><td>stickiness, frequency, temperature, thickness, 3 more</td></tr>
+  </table>
+  <p style="font-size:28px; line-height:1.4; color:#3D4656; width:1600px">Stickiness moves the sticky curves by up to 28%, and it was a silent default in 3 of 3 runs. The harness knew, because it resolves the model card. An agent calling SMRT directly never sees a library default.</p>
+  <p style="position:absolute; left:128px; bottom:64px; width:1600px; font-size:24px; color:#5F6673">research.plan: defaulted_parameters vs condition_provenance · the swept density is excluded</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:60px; text-align:right; font-size:24px; color:#5F6673">13</p>
+  <aside>~60 s. Using 36.5 or 37 GHz, or a different stickiness, is fine when the paper does not state it. What matters is that the plan and the report say which values came from the paper, which were derived, which came from the user, which are model defaults, and which were guessed. That is the evaluation that distinguishes PhysEarth. Today the pieces exist: the six-way label scheme, gold labels for Figures 4 to 6, a scorer, and the system's own record of which parameters were filled from card defaults. What is missing: the scorer skips Q1, it never cross-checks the agent's labels against the system record, and all six Q1 reports omitted the provenance appendix. The table is that cross-check computed offline on the three harnessed runs. Density is excluded because it is the swept axis.</aside>
+</section>

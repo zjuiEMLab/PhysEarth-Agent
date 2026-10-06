@@ -1,0 +1,19 @@
+<section id="invariants" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:40px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#B4491C; font-weight:600">Suggestion 2 · the hard part</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">The invariants must survive a host we do not control</h2>
+  </div>
+  <table style="font-size:24px; color:#14213D">
+    <tr><th style="width:26%; text-align:left">Invariant</th><th style="width:22%; text-align:left">In the plugin</th><th style="width:52%; text-align:left">How</th></tr>
+    <tr><td>Human approves runs</td><td><b>Redesign</b></td><td>run returns a pending ticket; approved out of band (MCP elicitation or a local CLI); no approve tool exposed</td></tr>
+    <tr><td>Every claim resolves</td><td><b>Redesign</b></td><td>the host writes the answer, so add verify_report(text) and a Claude Code Stop hook that blocks until it passes</td></tr>
+    <tr><td>Ranges, QC bounds</td><td>Unchanged</td><td>checks live in the server, not the prompt</td></tr>
+    <tr><td>No arrays in context</td><td>Unchanged</td><td>tools return handles and a bounded preview</td></tr>
+    <tr><td>Charts from a spec</td><td>Unchanged</td><td>plot(spec) returns an image path and spec hash</td></tr>
+    <tr><td>Outside text is evidence</td><td>Partial</td><td>our tool output stays wrapped; the host's own web search is outside it</td></tr>
+  </table>
+  <p style="font-size:28px; color:#3D4656">Bonus: the same task in Claude Code or Codex, with and without PhysEarth, is the fair baseline from slide 15.</p>
+  <p style="position:absolute; left:128px; bottom:64px; width:1400px; font-size:24px; color:#5F6673">Invariants as listed in AGENTS.md</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:100px; text-align:right; font-size:24px; color:#5F6673">18</p>
+  <aside>~50 s. Most invariants carry over for free because they already live in code. Two do not. Approval: in the web app a person clicks a button the agent cannot reach; over MCP, any tool we expose the host model can call, so approval must happen outside the tool channel, through MCP elicitation where the client supports it, or a signed ticket confirmed from a terminal or local page. Citations: our gate checks our agent's final answer, but in a plugin the host writes it, so we expose verification as a tool and, in Claude Code, enforce it with a Stop hook. Be honest in the paper that a host's own web search sits outside our untrusted-text boundary.</aside>
+</section>

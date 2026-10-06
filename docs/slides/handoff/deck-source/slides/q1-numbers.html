@@ -1,0 +1,20 @@
+<section id="q1-numbers" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#B4491C; font-weight:600">Evidence · Q1, three runs each · baseline to be re-run</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">The committed baseline stopped after one page</h2>
+  </div>
+  <table style="font-size:28px; color:#14213D">
+    <tr><th style="width:44%; text-align:left">Measure</th><th style="width:28%; text-align:left">Full harness</th><th style="width:28%; text-align:left">Direct LLM (stale)</th></tr>
+    <tr><td>Figure produced</td><td><b>3 of 3</b></td><td>0 of 3</td></tr>
+    <tr><td>Visual judge, 0 to 8</td><td><b>8, 8, 8</b></td><td>not scoreable</td></tr>
+    <tr><td>Report judge, 0 to 10 (pass at 8)</td><td>6, 6, 5 · all fail</td><td>4, 2, 0 · all fail</td></tr>
+    <tr><td>Paper sections opened</td><td>5 to 6</td><td>0</td></tr>
+    <tr><td>LLM calls per run</td><td>26 to 28</td><td>3</td></tr>
+    <tr><td>Tokens per run</td><td>0.65 to 0.74 M</td><td>about 8 k</td></tr>
+    <tr><td>Wall time per run</td><td>4 to 5 min</td><td>11 to 13 s</td></tr>
+  </table>
+  <p style="font-size:28px; line-height:1.4; color:#B4491C">These direct-LLM runs predate the fix that makes it run SMRT; re-run before comparing.</p>
+  <p style="position:absolute; left:128px; bottom:64px; width:1600px; font-size:24px; color:#5F6673">scored_runs.json · candidate qwen-plus · label-blinded judge anthropic/claude-opus-5 · raw = same LLM, no harness</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:60px; text-align:right; font-size:24px; color:#5F6673">11</p>
+  <aside>~50 s. The committed comparison, with a caveat that changes how to read it. Every direct-LLM run read one page, wrote "I will reproduce…" and stopped; it never called SMRT. The current code forces the read, run and plot steps (a regression test now pins this), so the baseline must be re-run before this table is shown as a result. With the harness, every run produced the figure and the visual judge gave full marks; without it, no figure at all, and the raw runs invented facts such as "the paper is only 26 pages long, so page 2768 is invalid". But the harnessed reports also fail the report judge: 6, 6 and 5 out of 10 against a pass mark of 8. And the cost is real, roughly 85 times the tokens, because the prompt grows from 14 k to 39 k tokens across 28 calls. Run 3 also stopped at the research-approval gate. Three runs on one LLM and one task is a pilot, not a result.</aside>
+</section>
