@@ -455,20 +455,27 @@ def _capability_check_one(
         for item in supported
         for output in item.get("outputs") or ()
     })
-    # What a figure plots against is a parameter, not an output: density_kg_m3 on the
-    # x-axis was reported as an output no registered model declares. And a requested output
-    # written as a phrase ("ks_per_m vs density over 0-100 kg m-3") names its output.
+    # A requested output written as a phrase ("ks_per_m vs density over 0-100 kg m-3")
+    # names its output. And what a figure plots against is a parameter, not an output:
+    # density_kg_m3 on the x-axis was reported as an output no registered model declares.
+    # A parameter counts only as such an axis, beside an output that is declared. Asked
+    # for on its own it is an inversion -- leaf area index out of a forward canopy model --
+    # and that stays a refusal.
     supported_parameters = {
         parameter for item in supported for parameter in item.get("parameters") or ()
     }
 
-    def _declared(output):
-        if output in supported_outputs or output in supported_parameters:
+    def _names_output(output):
+        if output in supported_outputs:
             return True
         words = re.findall(r"[a-z][a-z0-9_]*", str(output).lower())
         return any(word in supported_outputs for word in words)
 
-    unavailable_outputs = [output for output in outputs if not _declared(output)]
+    plotted = any(_names_output(output) for output in outputs)
+    unavailable_outputs = [
+        output for output in outputs
+        if not _names_output(output) and not (plotted and output in supported_parameters)
+    ]
     not_comparable = []
     if unavailable:
         for missing in unavailable:
