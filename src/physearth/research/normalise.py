@@ -298,20 +298,24 @@ def _clean_charts(charts):
         ys = _clean_list(chart.get("ys") or ([chart.get("y")] if chart.get("y") else []), 6)
         if not x or not ys:
             continue
-        cleaned.append(
-            {
-                "id": str(chart.get("id") or "chart_%d" % (index + 1)).strip(),
-                "label": str(chart.get("label") or "%s versus %s" % (", ".join(ys), x)).strip(),
-                "kind": str(chart.get("kind") or "line").strip(),
-                "x": x,
-                "y": ys[0],
-                "ys": ys,
-                "required": bool(chart.get("required", True)),
-                "purpose": str(chart.get("purpose") or "result").strip(),
-                "x_label": str(chart.get("x_label") or "").strip(),
-                "y_label": str(chart.get("y_label") or "").strip(),
-            }
-        )
+        entry = {
+            "id": str(chart.get("id") or "chart_%d" % (index + 1)).strip(),
+            "label": str(chart.get("label") or "%s versus %s" % (", ".join(ys), x)).strip(),
+            "kind": str(chart.get("kind") or "line").strip(),
+            "x": x,
+            "y": ys[0],
+            "ys": ys,
+            "required": bool(chart.get("required", True)),
+            "purpose": str(chart.get("purpose") or "result").strip(),
+            "x_label": str(chart.get("x_label") or "").strip(),
+            "y_label": str(chart.get("y_label") or "").strip(),
+        }
+        # Which runs the chart draws. This used to be dropped without a word, so a plan with
+        # several sweeps over one axis could never be split into charts of at most 8 series.
+        run_ids = _clean_list(chart.get("runs") or chart.get("run_ids"), 40)
+        if run_ids:
+            entry["runs"] = run_ids
+        cleaned.append(entry)
     return cleaned[:8]
 
 

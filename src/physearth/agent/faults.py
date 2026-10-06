@@ -42,6 +42,17 @@ def _rate_limited(exc):
     return "rpm" in text or "rate limit" in text or "too many requests" in text
 
 
+def _connection_fault(exc):
+    """The connection could not be opened or the request timed out: wait and try again."""
+    name = type(exc).__name__
+    return (
+        name in ("APITimeoutError", "APIConnectionError")
+        or "Timeout" in name
+        or "ConnectError" in name
+        or isinstance(exc, (ConnectionError, TimeoutError))
+    )
+
+
 def _dead_for_today(exc):
     """Faults that will not clear by retrying the same request.
 

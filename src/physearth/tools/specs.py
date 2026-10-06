@@ -588,6 +588,7 @@ RESEARCH_PLAN_SPEC = {
                             "x": {"type": "string", "description": "The common sweep_parameter of its runs."},
                             "y": {"type": "string"},
                             "ys": {"type": "array", "items": {"type": "string"}, "description": "Outputs sharing one unit."},
+                            "runs": {"type": "array", "items": {"type": "string"}, "description": "Run ids this chart draws. Omit it to draw every run whose sweep matches x; give it to keep a chart under 8 series or to separate sweeps that share an axis."},
                             "required": {"type": "boolean"},
                             "purpose": {"type": "string"},
                             "x_label": {"type": "string"},

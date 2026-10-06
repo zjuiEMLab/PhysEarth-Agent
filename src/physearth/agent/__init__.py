@@ -32,7 +32,13 @@ from physearth.agent.constants import (
     RETRY_BACKOFF_S,
     SEGMENT_BREAK,
 )
-from physearth.agent.faults import _dead_for_today, _fault, _rate_limited, _upstream_text
+from physearth.agent.faults import (
+    _connection_fault,
+    _dead_for_today,
+    _fault,
+    _rate_limited,
+    _upstream_text,
+)
 from physearth.agent.loop import _requests_tool_bypass, run, stream
 from physearth.agent.messages import _compact_messages, _messages, _short_content, transcript
 from physearth.agent.results import (

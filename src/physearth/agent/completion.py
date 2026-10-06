@@ -4,9 +4,11 @@ import ast
 import json
 import time
 
+import httpx
 from openai import OpenAI
 
 from physearth import config
+from physearth.agent.constants import CONNECT_TIMEOUT_S, REQUEST_TIMEOUT_S
 
 
 def _client():
@@ -15,7 +17,12 @@ def _client():
         raise RuntimeError("PHYSEARTH_LLM_API_KEY is not set; the agent cannot reach the model.")
     # The agent loop retries with its own backoff and counts each attempt; the SDK's
     # hidden retries would multiply every one of them.
-    return OpenAI(api_key=token, base_url=config.llm_api_base(), max_retries=0)
+    return OpenAI(
+        api_key=token,
+        base_url=config.llm_api_base(),
+        max_retries=0,
+        timeout=httpx.Timeout(REQUEST_TIMEOUT_S, connect=CONNECT_TIMEOUT_S),
+    )
 
 
 class _Completion:

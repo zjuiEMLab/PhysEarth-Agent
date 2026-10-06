@@ -12,11 +12,20 @@ from physearth.agent.constants import (
     _TOOL_BYPASS_PATTERNS,
     EMPTY_RESPONSE_RETRIES,
     MAX_OUTPUT_TOKENS,
+    CONNECTION_BACKOFF_MAX_S,
+    CONNECTION_BACKOFF_S,
+    CONNECTION_RETRIES,
     RATE_LIMIT_BACKOFF_S,
     RATE_LIMIT_RETRIES,
     RETRY_BACKOFF_S,
 )
-from physearth.agent.faults import _dead_for_today, _fault, _rate_limited, _upstream_text
+from physearth.agent.faults import (
+    _connection_fault,
+    _dead_for_today,
+    _fault,
+    _rate_limited,
+    _upstream_text,
+)
 from physearth.agent.messages import (
     _compact_messages,
     _messages,
@@ -391,6 +400,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 if _rate_limited(exc):
                     budget_left = max(budget_left, RATE_LIMIT_RETRIES)
                     time.sleep(RATE_LIMIT_BACKOFF_S * attempt)
+                elif _connection_fault(exc):
+                    budget_left = max(budget_left, CONNECTION_RETRIES)
+                    time.sleep(min(CONNECTION_BACKOFF_MAX_S, CONNECTION_BACKOFF_S * attempt))
                 else:
                     time.sleep(RETRY_BACKOFF_S * attempt)
                 continue
@@ -437,7 +449,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 answer = answer or (
                     "The inference endpoint refused %d times in a row: %s. This is an upstream "
                     "fault, not a modelling result; the run trace has what the endpoint said."
-                    % (EMPTY_RESPONSE_RETRIES, last_fault)
+                    % (attempt, last_fault)
                 )
             break
 

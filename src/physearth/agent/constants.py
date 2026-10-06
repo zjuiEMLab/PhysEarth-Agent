@@ -14,6 +14,15 @@ RETRY_BACKOFF_S = 1.5
 # would have worked. These three attempts span just over a minute instead.
 RATE_LIMIT_BACKOFF_S = 12.0
 RATE_LIMIT_RETRIES = 4
+# A connection that cannot be opened, or a request that times out, is a network or provider
+# blip that clears on its own, like a rate limit, and unlike an empty answer. The SDK's
+# default connect timeout is 5 seconds, which a busy provider routinely misses, so the client
+# gets a longer one and these faults get their own, longer retry budget.
+CONNECTION_RETRIES = 6
+CONNECTION_BACKOFF_S = 5.0
+CONNECTION_BACKOFF_MAX_S = 30.0
+REQUEST_TIMEOUT_S = 600.0
+CONNECT_TIMEOUT_S = 30.0
 # One budget for every request. Thinking models spend part of it on reasoning, and at 4096
 # both a research_plan tool call and an ordinary step were cut off mid-output.
 MAX_OUTPUT_TOKENS = 40960

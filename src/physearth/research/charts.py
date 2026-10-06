@@ -169,7 +169,14 @@ def _validate_chart_runs(charts, runs):
     runs remain mandatory in ``execution_gaps`` but need not share a main plot's sweep axis.
     """
     problems = []
+    run_ids = {run.get("id") for run in runs}
     for chart in charts:
+        unknown = [name for name in chart.get("runs") or () if name not in run_ids]
+        if unknown:
+            problems.append(
+                "%s names runs that are not planned: %s; use run ids from the plan's runs"
+                % (chart["label"], ", ".join(unknown))
+            )
         units = set()
         series = 0
         for y_name in _chart_y_names(chart):
@@ -195,7 +202,8 @@ def _validate_chart_runs(charts, runs):
             # produce its figure; say so while the plan can still change.
             problems.append(
                 "%s would draw %d series (each producing run times each y), more than the "
-                "%d one chart can hold; split it into separate charts or plot fewer outputs"
+                "%d one chart can hold; give each chart its own run ids in its runs field, "
+                "split it into separate charts, or plot fewer outputs"
                 % (chart["label"], series, plotting.MAX_SERIES)
             )
     for run in runs:
@@ -230,6 +238,9 @@ def _run_produces_chart(run, chart, y_name=None):
     spec = run.get("parameters") or {}
     groups = entry.card.get("output_groups") or {}
     available = groups.get(spec.get("output"), list(entry.card.get("outputs", {})))
+    chosen = chart.get("runs")
+    if chosen and run.get("id") not in chosen:
+        return False
     x_matches = chart.get("x") == "index" or spec.get("sweep_parameter") == chart.get("x")
     wanted = [y_name] if y_name else _chart_y_names(chart)
     return bool(x_matches and any(name in available for name in wanted))

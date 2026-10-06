@@ -242,6 +242,18 @@ def _repair_parameter_mappings(
                         % (raw_name, ", ".join(produced_by))
                     )
                     expected = "an input, not a declared output"
+                elif re.search(r"\s*(?:/|,|;|\+|\band\b)\s*", raw_name) and all(
+                    part.strip() for part in re.split(r"\s*(?:/|,|;|\+|\band\b)\s*", raw_name)
+                ):
+                    parts = [
+                        part for part in re.split(r"\s*(?:/|,|;|\+|\band\b)\s*", raw_name)
+                    ]
+                    repair = (
+                        "A mapping row names exactly one model input and carries its own value. "
+                        "Replace %r with one row per input (%s), each with its own mapped_value "
+                        "and provenance_class." % (raw_name, ", ".join(parts))
+                    )
+                    expected = "one exact registered model input per row"
                 elif len(candidates) > 1:
                     repair = "Replace the alias with one exact input from list_models."
                     expected = "an exact registered model input"
