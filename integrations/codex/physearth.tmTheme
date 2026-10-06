@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PhysEarth Geo-AI — a TextMate/Sublime colour scheme for the Codex TUI.
+
+  Codex parses .tmTheme files with the `two-face` crate and reads them from
+  $CODEX_HOME/themes/, then offers them under /theme and persists the choice as `tui.theme`.
+  That makes this file the one supported way a third party can change how Codex *looks*, and
+  colour is what a CLI can carry: there are no panels or widgets to fill.
+
+  The palette is the same one the DeepSeek Harness plugin applies to that surface — near-black
+  OLED field, one accent per domain — so the two integrations read as the same product rather
+  than two experiments. Ice (#22D3EE) is the accent; amber (#F59E0B) marks anything that is a
+  measurement or a refusal, which is the distinction this project cares about most.
+
+  Every scope below is one Codex itself names in its own theme scope list, so nothing here is a
+  guess about what the TUI might emit. `tests/test_codex_integration.py` asserts that coverage.
+-->
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>PhysEarth Geo-AI</string>
+	<key>author</key>
+	<string>zjuiEMLab</string>
+	<key>comment</key>
+	<string>Geo-AI: dark field, ice accent, amber for measurements and refusals.</string>
+	<key>semanticClass</key>
+	<string>theme.dark.physearth</string>
+	<key>settings</key>
+	<array>
+		<!-- Global: the field everything else sits on. -->
+		<dict>
+			<key>settings</key>
+			<dict>
+				<key>background</key>
+				<string>#05070D</string>
+				<key>foreground</key>
+				<string>#E8EEFB</string>
+				<key>caret</key>
+				<string>#22D3EE</string>
+				<key>lineHighlight</key>
+				<string>#0F1728</string>
+				<key>selection</key>
+				<string>#16223C</string>
+				<key>selectionForeground</key>
+				<string>#E8EEFB</string>
+				<key>selectionBorder</key>
+				<string>#22D3EE</string>
+				<key>inactiveSelection</key>
+				<string>#0F1728</string>
+				<key>findHighlight</key>
+				<string>#F59E0B</string>
+				<key>findHighlightForeground</key>
+				<string>#05070D</string>
+				<key>gutter</key>
+				<string>#05070D</string>
+				<key>gutterForeground</key>
+				<string>#7186A6</string>
+				<key>guide</key>
+				<string>#1E2A45</string>
+				<key>activeGuide</key>
+				<string>#22D3EE</string>
+				<key>shadow</key>
+				<string>#020610</string>
+			</dict>
+		</dict>
+
+		<!-- Comments and anything the model did not say: quiet, never brighter than the answer. -->
+		<dict>
+			<key>name</key>
+			<string>Comment</string>
+			<key>scope</key>
+			<string>comment</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#7186A6</string>
+				<key>fontStyle</key>
+				<string>italic</string>
+			</dict>
+		</dict>
+
+		<!-- Keywords: the structure of a thought. -->
+		<dict>
+			<key>name</key>
+			<string>Keyword</string>
+			<key>scope</key>
+			<string>keyword</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#67E8F9</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Keyword control</string>
+			<key>scope</key>
+			<string>keyword.control</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#22D3EE</string>
+				<key>fontStyle</key>
+				<string>bold</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Keyword operator</string>
+			<key>scope</key>
+			<string>keyword.operator</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#8094B4</string>
+			</dict>
+		</dict>
+
+		<!-- Storage: a declaration, and the modifier that changes what it means. -->
+		<dict>
+			<key>name</key>
+			<string>Storage type</string>
+			<key>scope</key>
+			<string>storage.type</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#A8B8D4</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Storage modifier</string>
+			<key>scope</key>
+			<string>storage.modifier</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#C3CEE3</string>
+				<key>fontStyle</key>
+				<string>italic</string>
+			</dict>
+		</dict>
+
+		<!-- Names and literals. -->
+		<dict>
+			<key>name</key>
+			<string>Function name</string>
+			<key>scope</key>
+			<string>entity.name.function</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#7DD3FC</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Tag name</string>
+			<key>scope</key>
+			<string>entity.name.tag</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#22D3EE</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Language constant</string>
+			<key>scope</key>
+			<string>constant.language</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#FBBF24</string>
+				<key>fontStyle</key>
+				<string>bold</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Other constant (a number someone measured)</string>
+			<key>scope</key>
+			<string>constant.other</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#F59E0B</string>
+			</dict>
+		</dict>
+
+		<!-- Markdown: the shape most answers actually take here. -->
+		<dict>
+			<key>name</key>
+			<string>Heading</string>
+			<key>scope</key>
+			<string>markup.heading</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#67E8F9</string>
+				<key>fontStyle</key>
+				<string>bold</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Section</string>
+			<key>scope</key>
+			<string>markup.underline.link, entity.name.section</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#22D3EE</string>
+				<key>fontStyle</key>
+				<string>underline</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Inserted</string>
+			<key>scope</key>
+			<string>markup.inserted</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#34D399</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Deleted</string>
+			<key>scope</key>
+			<string>markup.deleted</string>
+			<key>settings</key>
+			<dict>
+				<key>foreground</key>
+				<string>#F87171</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Emphasis</string>
+			<key>scope</key>
+			<string>markup.italic</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>italic</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>name</key>
+			<string>Strong</string>
+			<key>scope</key>
+			<string>markup.bold</string>
+			<key>settings</key>
+			<dict>
+				<key>fontStyle</key>
+				<string>bold</string>
+				<key>foreground</key>
+				<string>#E8EEFB</string>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

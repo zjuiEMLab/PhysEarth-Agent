@@ -76,7 +76,7 @@ test('the bridge command matches the address the settings name', () => {
   const spec = bridgeCommand({ pythonCmd: 'python3', bridgeUrl: 'http://127.0.0.1:9123', projectRoot: '/repo' })
 
   assert.equal(spec.command, 'python3')
-  assert.deepEqual(spec.args, ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', '9123', '--approval', 'ask'])
+  assert.deepEqual(spec.args, ['-m', 'integrations.physearth', 'serve-http', '--host', '127.0.0.1', '--port', '9123', '--approval', 'ask'])
   assert.deepEqual(bridgeCommand({ pythonCmd: 'python3', approveRuns: true }).args.slice(-2), ['--approval', 'always'])
   assert.equal(spec.cwd, '/repo')
   assert.equal(portOf('not a url'), 8799)
@@ -113,13 +113,13 @@ test('tool cards exist for the tools a reviewer reads most', () => {
 test('the bundle patch mounts the plugin and the MCP row that brings the tools', () => {
   const patch = readFileSync(join(ROOT, 'cordis.patch.yml'), 'utf8')
 
-  assert.match(patch, /id: geoai\b/)
-  assert.match(patch, /name: dsh-plugin-physearth-geoai/)
-  assert.match(patch, /id: mcp-geoai/)
+  assert.match(patch, /id: physearth\b/)
+  assert.match(patch, /name: dsh-plugin-physearth/)
+  assert.match(patch, /id: mcp-physearth/)
   assert.match(patch, /@deepseek-ai\/dsh-mcp-client/)
-  assert.match(patch, /serverName: geoai/)
+  assert.match(patch, /serverName: physearth/)
   assert.match(patch, /command: python3/)
-  assert.match(patch, /args: \['-m', 'integrations\.geoai', 'serve'\]/)
+  assert.match(patch, /args: \['-m', 'integrations\.physearth', 'serve'\]/)
   // Off by default.
   assert.match(patch, /enabled: false/)
   // And no placeholder: a patch layer cannot carry an absolute checkout path, and a later
@@ -156,7 +156,7 @@ test('the client half is a self-contained factory that can be unloaded', () => {
   assert.match(client, /settings\.plugin\.item/)
   // Everything the restyle adds is an effect, so a disable removes it.
   assert.match(client, /overrideTokens/)
-  assert.match(client, /classList\.remove\('geoai-restyled'\)/)
+  assert.match(client, /classList\.remove\('physearth-restyled'\)/)
   assert.match(client, /style\.remove\(\)/)
 })
 
@@ -176,7 +176,7 @@ test('the client half requires nothing but its declared rows', () => {
 test('the stylesheet is scoped to the enabled class and respects reduced motion', () => {
   const client = readFileSync(join(ROOT, 'lib', 'client.js'), 'utf8')
 
-  assert.match(client, /body\.geoai-restyled/)
+  assert.match(client, /body\.physearth-restyled/)
   assert.match(client, /prefers-reduced-motion: reduce/)
   assert.match(client, /focus-visible/)
   // Mobile first, then two relaxations as room appears.

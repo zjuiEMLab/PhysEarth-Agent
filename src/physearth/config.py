@@ -1,0 +1,120 @@
+import os
+from pathlib import Path
+
+_DEFAULTS = {
+    "PHYSEARTH_LLM_API_KEY": "",
+    "PHYSEARTH_LLM_API_BASE": "",
+    "PHYSEARTH_LLM_MODEL": "",
+    "PHYSEARTH_LLM_MODELS": "",
+    "EVAL_LLM_API_KEY": "",
+    "EVAL_LLM_API_BASE": "",
+    "EVAL_LLM_MODEL": "",
+    "MODELSCOPE_TOKEN": "",
+    "MODELSCOPE_NAMESPACE": "",
+    "MODELSCOPE_API_BASE": "https://api-inference.modelscope.cn/v1",
+    "MODELSCOPE_MODEL": "deepseek-ai/DeepSeek-V4.1-Flash",
+    # Source-paper figure inspection should include the image by default. Providers that
+    # do not expose a vision-capable endpoint can opt out with PHYSEARTH_LLM_VISION=0;
+    # vector labels and captions are still extracted when available.
+    "PHYSEARTH_LLM_VISION": "1",
+    # low | medium | high caps a thinking model's hidden reasoning on ordinary calls.
+    # Empty keeps the provider default. See agent/loop.py:_reasoning_effort.
+    "PHYSEARTH_LLM_REASONING_EFFORT": "",
+    "PHYSEARTH_ONLINE": "1",
+    "PHYSEARTH_STATE_DIR": "_state",
+    # Hard stops on spend. Zero disables one. The defaults sit above the longest complete
+    # evaluation run (55 model calls in one turn, 66 and USD 0.41 in one session) so that
+    # only a runaway loop reaches them.
+    "PHYSEARTH_MAX_MODEL_CALLS": "60",
+    "PHYSEARTH_MAX_TOOL_CALLS": "80",
+    "PHYSEARTH_MAX_SESSION_MODEL_CALLS": "200",
+    "PHYSEARTH_MAX_SESSION_TOOL_CALLS": "300",
+    "PHYSEARTH_MAX_SESSION_COST_USD": "1.00",
+    "PHYSEARTH_MAX_QUESTIONS_PER_HOUR": "0",
+    "PHYSEARTH_PORT": "7860",
+    "PHYSEARTH_LOG_MAX_BYTES": str(5 * 1024 * 1024),
+    "PHYSEARTH_SESSION_LOG_MAX_BYTES": str(10 * 1024 * 1024),
+    "PHYSEARTH_LOG_BACKUP_COUNT": "5",
+    "PHYSEARTH_HOST": "0.0.0.0",
+}
+
+
+def load_dotenv(path=".env"):
+    f = Path(path)
+    if not f.is_file():
+        return
+    for line in f.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
+
+
+def get(name):
+    return os.environ.get(name, _DEFAULTS.get(name, ""))
+
+
+def llm_api_key():
+    """Provider-neutral key, with the old ModelScope name kept for deployments."""
+    return get("PHYSEARTH_LLM_API_KEY") or get("MODELSCOPE_TOKEN")
+
+
+def llm_api_base():
+    return get("PHYSEARTH_LLM_API_BASE") or get("MODELSCOPE_API_BASE")
+
+
+def llm_model():
+    return get("PHYSEARTH_LLM_MODEL") or get("MODELSCOPE_MODEL")
+
+
+def llm_models():
+    raw = get("PHYSEARTH_LLM_MODELS")
+    if raw:
+        return [item.strip() for item in raw.split(",") if item.strip()]
+    return [
+        "Qwen/Qwen3.8-Flash-Next",
+        "deepseek-ai/DeepSeek-V4.1-Flash",
+        "ZhipuAI/GLM-5.2",
+    ]
+
+
+def eval_llm_api_key():
+    """Evaluation-judge credential with no candidate-provider fallback."""
+    return get("EVAL_LLM_API_KEY")
+
+
+def eval_llm_api_base():
+    return get("EVAL_LLM_API_BASE")
+
+
+def eval_llm_model():
+    return get("EVAL_LLM_MODEL")
+
+
+def state_dir():
+    path = Path(get("PHYSEARTH_STATE_DIR"))
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def has_token():
+    return bool(llm_api_key())
+
+
+def nonnegative_int(name, default=0):
+    try:
+        return max(0, int(get(name) or default))
+    except (TypeError, ValueError):
+        return max(0, int(default))
+
+
+def nonnegative_float(name, default=0.0):
+    try:
+        return max(0.0, float(get(name) or default))
+    except (TypeError, ValueError):
+        return max(0.0, float(default))
+
+
+# Load local provider selection before agent.py builds its model switcher catalogue.
+load_dotenv()

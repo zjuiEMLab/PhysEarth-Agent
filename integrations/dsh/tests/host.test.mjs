@@ -146,7 +146,7 @@ async function waitFor(predicate, { timeout = 5000, step = 20 } = {}) {
 }
 
 test('the module exports what the cordis loader reads', () => {
-  assert.equal(name, 'physearth-geoai')
+  assert.equal(name, 'physearth')
   assert.deepEqual(inject, ['settings', 'tools', 'systemPrompt'])
   assert.equal(typeof apply, 'function')
   // Real schemastery schemas are callable; the test stub is a plain object. What matters here
@@ -196,7 +196,7 @@ test('the prompt section is registered in the shape the service accepts', async 
 
   assert.equal(calls.sections.length, 1)
   const section = calls.sections[0]
-  assert.equal(section.name, 'geoai-physics')
+  assert.equal(section.name, 'physearth-physics')
   assert.equal(section.order, PROMPT_ORDER)
   assert.ok(Number.isFinite(section.order))
   assert.equal(section.text, PROMPT_SECTION)
@@ -228,7 +228,7 @@ test('promptDepth "off" registers no section, and says that is deliberate', asyn
 
 /** A stand-in for the interpreter: it prints whatever the test needs and records its calls. */
 function fakeEngine({ text = 'ENGINE RULES: numbers come from runs.', status = 0 } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'geoai-fake-'))
+  const dir = mkdtempSync(join(tmpdir(), 'physearth-fake-'))
   const counter = join(dir, 'calls')
   const script = join(dir, 'python')
   writeFileSync(
@@ -247,7 +247,7 @@ function fakeEngine({ text = 'ENGINE RULES: numbers come from runs.', status = 0
       readFileSync(counter, 'utf8')
         .trim()
         .split('\n')
-        .filter((line) => line.startsWith('-m integrations.geoai')),
+        .filter((line) => line.startsWith('-m integrations.physearth')),
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   }
 }
@@ -277,7 +277,7 @@ test('the engine supplies the prompt text, so it cannot drift from prompts/ and 
     assert.equal(text.slice(PROMPT_HEADING.length + 2), 'ENGINE RULES: numbers come from runs.')
     // And it asked the engine for the scope the depth names, not for everything. (`engine.calls()`
     // also holds the probe the interpreter search makes.)
-    assert.deepEqual(engine.promptCalls(), ['-m integrations.geoai prompt --scopes rules'])
+    assert.deepEqual(engine.promptCalls(), ['-m integrations.physearth prompt --scopes rules'])
     assert.ok(
       calls.logs.some(([level, message]) => level === 'info' && /text from engine/.test(message)),
       'the source and size of the injected text are reported, not assumed',
@@ -310,7 +310,7 @@ test('a failing engine leaves the compact rules in place and names the depth tha
     assert.ok(warning, 'the failure is a warning, not a silent fallback')
     assert.match(warning[1], /Exit 3|exit 3|boom/)
     // `full` is the three scopes, in the order the engine stacks them.
-    assert.deepEqual(engine.promptCalls(), ['-m integrations.geoai prompt --scopes identity,rules,context'])
+    assert.deepEqual(engine.promptCalls(), ['-m integrations.physearth prompt --scopes identity,rules,context'])
   } finally {
     engine.cleanup()
   }
@@ -363,8 +363,8 @@ test('a different depth reads the engine again, the same depth does not', async 
     flip({ promptDepth: 'full' })
     await waitFor(() => calls.sections.length === 2)
     assert.deepEqual(engine.promptCalls(), [
-      '-m integrations.geoai prompt --scopes rules',
-      '-m integrations.geoai prompt --scopes identity,rules,context',
+      '-m integrations.physearth prompt --scopes rules',
+      '-m integrations.physearth prompt --scopes identity,rules,context',
     ])
 
     flip({ accent: 'amber' })

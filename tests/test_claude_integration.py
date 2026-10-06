@@ -18,11 +18,11 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-PLUGIN = ROOT / "plugins" / "geoai-claude"
+PLUGIN = ROOT / "integrations" / "claude-code" / "physearth"
 MANIFEST = PLUGIN / ".claude-plugin" / "plugin.json"
 MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 STATUSLINE = PLUGIN / "scripts" / "statusline.py"
-SKILL = PLUGIN / "skills" / "geoai" / "SKILL.md"
+SKILL = PLUGIN / "skills" / "physearth" / "SKILL.md"
 
 # Every key Claude Code documents for plugin.json. A key outside this set is stripped at load with
 # a warning nobody reads, so it is a typo that looks like a feature.
@@ -50,7 +50,7 @@ def manifest() -> dict:
 def test_the_manifest_uses_only_keys_claude_code_reads():
     data = manifest()
 
-    assert data["name"] == "geoai-claude"
+    assert data["name"] == "physearth"
     unknown = set(data) - MANIFEST_KEYS
     assert not unknown, f"keys Claude Code strips: {sorted(unknown)}"
     # `name` is the only required field; the rest is what a reader needs to trust the package.
@@ -84,7 +84,7 @@ def test_the_plugin_declares_no_mcp_server_and_the_readme_says_why():
 
 
 def test_the_theme_only_names_tokens_that_exist():
-    theme = json.loads((PLUGIN / "themes" / "geoai-night.json").read_text())
+    theme = json.loads((PLUGIN / "themes" / "physearth-night.json").read_text())
 
     assert theme["base"] == "dark"
     overrides = theme["overrides"]
@@ -98,7 +98,7 @@ def test_the_theme_only_names_tokens_that_exist():
 
 
 def test_the_output_style_forces_itself_on_and_keeps_the_coding_instructions():
-    body = (PLUGIN / "output-styles" / "geoai-brief.md").read_text()
+    body = (PLUGIN / "output-styles" / "physearth-brief.md").read_text()
 
     assert body.startswith("---\n")
     front, _, prose = body[4:].partition("\n---")
@@ -107,13 +107,13 @@ def test_the_output_style_forces_itself_on_and_keeps_the_coding_instructions():
     )
     fields = {key.strip(): value.strip() for key, value in fields.items()}
 
-    assert fields["name"] == "geoai-brief"
+    assert fields["name"] == "physearth-brief"
     # The only mechanism that changes every response's text with no user action...
     assert fields["force-for-plugin"] == "true"
     # ...while leaving ordinary engineering behaviour in place: this adds claim discipline, it
     # does not remove the ability to write code.
     assert fields["keep-coding-instructions"] == "true"
-    for rule in ("[abs:doi]", "geoai_decide", "geoai_verify_report", "needs_input"):
+    for rule in ("[abs:doi]", "physearth_decide", "physearth_verify_report", "needs_input"):
         assert rule in prose, rule
     assert "approve_runs" not in prose
 
@@ -125,8 +125,8 @@ def test_the_skill_is_the_same_one_the_codex_plugin_ships():
     assert SKILL.is_file()
     text = SKILL.read_text()
     assert text.startswith("---\n")
-    assert "name: geoai" in text.split("---", 2)[1]
-    sibling = ROOT / ".agents" / "skills" / "geoai" / "SKILL.md"
+    assert "name: physearth" in text.split("---", 2)[1]
+    sibling = ROOT / ".agents" / "skills" / "physearth" / "SKILL.md"
     if sibling.is_file():
         assert text == sibling.read_text()
     for reference in re.findall(r"references/[a-z_-]+\.md", text):
@@ -150,7 +150,7 @@ def test_the_status_line_prints_one_coloured_row():
     out = run_statusline(
         {
             "model": {"display_name": "Sonnet 4.6"},
-            "output_style": {"name": "geoai-claude:geoai-brief"},
+            "output_style": {"name": "physearth:physearth-brief"},
             "context_window": {"used_percentage": 37},
         },
         env={"FORCE_COLOR": "1", "COLORTERM": "truecolor", "NO_COLOR": ""},
@@ -208,13 +208,13 @@ def test_the_marketplace_points_at_the_plugin_it_catalogues():
 
 
 def test_the_installer_proves_the_interpreter_and_is_reversible():
-    script = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    script = (ROOT / "integrations" / "claude-code" / "install.sh").read_text()
 
-    assert os.access(ROOT / "scripts" / "claude-plugin-install.sh", os.X_OK)
+    assert os.access(ROOT / "integrations" / "claude-code" / "install.sh", os.X_OK)
     # It must prove the engine imports, register the server by absolute path, back the settings up
     # before writing them, and offer a read-only mode.
     assert "physearth_find_python_for_engine" in script
-    assert "claude mcp add geoai" in script
+    assert "claude mcp add physearth" in script
     assert "backed up" in script
     assert "--check" in script
     assert "--plugin-only" in script
@@ -223,36 +223,36 @@ def test_the_installer_proves_the_interpreter_and_is_reversible():
 def test_every_script_sources_the_shared_interpreter_search():
     # The same discovery bug was written three times — PATH finds a python3 without the scientific
     # stack, and the failure is always silent. One implementation, sourced, is the fix.
-    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    library = ROOT / "integrations" / "lib" / "find-python.sh"
     assert library.is_file()
     body = library.read_text()
     assert "physearth_find_python_for_engine" in body
     assert "conda info --base" in body, "asking conda beats guessing a home directory"
-    for script in ("claude-plugin-install.sh",):
-        text = (ROOT / "scripts" / script).read_text()
-        assert "scripts/lib/find-python.sh" in text, script
+    for script in ("integrations/claude-code/install.sh",):
+        text = (ROOT / script).read_text()
+        assert "integrations/lib/find-python.sh" in text, script
 
 
 def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
     # "The plugin must carry the whole project" includes the way the project is started. The
     # launcher that existed only on the Codex branch failed on `python app.py` for the two reasons
     # its header names, so it belongs on every branch and must not re-implement the search.
-    launcher = ROOT / "scripts" / "studio.sh"
+    launcher = ROOT / "apps" / "studio" / "run.sh"
     assert launcher.is_file() and os.access(launcher, os.X_OK)
     body = launcher.read_text()
-    assert "scripts/lib/find-python.sh" in body
+    assert "integrations/lib/find-python.sh" in body
     assert "physearth_find_python_for_studio" in body
-    assert "PYTHONPATH=backend" in body, "the package lives under backend/"
-    wrapper = ROOT / "start-local.command"
+    assert "PYTHONPATH=src" in body, "the package lives under src/"
+    wrapper = ROOT / "apps" / "studio" / "start-local.command"
     assert wrapper.is_file() and os.access(wrapper, os.X_OK)
-    assert "scripts/studio.sh" in wrapper.read_text(), "one implementation, not a second copy"
+    assert "apps/studio/run.sh" in wrapper.read_text(), "one implementation, not a second copy"
 
 
 def test_the_settings_half_resolves_its_interpreter_before_the_read_only_path():
     # `--check` reads the settings file with PYTHON_BIN. When that assignment sat below the branch,
     # `set -u` turned the report into "unbound variable" — a crash in the one mode that exists to
     # keep working on a broken install. Order is the assertion, so it is asserted positionally.
-    script = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    script = (ROOT / "integrations" / "claude-code" / "install.sh").read_text()
     assignment = script.index('PYTHON_BIN=')
     read_only = script.index('if [ "$CHECK" = "1" ]; then')
     assert assignment < read_only
@@ -265,7 +265,7 @@ def test_the_settings_half_resolves_its_interpreter_before_the_read_only_path():
 def test_the_server_can_be_run_as_a_file_without_cwd_or_pythonpath():
     # This is what makes the installer's one command enough. A file run gets its own directory on
     # sys.path, finding neither `integrations` nor `physearth`, so the file adds both roots itself.
-    source = (ROOT / "integrations" / "geoai" / "mcp_server.py").read_text()
+    source = (ROOT / "integrations" / "physearth" / "mcp_server.py").read_text()
     assert "_bootstrap_path" in source
     assert "if __package__ in (None, \"\"):" in source
 
@@ -297,8 +297,8 @@ def test_the_theme_id_is_the_prefixed_form_claude_code_resolves():
     # A plugin *supplies* a theme; it cannot activate one, and the id a session resolves is
     # `custom:<plugin-name>:<slug>`. The installer builds that from the manifest name rather than
     # from a literal, so renaming the plugin cannot leave a theme id pointing at nothing.
-    installer = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    installer = (ROOT / "integrations" / "claude-code" / "install.sh").read_text()
 
-    assert 'PLUGIN_NAME="geoai-claude"' in installer
-    assert 'f"custom:{plugin}:geoai-night"' in installer
+    assert 'PLUGIN_NAME="physearth"' in installer
+    assert 'f"custom:{plugin}:physearth-night"' in installer
     assert 'settings.json' in installer and 'backed up' in installer

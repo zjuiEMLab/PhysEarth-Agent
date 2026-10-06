@@ -62,8 +62,8 @@ test('a copied package falls back to the working directory', () => {
 test('a directory that is not a checkout is not reported as one', () => {
   assert.equal(findCheckout({ startDirs: ['/tmp/x'], cwd: '/tmp', exists: () => false }), undefined)
   // Two markers are required, so a directory holding only one of them does not qualify.
-  const half = (path) => path === '/repo/backend/physearth/__init__.py' || path === '/repo/backend'
-  assert.equal(findCheckout({ startDirs: ['/repo/backend'], cwd: '/repo', exists: half }), undefined)
+  const half = (path) => path === '/repo/src/physearth/__init__.py' || path === '/repo/src'
+  assert.equal(findCheckout({ startDirs: ['/repo/src'], cwd: '/repo', exists: half }), undefined)
 })
 
 test('an explicit interpreter is tried before the environment and the defaults', () => {
@@ -102,24 +102,24 @@ test('an interpreter is chosen only after it proves it can import the engine', (
 })
 
 test('the bridge child inherits a PYTHONPATH that can reach the engine', () => {
-  // `-m integrations.geoai` puts the cwd on sys.path, which finds `integrations` but not
-  // `physearth` — the engine lives under backend/. Without this the child died with
+  // `-m integrations.physearth` puts the cwd on sys.path, which finds `integrations` but not
+  // `physearth` — the engine lives under src/. Without this the child died with
   // ModuleNotFoundError inside a stdio:'ignore' spawn and the plugin only ever reported a
   // bridge that did not answer.
-  assert.deepEqual(engineEnv('/repo'), { PYTHONPATH: '/repo/backend:/repo', PYTHONUNBUFFERED: '1' })
+  assert.deepEqual(engineEnv('/repo'), { PYTHONPATH: '/repo/src:/repo', PYTHONUNBUFFERED: '1' })
   assert.deepEqual(engineEnv(''), {})
 
   const spec = bridgeCommand({ pythonCmd: '/opt/py', bridgeUrl: 'http://127.0.0.1:8799', projectRoot: '/repo' })
   assert.equal(spec.command, '/opt/py')
-  assert.deepEqual(spec.args, ['-m', 'integrations.geoai', 'serve-http', '--host', '127.0.0.1', '--port', '8799', '--approval', 'ask'])
+  assert.deepEqual(spec.args, ['-m', 'integrations.physearth', 'serve-http', '--host', '127.0.0.1', '--port', '8799', '--approval', 'ask'])
   assert.equal(spec.cwd, '/repo')
-  assert.equal(spec.env.PYTHONPATH, '/repo/backend:/repo')
+  assert.equal(spec.env.PYTHONPATH, '/repo/src:/repo')
 })
 
 test('each prompt depth asks the engine for a scope, and the cheap one asks for nothing', () => {
   // The map is the card's contract with the engine: `compact` is text this plugin writes
   // itself, so it must *not* look like a fetch, and every other depth must name a scope the
-  // engine publishes. `python -m integrations.geoai prompt --list` is where those come from.
+  // engine publishes. `python -m integrations.physearth prompt --list` is where those come from.
   assert.equal(PROMPT_SCOPE_ARGS.compact, null)
   assert.equal(PROMPT_SCOPE_ARGS.rules, 'rules')
   assert.equal(PROMPT_SCOPE_ARGS.full, 'identity,rules,context')
@@ -154,11 +154,11 @@ test('the prompt fetch asks the engine with the scopes and the PYTHONPATH it nee
   assert.match(result.detail, /\/opt\/py/)
   assert.equal(seen.length, 1)
   assert.equal(seen[0].command, '/opt/py')
-  assert.deepEqual(seen[0].args, ['-m', 'integrations.geoai', 'prompt', '--scopes', 'rules'])
+  assert.deepEqual(seen[0].args, ['-m', 'integrations.physearth', 'prompt', '--scopes', 'rules'])
   assert.equal(seen[0].options.cwd, '/repo')
-  // Same reason as the bridge: `-m integrations.geoai` finds `integrations` through the cwd,
-  // and the engine itself lives under backend/.
-  assert.equal(seen[0].options.env.PYTHONPATH, '/repo/backend:/repo')
+  // Same reason as the bridge: `-m integrations.physearth` finds `integrations` through the cwd,
+  // and the engine itself lives under src/.
+  assert.equal(seen[0].options.env.PYTHONPATH, '/repo/src:/repo')
   assert.equal(seen[0].options.env.HOME, '/home/x', 'the rest of the environment is inherited')
 })
 

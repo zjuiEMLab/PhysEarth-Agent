@@ -1,0 +1,57 @@
+<section id="loop" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:56px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#2F6690; font-weight:600">Technical part · 2 of 3 · the loop</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">The agent loop, with the gates drawn in</h2>
+  </div>
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <div style="display:flex; align-items:center; gap:20px">
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">Read</p>
+        <p style="font-size:24px; color:#3D4656">paper sections, figures</p>
+      </div>
+      <x-shape kind="arrow-right" style="width:48px; height:24px; background:#9AA3B2"></x-shape>
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">Plan</p>
+        <p style="font-size:24px; color:#3D4656">runs and charts, capability check</p>
+      </div>
+      <x-shape kind="arrow-right" style="width:48px; height:24px; background:#9AA3B2"></x-shape>
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#F6E3D6; border:2px solid #B4491C; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">Validate</p>
+        <p style="font-size:24px; color:#3D4656">ranges, legal pairs</p>
+      </div>
+      <x-shape kind="arrow-right" style="width:48px; height:24px; background:#9AA3B2"></x-shape>
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#F6E3D6; border:2px solid #B4491C; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">Approve</p>
+        <p style="font-size:24px; color:#3D4656">a human, never the agent</p>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:20px">
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">Run</p>
+        <p style="font-size:24px; color:#3D4656">adapter; LLM gets a handle</p>
+      </div>
+      <x-shape kind="arrow-right" style="width:48px; height:24px; background:#9AA3B2"></x-shape>
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#F6E3D6; border:2px solid #B4491C; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">QC</p>
+        <p style="font-size:24px; color:#3D4656">declared output bounds</p>
+      </div>
+      <x-shape kind="arrow-right" style="width:48px; height:24px; background:#9AA3B2"></x-shape>
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#FBFAF6; border:1px solid #D6D0C2; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">Plot</p>
+        <p style="font-size:24px; color:#3D4656">declarative spec over handles</p>
+      </div>
+      <x-shape kind="arrow-right" style="width:48px; height:24px; background:#9AA3B2"></x-shape>
+      <div style="width:276px; display:flex; flex-direction:column; gap:8px; background:#F6E3D6; border:2px solid #B4491C; border-radius:12px; padding:24px">
+        <p style="font-size:28px; font-weight:600">Cite</p>
+        <p style="font-size:24px; color:#3D4656">every marker must resolve</p>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex; gap:32px; align-items:center">
+    <p style="font-size:24px; background:#F6E3D6; border:2px solid #B4491C; border-radius:8px; padding:8px 16px">Gate enforced in code</p>
+    <p style="font-size:28px; color:#3D4656">21 tools · ablation switches remove a gate from a YAML file, never from a prompt</p>
+  </div>
+  <p style="position:absolute; left:128px; bottom:64px; width:1400px; font-size:24px; color:#5F6673">backend/physearth/harness/, tools/specs.py, research/</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:100px; text-align:right; font-size:24px; color:#5F6673">5</p>
+  <aside>~50 s. Read the loop left to right, top to bottom. Orange boxes are gates: code, not prompt, and the run trace shows each one including refusals. The ablation switches (full, no-harness, no-capability, no-literature) are set by the process that starts the run; the Studio never passes one, so the deployed app always runs with everything on. Note for later: the architecture PNG in assets/evaluation still shows 11 tools and pre-refactor module names; there are 21 tool specs now.</aside>
+</section>

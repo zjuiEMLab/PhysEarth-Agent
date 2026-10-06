@@ -3,7 +3,7 @@
 // What this half owns: the settings section a user toggles in 设置 → 插件, the prompt rules
 // that make an answer scientific, and the lifecycle that starts and stops the Python bridge
 // the tools run on. What it deliberately does not own: the tool definitions. Those arrive
-// through the harness' own MCP client row (`mcp-geoai`), because a server's tool list is then
+// through the harness' own MCP client row (`mcp-physearth`), because a server's tool list is then
 // *discovered* rather than hand-declared, and it carries `notifications/tools/list_changed`.
 //
 // Three facts about the harness shaped this file, each checked against the installed packages
@@ -38,14 +38,14 @@ import {
 } from './lib/host-env.js'
 import { ACCENTS, DEFAULTS, ENGINE_TOOLS, HOST_TOOLS, normaliseSettings } from './lib/logic.js'
 
-export const name = 'physearth-geoai'
+export const name = 'physearth'
 export const inject = ['settings', 'tools', 'systemPrompt']
 
 /** Settings namespace the browser card edits; also the card's slot key. */
-export const NAMESPACE = 'physearth-geoai'
+export const NAMESPACE = 'physearth'
 
 /** The MCP row that brings the engine's tools; the switch disables it with the plugin. */
-export const MCP_ENTRY_ID = 'mcp-geoai'
+export const MCP_ENTRY_ID = 'mcp-physearth'
 
 /**
  * Where the Geo-AI rules sit in the assembled prompt.
@@ -100,7 +100,7 @@ export const PROMPT_HEADING = '## Geo-AI physics (PhysEarth-Agent)'
 export const PROMPT_SECTION = `
 ${PROMPT_HEADING}
 
-Physics tools are available under the \`mcp__geoai__\` namespace. They run the physical models
+Physics tools are available under the \`mcp__physearth__\` namespace. They run the physical models
 this checkout has registered — call \`list_models\` for the current list and each model's
 declared parameters rather than assuming one — with declared physical ranges, a human approval
 gate and post-run quality control.
@@ -125,7 +125,7 @@ gate and post-run quality control.
  */
 export function apply(ctx, config = {}) {
   const { settings, warnings } = normaliseSettings(config)
-  for (const warning of warnings) ctx.logger?.warn?.(`physearth-geoai: ${warning}`)
+  for (const warning of warnings) ctx.logger?.warn?.(`physearth: ${warning}`)
 
   let client
   let disposers = []
@@ -149,7 +149,7 @@ export function apply(ctx, config = {}) {
   function resolveCheckout() {
     if (settings.projectRoot) {
       if (existsSync(settings.projectRoot)) return settings.projectRoot
-      ctx.logger?.warn?.(`physearth-geoai: projectRoot ${settings.projectRoot} does not exist; searching instead`)
+      ctx.logger?.warn?.(`physearth: projectRoot ${settings.projectRoot} does not exist; searching instead`)
     }
     return findCheckout({ startDirs: [here], cwd: process.cwd(), exists: existsSync })
   }
@@ -164,21 +164,21 @@ export function apply(ctx, config = {}) {
         if (!checkout) return false
         const result = spawnSync(
           command,
-          ['-c', 'from integrations.geoai import service'],
-          { cwd: checkout, env: { ...process.env, PYTHONPATH: checkout ? `${checkout}/backend:${checkout}` : '' }, timeout: 20000 },
+          ['-c', 'from integrations.physearth import service'],
+          { cwd: checkout, env: { ...process.env, PYTHONPATH: checkout ? `${checkout}/src:${checkout}` : '' }, timeout: 20000 },
         )
         return result.status === 0
       },
     })
-    ctx.logger?.info?.(`physearth-geoai: interpreter ${interpreterProvenance(chosen, probed)}`)
+    ctx.logger?.info?.(`physearth: interpreter ${interpreterProvenance(chosen, probed)}`)
     return chosen
   }
 
   const checkout = resolveCheckout()
   if (!checkout) {
     ctx.logger?.error?.(
-      'physearth-geoai: cannot find this repository. Set `projectRoot` in the plugin row to the ' +
-        'checkout that holds backend/physearth and integrations/geoai, or run ' +
+      'physearth: cannot find this repository. Set `projectRoot` in the plugin row to the ' +
+        'checkout that holds src/physearth and integrations/physearth, or run ' +
         'integrations/dsh/scripts/install.sh, which resolves it for you.',
     )
   }
@@ -189,7 +189,7 @@ export function apply(ctx, config = {}) {
   const pythonCmd = checkout && needsInterpreter ? resolveInterpreter(checkout) : undefined
   if (needsInterpreter && checkout && !pythonCmd) {
     ctx.logger?.warn?.(
-      `physearth-geoai: no interpreter could import the engine from ${checkout}. ` +
+      `physearth: no interpreter could import the engine from ${checkout}. ` +
         (settings.autoStartBridge ? 'Set pythonCmd (or PHYSEARTH_PYTHON), or turn autoStartBridge off. ' : '') +
         (settings.promptDepth !== 'compact'
           ? `promptDepth is "${settings.promptDepth}", so the prompt section falls back to the ` +
@@ -205,7 +205,7 @@ export function apply(ctx, config = {}) {
       try {
         dispose()
       } catch (error) {
-        ctx.logger?.warn?.(`physearth-geoai: teardown failed: ${error.message}`)
+        ctx.logger?.warn?.(`physearth: teardown failed: ${error.message}`)
       }
     }
     disposers = []
@@ -231,11 +231,11 @@ export function apply(ctx, config = {}) {
     if (!text) return false
     try {
       if (promptDispose) promptDispose()
-      promptDispose = ctx.systemPrompt.section({ name: 'geoai-physics', order: PROMPT_ORDER, text })
+      promptDispose = ctx.systemPrompt.section({ name: 'physearth-physics', order: PROMPT_ORDER, text })
       disposers.push(promptDispose)
       return true
     } catch (error) {
-      ctx.logger?.warn?.(`physearth-geoai: could not register the prompt section: ${error.message}`)
+      ctx.logger?.warn?.(`physearth: could not register the prompt section: ${error.message}`)
       return false
     }
   }
@@ -273,7 +273,7 @@ export function apply(ctx, config = {}) {
       return promptCache.get(key)
     } catch (error) {
       ctx.logger?.warn?.(
-        `physearth-geoai: promptDepth "${depth}" could not be read from the engine ` +
+        `physearth: promptDepth "${depth}" could not be read from the engine ` +
           `(${error.message}); the compact rules are used instead.`,
       )
       return { text: PROMPT_SECTION, source: 'compact', failed: true }
@@ -285,13 +285,13 @@ export function apply(ctx, config = {}) {
     const depth = active.promptDepth
     // `off` registers nothing at all, which is a choice rather than a failure.
     if (depth === 'off') {
-      ctx.logger?.info?.('physearth-geoai: promptDepth is "off"; no prompt section is registered')
+      ctx.logger?.info?.('physearth: promptDepth is "off"; no prompt section is registered')
     } else {
       const chosen = promptTextFor(engine, depth)
       if (setPromptSection(chosen.text)) {
         ctx.logger?.info?.(
-          `physearth-geoai: enabled — ${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present ` +
-            `as mcp__geoai__*, ${ACCENTS.length} accents, prompt section at order ${PROMPT_ORDER} ` +
+          `physearth: enabled — ${ENGINE_TOOLS.length + HOST_TOOLS.length} engine tools present ` +
+            `as mcp__physearth__*, ${ACCENTS.length} accents, prompt section at order ${PROMPT_ORDER} ` +
             `(depth ${depth}, text from ${chosen.source}${chosen.detail ? `: ${chosen.detail}` : ''})`,
         )
       }
@@ -303,12 +303,12 @@ export function apply(ctx, config = {}) {
     const readiness = await client.ensureRunning()
     const asked = engine.autoStartBridge
     if (readiness.started) {
-      ctx.logger?.info?.(`physearth-geoai: ${readiness.detail}`)
+      ctx.logger?.info?.(`physearth: ${readiness.detail}`)
     } else if (asked) {
-      ctx.logger?.warn?.(`physearth-geoai: autoStartBridge is on, but ${readiness.detail}`)
+      ctx.logger?.warn?.(`physearth: autoStartBridge is on, but ${readiness.detail}`)
     } else {
       ctx.logger?.info?.(
-        `physearth-geoai: no bridge at ${engine.bridgeUrl} (${readiness.detail}); the tools are ` +
+        `physearth: no bridge at ${engine.bridgeUrl} (${readiness.detail}); the tools are ` +
           'served over MCP and do not need one',
       )
     }
@@ -318,7 +318,7 @@ export function apply(ctx, config = {}) {
    * Reconcile the MCP row with the switch.
    *
    * This runs on *both* transitions, which is the whole mechanism: with the row left composed
-   * while the plugin is off, the model would still see every `mcp__geoai__*` tool and "off"
+   * while the plugin is off, the model would still see every `mcp__physearth__*` tool and "off"
    * would be cosmetic. `loader.update` is async and live (the web profile reloads patches
    * without a restart), so the tool list follows the switch and a page refresh shows it.
    *
@@ -330,14 +330,14 @@ export function apply(ctx, config = {}) {
   function applyToolRow(disabled) {
     if (typeof ctx.loader?.update !== 'function') {
       ctx.logger?.warn?.(
-        'physearth-geoai: this host exposes no loader.update; the mcp-geoai row keeps its ' +
+        'physearth: this host exposes no loader.update; the mcp-physearth row keeps its ' +
           'composed state, so the tools stay in the model’s list even while the plugin is off.',
       )
       return
     }
     Promise.resolve(ctx.loader.update(MCP_ENTRY_ID, { disabled })).catch((error) => {
       ctx.logger?.warn?.(
-        `physearth-geoai: loader.update(${MCP_ENTRY_ID}, ${disabled}) failed: ${error.message}. ` +
+        `physearth: loader.update(${MCP_ENTRY_ID}, ${disabled}) failed: ${error.message}. ` +
           'The row comes from this package’s bundle patch; run integrations/dsh/scripts/install.sh ' +
           'if it is missing.',
       )
@@ -349,11 +349,11 @@ export function apply(ctx, config = {}) {
     const active = current()
     applyToolRow(!active.enabled)
     if (!active.enabled) {
-      ctx.logger?.info?.('physearth-geoai: disabled — no tools, no prompt section, no restyle')
+      ctx.logger?.info?.('physearth: disabled — no tools, no prompt section, no restyle')
       return
     }
     void start().catch((error) => {
-      ctx.logger?.error?.(`physearth-geoai: start failed: ${error.message}`)
+      ctx.logger?.error?.(`physearth: start failed: ${error.message}`)
     })
   }
 
@@ -363,13 +363,13 @@ export function apply(ctx, config = {}) {
   // wrong name here fails silently, and the switch would only ever apply at mount time.
   ctx.effect(() => {
     if (typeof scope.watch !== 'function') {
-      ctx.logger?.warn?.('physearth-geoai: settings scope exposes no watch(); the switch applies at mount only')
+      ctx.logger?.warn?.('physearth: settings scope exposes no watch(); the switch applies at mount only')
       return () => {}
     }
     return scope.watch(() => reconcile())
-  }, 'physearth-geoai: settings adoption')
+  }, 'physearth: settings adoption')
 
-  ctx.effect(() => stop, 'physearth-geoai: teardown')
+  ctx.effect(() => stop, 'physearth: teardown')
 }
 
 export default { name, inject, Config, apply }

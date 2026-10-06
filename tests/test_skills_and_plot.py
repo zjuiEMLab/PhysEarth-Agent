@@ -296,6 +296,7 @@ def test_the_tool_count_did_not_grow_for_either_increment():
     assert names == {
         "list_literature",
         "read_literature",
+        "read_paper_digest",
         "list_models",
         "run_model",
         "run_planned_model",

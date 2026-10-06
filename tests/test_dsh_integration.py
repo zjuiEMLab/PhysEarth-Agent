@@ -17,14 +17,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PLUGIN = ROOT / "integrations" / "dsh"
-SERVER = ROOT / "integrations" / "geoai" / "mcp_server.py"
+SERVER = ROOT / "integrations" / "physearth" / "mcp_server.py"
 
 
 def test_the_installer_uses_the_shared_interpreter_search():
     body = (PLUGIN / "scripts" / "install.sh").read_text()
 
     # Sourced after the checkout is known, because the library lives in the checkout.
-    assert '. "$CHECKOUT/scripts/lib/find-python.sh"' in body
+    assert '. "$CHECKOUT/integrations/lib/find-python.sh"' in body
     assert "physearth_find_python_for_engine" in body
     # The private copy is gone rather than left as a fallback beside the shared one.
     assert "resolve_python" not in body
@@ -32,7 +32,7 @@ def test_the_installer_uses_the_shared_interpreter_search():
 
 
 def test_the_shared_library_answers_the_probe_this_branch_needs():
-    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    library = ROOT / "integrations" / "lib" / "find-python.sh"
     assert library.is_file() and os.access(library, os.X_OK)
 
     # The engine, not `physearth`: that package's `__init__` is lazy, so an interpreter with no
@@ -47,7 +47,7 @@ def test_the_shared_library_answers_the_probe_this_branch_needs():
     interpreter = probe.stdout.strip()
     assert Path(interpreter).is_absolute(), interpreter
     again = subprocess.run(
-        [interpreter, "-c", "from integrations.geoai import service"],
+        [interpreter, "-c", "from integrations.physearth import service"],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -57,7 +57,7 @@ def test_the_shared_library_answers_the_probe_this_branch_needs():
 
 
 def test_the_server_runs_as_a_file_from_an_unrelated_directory(tmp_path):
-    # Why this branch cares: its own row invokes `python -m integrations.geoai serve` with a
+    # Why this branch cares: its own row invokes `python -m integrations.physearth serve` with a
     # `cwd` and a `PYTHONPATH` written into the profile patch, so the file form is never
     # exercised by the plugin itself. A reader who copies the file form out of any other host's
     # guide would get `ModuleNotFoundError` and a server that "starts but has no tools".
@@ -92,17 +92,17 @@ def test_the_server_runs_as_a_file_from_an_unrelated_directory(tmp_path):
     )
     replies = [json.loads(line) for line in run.stdout.splitlines() if line.strip()]
     assert [reply["id"] for reply in replies] == [1, 2], run.stdout + run.stderr
-    assert replies[0]["result"]["serverInfo"]["name"] == "physearth-geoai"
+    assert replies[0]["result"]["serverInfo"]["name"] == "physearth"
     assert len(replies[1]["result"]["tools"]) >= 28
     # `--stdio` is what every host's guide spells; it must be accepted, not argued with.
     assert "unrecognised argument" not in run.stdout
 
 
 def test_the_studio_launcher_is_here_and_does_not_reimplement_the_search():
-    for name in ("scripts/studio.sh", "start-local.command"):
+    for name in ("apps/studio/run.sh", "apps/studio/start-local.command"):
         path = ROOT / name
         assert path.is_file(), name
         assert os.access(path, os.X_OK), name
-    studio = (ROOT / "scripts" / "studio.sh").read_text()
-    assert "scripts/lib/find-python.sh" in studio
+    studio = (ROOT / "apps" / "studio" / "run.sh").read_text()
+    assert "integrations/lib/find-python.sh" in studio
     assert "physearth_find_python_for_studio" in studio

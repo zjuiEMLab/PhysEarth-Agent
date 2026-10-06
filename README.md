@@ -99,7 +99,7 @@ the PRMS process chain over the official five-year Sagehen Creek domain and answ
 water in that surface is doing, which is why the harness is not written around any one
 physics: the same parameter validation, quality control and citation rules apply to a
 hydrologic model that never emits a photon. Its card is
-[`models/bundled/pywatershed/model_card.yaml`](models/bundled/pywatershed/model_card.yaml).
+[`catalog/models/bundled/pywatershed/model_card.yaml`](catalog/models/bundled/pywatershed/model_card.yaml).
 
 Its pinned Sagehen domain is fetched once into the state directory and checksummed on first
 use; it is not redistributed here.
@@ -124,8 +124,20 @@ comparing two models, and reporting a result. See `NOTICE` for the per-paper att
 Radar backscatter measured at Trail Valley Creek in 2018/19 at C, X and Ku band, 23658 rows,
 plus per-station soil roughness from airborne lidar. Published under the Open Government
 Licence - Canada. The agent can run a model at the configuration a measurement was taken at
-and compare the two. `scripts/build_reference.py` regenerates the tables from the published
+and compare the two. `onboarding/build_reference.py` regenerates the tables from the published
 files.
+
+## Repository layout
+
+```
+src/physearth/   the library: agent, harness, registry, and its package data (prompts, fonts, model templates)
+apps/studio/     the Gradio Studio (app.py at the root is the ModelScope entry shim)
+catalog/         what is registered: models/ (bundled, examples) and knowledge/ (papers, method notes, datasets)
+onboarding/      bringing a model or paper in: corpus builders and the literature card template
+integrations/    physearth/ (the MCP engine adapter), claude-code/, codex/, dsh/ and their installers
+evaluation/      tasks, fixtures, scorers, runners and the committed result records
+tests/  docs/    docs/reorganisation/ records why the layout is this way
+```
 
 ## Running it
 
@@ -377,7 +389,7 @@ my_model = "my_package:model_dir"
 
 ```
 # or contribute it, by dropping the folder into
-models/bundled/
+catalog/models/bundled/
 ```
 
 Start the app and it is there:
@@ -401,7 +413,7 @@ You wrote a card and a function. Without writing anything else, your model now:
 If a card is broken, that model alone is rejected and the reason is listed under "Registered
 models" in the interface. The rest of the application starts normally.
 
-A finished example is in `examples/toy_model/`.
+A finished example is in `catalog/models/examples/toy_model/`.
 
 ## Licence
 

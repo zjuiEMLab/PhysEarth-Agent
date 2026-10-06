@@ -3,9 +3,8 @@
 import contextlib
 import time
 
-from physearth.harness import approval
-
 from physearth import agent, harness, session, tools
+from physearth.harness import approval
 
 
 def _asking():
@@ -261,12 +260,14 @@ def test_guided_reproduction_preflight_selects_research_mode_before_model_plan(m
         }
 
     monkeypatch.setattr(agent.tools, "call", fake_call)
-    from frontend.views import evaluation as evals
+    from apps.studio.views import evaluation as evals
 
     answer, events, _ = agent.run(evals.guided_demo()["question"], session=box)
 
     assert box["research_required"] is True
-    assert "Research is paused at the human-review stage" in answer
+    assert "ready for your review" in answer and "**approve**" in answer
+    # The turn ends at the accepted plan: no further call writes a summary of it.
+    assert len(client.tool_choices) == 2
     assert any(
         event["kind"] == "research_mode_selected"
         and event["rule"] == "agent_preflight_reproduction"
@@ -296,7 +297,8 @@ def test_research_plan_call_selects_research_mode(monkeypatch):
     answer, events, _ = agent.run("Compare two model predictions", session=box)
 
     assert box["research_required"] is True
-    assert "Research is paused at the human-review stage" in answer
+    assert "ready for your review" in answer
+    assert len(client.tool_choices) == 1
     assert any(event["kind"] == "research_mode_selected" for event in events)
 
 
@@ -777,7 +779,7 @@ def test_source_figure_inspection_sends_the_image_to_the_model(monkeypatch):
 
 
 def test_the_trace_names_what_is_waiting_and_what_was_decided():
-    from frontend import views as render
+    from apps.studio import views as render
 
     waiting = {
         "kind": "approval_wait",
@@ -801,7 +803,7 @@ def test_the_trace_names_what_is_waiting_and_what_was_decided():
 
 
 def test_the_approval_bar_appears_only_while_something_waits():
-    from frontend import views as render
+    from apps.studio import views as render
 
     box = _asking()
     assert "hidden" in render.approval_bar(box)

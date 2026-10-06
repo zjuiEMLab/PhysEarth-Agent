@@ -1,4 +1,4 @@
-schema_version: report-judge-standard-v3
+schema_version: report-judge-standard-v4
 description: >-
   Label-blinded review standard for the final reproduction report, eight dimensions scored
   0-2. The judge uses the supplied source description, reference facts, measured results and
@@ -7,8 +7,10 @@ description: >-
   report's text, so a figure verdict that did not pass is context, not a factual error in the
   report. A report that correctly declines a task the system cannot support is judged on
   whether its reasons are true and complete, not penalised for the missing figure. v3 lowers
-  the v2 pass rule (total 12/16, factuality 2) to total 8/16, factuality 1.
-supersedes: report-judge-standard-v2
+  the v2 pass rule (total 12/16, factuality 2) to total 8/16, factuality 1. v4 keeps the pass
+  rule and moves the reference to the manuscript: reference facts are what the paper states,
+  and details found only in the authors' notebook are context, never factual errors.
+supersedes: report-judge-standard-v3
 dimensions:
   source_fidelity: >-
     Does the report reproduce the experiment the source actually describes -- its stated

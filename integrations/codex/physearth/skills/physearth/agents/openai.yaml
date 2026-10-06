@@ -1,0 +1,28 @@
+# Codex-facing metadata for the physearth skill.
+#
+# This file is optional: the skill works with only `SKILL.md`. What it adds is the formal
+# statement that the skill needs an MCP server, which is exactly the coupling a reader would
+# otherwise have to infer from the prose.
+#
+# `transport: stdio` inside a `tools` dependency is only shown as `streamable_http` in the
+# official example, so it is left out below rather than guessed at: `value` names the MCP
+# server the skill expects, and the server is registered separately (see integrations/codex/README.md).
+# A validator that rejects the `dependencies` block entirely can be satisfied by deleting it —
+# nothing in SKILL.md depends on it.
+
+interface:
+  display_name: "PhysEarth Geo-AI"
+  short_description: "Run registered physical models and cite the evidence actually read"
+  icon_small: "./assets/small-logo.svg"
+  icon_large: "./assets/large-logo.png"
+  brand_color: "#1F6FEB"
+  default_prompt: "Answer this geophysics question by running a registered model, and cite the evidence you read."
+
+policy:
+  allow_implicit_invocation: true
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "physearth"
+      description: "PhysEarth-Agent engine: registered models, bundled corpus, evidence ledger"

@@ -2,18 +2,16 @@ import re
 import urllib.request
 from pathlib import Path
 
+from apps.studio import studio, theme
+from apps.studio import views as render
 from physearth import agent, prompt
 from physearth.corpus import knowledge
 from physearth.harness import budget
 
-from frontend import studio
-from frontend import theme
-from frontend import views as render
-
 
 def test_optimistic_ui_never_replaces_gradio_managed_html():
     """Direct innerHTML writes detach streamed answer slots from Gradio updates."""
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.js").read_text(
+    source = (Path(__file__).parents[1] / "apps" / "studio" / "static" / "ui.js").read_text(
         encoding="utf-8"
     )
     assert ".innerHTML =" not in source
@@ -21,14 +19,14 @@ def test_optimistic_ui_never_replaces_gradio_managed_html():
 
 def test_trace_cards_do_not_replay_an_entry_animation_on_every_gradio_frame():
     """The entire trace subtree is replaced; :last-child animation would keep restarting."""
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text(
+    source = (Path(__file__).parents[1] / "apps" / "studio" / "static" / "ui.css").read_text(
         encoding="utf-8"
     )
     assert ".step-card:last-child {\n  animation:" not in source
 
 
 def test_model_call_trace_metadata_has_its_own_line():
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text(
+    source = (Path(__file__).parents[1] / "apps" / "studio" / "static" / "ui.css").read_text(
         encoding="utf-8"
     )
     out = render.trace(
@@ -42,7 +40,7 @@ def test_model_call_trace_metadata_has_its_own_line():
 
 
 def test_other_routine_trace_rows_use_the_same_separate_summary_layout():
-    source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.css").read_text(
+    source = (Path(__file__).parents[1] / "apps" / "studio" / "static" / "ui.css").read_text(
         encoding="utf-8"
     )
     out = render.trace(
@@ -60,9 +58,8 @@ def test_other_routine_trace_rows_use_the_same_separate_summary_layout():
 
 def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypatch):
     """A tool lifecycle event must not remount the unchanged streamed transcript."""
+    from apps.studio import studio as app
     from physearth import session as session_state
-
-    from frontend import studio as app
 
     box = session_state.new_session(agent.default_model())
     state = session_state.new_state(box)
@@ -85,9 +82,8 @@ def test_unchanged_conversation_is_not_replaced_for_a_trace_only_frame(monkeypat
 
 
 def test_execution_continuation_preserves_conversation_and_only_removes_plan_card(monkeypatch):
+    from apps.studio import studio as app
     from physearth import session as session_state
-
-    from frontend import studio as app
 
     box = session_state.new_session("m")
     turns = [{
@@ -117,7 +113,7 @@ def test_execution_continuation_preserves_conversation_and_only_removes_plan_car
 
 def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
     """Approving a plan must not invoke the full-output continuation as a reset."""
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     called = []
 
@@ -136,11 +132,10 @@ def test_plan_approval_chain_is_an_explicit_ui_noop(monkeypatch):
 
 def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(monkeypatch):
     """All user-facing case starters share the same direct-tool approval route."""
-    from frontend.views import evaluation as evals
+    from apps.studio import studio as app
+    from apps.studio.views import evaluation as evals
     from physearth import session as session_state
     from physearth.harness import approval
-
-    from frontend import studio as app
 
     state = session_state.new_state(None)
     state["phase"] = "done"
@@ -173,11 +168,10 @@ def test_basic_case_and_guided_approval_resume_keep_the_existing_conversation(mo
 
 
 def test_direct_approval_hides_the_card_and_continues_only_once():
+    from apps.studio import studio as app
+    from apps.studio import views as render
     from physearth import session as session_state
     from physearth.harness import approval
-
-    from frontend import studio as app
-    from frontend import views as render
 
     box = session_state.new_session("m")
     approval.set_mode(box, approval.ASK)
@@ -257,18 +251,20 @@ def test_research_plan_preview_is_structured_and_keeps_yaml_in_a_disclosure():
         },
     }
     out = render.approval_bar(box)
+    # Conversation carries a summary and what to type; the plan itself is a page.
+    assert "Research plan <b>v002</b>" in out and "<code>approve</code>" in out
+    assert "Conditions and runs" not in out and '{"' not in out
 
-    assert "Question and hypothesis" in out
-    assert "Literature evidence" in out
-    assert "Reproduction targets" in out
-    assert "Paper concept" in out and "Model input" in out
-    assert "Planned runs" in out and "Resolved parameters" in out
-    assert "Validation sources and warnings" in out
-    assert "paper_context_difference" in out
-    assert "non-blocking" in out
-    assert "REVISION SUMMARY · v001 → v002" in out
-    assert "Raw generated protocol YAML" in out
-    assert "research-plan-yaml" in out
+    from apps.studio.views import exports
+
+    page = exports.plan_document(box)
+    assert "Conditions and runs" in page and "Runs, only what differs" in page
+    assert "Resolved parameters" not in page
+    assert "What is reproduced" in page and "Things to check" in page
+    assert "plan has 1" in page
+    # Machinery a reviewer does not decide on stays off the page.
+    assert "Literature evidence" not in page and "Paper concept" not in page
+    assert "plan_version:" not in page and "Generated protocol" not in page
     assert "Pasted revision text" not in out
 
 
@@ -307,20 +303,25 @@ def test_revised_plan_card_is_collapsed_while_revision_summary_remains_visible()
         baseline_run_id="density",
     )
     assert result["status"] == "needs_input"
-    assert "data-collapsed='false'" in render.approval_bar(box)
+    assert "WHAT CHANGED" not in render.approval_bar(box)
 
     revised = research.revise(box, {"assumptions": ["revised layer assumption"]})
     assert revised["status"] == "needs_input"
-    out = render.approval_bar(box)
-    assert "data-collapsed='true'" in out
-    assert "REVISION SUMMARY" in out
+    from apps.studio.views import exports
+
+    # The reply names the changes in sentences, and the plan page repeats them.
+    assert "Added assumption: revised layer assumption" in revised["summary"]
+    assert "Removed assumption: homogeneous layer" in revised["summary"]
+    assert "[" not in revised["summary"]
+    assert "What changed from v001" in exports.plan_document(box)
 
 
 def test_plan_review_exposes_only_the_two_review_controls():
     from pathlib import Path
 
-    app_source = (Path(__file__).parents[1] / "frontend" / "studio.py").read_text(encoding="utf-8")
-    js_source = (Path(__file__).parents[1] / "frontend" / "static" / "ui.js").read_text(encoding="utf-8")
+    studio_dir = Path(__file__).parents[1] / "apps" / "studio"
+    app_source = (studio_dir / "studio.py").read_text(encoding="utf-8")
+    js_source = (studio_dir / "static" / "ui.js").read_text(encoding="utf-8")
     assert "Revise / Regenerate" not in app_source
     assert 'gr.Button("Pause"' not in app_source
     assert "pe-approve-no" not in app_source and "pe-approve-no" not in js_source
@@ -359,15 +360,14 @@ def test_guided_research_context_shows_live_capability_and_agent_paper_session()
     assert "PAPER SESSION" in brief
     assert status.count("LIVE RESEARCH STATUS") == 1
     assert "Idle" in status
-    assert "FROM PAPER SECTIONS" in brief.upper()
+    assert "3.1.1" in brief
     assert "Open DOI / paper source" in brief
     assert "rayleigh" not in status and "sticky_hard_spheres" not in status
 
 
 def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
-    from frontend.views import evaluation as evals
-
-    from frontend import studio as app
+    from apps.studio import studio as app
+    from apps.studio.views import evaluation as evals
 
     question = evals.guided_demo()["question"]
     result = app.start_guided_demo(question, agent.default_model())
@@ -428,11 +428,8 @@ def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
     assert "LIVE RESEARCH STATUS" not in updated
     assert "LIVE RESEARCH STATUS" in render.conversation_head(1, guided_session)
     assert "3.1.1" in render.guided_brief(guided_session)
-    assert "AGENT PLAN: RUNS" in render.guided_brief(guided_session)
-    assert "AGENT PLAN: EXPECTED OUTPUTS" in render.guided_brief(guided_session)
-    assert "From paper sections" in render.guided_brief(guided_session)
-    assert "dry snow" in render.guided_brief(guided_session)
-    assert "q1_iba_sticky" in render.guided_brief(guided_session)
+    # The brief names the paper; the plan is on its own page, not repeated above the chat.
+    assert "q1_iba_sticky" not in render.guided_brief(guided_session)
     assert "q1_rayleigh_independent" not in render.guided_brief(guided_session)
 
 
@@ -552,7 +549,7 @@ def test_the_layout_has_resizable_and_hideable_panel_controls():
 
 
 def test_upload_workbench_is_separate_and_the_chat_context_has_one_scroll_surface():
-    source = (Path(__file__).parents[1] / "frontend" / "studio.py").read_text(encoding="utf-8")
+    source = (Path(__file__).parents[1] / "apps/studio/studio.py").read_text(encoding="utf-8")
     css = theme.css()
     js = theme.js()
 
@@ -630,7 +627,7 @@ def test_a_content_filter_refusal_is_not_retried(monkeypatch):
 
 
 def test_clearing_the_session_resets_the_panels_but_not_the_shared_quota():
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     used_before = budget.used()
     hero, head, history, live, trace, metrics, evidence, approve, turns, session, box = app.reset(
@@ -668,7 +665,7 @@ def test_a_withdrawn_model_is_not_retried_either():
 
 
 def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     fault = [{"kind": "harness_stop", "rule": "quota", "reason": "rate limited"}]
     good = [{"kind": "harness_pass", "rule": "citation_integrity", "markers": []}]
@@ -693,9 +690,8 @@ def test_a_turn_that_died_upstream_is_marked_and_kept_out_of_the_context():
 
 def test_clearing_the_session_starts_in_normal_q_and_a_mode():
     """Research is selected by the agent, while ordinary model calls retain approval."""
+    from apps.studio import studio as app
     from physearth.harness import approval
-
-    from frontend import studio as app
 
     first = app._session(None, agent.default_model())
     assert approval.required(first)
@@ -754,7 +750,7 @@ def test_provider_neutral_llm_config_falls_back_to_modelscope(monkeypatch):
 
 def test_only_one_route_reaches_the_agent():
     """Two bindings would let a stray submit start a second run against one session."""
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     handlers = [
         dep for dep in app.demo.fns.values()
@@ -764,9 +760,8 @@ def test_only_one_route_reaches_the_agent():
 
 
 def test_chart_click_records_the_human_choice_without_an_llm_turn():
+    from apps.studio import studio as app
     from physearth import research, session
-
-    from frontend import studio as app
 
     box = session.new_session("m")
     research.propose(
@@ -840,7 +835,7 @@ def test_the_client_script_actually_parses():
     import shutil
     import subprocess
 
-    from frontend import theme
+    from apps.studio import theme
 
     node = shutil.which("node")
     if not node:
@@ -880,7 +875,7 @@ def test_the_opening_hint_steps_aside_for_a_question_in_flight():
 
 def test_the_optimistic_acknowledgement_leaves_output_slots_to_gradio():
     """Client feedback must not detach streamed HTML components from Gradio."""
-    from frontend import theme
+    from apps.studio import theme
 
     js = theme.js()
     assert "optimisticSend" in js and "optimisticClear" in js
@@ -897,7 +892,8 @@ def test_the_optimistic_acknowledgement_leaves_output_slots_to_gradio():
 
 def test_clear_is_wired_as_a_cancellation_boundary_for_streaming_send():
     """A reset must cancel the active generator before its next frame repaints the UI."""
-    source = Path(__file__).resolve().parents[1].joinpath("frontend", "studio.py").read_text(encoding="utf-8")
+    studio = Path(__file__).resolve().parents[1].joinpath("apps", "studio", "studio.py")
+    source = studio.read_text(encoding="utf-8")
     assert "send_event = send.click(respond, inputs, outputs)" in source
     assert "active_stream_events = [send_event]" in source
     assert "active_stream_events.append(resume_event)" in source
@@ -917,9 +913,8 @@ def test_the_run_trace_is_rebuilt_per_checkpoint_not_per_token(monkeypatch):
     renders the trace a fixed number of times outside the streaming loop: once for the
     pending layout, once to seed the comparison, once for the final frame.
     """
+    from apps.studio import studio as app
     from physearth import session as session_state
-
-    from frontend import studio as app
 
     def renders_for(content_chunks):
         box = session_state.new_session(agent.default_model())
@@ -994,7 +989,7 @@ def test_local_proxy_bypass_still_exempts_loopback_when_a_proxy_is_configured(mo
 
 def test_popped_transient_events_do_not_hide_the_next_trace_event():
     """tool_start is shown then popped; the tool outcome that follows must still be logged."""
-    from frontend.studio import _unmirrored_events
+    from apps.studio.studio import _unmirrored_events
 
     events = []
     mirrored = []
@@ -1025,7 +1020,7 @@ def test_execution_steps_follow_the_plan_and_name_the_model():
     They used to render plan["steps"], authored once, so a revision that changed the runs
     left them describing the superseded plan and they never said which model would run.
     """
-    from frontend.views.review import _execution_steps_html
+    from apps.studio.views.review import _execution_steps_html
 
     def plan_with(sweep_start, runs=2):
         return {

@@ -1,0 +1,28 @@
+# Where this documentation comes from and what it is for. Read by
+# onboarding/build_documentation.py; the card is generated, this is the input.
+title: prosail 2.0.5 Python bindings, documentation and benchmark tests
+authors: [Jose Gomez-Dans]
+version: prosail 2.0.5
+year: 2019
+repository: https://github.com/jgomezdans/prosail
+ref: 2.0.5
+commit: eb96591c7ec34e8a8439fdada2d5a9f71514e3e9
+license: GPL-3.0
+license_url: https://www.gnu.org/licenses/gpl-3.0.html
+license_notice: >-
+  The upstream repository declares the GNU GPL v3 in recipe/meta.yaml; it carries no separate
+  LICENSE file.
+scenarios: [vegetation]
+outputs: [reflectance, ndvi]
+description: >-
+  The documentation of the prosail package, the registered PROSAIL model: how the PROSPECT
+  leaf model and the 4SAIL canopy model are coupled and called, what each argument means,
+  and the package's own benchmark tests, which run PROSPECT-5 and 4SAIL for one stated case
+  and check the result against the reference output of the original PROSAIL Fortran code.
+  Read this for the PROSAIL arguments and for that benchmark case. Software documentation,
+  not a peer-reviewed paper.
+sections:
+  - title: Overview and usage
+    path: README.md
+  - title: Benchmark tests against the PROSAIL Fortran reference
+    path: tests/test_prosail.py

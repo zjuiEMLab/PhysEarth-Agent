@@ -6,9 +6,9 @@ from pathlib import Path
 
 import yaml
 
+from apps.studio.views import evaluation as evals
 from evaluation.metrics import score
 from evaluation.runners import llm_robustness, reproduction_eval
-from frontend.views import evaluation as evals
 
 
 def test_reproduction_visual_checks_follow_each_planned_figure_target():
@@ -123,7 +123,7 @@ def test_demo_cases_are_exact_prompts_from_the_evaluation_set():
         ["fig06.png"],
         ["fig07.png", "fig08.png"],
     ]
-    figure_root = Path("knowledge/literature/smrt-v1/figures")
+    figure_root = Path("catalog/knowledge/literature/smrt-v1/figures")
     assert all(
         (figure_root / figure).is_file()
         for case in cases

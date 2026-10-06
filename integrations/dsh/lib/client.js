@@ -2,7 +2,7 @@
 //
 // This file is the package's `exports["./client"]` artifact, and that is a precise role: the
 // client module system reads it, hashes it for cache-busting, serves it at
-// `/plugins/dsh-plugin-physearth-geoai/client.js`, and hands it to the kernel as a CommonJS
+// `/plugins/dsh-plugin-physearth/client.js`, and hands it to the kernel as a CommonJS
 // factory. Three consequences shape everything below.
 //
 //   1. It is a *single* file. The module table answers `require` only for platform seed words
@@ -31,7 +31,7 @@
 // the first time this plugin was opened in a real one. `tests/client.test.mjs` ties the constant
 // below to package.json's `name` so the two cannot drift.
 window.__ModuleLoader__.load({
-  id: 'dsh-plugin-physearth-geoai',
+  id: 'dsh-plugin-physearth',
   factory: (require) => {
     const module = { exports: {} }
     const exports = module.exports
@@ -41,7 +41,7 @@ window.__ModuleLoader__.load({
     const { useCallback, useEffect, useMemo, useState } = React
 
     /** Settings namespace, also the slot `key` the plugin tab matches a served namespace by. */
-    const NS = 'physearth-geoai'
+    const NS = 'physearth'
 
     // ── The same definitions the host half and the tests read ──────────────────────────────
     // Duplicated as plain data rather than imported: a client bundle cannot value-import
@@ -329,9 +329,9 @@ window.__ModuleLoader__.load({
     /**
      * The scoped stylesheet.
      *
-     * Two halves on purpose. `.geoai-card …` is not gated on the restyle, because the card is
+     * Two halves on purpose. `.physearth-card …` is not gated on the restyle, because the card is
      * the control that turns the plugin back on: it has to look deliberate even with the host
-     * restyle switched off. `body.geoai-restyled …` carries the restyle itself, so turning the
+     * restyle switched off. `body.physearth-restyled …` carries the restyle itself, so turning the
      * switch off removes the look from the shell without touching the card.
      *
      * Two constraints from the product, both enforced below: no colour-only signal (every
@@ -340,74 +340,74 @@ window.__ModuleLoader__.load({
      */
     function stylesheet(paint) {
       return `
-body.geoai-restyled {
-  --geoai-accent: ${paint.fill};
-  --geoai-accent-soft: ${paint.soft};
-  --geoai-accent-on-fill: ${paint.onFill};
-  --geoai-font-sans: 'Fira Sans', 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --geoai-font-mono: 'Fira Code', ui-monospace, 'SFMono-Regular', 'JetBrains Mono', monospace;
+body.physearth-restyled {
+  --physearth-accent: ${paint.fill};
+  --physearth-accent-soft: ${paint.soft};
+  --physearth-accent-on-fill: ${paint.onFill};
+  --physearth-font-sans: 'Fira Sans', 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --physearth-font-mono: 'Fira Code', ui-monospace, 'SFMono-Regular', 'JetBrains Mono', monospace;
   background-image:
-    radial-gradient(1100px 520px at 12% -8%, var(--geoai-accent-soft), transparent 62%),
+    radial-gradient(1100px 520px at 12% -8%, var(--physearth-accent-soft), transparent 62%),
     radial-gradient(760px 420px at 100% 0%, rgba(59, 130, 246, 0.07), transparent 58%);
   background-attachment: fixed;
-  font-family: var(--geoai-font-sans);
+  font-family: var(--physearth-font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 /* Numbers are the product here, so the mono face is not decoration: a handle, a version, a
    parameter name and a unit all read better when the digits do not shift width. */
-body.geoai-restyled code,
-body.geoai-restyled pre,
-body.geoai-restyled kbd,
-body.geoai-restyled samp {
-  font-family: var(--geoai-font-mono);
+body.physearth-restyled code,
+body.physearth-restyled pre,
+body.physearth-restyled kbd,
+body.physearth-restyled samp {
+  font-family: var(--physearth-font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-body.geoai-restyled :focus-visible {
-  outline: 2px solid var(--geoai-accent);
+body.physearth-restyled :focus-visible {
+  outline: 2px solid var(--physearth-accent);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-body.geoai-restyled ::selection {
-  background: var(--geoai-accent-soft);
+body.physearth-restyled ::selection {
+  background: var(--physearth-accent-soft);
   color: var(--dsw-alias-label-primary, inherit);
 }
 
-body.geoai-restyled * {
+body.physearth-restyled * {
   scrollbar-color: var(--dsw-alias-scrollbar-hover-l1, #1e2a45) transparent;
   scrollbar-width: thin;
 }
 
-body.geoai-restyled *::-webkit-scrollbar {
+body.physearth-restyled *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-body.geoai-restyled *::-webkit-scrollbar-track {
+body.physearth-restyled *::-webkit-scrollbar-track {
   background: transparent;
 }
 
-body.geoai-restyled *::-webkit-scrollbar-thumb {
+body.physearth-restyled *::-webkit-scrollbar-thumb {
   background: var(--dsw-alias-scrollbar-hover-l1, #1e2a45);
   border: 2px solid transparent;
   border-radius: 999px;
   background-clip: content-box;
 }
 
-body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
-  background: var(--geoai-accent);
+body.physearth-restyled *::-webkit-scrollbar-thumb:hover {
+  background: var(--physearth-accent);
   background-clip: content-box;
 }
 
 /* The host animates with transitions, not keyframes, so honouring the preference here is a
    single rule rather than a stylesheet rewrite. */
 @media (prefers-reduced-motion: reduce) {
-  body.geoai-restyled *,
-  body.geoai-restyled *::before,
-  body.geoai-restyled *::after {
+  body.physearth-restyled *,
+  body.physearth-restyled *::before,
+  body.physearth-restyled *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -418,7 +418,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
    Mobile first: one column, full width, 44px minimum touch targets, and the control column
    only splits once there is room for it. */
 
-.geoai-card {
+.physearth-card {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -432,7 +432,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   font-family: 'Fira Sans', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
 }
 
-.geoai-card__head {
+.physearth-card__head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -440,7 +440,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   justify-content: space-between;
 }
 
-.geoai-card__head h3 {
+.physearth-card__head h3 {
   margin: 0;
   font-size: 16px;
   line-height: 24px;
@@ -448,7 +448,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   letter-spacing: 0.01em;
 }
 
-.geoai-tag {
+.physearth-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -463,20 +463,20 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   white-space: nowrap;
 }
 
-.geoai-tag[data-on='true'] {
-  border-color: var(--geoai-accent, #22d3ee);
-  background: var(--geoai-accent-soft, rgba(34, 211, 238, 0.14));
+.physearth-tag[data-on='true'] {
+  border-color: var(--physearth-accent, #22d3ee);
+  background: var(--physearth-accent-soft, rgba(34, 211, 238, 0.14));
   color: var(--dsw-alias-label-primary, inherit);
 }
 
-.geoai-card__desc {
+.physearth-card__desc {
   margin: 0;
   color: var(--dsw-alias-label-secondary, inherit);
   font-size: 13px;
   line-height: 21px;
 }
 
-.geoai-row {
+.physearth-row {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -486,14 +486,14 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   background: var(--dsw-alias-bg-layer-2, transparent);
 }
 
-.geoai-row__hint {
+.physearth-row__hint {
   color: var(--dsw-alias-label-tertiary, inherit);
   font-size: 12px;
   line-height: 19px;
 }
 
 /* A switch, not a checkbox: it reads as a state, and the label says which state. */
-.geoai-switch {
+.physearth-switch {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
@@ -512,16 +512,16 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   transition: border-color 160ms ease, background-color 160ms ease;
 }
 
-.geoai-switch:hover:not(:disabled) {
-  border-color: var(--geoai-accent, #22d3ee);
+.physearth-switch:hover:not(:disabled) {
+  border-color: var(--physearth-accent, #22d3ee);
 }
 
-.geoai-switch:disabled {
+.physearth-switch:disabled {
   cursor: progress;
   opacity: 0.7;
 }
 
-.geoai-switch__track {
+.physearth-switch__track {
   position: relative;
   display: inline-block;
   width: 46px;
@@ -531,7 +531,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   transition: background-color 160ms ease;
 }
 
-.geoai-switch__knob {
+.physearth-switch__knob {
   position: absolute;
   top: 3px;
   left: 3px;
@@ -542,21 +542,21 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   transition: transform 160ms ease, background-color 160ms ease;
 }
 
-.geoai-switch.is-on {
-  border-color: var(--geoai-accent, #22d3ee);
-  background: var(--geoai-accent-soft, rgba(34, 211, 238, 0.14));
+.physearth-switch.is-on {
+  border-color: var(--physearth-accent, #22d3ee);
+  background: var(--physearth-accent-soft, rgba(34, 211, 238, 0.14));
 }
 
-.geoai-switch.is-on .geoai-switch__track {
-  background: var(--geoai-accent, #22d3ee);
+.physearth-switch.is-on .physearth-switch__track {
+  background: var(--physearth-accent, #22d3ee);
 }
 
-.geoai-switch.is-on .geoai-switch__knob {
+.physearth-switch.is-on .physearth-switch__knob {
   transform: translateX(20px);
-  background: var(--geoai-accent-on-fill, #04121a);
+  background: var(--physearth-accent-on-fill, #04121a);
 }
 
-.geoai-grid {
+.physearth-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
@@ -566,19 +566,19 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
    viewport, where the host keeps its two-column shell. Nothing here tries to widen past its
    container (that would overflow); instead every text node wraps and every grid child may
    shrink, so the card degrades to a tall readable column instead of clipping. */
-.geoai-card,
-.geoai-card * {
+.physearth-card,
+.physearth-card * {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.geoai-card__desc,
-.geoai-row__hint,
-.geoai-status {
+.physearth-card__desc,
+.physearth-row__hint,
+.physearth-status {
   overflow-wrap: anywhere;
 }
 
-.geoai-grid label {
+.physearth-grid label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -588,8 +588,8 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   font-weight: 600;
 }
 
-.geoai-grid input[type='text'],
-.geoai-grid select {
+.physearth-grid input[type='text'],
+.physearth-grid select {
   min-height: 40px;
   padding: 8px 10px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(148, 163, 184, 0.2));
@@ -601,18 +601,18 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   line-height: 18px;
 }
 
-.geoai-grid select {
+.physearth-grid select {
   font-family: 'Fira Sans', system-ui, sans-serif;
   font-size: 13px;
 }
 
-.geoai-checks {
+.physearth-checks {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.geoai-checks label {
+.physearth-checks label {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -624,22 +624,22 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   cursor: pointer;
 }
 
-.geoai-checks input[type='checkbox'] {
+.physearth-checks input[type='checkbox'] {
   flex: none;
   width: 18px;
   height: 18px;
   margin: 1px 0 0;
-  accent-color: var(--geoai-accent, #22d3ee);
+  accent-color: var(--physearth-accent, #22d3ee);
 }
 
-.geoai-card__foot {
+.physearth-card__foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
 }
 
-.geoai-btn {
+.physearth-btn {
   min-height: 40px;
   padding: 9px 18px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(148, 163, 184, 0.2));
@@ -653,18 +653,18 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   transition: border-color 160ms ease, background-color 160ms ease;
 }
 
-.geoai-btn:hover:not(:disabled) {
-  border-color: var(--geoai-accent, #22d3ee);
-  background: var(--geoai-accent-soft, rgba(34, 211, 238, 0.14));
+.physearth-btn:hover:not(:disabled) {
+  border-color: var(--physearth-accent, #22d3ee);
+  background: var(--physearth-accent-soft, rgba(34, 211, 238, 0.14));
 }
 
-.geoai-btn:disabled {
+.physearth-btn:disabled {
   cursor: progress;
   opacity: 0.7;
 }
 
 /* State is never colour alone: each tone carries its own weight and the sentence says it. */
-.geoai-status {
+.physearth-status {
   flex: 1 1 260px;
   min-width: 0;
   font-size: 12px;
@@ -672,19 +672,19 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   color: var(--dsw-alias-label-secondary, inherit);
 }
 
-.geoai-status[data-tone='pass'] {
+.physearth-status[data-tone='pass'] {
   color: var(--dsw-alias-state-success-primary, #34d399);
 }
 
-.geoai-status[data-tone='warn'] {
+.physearth-status[data-tone='warn'] {
   color: var(--dsw-alias-state-warn-primary, #fbbf24);
 }
 
-.geoai-status[data-tone='block'] {
+.physearth-status[data-tone='block'] {
   color: var(--dsw-alias-state-error-primary, #f87171);
 }
 
-.geoai-facts {
+.physearth-facts {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
@@ -693,7 +693,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   list-style: none;
 }
 
-.geoai-facts li {
+.physearth-facts li {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -705,39 +705,39 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
   line-height: 18px;
 }
 
-.geoai-facts dt,
-.geoai-facts span:first-child {
+.physearth-facts dt,
+.physearth-facts span:first-child {
   color: var(--dsw-alias-label-tertiary, inherit);
 }
 
-.geoai-facts strong {
+.physearth-facts strong {
   font-family: 'Fira Code', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 
 @media (min-width: 640px) {
-  .geoai-card {
+  .physearth-card {
     padding: 20px;
   }
 
-  .geoai-grid {
+  .physearth-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .geoai-facts {
+  .physearth-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
-  .geoai-row {
+  .physearth-row {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
   }
 
-  .geoai-grid {
+  .physearth-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -759,7 +759,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
         'button',
         {
           type: 'button',
-          className: 'geoai-switch' + (on ? ' is-on' : ''),
+          className: 'physearth-switch' + (on ? ' is-on' : ''),
           role: 'switch',
           'aria-checked': on ? 'true' : 'false',
           'aria-busy': busy ? 'true' : 'false',
@@ -768,10 +768,10 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
         },
         React.createElement(
           'span',
-          { className: 'geoai-switch__track', 'aria-hidden': 'true' },
-          React.createElement('span', { className: 'geoai-switch__knob' }),
+          { className: 'physearth-switch__track', 'aria-hidden': 'true' },
+          React.createElement('span', { className: 'physearth-switch__knob' }),
         ),
-        React.createElement('span', { className: 'geoai-switch__label' }, busy ? '正在写入…' : on ? labelOn : labelOff),
+        React.createElement('span', { className: 'physearth-switch__label' }, busy ? '正在写入…' : on ? labelOn : labelOff),
       )
     }
 
@@ -851,24 +851,24 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
 
       return React.createElement(
         'div',
-        { className: 'geoai-card' },
+        { className: 'physearth-card' },
         React.createElement(
           'div',
-          { className: 'geoai-card__head' },
+          { className: 'physearth-card__head' },
           React.createElement('h3', null, 'PhysEarth Geo-AI'),
           React.createElement(
             'span',
-            { className: 'geoai-tag', 'data-on': value.enabled ? 'true' : 'false' },
+            { className: 'physearth-tag', 'data-on': value.enabled ? 'true' : 'false' },
             value.enabled ? t('enabled') : t('disabled'),
           ),
         ),
-        React.createElement('p', { className: 'geoai-card__desc' }, t('description')),
+        React.createElement('p', { className: 'physearth-card__desc' }, t('description')),
         statusLabel
-          ? React.createElement('p', { className: 'geoai-card__desc' }, statusLabel)
+          ? React.createElement('p', { className: 'physearth-card__desc' }, statusLabel)
           : null,
         React.createElement(
           'div',
-          { className: 'geoai-row' },
+          { className: 'physearth-row' },
           React.createElement(Switch, {
             on: value.enabled,
             busy,
@@ -876,11 +876,11 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
             labelOn: t('switchOn'),
             labelOff: t('switchOff'),
           }),
-          React.createElement('div', { className: 'geoai-row__hint' }, value.enabled ? t('hintOn') : t('hintOff')),
+          React.createElement('div', { className: 'physearth-row__hint' }, value.enabled ? t('hintOn') : t('hintOff')),
         ),
         React.createElement(
           'div',
-          { className: 'geoai-grid' },
+          { className: 'physearth-grid' },
           React.createElement(
             'label',
             null,
@@ -957,7 +957,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
         ),
         React.createElement(
           'div',
-          { className: 'geoai-checks' },
+          { className: 'physearth-checks' },
           React.createElement(
             'label',
             null,
@@ -991,9 +991,9 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
         ),
         React.createElement(
           'div',
-          { className: 'geoai-card__foot' },
-          React.createElement('button', { type: 'button', className: 'geoai-btn', onClick: probe, disabled: busy }, t('probe')),
-          status ? React.createElement('span', { className: 'geoai-status', 'data-tone': status.tone, role: 'status' }, status.text) : null,
+          { className: 'physearth-card__foot' },
+          React.createElement('button', { type: 'button', className: 'physearth-btn', onClick: probe, disabled: busy }, t('probe')),
+          status ? React.createElement('span', { className: 'physearth-status', 'data-tone': status.tone, role: 'status' }, status.text) : null,
         ),
       )
     }
@@ -1014,7 +1014,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       writeFailed: '写入设置失败，值没有保存。',
       switchOn: '点击停用',
       switchOff: '点击启用',
-      hintOn: '工具以 mcp__geoai__* 出现，系统提示注入本项目的引用/证据/流程规则（深度见下），界面换成 Geo-AI 视觉。',
+      hintOn: '工具以 mcp__physearth__* 出现，系统提示注入本项目的引用/证据/流程规则（深度见下），界面换成 Geo-AI 视觉。',
       hintOff: '停用后不注册工具、不注入提示词、不改界面；桥进程也会被释放。',
       accent: '视觉强调色',
       colorScheme: '强调色曝光',
@@ -1035,7 +1035,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
         `${p.papers} 篇论文 / ${p.sections} 节、${p.skills} 个方法卡；凭据${p.credentials}。`,
       probeCredentialsYes: '已配置',
       probeCredentialsNo: '未配置',
-      probeFailed: (p) => `桥没有应答（${p.message}）。先运行：python -m integrations.geoai serve-http`,
+      probeFailed: (p) => `桥没有应答（${p.message}）。先运行：python -m integrations.physearth serve-http`,
     }
 
     const en = {
@@ -1050,7 +1050,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       writeFailed: 'The settings write failed; nothing was saved.',
       switchOn: 'Click to disable',
       switchOff: 'Click to enable',
-      hintOn: 'Tools appear as mcp__geoai__*, the system prompt gains this project’s citation, evidence and workflow rules (depth below), and the interface takes the Geo-AI look.',
+      hintOn: 'Tools appear as mcp__physearth__*, the system prompt gains this project’s citation, evidence and workflow rules (depth below), and the interface takes the Geo-AI look.',
       hintOff: 'Disabled: no tools, no prompt rules, no restyle, and the bridge process is released.',
       accent: 'Accent',
       colorScheme: 'Accent exposure',
@@ -1071,7 +1071,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
         `${p.papers} papers / ${p.sections} sections, ${p.skills} method cards; credentials ${p.credentials}.`,
       probeCredentialsYes: 'configured',
       probeCredentialsNo: 'not configured',
-      probeFailed: (p) => `The bridge did not answer (${p.message}). Start it with: python -m integrations.geoai serve-http`,
+      probeFailed: (p) => `The bridge did not answer (${p.message}). Start it with: python -m integrations.physearth serve-http`,
     }
 
     /**
@@ -1085,7 +1085,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
 
     exports.apply = function apply(ctx) {
       const t = ctx.locale.bind(NS)
-      ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'physearth-geoai: card dictionaries')
+      ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'physearth: card dictionaries')
 
       const scope = ctx.settingsScope.bind({ namespace: NS })
       const snapshot = () => {
@@ -1106,7 +1106,7 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
       //    the switch the body class was gone and `--dsw-alias-bg-base` was still ours.
       ctx.effect(() => {
         if (typeof ctx.theme?.overrideTokens !== 'function') {
-          ctx.logger?.warn?.('physearth-geoai: no theme.overrideTokens on this host; the restyle falls back to the stylesheet alone')
+          ctx.logger?.warn?.('physearth: no theme.overrideTokens on this host; the restyle falls back to the stylesheet alone')
           return () => {}
         }
         let dispose
@@ -1125,32 +1125,32 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
           if (typeof stop === 'function') stop()
           if (typeof dispose === 'function') dispose()
         }
-      }, 'physearth-geoai: host token layer')
+      }, 'physearth: host token layer')
 
       // 2. The scoped stylesheet and the body class the restyle hangs off. The class is what
       //    makes "on" visible: tokens alone would recolour, not restyle.
       ctx.effect(() => {
         const style = document.createElement('style')
-        style.id = 'geoai-restyle'
+        style.id = 'physearth-restyle'
         document.head.appendChild(style)
         const render = () => {
           const value = current()
           style.textContent = stylesheet(accentPaint(value))
           const active = Boolean(value.enabled && value.restyleHost)
-          document.body.classList.toggle('geoai-restyled', active)
-          document.body.dataset.geoaiAccent = value.accent
-          document.body.dataset.geoaiEnabled = value.enabled ? 'true' : 'false'
+          document.body.classList.toggle('physearth-restyled', active)
+          document.body.dataset.physearthAccent = value.accent
+          document.body.dataset.physearthEnabled = value.enabled ? 'true' : 'false'
         }
         render()
         const stop = scope.subscribe(render)
         return () => {
           if (typeof stop === 'function') stop()
-          document.body.classList.remove('geoai-restyled')
-          delete document.body.dataset.geoaiAccent
-          delete document.body.dataset.geoaiEnabled
+          document.body.classList.remove('physearth-restyled')
+          delete document.body.dataset.physearthAccent
+          delete document.body.dataset.physearthEnabled
           style.remove()
         }
-      }, 'physeauth-geoai: stylesheet')
+      }, 'physeauth-physearth: stylesheet')
 
       // 3. The switch. The shipped plugin inventory is a read-only list, so the enable/disable
       //    control is this card's, and it writes the host half's own `enabled` setting — which
@@ -1170,9 +1170,9 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
             card,
           )
         })
-      }, 'physearth-geoai: settings card')
+      }, 'physearth: settings card')
 
-      ctx.logger?.info?.('physearth-geoai: browser half ready (设置 → 插件 → PhysEarth Geo-AI)')
+      ctx.logger?.info?.('physearth: browser half ready (设置 → 插件 → PhysEarth Geo-AI)')
     }
 
     // Exported for `tests/client.test.mjs`, which mounts this factory against a stub module

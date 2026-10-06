@@ -2,9 +2,9 @@ import copy
 from pathlib import Path
 
 import pytest
-from physearth import agent, research, session, tools
 
-from frontend import views as render
+from apps.studio import views as render
+from physearth import agent, research, session, tools
 
 
 def _proposal(box, question="How does snow density affect microwave scattering?"):
@@ -322,7 +322,7 @@ def test_plan_revision_preview_chart_and_execution_gate():
 
 
 def test_execution_approval_is_idempotent_and_sends_one_continuation():
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     box = session.new_session("m")
     box["research_required"] = True
@@ -443,20 +443,19 @@ def test_research_review_card_exposes_agent_plan_and_pseudo_data():
     box = session.new_session("m")
     _proposal(box)
     card = render.approval_bar(box)
-    assert "Research review" in card
-    assert "research-steps" in card
-    assert "Research plan flow" in card
-    assert "How to edit this plan" in card
+    assert "Research plan <b>v001</b>" in card
+    assert "Reply in Conversation to continue" in card and "<code>approve</code>" in card
     assert "data-research-phase='plan_review'" in card
-    assert "data-chart-id='density_curve'" in card and "disabled" in card
+    # Chart choices only appear once there is a preview to choose from.
+    assert "data-chart-id='density_curve'" not in card
     research.approve_plan(box)
     research.pseudo_preview(box)
     card = render.approval_bar(box)
     assert "PSEUDO-DATA" in card
     assert "Pseudo-data are deterministic layout demonstrations" in card
-    assert "Revise plan in chat" in card
-    assert "Chart options" in card
-    assert "data-chart-id='density_curve' disabled" not in card
+    assert "is a change to the plan" in card
+    assert "Figures to run" in card
+    assert "data-chart-id='density_curve'" in card and "disabled" not in card
 
 
 def test_pseudo_preview_uses_generic_range_parameter():
@@ -1631,7 +1630,7 @@ def test_formulation_attribution_reads_the_formulation_parameter_from_the_card()
 
 
 def test_approve_and_run_is_one_human_step_from_plan_review():
-    from frontend import studio as app
+    from apps.studio import studio as app
 
     box = session.new_session("m")
     box["research_required"] = True

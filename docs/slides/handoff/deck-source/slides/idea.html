@@ -1,0 +1,30 @@
+<section id="idea" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#2F6690; font-weight:600">Technical part · 1 of 3 · registration</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">Register a model once; it inherits every check</h2>
+  </div>
+  <div style="display:flex; gap:48px">
+    <div style="width:700px; display:flex; flex-direction:column; gap:16px; background:#14213D; border-radius:16px; padding:40px; font-family:'IBM Plex Mono', 'Courier New', monospace; color:#E4E8EF">
+      <p style="font-size:24px; color:#F0A071">my_model/model_card.yaml</p>
+      <p style="font-size:24px; line-height:1.5">parameters:<br>  density_kg_m3:<br>    unit: kg m-3<br>    minimum: 1.0<br>    maximum: 917.0<br>combinations: [when … allow … reason]<br>outputs:<br>  tb_v: {valid_min: 0, valid_max: 320}</p>
+      <p style="font-size:24px; color:#F0A071">my_model/adapter.py</p>
+      <p style="font-size:24px; line-height:1.5">def run(spec):<br>    return {"axis", "points", "series"}</p>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; gap:20px">
+      <p style="font-size:32px; font-weight:600">What the model gets without new code</p>
+      <ul style="font-size:28px; line-height:1.45; color:#3D4656">
+        <li>Ranges and legal combinations checked before the run</li>
+        <li>A human approves the run; the agent cannot</li>
+        <li>Outputs checked against declared bounds after it</li>
+        <li>Every claim carries a marker that must resolve</li>
+        <li>Abstract-only evidence may never carry a value</li>
+        <li>Outside text arrives as evidence, never instruction</li>
+        <li>Arrays stay in the session store; the LLM sees handles</li>
+        <li>Charts come from a declarative spec, not agent code</li>
+      </ul>
+    </div>
+  </div>
+  <p style="position:absolute; left:128px; bottom:64px; width:1400px; font-size:24px; color:#5F6673">README.md, AGENTS.md "Invariants", TEMPLATES/model_card.yaml</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:100px; text-align:right; font-size:24px; color:#5F6673">4</p>
+  <aside>~50 s. The contribution is a contract: a model is a YAML card plus a pure run(spec) function. The card declares ranges, legal combinations and output bounds; the harness enforces them for every model, so the checks are data, not prompt text. The eight invariants on the right are what AGENTS.md calls "the product, not conventions". For the paper, this generality is the claim to defend: that a new model gets all of this with zero harness edits.</aside>
+</section>

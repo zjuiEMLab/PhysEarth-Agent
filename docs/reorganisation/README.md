@@ -34,3 +34,15 @@ is two or three packages, not four.
 
 They are self-contained HTML — open one in a browser, no build step. They follow the same
 convention as `docs/evaluation/`.
+
+## Update, 3 October 2026: the minimal top-level layout
+
+Option C's split was kept and its folders were regrouped by role, taking the repository from
+15 visible top-level folders to 8: `src/physearth` (was `backend/physearth`), `apps/studio`
+(was `frontend`), `catalog/` (was `knowledge/` and `models/`), `onboarding/` (was the corpus
+scripts and the literature template), `integrations/` (was `plugins/`, `claude/`, `codex/` and
+the old `integrations/`), plus `evaluation/`, `tests/` and `docs/` unchanged. The prompts, the
+typefaces and the model templates moved inside the library as package data, so a built wheel
+carries them. It is still one distribution, so none of the six Option D conditions is triggered.
+The documents above describe the layout of their day and keep their old paths on purpose.
+

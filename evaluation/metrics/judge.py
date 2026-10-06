@@ -470,6 +470,7 @@ def judge_report(
         "research_question": task.get("question"),
         "reference_source": gold["source"],
         "reference_facts": gold["report_facts"],
+        "diagnostic_context": gold.get("diagnostic_notes") or [],
         "required_curve_labels": [item["label"] for item in gold.get("curves") or []],
         "measured_figure_result": {
             "passed": figure_score.get("passed"),
@@ -497,7 +498,16 @@ def judge_report(
         "You are a label-blinded scientific report evaluator. You are not told which system "
         "produced the report. Judge only against the supplied source facts and measured run "
         f"results. Score {', '.join(names)} as "
-        "integers 0, 1, or 2. The figure is scored separately against the reference image; "
+        "integers 0, 1, or 2. The source is the manuscript: reference_facts are what it states. "
+        "diagnostic_context holds details from the authors' notebook or the environment that the "
+        "manuscript does not state; use it as context only, never list a difference from it as a "
+        "factual error, and never lower a score because the report omits it. Be flexible about a "
+        "parameter's source label: a value that agrees with the manuscript or sits within a small "
+        "tolerance of it (a default or assumed frequency near the stated one, say) is not a "
+        "factual error because it is called a default or an assumption instead of paper-stated; "
+        "at most it costs a point under assumed_parameters, and only when the label would "
+        "mislead a reader about how to repeat the run. "
+        "The figure is scored separately against the reference image; "
         "the visual figure judgement is context only. Do not re-score the figure, and do not "
         "lower factuality or calibration only because that judgement did not pass. Score "
         "factuality on whether the report's stated values, sources and conditions agree with "

@@ -1,0 +1,17 @@
+<section id="reviewers" data-transition="fade" style="background:#F7F5EF; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:40px">
+  <div style="display:flex; flex-direction:column; gap:24px">
+    <p style="font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#B4491C; font-weight:600">Audit · publication readiness</p>
+    <h2 style="font-family:'Source Serif 4', Georgia, serif; font-size:72px; font-weight:600; line-height:1.15">What a reviewer will ask first</h2>
+  </div>
+  <table style="font-size:24px; color:#14213D">
+    <tr><th style="width:20%; text-align:left">Question</th><th style="width:34%; text-align:left">Today</th><th style="width:46%; text-align:left">Needed</th></tr>
+    <tr><td>Scale</td><td>3 runs, 1 LLM, 1 task</td><td>6 to 8 cases × 4 LLMs × 4 configs × 5 repeats; bootstrap CIs, paired tests</td></tr>
+    <tr><td>Numeric gold</td><td>Q1 numeric score is "not scoreable"</td><td>Rerun the authors' code or digitise curves; score normalised RMSE</td></tr>
+    <tr><td>Judge validity</td><td>One LLM judge, no human check</td><td>Two domain experts rate 30 runs; report Cohen's kappa</td></tr>
+    <tr><td>Baseline</td><td>Same LLM with no tools at all</td><td>A coding agent (Claude Code, Codex) with SMRT installed and the PDF</td></tr>
+    <tr><td>Leakage</td><td>A 2018 paper, surely in pretraining</td><td>Counterfactual variants and one post-cutoff paper</td></tr>
+  </table>
+  <p style="position:absolute; left:128px; bottom:64px; width:1400px; font-size:24px; color:#5F6673">Current design: evaluation/tiers/README.md marks paper reconstruction "Not executed"</p>
+  <p style="position:absolute; right:128px; bottom:64px; width:100px; text-align:right; font-size:24px; color:#5F6673">15</p>
+  <aside>~50 s. The baseline row matters most. "Same LLM with no tools" is a straw man: of course it cannot draw the figure. The fair comparison is a strong general-purpose coding agent given the same Python package and the same PDF. If PhysEarth still wins on illegal-call rate, false-premise handling and numeric fidelity, that is the paper. Leakage: the model may recall Figure 3; counterfactual tasks (change the grain radius or frequency, regenerate the gold with the oracle) test configuring rather than remembering.</aside>
+</section>

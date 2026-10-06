@@ -1,4 +1,4 @@
-"""The frontend/backend split, as two rules a test can check.
+"""The apps/studio/backend split, as two rules a test can check.
 
 A layout is a suggestion until something enforces it. These two are what stop the split
 from eroding one convenient import at a time, and they are cheap enough to run always.
@@ -8,8 +8,8 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKEND = ROOT / "backend" / "physearth"
-FRONTEND = ROOT / "frontend"
+BACKEND = ROOT / "src" / "physearth"
+FRONTEND = ROOT / "apps" / "studio"
 
 
 def _imports(path):
@@ -71,7 +71,7 @@ def test_the_root_entry_point_the_deployspec_names_still_exists():
     """README front-matter pins `deployspec: entry_file: app.py`; it may only ever be a shim."""
     app = ROOT / "app.py"
     assert app.is_file()
-    assert "frontend.studio" in app.read_text(encoding="utf-8")
+    assert "apps.studio.studio" in app.read_text(encoding="utf-8")
 
 
 def test_no_module_still_refers_to_the_old_models_package_path():
@@ -113,7 +113,7 @@ def test_the_card_checker_runs_end_to_end():
     import sys
 
     result = subprocess.run(
-        [sys.executable, "-m", "physearth.registry.check", "models/bundled/smrt"],
+        [sys.executable, "-m", "physearth.registry.check", "catalog/models/bundled/smrt"],
         cwd=ROOT, capture_output=True, text=True, timeout=120,
     )
     assert result.returncode == 0, result.stderr[-400:]

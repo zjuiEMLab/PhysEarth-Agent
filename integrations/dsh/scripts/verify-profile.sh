@@ -23,7 +23,7 @@
 
 set -euo pipefail
 
-NAME="${1:-geoai-verify}"
+NAME="${1:-physearth-verify}"
 PORT="${2:-3199}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$HERE/.." && pwd)"
@@ -62,7 +62,7 @@ if [ ! -f "$PROFILE_DIR/cordis.patch.yml" ]; then
 # The verification profile's own layer, applied after every bundle layer.
 #
 # Deliberately empty: everything this profile mounts arrives through
-# dsh-plugin-physearth-geoai's own bundle patch, which is the thing under test.
+# dsh-plugin-physearth's own bundle patch, which is the thing under test.
 []
 YAML
 fi
@@ -89,7 +89,7 @@ Boot it with:
 Then open http://127.0.0.1:$PORT/ and go to 设置 → 插件 → PhysEarth Geo-AI.
 
 Rows must appear in the composed tree:
-  dsh --profile $NAME --dump-config | grep -A4 -E '(geoai|mcp-geoai)'
+  dsh --profile $NAME --dump-config | grep -A4 -E '(physearth|mcp-physearth)'
 
 Tear it down with:
   rm -rf "$PROFILE_DIR"

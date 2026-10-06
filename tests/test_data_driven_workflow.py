@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from physearth.corpus import live
-
-from frontend.views import evaluation as evals
+from apps.studio.views import evaluation as evals
 from physearth import harness, prompt, research, session, tools
+from physearth.corpus import knowledge, live
 from physearth.ingest import jats
 
 FIXTURE = Path(__file__).parent / "fixtures" / "jats_sample.xml"
@@ -335,7 +334,10 @@ def test_plan_revision_returns_field_diff_and_invalidated_review_state():
 
 def _q1_resources(box):
     tools.call("read_research_guideline", {}, session=box)
-    tools.call("read_literature", {"slug": "smrt-v1", "section_id": "08"}, session=box)
+    # The whole paper: a reproduction that assumes a value is refused while an unopened section
+    # of the paper it cites still gives one, so a plan that is meant to be accepted has read it.
+    for item in knowledge.section_index("smrt-v1"):
+        tools.call("read_literature", {"slug": "smrt-v1", "section_id": item["id"]}, session=box)
     tools.call("list_models", {"model": "smrt"}, session=box)
     tools.call("read_model_instruction", {"model": "smrt"}, session=box)
     capability = tools.call(
@@ -752,9 +754,8 @@ def test_reading_a_section_says_what_the_paper_figures_are_called():
     proposed, was refused for missing figure evidence, read another section, and gave up
     after five consecutive failures. The requirement was satisfiable only by luck.
     """
-    from physearth.tools import literature
-
     from physearth import session as session_state
+    from physearth.tools import literature
 
     box = session_state.new_session("m")
     result = literature.read_literature("smrt-v1", "03", _session=box)
@@ -786,10 +787,9 @@ def test_a_plan_thinner_than_the_figure_legend_is_flagged_at_review():
     extracts it. A plan with one run against a legend of six is reproducing one line of
     that figure. Advisory, not blocking: a legend entry is not always a run.
     """
+    from physearth import session as session_state
     from physearth.research import evidence
     from physearth.tools import literature
-
-    from physearth import session as session_state
 
     box = session_state.new_session("m")
     literature.read_literature("smrt-v1", "03", _session=box)
