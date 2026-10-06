@@ -1,7 +1,7 @@
 """The conversation itself: the hero, the composer, one message, the guided brief."""
 
 from apps.studio.views.context import current_activity_status
-from apps.studio.views.parts import _mapping_text, _reproduction_state
+from apps.studio.views.parts import _mapping_text, _reproduction_state, plan_sheet_html
 from apps.studio.views.text import _e, _paragraphs, _svg, answer_html
 from physearth.api import agent
 
@@ -75,31 +75,9 @@ def conversation_head(count, session=None, events=None, state=None):
 
 
 def _plan_run_rows(plan):
-    rows = []
-    for run in plan.get("runs") or []:
-        spec = run.get("parameters") or {}
-        theory = spec.get("electromagnetic_model", "")
-        microstructure = spec.get("microstructure_model", "")
-        output = spec.get("output", "")
-        sweep = spec.get("sweep_parameter", "")
-        rows.append(
-            "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-            % (
-                _e(run.get("id", "")),
-                _e(run.get("label", "%s + %s" % (theory, microstructure))),
-                _e(theory),
-                _e(microstructure),
-                _e("%s; sweep %s" % (output or "not specified", sweep or "none")),
-            )
-        )
-    if not rows:
-        return ""
-    return (
-        "<div class='research-context__label'>AGENT PLAN: RUNS</div>"
-        "<table class='research-plan-runs'><thead><tr><th>ID</th><th>Run</th>"
-        "<th>Theory</th><th>Microstructure</th><th>Output</th></tr></thead><tbody>%s</tbody></table>"
-        % "".join(rows)
-    )
+    """What differs between the plan's runs, whatever the model: the sheet's matrix."""
+    matrix = plan_sheet_html(plan, conditions=False)
+    return ("<div class='research-context__label'>AGENT PLAN: RUNS</div>" + matrix) if matrix else ""
 
 
 def guided_brief(session):

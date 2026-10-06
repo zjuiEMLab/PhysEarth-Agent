@@ -5194,3 +5194,27 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 .disclosure--markup > .disclosure__body {
   padding-top: 6px;
 }
+
+
+/* Plan sheet: conditions once with their sources, and a matrix of what differs per run. */
+.plan-sheet { display: grid; gap: 14px; }
+.plan-sheet__group { border: 1px solid var(--line, #e4e1d8); border-radius: 10px; padding: 12px 14px; background: var(--surface-1, #fff); }
+.plan-sheet__title { font-weight: 600; margin-bottom: 8px; }
+.plan-sheet__label { font: 600 11px/1.2 var(--mono, monospace); letter-spacing: .06em; text-transform: uppercase; color: var(--muted, #6b6a65); margin: 10px 0 4px; }
+.plan-sheet__sweep, .plan-sheet__sources { font-size: 13px; margin: 8px 0 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.plan-sheet__stage { font-size: 11px; color: var(--muted, #6b6a65); border: 1px solid var(--line, #e4e1d8); border-radius: 4px; padding: 0 5px; }
+.plan-sheet__decide { border: 1px solid #e0b25c; background: #fbf3df; border-radius: 10px; padding: 10px 14px; }
+.plan-sheet__decide ul { margin: 6px 0 0; padding-left: 18px; }
+.plan-sheet__hint { color: var(--muted, #6b6a65); font-size: 12px; }
+.plan-sheet-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.plan-sheet-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted, #6b6a65); border-bottom: 1px solid var(--line, #e4e1d8); padding: 4px 8px 4px 0; }
+.plan-sheet-table td { padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line, #eee9dd); vertical-align: top; }
+.plan-sheet-table-wrap { overflow-x: auto; }
+.src { display: inline-block; font: 600 11px/1 var(--mono, monospace); padding: 3px 6px; border-radius: 4px; white-space: nowrap; }
+.src-ref { font: 11px var(--mono, monospace); color: var(--muted, #6b6a65); }
+.src--extracted { background: #e3f0d8; color: #2f5a12; }
+.src--derived { background: #d9efe9; color: #0b5a47; }
+.src--user { background: #dce9f8; color: #174a80; }
+.src--default { background: #ebeae4; color: #4a4944; }
+.src--assumed, .src--mixed { background: #fbe9c7; color: #7a4a05; }
+.src--guessed, .src--unlabelled { background: #f8d9d9; color: #8a2020; }

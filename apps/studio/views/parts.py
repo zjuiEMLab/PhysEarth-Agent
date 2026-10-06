@@ -3,7 +3,7 @@
 import json
 
 from apps.studio.views.text import _e
-from physearth.api import knowledge
+from physearth.api import knowledge, research
 
 
 def _reproduction_state(session):
@@ -110,3 +110,90 @@ def _plan_disclosure(title, body, open=False):
         "<div class='research-plan-section__body'>%s</div></details>"
         % (" open" if open else "", _e(title), body)
     )
+
+
+_TAG_HELP = {
+    "extracted": "stated in the paper, or read off its figure",
+    "derived": "follows from what the paper states",
+    "user": "given in the question",
+    "default": "the model card's default; the paper does not say",
+    "assumed": "chosen by the agent, with a reason",
+    "guessed": "chosen by the agent with no stated reason",
+    "unlabelled": "no source recorded",
+    "mixed": "differs between runs",
+}
+
+
+def _source_chip(tag, ref=""):
+    return "<span class='src src--%s' title='%s'>%s</span>%s" % (
+        _e(tag), _e(_TAG_HELP.get(tag, "")), _e(tag),
+        " <span class='src-ref'>%s</span>" % _e(ref) if ref else "",
+    )
+
+
+def plan_sheet_html(plan, conditions=True):
+    """The plan as conditions once, with their sources, and a matrix of what differs per run."""
+    sheet = research.sheet.build(plan)
+    if not sheet["groups"]:
+        return ""
+    out = ["<div class='plan-sheet'>"]
+    if conditions and sheet["decisions"]:
+        items = "".join(
+            "<li><b>%s</b> %s = %s %s</li>" % (
+                _e(d["model"]), _e(d["name"]), _e(research.sheet.fmt(d["value"])), _source_chip(d["tag"]),
+            )
+            for d in sheet["decisions"]
+        )
+        out.append(
+            "<div class='plan-sheet__decide'><b>Needs your decision (%d)</b>"
+            "<span class='plan-sheet__hint'> chosen without a source in the paper; approve, or ask for a change</span>"
+            "<ul>%s</ul></div>" % (len(sheet["decisions"]), items)
+        )
+    for group in sheet["groups"]:
+        title = "%s%s · %d run%s" % (
+            group["model"] or "model", " v%s" % group["version"] if group["version"] else "",
+            len(group["runs"]), "" if len(group["runs"]) == 1 else "s",
+        )
+        out.append("<div class='plan-sheet__group'><div class='plan-sheet__title'>%s</div>" % _e(title))
+        if conditions:
+            rows = [
+                [
+                    "<code>%s</code>" % _e(c["name"]),
+                    _e(("%s %s" % (research.sheet.fmt(c["value"]), c["unit"] if c["unit"] != "none" else "")).strip()),
+                    _source_chip(c["tag"], c["ref"]),
+                    _e(c["note"]),
+                ]
+                for c in group["conditions"]
+            ]
+            out.append(
+                "<div class='plan-sheet__label'>Conditions, the same in every run</div>"
+                + _plan_table(("Parameter", "Value", "Source", "Note"), rows, css="plan-sheet-table")
+            )
+            if group["sweep"]:
+                out.append("<div class='plan-sheet__sweep'><b>Swept in every run:</b> %s</div>" % _e(group["sweep"]))
+        columns = group["columns"]
+        headers = ["Run"] + [
+            c["name"] + (" (%s)" % c["unit"] if c["unit"] and c["unit"] != "none" else "") for c in columns
+        ]
+        if group["sweep_varies"]:
+            headers.append("Sweep")
+        headers.append("Feeds")
+        rows = []
+        for run in group["runs"]:
+            cells = ["<b>%s</b>%s" % (_e(run["id"]), " <span class='plan-sheet__stage'>%s</span>" % _e(run["stage"]) if run["stage"] and run["stage"] != "main" else "")]
+            cells += [_e(research.sheet.fmt(run["values"].get(c["name"]))) for c in columns]
+            if group["sweep_varies"]:
+                cells.append(_e(run["sweep"]))
+            cells.append(_e(", ".join(run["feeds"]) or "-"))
+            rows.append(cells)
+        out.append(
+            "<div class='plan-sheet__label'>Runs, only what differs</div>"
+            + _plan_table(headers, rows, css="plan-sheet-table")
+        )
+        if columns:
+            out.append("<div class='plan-sheet__sources'>%s</div>" % " ".join(
+                "<span><code>%s</code> %s</span>" % (_e(c["name"]), _source_chip(c["tag"], c["ref"])) for c in columns
+            ))
+        out.append("</div>")
+    out.append("</div>")
+    return "".join(out)

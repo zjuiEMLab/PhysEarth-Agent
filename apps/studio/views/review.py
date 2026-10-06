@@ -5,6 +5,7 @@ from apps.studio.views.parts import (
     _plan_cell,
     _plan_disclosure,
     _plan_table,
+    plan_sheet_html,
 )
 from apps.studio.views.text import _e
 from physearth.api import research
@@ -307,7 +308,7 @@ def _structured_approval_bar(session, project, research):
             + _plan_table(("Field", "Value"), condition_rows)
             + _plan_table(("Code", "Field", "Paper context", "Actual", "Status"), warning_rows),
         )
-        + _plan_disclosure("Planned runs", _plan_table(("ID", "Label", "Model", "Resolved parameters", "Targets"), run_rows), open=True)
+        + _plan_disclosure("Conditions and runs", plan_sheet_html(plan) or _plan_table(("ID", "Label", "Model", "Resolved parameters", "Targets"), run_rows), open=True)
         + _plan_disclosure("Outputs and charts", _plan_table(("Chart", "Label", "X", "Y", "Purpose"), chart_rows) + "<div class='approve__note'><b>Chart options</b></div><div class='approve__charts'>%s</div>" % chart_buttons, open=True)
         + _plan_disclosure("Preview", ("<div class='approve__note'><b>%s</b><br>Pseudo-data are deterministic layout demonstrations, not model results.</div>" % _e(pseudo.get("label", "PSEUDO-DATA · demonstration only")) + pseudo_html) if pseudo_html else "No pseudo-data preview has been generated.")
         + "<details class='research-protocol-yaml'><summary>Raw generated protocol YAML · plan v%03d</summary><pre class='research-plan-yaml'>%s</pre><p class='approve__note'>This is a session draft for review and copying. Edit the plan in Conversation; it is never loaded as hidden instructions.</p></details>" % (project.get("plan_version", 1), protocol)

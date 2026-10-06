@@ -256,7 +256,9 @@ def test_research_plan_preview_is_structured_and_keeps_yaml_in_a_disclosure():
     assert "Literature evidence" in out
     assert "Reproduction targets" in out
     assert "Paper concept" in out and "Model input" in out
-    assert "Planned runs" in out and "Resolved parameters" in out
+    # The runs are a conditions sheet and a matrix of what differs, not one parameter dump per run.
+    assert "Conditions and runs" in out and "Runs, only what differs" in out
+    assert "Resolved parameters" not in out
     assert "Validation sources and warnings" in out
     assert "paper_context_difference" in out
     assert "non-blocking" in out
