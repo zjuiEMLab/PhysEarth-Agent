@@ -127,6 +127,22 @@ def _thinking_off():
     return body
 
 
+def _reasoning_effort():
+    """Request body that caps reasoning for an ordinary call, when the deployment asks.
+
+    PHYSEARTH_LLM_REASONING_EFFORT=low|medium|high. Unset leaves the provider's default.
+    A thinking model's hidden reasoning is most of the time a research turn takes: in the
+    recorded runs, each report draft was preceded by 60 to 110 seconds of it.
+    """
+    effort = str(config.get("PHYSEARTH_LLM_REASONING_EFFORT") or "").strip().lower()
+    if effort not in ("low", "medium", "high"):
+        return None
+    if "openrouter.ai" in str(config.llm_api_base() or "").lower():
+        return {"reasoning": {"effort": effort}}
+    # DashScope-style endpoints take a token budget instead of an effort level.
+    return {"thinking_budget": {"low": 2048, "medium": 8192, "high": 32768}[effort]}
+
+
 def _requests_tool_bypass(question):
     """Recognize an explicit request to disable evidence/model tools.
 
@@ -289,6 +305,18 @@ def stream(question, history=None, model=None, session=None, switches=None):
         return
 
     messages = list(held["resume"]["messages"]) if held else _messages(question, history, state)
+    # An approved plan's execution turn starts with the plan and the paper's key statements
+    # in front of the agent, once per plan version, whoever approved it (the Studio, a chat
+    # reply or the evaluation's scripted reviewer).
+    project = session.get("research") or {}
+    if (
+        not held
+        and research.allow_model(session)
+        and project.get("phase") == "approved"
+        and project.get("brief_version") != project.get("plan_version")
+    ):
+        project["brief_version"] = project.get("plan_version")
+        messages.append({"role": "user", "content": research.execution_brief(session)})
     # Resolved through the module rather than bound at import, so a test can substitute
     # the provider client on physearth.agent.completion and have this call see it.
     client = _completion._client()
@@ -365,7 +393,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     stream_options={"include_usage": True},
                     # Qwen3.8 rejects a forced tool_choice in thinking mode with HTTP 400,
                     # and long reasoning truncates a forced research_plan on other models.
-                    extra_body=_thinking_off() if requested_tool else None,
+                    extra_body=_thinking_off() if requested_tool else _reasoning_effort(),
                 )
                 for chunk in chunks:
                     if candidate.feed(chunk) and candidate.content:
@@ -487,6 +515,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     cost_usd=completion.cost_usd,
                     cost_details=completion.cost_details,
                     reasoning_chars=completion.reasoning,
+                    reasoning_tokens=completion.reasoning_tokens,
                     finish_reason=completion.finish_reason,
                     requested_output_tokens=output_tokens,
                 )
@@ -906,6 +935,21 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     yield answer, events, state
                     return
 
+                # A newly proposed plan is in the same position. The review card shows it
+                # in full and the turn ends at the review gate whatever the model writes
+                # next; the call that used to follow spent 50 to 95 seconds on a summary
+                # that the gate then replaced with its own pause message.
+                ready = session.get("research") or {}
+                if (
+                    human_wait
+                    and ready.get("phase") == "plan_review"
+                    and not (ready.get("plan") or {}).get("resource_gate")
+                ):
+                    answer = research.review_guidance(ready)
+                    state["phase"] = "done"
+                    yield answer, events, state
+                    return
+
                 if (
                     name == "run_planned_model"
                     and result["status"] == "terminal_error"
@@ -1189,11 +1233,11 @@ def stream(question, history=None, model=None, session=None, switches=None):
         if session.get("research_required") and project and not research.allow_model(session):
             phase = project.get("phase", "plan_review")
             next_step = {
-                "plan_review": "Click Approve plan, or describe the changes you want in Conversation.",
-                "plan_approved": "Click Generate preview to inspect demonstration data and chart layouts.",
-                "pseudo_preview": "Click one of the named chart options inside Research review; confirming the plan again does not select a chart.",
-                "chart_selected": "Click Approve execution to authorize the registered physical-model run.",
-            }.get(phase, "Use the active control in Research review to continue.")
+                "plan_review": "Reply **approve** to run it, **preview** to check the figure layout first, or describe the changes you want.",
+                "plan_approved": "Reply **preview** to draw the layout from pseudo-data, or **approve** to run.",
+                "pseudo_preview": "Reply **approve** to run the plan with its required figures, or describe what to change.",
+                "chart_selected": "Reply **approve** to run the registered physical models.",
+            }.get(phase, "Reply **approve** to continue, or describe what to change.")
             # The gate exists so a fluent literature paragraph is never mistaken for a
             # reproduced result. But it also caught the turn where the user had just
             # described the changes they wanted: the agent answered in prose, the gate
@@ -1537,7 +1581,13 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 _event(
                     "harness_block",
                     rule=check["rule"],
-                    detail=check.get("reason") or "unresolved markers",
+                    # Every rule but citation_integrity has its reason only in the
+                    # correction it sends back; record that, or a rejected draft leaves no
+                    # trace of why (a whole evaluation report was lost that way).
+                    detail=check.get("reason") or (
+                        "unresolved markers" if check.get("rule") == "citation_integrity"
+                        else str(correction)[:600]
+                    ),
                     unresolved=check.get("unresolved") or [],
                     intervention=review_attempts[check["rule"]],
                 )

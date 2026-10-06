@@ -17,6 +17,9 @@ _DEFAULTS = {
     # do not expose a vision-capable endpoint can opt out with PHYSEARTH_LLM_VISION=0;
     # vector labels and captions are still extracted when available.
     "PHYSEARTH_LLM_VISION": "1",
+    # low | medium | high caps a thinking model's hidden reasoning on ordinary calls.
+    # Empty keeps the provider default. See agent/loop.py:_reasoning_effort.
+    "PHYSEARTH_LLM_REASONING_EFFORT": "",
     "PHYSEARTH_ONLINE": "1",
     "PHYSEARTH_STATE_DIR": "_state",
     # Hard stops on spend. Zero disables one. The defaults sit above the longest complete

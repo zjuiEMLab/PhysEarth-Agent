@@ -446,13 +446,68 @@ function peBoot() {
     }
   }
 
+  /* The trace scrolls in #pe-trace-stream; the .subpanel__scroll inside it does not
+     scroll at all, which is why the trace used to stay where it was. Whether to follow
+     cannot be read off the position after a re-render either: one new card is often
+     taller than any threshold. So the reader's intent is recorded when they scroll --
+     up means "let me read", back to the bottom means "follow again" -- and a new
+     question always starts following. */
+  var traceFollow = true;
+  var traceProgrammatic = false;
+
+  function traceStream() {
+    return document.getElementById("pe-trace-stream");
+  }
+
+  function bindTraceFollow() {
+    var node = traceStream();
+    if (!node || node.dataset.followBound) return;
+    node.dataset.followBound = "1";
+    node.addEventListener("scroll", function () {
+      if (traceProgrammatic) return;
+      traceFollow = node.scrollHeight - node.scrollTop - node.clientHeight < 24;
+    }, { passive: true });
+  }
+
+  function followTrace() {
+    var node = traceStream();
+    if (!node || !traceFollow) return;
+    traceProgrammatic = true;
+    node.scrollTop = node.scrollHeight;
+    requestAnimationFrame(function () { traceProgrammatic = false; });
+  }
+
   function autoScroll() {
     /* The transcript is the left-panel scroll surface. New streamed context and review
        cards should always leave the latest exchange visible; the plan itself is a
        collapsible card, so this does not create a second scrollbar. */
     scrollToEnd(document.getElementById("pe-chat-scroll"), true);
-    scrollToEnd(document.querySelector(".pe-panel--trace .subpanel__scroll"));
+    bindTraceFollow();
+    followTrace();
   }
+
+  /* ---------- the running clock on the trace header ---------- */
+
+  function formatSeconds(total) {
+    total = Math.max(0, Math.round(total));
+    var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    if (h) return h + "h " + m + "m";
+    if (m) return m + "m " + (s < 10 ? "0" : "") + s + "s";
+    return s + "s";
+  }
+
+  function tickClocks() {
+    var clocks = document.querySelectorAll("[data-clock-since]");
+    var now = Date.now() / 1000;
+    for (var i = 0; i < clocks.length; i++) {
+      var since = Number(clocks[i].getAttribute("data-clock-since"));
+      var base = Number(clocks[i].getAttribute("data-clock-base") || 0);
+      if (!isFinite(since) || since <= 0) continue;
+      var text = formatSeconds(base + now - since);
+      if (clocks[i].textContent !== text) clocks[i].textContent = text;
+    }
+  }
+  setInterval(tickClocks, 1000);
 
   /* ---------- clicks: examples, model choice, citation jumps ---------- */
 
@@ -615,7 +670,10 @@ function peBoot() {
   document.addEventListener("click", function (event) {
     var target = event.target.closest ? event.target.closest("button") : null;
     if (!target) return;
-    if (target.id === "pe-send") optimisticSend();
+    if (target.id === "pe-send") {
+      traceFollow = true;
+      optimisticSend();
+    }
     if (target.id === "pe-clear") optimisticClear();
     if (target.id === "pe-approve-yes" || target.id === "pe-approve-all") {
       var card = document.querySelector(".approve--research[data-research-phase]");
@@ -666,7 +724,19 @@ function peBoot() {
   /* ---------- react to every Gradio re-render ---------- */
 
   var pending = null;
-  var observer = new MutationObserver(function () {
+  function clockOnly(mutations) {
+    /* The running clock rewrites its own text every second. That is not a re-render,
+       and treating it as one would pull the transcript to the bottom once a second. */
+    for (var i = 0; i < mutations.length; i++) {
+      var node = mutations[i].target;
+      var element = node.nodeType === 1 ? node : node.parentElement;
+      if (!element || !element.closest || !element.closest("[data-clock-since]")) return false;
+    }
+    return mutations.length > 0;
+  }
+
+  var observer = new MutationObserver(function (mutations) {
+    if (clockOnly(mutations)) return;
     if (pending) return;
     pending = requestAnimationFrame(function () {
       pending = null;
@@ -679,6 +749,7 @@ function peBoot() {
       restoreState(document);
       syncResearchControls();
       autoScroll();
+      tickClocks();
       var running = !!document.querySelector("[data-running]");
       if (running) pendingUntil = 0;
       document.body.classList.toggle(

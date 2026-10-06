@@ -2,57 +2,37 @@
 
 from apps.studio.views.parts import (
     _mapping_text,
-    _plan_cell,
-    _plan_disclosure,
-    _plan_table,
-    plan_sheet_html,
 )
 from apps.studio.views.text import _e
 from physearth.api import research
 
 
 def _revision_changes_html(summary):
+    """What the last revision changed, as sentences; never the raw field values."""
     if not summary:
         return ""
-    groups = []
-    for name, label in (("changed", "Changed"), ("added", "Added"), ("removed", "Removed")):
-        items = summary.get(name) or []
-        if not items:
-            continue
-        rows = []
-        for item in items:
-            if name == "changed":
-                full = "%s → %s" % (
-                    _plan_cell(item.get("from"), 260), _plan_cell(item.get("to"), 260)
-                )
-            else:
-                full = _plan_cell(item.get("to") if name == "added" else item.get("from"), 260)
-            # Lead with the short note; a reviewer who wants the literal values opens the
-            # disclosure. Quoting two 260-character run lists inline buried the point.
-            note = _e(item.get("note") or "").strip()
-            detail = (
-                "<details class='research-plan-change-detail'><summary>values</summary>"
-                "<span>%s</span></details>" % full
-            )
-            rows.append(
-                "<li><b>%s</b><span>%s</span>%s</li>"
-                % (_e(item.get("field", "field")), note or full, detail if note else "")
-            )
-        groups.append(
-            "<div class='research-plan-change-group'><b>%s</b><ul>%s</ul></div>"
-            % (label, "".join(rows))
-        )
-    invalidated = ", ".join(summary.get("invalidated") or []) or "none"
-    preserved = ", ".join(summary.get("preserved") or []) or "none"
+    readable = summary.get("readable")
+    if readable is None:
+        # A summary written before readable diffs existed: name the fields only.
+        readable = [
+            {"kind": kind, "text": str(item.get("field") or "field")}
+            for kind in ("changed", "added", "removed")
+            for item in summary.get(kind) or []
+        ]
+    words = {"added": "Added", "removed": "Removed", "changed": "Changed"}
+    items = "".join(
+        "<li><span class='research-plan-change__kind research-plan-change__kind--%s'>%s</span> %s</li>"
+        % (_e(item["kind"]), words.get(item["kind"], "Changed"), _e(item["text"]))
+        for item in readable
+    )
     return (
         "<section class='research-plan-revision'>"
-        "<div class='research-context__label'>REVISION SUMMARY · v%03d → v%03d</div>"
-        "%s<div class='research-plan-revision__meta'><b>Cleared:</b> %s · <b>Preserved:</b> %s · <b>Next:</b> review plan</div>"
-        "</section>"
+        "<div class='research-context__label'>WHAT CHANGED · v%03d → v%03d</div>"
+        "%s<div class='research-plan-revision__meta'>The layout preview and any figure "
+        "selection were cleared.</div></section>"
         % (
             summary.get("from_version", 0), summary.get("to_version", 0),
-            "".join(groups) or "<p>No physical fields changed.</p>",
-            _e(invalidated), _e(preserved),
+            "<ul>%s</ul>" % items if items else "<p>Nothing a run or figure depends on changed.</p>",
         )
     )
 
@@ -192,147 +172,115 @@ def _execution_steps_html(plan):
     )
 
 
+def _chat_commands_html(phase):
+    """What to type, since a research plan is approved in Conversation, not with a button."""
+    if phase in ("plan_review", "plan_approved"):
+        items = (
+            "<li><code>approve</code> runs the plan as written and draws its required figures.</li>"
+            "<li><code>preview</code> first draws the planned figures from pseudo-data, to check the layout.</li>"
+            "<li>Anything else is a change to the plan, e.g. <i>change the density range to 10-500 kg/m3</i> "
+            "or <i>drop the optional chart</i>. A new version comes back for review.</li>"
+            "<li><code>protocol</code> gives you the generated protocol file, if you need it.</li>"
+        )
+    else:
+        items = (
+            "<li><code>approve</code> runs the registered models and draws the confirmed figures.</li>"
+            "<li>Anything else is a change to the plan, and returns it to review as a new version.</li>"
+        )
+    return (
+        "<div class='chat-commands'><b>Reply in Conversation to continue.</b>"
+        "<ul>%s</ul>Only a message that is just the word acts as a command; "
+        "<i>approve, but ...</i> is read as a change.</div>" % items
+    )
+
+
 def _structured_approval_bar(session, project, research):
+    """The plan as it appears in Conversation: what it is, what to type, and a link.
+
+    The plan itself is a page of its own (views/exports.py). A plan laid out inside the
+    narrow conversation column was too wide to read and too long to scroll past; here it is
+    summarised in a few lines, with the decisions that need the reviewer's attention.
+    """
     plan = project.get("plan") or {}
     phase = project.get("phase", "plan_review")
+    version = int(project.get("plan_version") or 1)
     phase_labels = {
-        "plan_review": "Review and revise the plan",
-        "plan_approved": "Plan approved for preview",
-        "pseudo_preview": "Review pseudo-data layout",
-        "chart_selected": "Review final figure package",
+        "plan_review": "waiting for your review",
+        "plan_approved": "approved for a layout preview",
+        "pseudo_preview": "layout preview ready",
+        "chart_selected": "figures confirmed",
     }
-    phase_label = phase_labels.get(phase, phase)
-    phase_index = {"plan_review": 0, "plan_approved": 1, "pseudo_preview": 2, "chart_selected": 3}.get(phase, 0)
-    flow = "".join(
-        "<span class='research-flow__step%s'>%d. %s</span>"
-        % (" is-current" if index == phase_index else "", index + 1, _e(label))
-        for index, label in enumerate(
-            ("Review plan", "Preview layout", "Confirm figures", "Approve execution", "Run real model")
+    sheet = research.sheet.build(plan)
+    models = "; ".join(
+        "%s%s · %d run%s" % (
+            group["model"], " v%s" % group["version"] if group["version"] else "",
+            len(group["runs"]), "" if len(group["runs"]) == 1 else "s",
         )
-    )
-    guidance = {
-        "plan_review": "Review the method, variables, runs, and acceptance criteria. No physical result is authorized. Approve and run skips the layout preview and runs the plan with its required figures.",
-        "plan_approved": "Only a display-only preview is authorized. No physical model call is authorized.",
-        "pseudo_preview": "Pseudo-data demonstrate layout only. Select the chart package or revise the plan.",
-        "chart_selected": "The selected figure package is ready for formal execution approval.",
-    }.get(phase, "Review the current research decision before continuing.")
-    evidence_rows = [
-        [_plan_cell(item.get("evidence_ref")), _plan_cell(item.get("purpose"), 260)]
-        for item in plan.get("literature_evidence") or [] if isinstance(item, dict)
-    ]
-    target_rows = [
-        [
-            _plan_cell(item.get("id")), _plan_cell("%s:%s" % (item.get("source_type"), item.get("source_id"))),
-            _plan_cell(item.get("target_quantity")), _plan_cell(item.get("status")),
-            _plan_cell(", ".join(item.get("run_ids") or []) or "none"),
-            _plan_cell(", ".join(item.get("chart_ids") or []) or "none"),
-        ]
-        for item in plan.get("reproduction_targets") or [] if isinstance(item, dict)
-    ]
-    model_rows = [
-        [_plan_cell(item.get("model")), _plan_cell(item.get("version")), _plan_cell(item.get("purpose"), 260), _plan_cell(item.get("capability_status"))]
-        for item in plan.get("selected_models") or [] if isinstance(item, dict)
-    ]
-    mapping_rows = [
-        [_plan_cell(item.get("paper_concept")), _plan_cell(item.get("paper_value")), _plan_cell(item.get("model_input")), _plan_cell(item.get("mapped_value")), _plan_cell(item.get("provenance_class"))]
-        for item in plan.get("parameter_mapping") or [] if isinstance(item, dict)
-    ]
-    run_rows = []
-    for run in plan.get("runs") or []:
-        parameters = run.get("resolved_parameters") or run.get("parameters") or {}
-        run_rows.append([
-            _plan_cell(run.get("id")), _plan_cell(run.get("label"), 220), _plan_cell(run.get("model")),
-            _plan_cell(parameters, 520), _plan_cell(", ".join(run.get("target_ids") or []) or "none"),
-        ])
-    chart_rows = [
-        [_plan_cell(item.get("id")), _plan_cell(item.get("label"), 220), _plan_cell(item.get("x")), _plan_cell(", ".join(item.get("ys") or [item.get("y") or ""])), _plan_cell(item.get("purpose"))]
-        for item in plan.get("charts") or [] if isinstance(item, dict)
-    ]
-    condition_rows = [
-        [_e("Paper context (non-blocking)"), _plan_cell(plan.get("paper_conditions") or {})],
-        [_e("Paper context provenance"), _plan_cell(plan.get("condition_provenance") or {})],
-        [_e("User/model parameters"), _plan_cell({key: value for key, value in (plan.get("parameters") or {}).items() if key not in (plan.get("paper_conditions") or {})})],
-        [_e("Assumptions"), _plan_cell(plan.get("assumptions") or [])],
-        [_e("Limitations"), _plan_cell(plan.get("limitations") or [])],
-        [_e("Success criteria"), _plan_cell(plan.get("success_criteria") or [])],
-    ]
-    warning_rows = [
-        [
-            _plan_cell(item.get("code") or "warning"),
-            _plan_cell(item.get("field")),
-            _plan_cell(item.get("expected")),
-            _plan_cell(item.get("actual")),
-            _plan_cell("non-blocking" if item.get("blocking") is False else "blocking"),
-        ]
-        for item in plan.get("validation_warnings") or []
-        if isinstance(item, dict)
-    ]
-    chart_buttons = "".join(
-        "<button type='button' class='approve__chart%s' data-chart-id='%s'%s data-required='%s'>"
-        "<b>[%s]</b> %s <span>(%s · %s: %s → %s%s)</span></button>"
-        % (
-            " is-selected" if item.get("id") in set(project.get("selected_charts") or []) else "",
-            _e(item.get("id")), " disabled" if phase != "pseudo_preview" else "",
-            "true" if item.get("required", True) else "false", _e(item.get("id")), _e(item.get("label")),
-            _e(item.get("purpose", "result")), _e(item.get("kind")), _e(item.get("x")),
-            _e(", ".join(item.get("ys") or [item.get("y") or ""])),
-            " · required" if item.get("required", True) else " · optional",
-        )
-        for item in plan.get("charts") or []
+        for group in sheet["groups"]
+    ) or "no runs"
+    charts = [c for c in plan.get("charts") or [] if isinstance(c, dict)]
+    figures = "; ".join(
+        "%s%s" % (c.get("label") or c.get("id"), "" if c.get("required", True) else " (optional)")
+        for c in charts
     ) or "none"
-    steps_html = _execution_steps_html(plan)
-    pseudo = project.get("pseudo") or {}
-    pseudo_html = ""
-    if pseudo.get("points"):
-        keys = list(pseudo["points"][0])
-        pseudo_html = _plan_table(
-            keys,
-            [[_plan_cell(row.get(key)) for key in keys] for row in pseudo["points"][:8]],
-            css="research-preview",
-        )
-    summary = plan.get("revision_summary") or project.get("revision_summary")
-    protocol = _e(research.protocol_yaml(project))
-    sections = (
-        _plan_disclosure(
-            "Question and hypothesis",
-            "<div class='research-plan-prose'><b>Question:</b> %s</div><div class='research-plan-prose'><b>Hypothesis:</b> %s</div>"
-            % (_e(plan.get("question", "")), _e(plan.get("hypothesis", ""))),
-            open=True,
-        )
-        + _plan_disclosure("Literature evidence", _plan_table(("Evidence", "Purpose"), evidence_rows), open=True)
-        + _plan_disclosure("Reproduction targets", _plan_table(("Target", "Source", "Quantity", "Status", "Runs", "Charts"), target_rows), open=True)
-        + _plan_disclosure("Models and paper-to-model mappings", _plan_table(("Model", "Version", "Purpose", "Status"), model_rows) + _plan_table(("Paper concept", "Paper value", "Model input", "Mapped value", "Provenance"), mapping_rows))
-        + _plan_disclosure(
-            "Validation sources and warnings",
-            "<div class='approve__note'>Registered model declarations and opened model instructions/user guidelines provide hard validity checks. Paper conditions are comparison context only.</div>"
-            + _plan_table(("Field", "Value"), condition_rows)
-            + _plan_table(("Code", "Field", "Paper context", "Actual", "Status"), warning_rows),
-        )
-        + _plan_disclosure("Conditions and runs", plan_sheet_html(plan) or _plan_table(("ID", "Label", "Model", "Resolved parameters", "Targets"), run_rows), open=True)
-        + _plan_disclosure("Outputs and charts", _plan_table(("Chart", "Label", "X", "Y", "Purpose"), chart_rows) + "<div class='approve__note'><b>Chart options</b></div><div class='approve__charts'>%s</div>" % chart_buttons, open=True)
-        + _plan_disclosure("Preview", ("<div class='approve__note'><b>%s</b><br>Pseudo-data are deterministic layout demonstrations, not model results.</div>" % _e(pseudo.get("label", "PSEUDO-DATA · demonstration only")) + pseudo_html) if pseudo_html else "No pseudo-data preview has been generated.")
-        + "<details class='research-protocol-yaml'><summary>Raw generated protocol YAML · plan v%03d</summary><pre class='research-plan-yaml'>%s</pre><p class='approve__note'>This is a session draft for review and copying. Edit the plan in Conversation; it is never loaded as hidden instructions.</p></details>" % (project.get("plan_version", 1), protocol)
-    )
-    details_open = " open" if project.get("plan_card_expanded", True) else ""
-    collapsed_marker = "false" if details_open else "true"
-    return (
-        "<details class='research-plan-details' data-key='research-plan' data-collapsed='%s'%s>"
-        "<summary>Research plan · v%03d · %s</summary>"
-        "<div class='approve approve--research' data-research-phase='%s' data-selected-count='%d' data-run-count='%d' data-chart-count='%d' data-validation='evidence %d · mappings %d'>"
-        "<div class='research-plan-summary'>%d runs · %d charts · evidence %d · mappings %d</div>"
-        "<div class='approve__head'>Research review · <b>plan v%03d</b></div>"
-        "<div class='research-plan-flow'><b>Research plan flow</b><span>%s</span></div>"
-        "<div class='approve__note approve__note--guide'><b>Current stage:</b> %s. %s "
-        "<b>How to edit this plan:</b> describe the change in Conversation; the agent will create a new version. "
-        "For a figure or preview, use ‘Revise plan in chat’.</div>"
-        "%s%s<div class='research-plan-steps'><b>Execution steps</b>%s</div></div></details>"
+    decisions = sheet["decisions"]
+    decide_html = (
+        "<div class='research-card__decide'><b>%d value%s chosen without a source in the paper:</b> %s. "
+        "Check them in the plan.</div>"
         % (
-            collapsed_marker, details_open,
-            project.get("plan_version", 1), _e(phase_label), _e(phase), len(project.get("selected_charts") or []),
-            len(plan.get("runs") or []), len(plan.get("charts") or []), len(plan.get("literature_evidence") or []),
-            len(plan.get("parameter_mapping") or []), len(plan.get("runs") or []), len(plan.get("charts") or []),
-            len(plan.get("literature_evidence") or []), len(plan.get("parameter_mapping") or []), project.get("plan_version", 1), flow, _e(phase_label), _e(guidance),
-            _revision_changes_html(summary), sections, steps_html,
+            len(decisions), "" if len(decisions) == 1 else "s",
+            _e(", ".join(
+                "%s = %s" % (d.get("label") or d["name"], d.get("shown") or research.sheet.fmt(d["value"]))
+                for d in decisions[:6]
+            ) + (" and %d more" % (len(decisions) - 6) if len(decisions) > 6 else "")),
+        )
+        if decisions else ""
+    )
+    export = project.get("plan_export") or {}
+    links = (
+        "<div class='plan-downloads'><a href='%s' target='_blank' rel='noopener'>Open the plan</a>"
+        "<a href='%s' download='research-plan-v%03d.html'>Download (HTML)</a></div>"
+        % (_e(export["url"]), _e(export["url"]), version)
+        if export.get("url") and export.get("version") == version
+        else ""
+    )
+    chart_buttons = ""
+    if phase == "pseudo_preview":
+        chart_buttons = (
+            "<div class='approve__note'><b>%s.</b> The layout preview is in Evidence → Figures. "
+            "Pseudo-data are deterministic layout demonstrations, not model results.</div>"
+            % _e((project.get("pseudo") or {}).get("label") or "PSEUDO-DATA · demonstration only")
+        )
+        selected = set(project.get("selected_charts") or [])
+        chart_buttons += (
+            "<div class='approve__note'><b>Figures to run</b> (required ones are always included):</div>"
+            "<div class='approve__charts'>%s</div>"
+            % "".join(
+                "<button type='button' class='approve__chart%s' data-chart-id='%s' data-required='%s'>"
+                "%s <span>(%s against %s%s)</span></button>"
+                % (
+                    " is-selected" if c.get("id") in selected else "", _e(c.get("id")),
+                    "true" if c.get("required", True) else "false", _e(c.get("label") or c.get("id")),
+                    _e(", ".join(c.get("ys") or [c.get("y") or ""])), _e(c.get("x")),
+                    "" if c.get("required", True) else ", optional",
+                )
+                for c in charts
+            )
+        )
+    return (
+        "<div class='research-plan-details research-card' data-key='research-plan'>"
+        "<div class='approve approve--research' data-research-phase='%s' data-selected-count='%d' "
+        "data-run-count='%d' data-chart-count='%d'>"
+        "<div class='approve__head'>Research plan <b>v%03d</b> · %s</div>"
+        "<div class='research-card__facts'><div><b>Question.</b> %s</div>"
+        "<div><b>Runs.</b> %s</div><div><b>Figures.</b> %s</div></div>"
+        "%s%s%s%s%s</div></div>"
+        % (
+            _e(phase), len(project.get("selected_charts") or []), len(plan.get("runs") or []), len(charts),
+            version, _e(phase_labels.get(phase, phase)),
+            _e(plan.get("question") or project.get("question") or ""), _e(models), _e(figures),
+            "",  # what changed is the reply above the card, and on the plan page
+            decide_html, _chat_commands_html(phase), links, chart_buttons,
         )
     )
 

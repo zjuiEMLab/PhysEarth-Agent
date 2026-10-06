@@ -28,7 +28,13 @@ BADGES = {
     "research_complete": ("badge--passed", "RESEARCH COMPLETE", "step-card--passed"),
     "tool_bypass_requested": ("badge--warn", "TOOLS DISABLED", "step-card--warn"),
     "tool_bypass_blocked": ("badge--block", "SAFE REFUSAL", "step-card--block"),
+    "research_mode_selected": ("badge--ok", "RESEARCH MODE", "step-card--pass"),
 }
+
+
+def _badge(kind):
+    """The badge for an event kind. An unlisted kind keeps its name, as words that wrap."""
+    return BADGES.get(kind, ("badge--mute", kind.replace("_", " ").upper(), "step-card--muted"))
 
 APPROVAL_WORDS = {
     "approve": "You approved this call.",
@@ -55,8 +61,12 @@ def _event_body(event, index):
                 "",
             )
         ]
+        if event.get("reasoning_tokens"):
+            rows.append(("thinking", "%s tokens" % event["reasoning_tokens"], ""))
         if event.get("reasoning_chars"):
             rows.append(("reasoning", "%d characters, not shown" % event["reasoning_chars"], ""))
+        if event.get("first_token_s") is not None:
+            rows.append(("first token", "%.1fs after the request" % float(event["first_token_s"]), ""))
         return _kv(rows)
 
     if kind == "tool_call":
@@ -183,9 +193,7 @@ def _event_body(event, index):
 
 
 def _event_card(event, index):
-    badge_class, badge_text, card_class = BADGES.get(
-        event["kind"], ("badge--mute", event["kind"].upper(), "step-card--muted")
-    )
+    badge_class, badge_text, card_class = _badge(event["kind"])
     icon = ""
     if event["kind"] == "harness_block":
         icon = _svg("block", "")
@@ -243,10 +251,15 @@ def _step_line(event):
     """One routine step, in one line."""
     kind = event["kind"]
     if kind == "model_call":
-        return "%s prompt, %s completion tokens" % (
+        line = "%s prompt, %s completion tokens" % (
             event.get("prompt_tokens") or "?",
             event.get("completion_tokens") or "?",
         )
+        if event.get("reasoning_tokens"):
+            line += " (%s thinking)" % event["reasoning_tokens"]
+        if event.get("first_token_s") is not None and event.get("elapsed_s"):
+            line += " · first token at %.0fs" % float(event["first_token_s"])
+        return line
     return str(event.get("summary") or event.get("detail") or "").strip()
 
 
@@ -267,8 +280,12 @@ def _routine_detail(event, index):
                 "",
             )
         ]
+        if event.get("reasoning_tokens"):
+            rows.append(("thinking", "%s tokens" % event["reasoning_tokens"], ""))
         if event.get("reasoning_chars"):
             rows.append(("reasoning", "%d characters, not shown" % event["reasoning_chars"], ""))
+        if event.get("first_token_s") is not None:
+            rows.append(("first token", "%.1fs after the request" % float(event["first_token_s"]), ""))
         return _kv(rows)
 
     if kind == "tool_call":
@@ -307,9 +324,7 @@ def _routine_detail(event, index):
 
 def _step_row(event, index):
     """A routine step as a single row, with its detail behind a disclosure."""
-    badge_class, badge_text, _card = BADGES.get(
-        event["kind"], ("badge--mute", event["kind"].upper(), "")
-    )
+    badge_class, badge_text, _card = _badge(event["kind"])
     row_class = "step-card--row-model" if event["kind"] == "model_call" else ""
     name = _mono(event.get("name") or event.get("rule") or "")
     right = ""
@@ -340,9 +355,7 @@ def _step_group(events, first_index):
     """Consecutive steps of one kind, as a counted row that opens to the steps."""
     if len(events) == 1:
         return _step_row(events[0], first_index)
-    badge_class, badge_text, _card = BADGES.get(
-        events[0]["kind"], ("badge--mute", events[0]["kind"].upper(), "")
-    )
+    badge_class, badge_text, _card = _badge(events[0]["kind"])
     named = [str(e.get("name") or e.get("rule") or "").strip() for e in events]
     trail = " → ".join(n for n in named if n) or "%d steps" % len(events)
     inner = "".join(
@@ -384,7 +397,77 @@ def _grouped(events):
     return "".join(blocks)
 
 
-def _trace_metrics(state):
+def _seconds(value):
+    """A duration the way a person reads it: 48s, 5m 18s, 1h 04m."""
+    total = max(0, int(round(float(value or 0))))
+    hours, rest = divmod(total, 3600)
+    minutes, seconds = divmod(rest, 60)
+    if hours:
+        return "%dh %02dm" % (hours, minutes)
+    if minutes:
+        return "%dm %02ds" % (minutes, seconds)
+    return "%ds" % seconds
+
+
+def turn_timing(events):
+    """Where this question's time went, from the trace itself.
+
+    "Before first token" is the part of the model time spent waiting for the first
+    streamed character. With a thinking model that hides its reasoning, it is the
+    reasoning, and it is usually most of the wait.
+    """
+    calls = [e for e in events or () if e.get("kind") == "model_call"]
+    return {
+        "model_s": sum(float(e.get("elapsed_s") or 0) for e in calls),
+        "first_token_s": sum(float(e.get("first_token_s") or 0) for e in calls),
+        "model_calls": len(calls),
+        "output_tokens": sum(int(e.get("completion_tokens") or 0) for e in calls),
+        "tool_s": sum(
+            float(e.get("elapsed_s") or 0) for e in events or () if e.get("kind") == "tool_call"
+        ),
+    }
+
+
+def _clock(seconds, since=None, base=0.0):
+    """A duration, or a clock the page keeps running from `since` (epoch seconds)."""
+    if since:
+        return "<b data-clock-since='%.3f' data-clock-base='%.3f'>%s</b>" % (
+            since, base, _e(_seconds(base)),
+        )
+    return "<b>%s</b>" % _e(_seconds(seconds))
+
+
+def _timing_html(session, events, running):
+    clock = session.get("turn_clock") or {}
+    started = clock.get("started_at")
+    if not started:
+        return ""
+    totals = session.get("timing_totals") or {}
+    timing = turn_timing(events)
+    if running:
+        question = _clock(0, since=started)
+        overall = _clock(0, since=started, base=float(totals.get("wall_s") or 0))
+    else:
+        wall = float(clock.get("finished_at") or started) - float(started)
+        question = _clock(wall)
+        overall = _clock(float(totals.get("wall_s") or 0))
+    items = [
+        ("this question", question),
+        (
+            "model · %d call%s" % (timing["model_calls"], "" if timing["model_calls"] == 1 else "s"),
+            _clock(timing["model_s"]),
+        ),
+        ("before first token", _clock(timing["first_token_s"])),
+        ("tools and model runs", _clock(timing["tool_s"])),
+        ("session, agent time", overall),
+    ]
+    return "<div class='trace-timing'>%s</div>" % "".join(
+        "<div class='trace-timing__item'><span>%s</span>%s</div>" % (_e(label), value)
+        for label, value in items
+    )
+
+
+def _trace_metrics(state, events=None, running=False):
     used, cap = budget.used()
     session = state.get("session") or state
     turns = session.get("turns", 0)
@@ -415,19 +498,41 @@ def _trace_metrics(state):
             "<span class='badge badge--src'>%d section%s read</span>" % (len(session.get("sections_read") or ()), "" if len(session.get("sections_read") or ()) == 1 else "s"),
         ]
     )
-    return "<div class='trace-metrics'><div class='meters'>%s</div><div class='counters'>%s</div></div>" % (meters, counters)
+    return "<div class='trace-metrics'>%s<div class='meters'>%s</div><div class='counters'>%s</div></div>" % (
+        _timing_html(session, events, running), meters, counters,
+    )
 
 
-def trace_metrics(state):
-    return _trace_metrics(state)
+def trace_metrics(state, events=None, running=False):
+    return _trace_metrics(state, events, running)
+
+
+def _header_clock(state, running):
+    session = state.get("session") or {}
+    clock = session.get("turn_clock") or {}
+    started = clock.get("started_at")
+    if not started:
+        return ""
+    if running:
+        return "<span class='trace-clock' title='time on this question'>%s</span>" % _clock(
+            0, since=started
+        )
+    if clock.get("finished_at"):
+        return "<span class='trace-clock' title='time on the last question'>%s</span>" % _clock(
+            float(clock["finished_at"]) - float(started)
+        )
+    return ""
 
 
 def trace(events, state, running=False, include_footer=True):
     head = (
         "<div class='subpanel' style='padding-bottom:0'><div class='sec-head'>%s"
         "<span class='sec-title'>Run trace</span>"
-        "<span class='sec-count'>%d event%s</span></div></div>"
-        % (_svg("trace", "sec-icon"), len(events), "" if len(events) == 1 else "s")
+        "<span class='sec-count'>%d event%s</span>%s</div></div>"
+        % (
+            _svg("trace", "sec-icon"), len(events), "" if len(events) == 1 else "s",
+            _header_clock(state, running),
+        )
     )
     if not events and not running:
         body = (
@@ -450,5 +555,5 @@ def trace(events, state, running=False, include_footer=True):
                 )
             )
 
-    footer = _trace_metrics(state) if include_footer else ""
+    footer = _trace_metrics(state, events, running) if include_footer else ""
     return "<div class='trace-layout trace-layout--events'>%s<div class='subpanel grow'><div class='subpanel__scroll'>%s</div></div>%s</div>" % (head, body, footer)

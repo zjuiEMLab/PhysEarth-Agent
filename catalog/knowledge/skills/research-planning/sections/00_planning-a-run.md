@@ -56,8 +56,11 @@ itself establish numeric agreement or a correct parameter value.
 
 A reproduction plan is refused until these are in the session, in this order.
 
-1. **Evidence.** Find the paper with list_literature or the session paper, read the relevant
-   sections with read_literature, and open every source figure that is a target with
+1. **Evidence.** Find the paper with list_literature or the session paper and read it once
+   with read_paper_digest: it returns the paper's key statements, each with its section, and
+   opens every section for citation. Use read_literature afterwards only to check a detail.
+   Give each literature_evidence item in the plan a `finding` taken from those statements.
+   Open every source figure that is a target with
    read_paper_figure. When the asset is available, inspect it with inspect_paper_figure to
    record axes, units, legend, panels, annotations and qualitative trends. If it is
    unavailable, record the target as partial or unavailable with the reason; do not invent a

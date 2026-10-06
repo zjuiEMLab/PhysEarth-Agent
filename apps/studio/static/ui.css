@@ -5218,3 +5218,183 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 .src--default { background: #ebeae4; color: #4a4944; }
 .src--assumed, .src--mixed { background: #fbe9c7; color: #7a4a05; }
 .src--guessed, .src--unlabelled { background: #f8d9d9; color: #8a2020; }
+
+/* ---- Run trace: a card head wraps instead of overlapping ---------------------
+   A badge has a fixed height and does not wrap, so in a narrow trace a long label
+   ran out of its pill and under the rule name beside it. The badge keeps its own
+   width; the name takes what is left and breaks anywhere; the row wraps. */
+.step-card__head {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.step-card__head > .badge {
+  flex: none;
+  max-width: 100%;
+}
+
+.step-card__head > .mono {
+  flex: 1 1 14em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ---- Run trace: the header stays put, like Conversation's ------------------- */
+#pe-app #pe-panel-trace .trace-layout > .subpanel:first-child {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: color-mix(in srgb, var(--paper) 96%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px !important;
+}
+
+#pe-app #pe-panel-trace .trace-layout > .subpanel:first-child .sec-head {
+  margin-bottom: 0;
+}
+
+.trace-clock {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- Time spent, under the meters ------------------------------------------ */
+.trace-timing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-mute);
+}
+
+.trace-timing__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.trace-timing__item b {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Research plan in Conversation: never wider than the panel --------------
+   The card sits in a flex column whose children default to min-width: auto, so a
+   wide table pushed the whole card past the panel instead of scrolling inside its
+   own wrapper. Every level down to the table wrappers may now shrink. */
+#pe-app #pe-chat-scroll .research-context,
+#pe-app #pe-chat-scroll .research-plan-details,
+#pe-app #pe-chat-scroll .approve--research,
+#pe-app #pe-chat-scroll .research-plan-section,
+#pe-app #pe-chat-scroll .research-plan-section__body,
+#pe-app #pe-chat-scroll .plan-sheet,
+#pe-app #pe-chat-scroll .plan-sheet__group {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#pe-app #pe-chat-scroll .plan-sheet-table-wrap,
+#pe-app #pe-chat-scroll .research-plan-table-wrap,
+#pe-app #pe-chat-scroll .research-preview-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+#pe-app #pe-chat-scroll .plan-sheet-table td,
+#pe-app #pe-chat-scroll .plan-sheet-table th {
+  overflow-wrap: anywhere;
+}
+
+/* The approval buttons belong to the single-run gate. A research plan is approved by
+   typing in Conversation, so its card shows guidance and no buttons. */
+#pe-app #pe-panel-chat #pe-chat-scroll #pe-approve:has(.approve.approve--research) > .approve__row {
+  display: none !important;
+}
+
+.plan-downloads,
+.report-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.plan-downloads a,
+.report-downloads a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.plan-downloads a:hover,
+.report-downloads a:hover {
+  border-color: var(--clay);
+  color: var(--clay);
+}
+
+.chat-commands {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--clay) 45%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--clay-wash) 55%, var(--paper));
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.chat-commands ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.chat-commands code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+/* Markdown pipe tables in answers. */
+.md-table-wrap { max-width: 100%; overflow-x: auto; margin: 8px 0 12px; }
+.md-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.md-table th, .md-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.md-table th { color: var(--ink-soft); font-weight: 700; }
+.plan-sheet__about { font-size: 11.5px; color: var(--ink-mute, #6b6a65); line-height: 1.35; margin-top: 2px; }
+.plan-sheet__purpose { font-size: 12.5px; color: var(--ink-soft, #4a4944); margin: -4px 0 6px; }
+
+/* The plan card in Conversation: a summary and what to type; the plan is its own page. */
+.research-card { border-top: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 96%, var(--clay-wash)); }
+.research-card > .approve { margin: 0; padding: 12px; }
+.research-card__facts { display: grid; gap: 4px; font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); margin: 6px 0 4px; }
+.research-card__facts b { color: var(--ink); }
+.research-card__decide { margin: 8px 0 0; padding: 8px 10px; border: 1px solid #e0b25c; background: #fbf3df; color: #3d2c08; border-radius: 8px; font-size: 12.5px; line-height: 1.5; }
+.research-plan-revision ul { margin: 6px 0 0; padding-left: 0; list-style: none; }
+.research-plan-revision li { font-size: 12.5px; line-height: 1.5; margin: 3px 0; }
+.research-plan-change__kind { display: inline-block; min-width: 62px; font: 700 10.5px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: .04em; color: var(--ink-mute); }
+.research-plan-change__kind--added { color: var(--ok); }
+.research-plan-change__kind--removed { color: #a33a2a; }
+.plan-sheet-table td, .plan-sheet-table th { overflow-wrap: normal; word-break: normal; }

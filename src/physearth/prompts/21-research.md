@@ -35,7 +35,9 @@ once with run_planned_model, then render every selected chart and run its render
 plot_planned_chart. The render check only confirms the plotted data are legible; it is not a
 visual comparison with the source figure.
 
-Before writing the final report, read the research-reporting guideline and follow it. Write
+Read a paper you plan from once, with read_paper_digest; open a section with read_literature
+only to check a detail. Before writing the final report, read the research-reporting
+guideline and follow it. Write
 concise reader-facing research-results and conclusion prose: begin with the answer supported
 by the generated figure, then add result-backed evidence, guessed or assumed parameters,
 comparison, and limitations. Apply evidence checks silently; do not expose internal headings

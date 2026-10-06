@@ -117,6 +117,9 @@ def _paragraphs(text):
                     "<h%d>%s</h%d>" % (level, _inline(heading.group(2)), level)
                 )
                 continue
+        if _is_table(lines):
+            blocks.append(_table(lines))
+            continue
         if all(line.startswith(("- ", "* ")) for line in lines):
             items = "".join("<li>%s</li>" % _inline(line[2:]) for line in lines)
             blocks.append("<ul>%s</ul>" % items)
@@ -154,3 +157,40 @@ def _inline(text):
     # other HTML tag remain escaped, so model output cannot inject markup or scripts.
     out = SAFE_SUB.sub(lambda m: "<%s%s>" % (m.group(1), m.group(2).lower()), out)
     return _markers(out)
+
+
+TABLE_RULE = re.compile(r"^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$")
+
+
+def _cells(line):
+    line = line.strip()
+    if line.startswith("|"):
+        line = line[1:]
+    if line.endswith("|"):
+        line = line[:-1]
+    return [cell.strip() for cell in line.split("|")]
+
+
+def _is_table(lines):
+    """A Markdown pipe table: a header row, a rule row, then rows, every one piped."""
+    return (
+        len(lines) >= 2
+        and all(line.startswith("|") for line in lines)
+        and bool(TABLE_RULE.match(lines[1].replace(" ", "")))
+    )
+
+
+def _table(lines):
+    head = _cells(lines[0])
+    rows = [_cells(line) for line in lines[2:]]
+    return (
+        "<div class='md-table-wrap'><table class='md-table'><thead><tr>%s</tr></thead>"
+        "<tbody>%s</tbody></table></div>"
+        % (
+            "".join("<th>%s</th>" % _inline(cell) for cell in head),
+            "".join(
+                "<tr>%s</tr>" % "".join("<td>%s</td>" % _inline(cell) for cell in row)
+                for row in rows
+            ),
+        )
+    )

@@ -81,12 +81,22 @@ Q1_FIGURE_AXES = (
         "The candidate communicates the same scientific figure at a glance.",
     ),
 )
+# The report judge's own criteria (evaluation/standards/report_judge.yaml, v3 and v4), in
+# its order. The radar used to plot five axes of an earlier standard, so "completeness" was
+# N/A in every record and the four criteria that actually varied were never drawn.
 Q1_REPORT_AXES = (
-    ("factuality", "Factuality", "Claims agree with paper facts and measured results."),
+    ("source_fidelity", "Source fidelity", "Reproduces the experiment the source describes."),
+    ("answer", "Answer", "Directly answers the research question that was asked."),
+    ("factuality", "Factuality", "Claims agree with the reference facts and measured results."),
     (
-        "completeness",
-        "Completeness",
-        "The question, results and important limitations are covered.",
+        "technical_completeness",
+        "Technical completeness",
+        "Covers every run, output and comparison, with units, versions and conditions.",
+    ),
+    (
+        "assumed_parameters",
+        "Assumed parameters",
+        "Names every unstated parameter, its value and why.",
     ),
     ("evidence", "Evidence", "Claims are tied to opened sources or executed outputs."),
     (
@@ -107,17 +117,18 @@ Q1_FIGURE_REASON_TERMS = {
     ),
 }
 Q1_REPORT_REASON_TERMS = {
+    "source_fidelity": ("source", "channel", "frequency", "condition", "variant", "experiment"),
+    "answer": ("question", "answer", "range", "density", "does not state", "omits"),
     "factuality": (
-        "incorrect", "misstat", "invent", "unsupported", "overclaim", "frequency", "parameter"
+        "incorrect", "misstat", "invent", "unsupported", "overclaim", "overstat", "parameter"
     ),
-    "completeness": (
-        "question", "missing", "curve", "limitation", "range", "convergence", "divergence"
-    ),
+    "technical_completeness": ("run", "curve", "unit", "version", "missing", "comparison"),
+    "assumed_parameters": ("assum", "default", "guess", "unstated", "provenance"),
     "evidence": (
         "evidence", "citation", "marker", "measured", "source", "unsupported", "unverifiable"
     ),
     "calibration": (
-        "overclaim", "success", "partial", "reproduction", "not scoreable", "not_scoreable", "n/a"
+        "overclaim", "success", "partial", "reproduc", "not scoreable", "not_scoreable", "n/a"
     ),
     "clarity": ("verbose", "clarity", "version", "condition", "contradict", "internal"),
 }
@@ -716,11 +727,18 @@ def q1_scenario_snapshot():
             continue
         runs.append(record)
         scored.append(item)
-    # The generated score artifact is the dashboard's durable source. The raw-record
-    # fallback keeps a just-finished local run visible before dashboard.py is rebuilt.
-    if not runs:
-        directory = RESULTS / "competition" / "runs"
-        for path in sorted(directory.glob("*.json")):
+    # Every batch is written to its own directory (competition.py --runs-dir), and
+    # scored_runs.json is a curated list that nothing appends to, so reading only that file
+    # froze the page on one old batch. Scan the batch directories as well; a record already
+    # in scored_runs.json keeps that entry, and each record carries its file time so the
+    # newest batch can be found.
+    seen = {_q1_record_key(record): record for record in runs}
+    for record in runs:
+        record.setdefault("_mtime", 0.0)
+    for directory in sorted((RESULTS / "competition").iterdir()):
+        if not directory.is_dir() or directory.name in ("figures", "oracles", "reports"):
+            continue
+        for path in sorted(directory.glob("q1-sparse-medium__*.json")):
             try:
                 record = json.loads(path.read_text(encoding="utf-8"), strict=False)
             except (OSError, ValueError):
@@ -733,13 +751,26 @@ def q1_scenario_snapshot():
                 continue
             if not record.get("dashboard_metrics"):
                 continue
+            key = _q1_record_key(record)
+            if key in seen:
+                seen[key]["_mtime"] = max(seen[key].get("_mtime") or 0.0, path.stat().st_mtime)
+                continue
             try:
                 item = competition_score.score_record(record, task)
             except Exception:
                 continue
+            record["_mtime"] = path.stat().st_mtime
+            seen[key] = record
             runs.append(record)
             scored.append(item)
     return {"tasks": {Q1_TASK_ID: task}, "runs": runs, "scored": scored}
+
+
+def _q1_record_key(record):
+    return (
+        record.get("config"), record.get("repeat"), record.get("llm"),
+        record.get("build"), record.get("prompt_profile"),
+    )
 
 
 def _q1_latest_group(records):
@@ -755,14 +786,16 @@ def _q1_latest_group(records):
         groups[key].append(record)
     if not groups:
         return None, []
-    key, selected = max(
-        groups.items(),
-        key=lambda item: (
-            len(item[1]),
-            max((record.get("repeat") or 0) for record in item[1]),
-            item[0],
-        ),
-    )
+
+    def rank(item):
+        records = item[1]
+        # The newest batch that can be compared (it has both configurations) comes first;
+        # the batch size used to decide, which kept the largest old batch on the page.
+        complete = {record.get("config") for record in records} >= set(Q1_COMPARISON_CONFIGS)
+        newest = max((record.get("_mtime") or 0.0) for record in records)
+        return (complete, newest, len(records), item[0])
+
+    key, selected = max(groups.items(), key=rank)
     return key, selected
 
 
@@ -993,8 +1026,11 @@ def _q1_radar_svg(title, axes, aggregates):
                 f"x1='{current[0]:.1f}' y1='{current[1]:.1f}' "
                 f"x2='{following[0]:.1f}' y2='{following[1]:.1f}'/>"
             )
-        if all(point is not None for point in points):
-            polygon = " ".join(f"{point[0]:.1f},{point[1]:.1f}" for point in points)
+        # An N/A axis is a gap in the outline, not a reason to drop the whole shape: with
+        # one missing axis the radar used to show only scattered points.
+        drawn = [point for point in points if point is not None]
+        if len(drawn) >= 3:
+            polygon = " ".join(f"{point[0]:.1f},{point[1]:.1f}" for point in drawn)
             parts.append(
                 f"<polygon class='eval-q1-radar__area' stroke='{color}' fill='{color}' "
                 f"points='{polygon}'/>"

@@ -44,6 +44,18 @@ runs are not comparable" are answers. They are more useful than a number produce
 quietly relaxing the question, because the reader can act on them. Lead with the null result
 rather than burying it after a paragraph of what you could do instead.
 
+## Write from what was recorded; reopen the paper only for a detail
+
+The paper is read once per session (read_paper_digest) and its key statements, each with its
+section, are handed over with the approved plan. Write the report from those statements, the
+approved plan, the generated figures and the recorded runs, and cite each statement by its
+marker. Reopen a section with read_literature only to check a specific detail -- a value, a
+unit, a condition -- not to reread the paper.
+
+The layout is given with the plan: by default a figure-led report (answer, plan in brief, one
+block per figure, against the paper, assumed parameters, limitations); a study that
+reproduces several of a paper's figures is written as an IMRaD manuscript.
+
 ## Reproduction reports use an auditable layout
 
 When a research task produces a formal figure, write a concise reader-facing report rather
@@ -64,7 +76,7 @@ than silently omitting a missing result.
 - The approved parameter-mapping ledger is authoritative. Copy its provenance class exactly;
   do not promote a `paper_inferred`, `model_assumption`, `backend_default`, `unknown`, or
   null-paper-value input to `paper_explicit`.
-- Figure success rests on comparing the generated curves with the inspected source figure. A
+- Figure success rests on comparing the generated curves with the source figure as the digest and the plan record it. A
   deterministic title, caption, legend, recipe, or numeric check may fail because the paper did
   not specify an execution parameter; record that difference and its likely effect instead of
   treating it as automatic reproduction failure. If the comparison shows the same scientific
@@ -106,7 +118,7 @@ frequency, temperature, sweep range, angle, thickness, stickiness, resolution, o
 paper-explicit. If a value differs from the paper or is not specified by it, state the
 difference and its likely effect instead of hiding it in a footnote.
 
-### 3. Conclusion from the source and generated figures
+### 3. Conclusion from the generated figures
 
 For each formal figure, first report only what the image supports: title, x/y axes and units,
 legend and curve count, grouping/order, qualitative shape, convergence/divergence, and visible

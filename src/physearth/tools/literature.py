@@ -295,11 +295,11 @@ def research_capability_check(
             )
         summary = (
             "Capability check by reproduction target\n\n%s\n\n"
-            "Unified summary\nSupported: %s\nUnavailable: %s\nNot comparable: %s\n"
-            "Outputs no registered model declares: %s"
+            "Unified summary\nResolved names: %s\nSupported: %s\nUnavailable: %s\n"
+            "Not comparable: %s\nOutputs no registered model declares: %s"
             % (
-                "\n\n".join(target_sections), supported_text, unavailable_text,
-                incomparable_text, unavailable_outputs_text,
+                "\n\n".join(target_sections), resolved_text, supported_text,
+                unavailable_text, incomparable_text, unavailable_outputs_text,
             )
         )
     else:
@@ -744,3 +744,60 @@ def ingest_paper(doi="", file_path=None, _session=None, _persist=True):
             "sections": live.section_index(_session, card["slug"]),
         },
     )
+
+
+def read_paper_digest(slug, _session=None):
+    """The whole paper, read once for this session, as key statements with their sections."""
+    from physearth.corpus import digest as paper_digest
+
+    item = live.card(_session, slug)
+    if not item:
+        known = sorted(set(knowledge.slugs(kind="paper")) | set(live.corpus(_session)))
+        return _fail("Unknown paper %r. Available papers: %s." % (slug, ", ".join(known)))
+    if live.source_of(_session, slug) == "skill":
+        return _fail("%s is a method note, not a paper; read it with read_literature." % slug)
+    try:
+        record, cached = paper_digest.digest(_session, slug)
+    except Exception as exc:  # the provider, not the paper: say so and leave sections open
+        return _fail(
+            "The paper could not be digested (%s: %s). Read its sections with read_literature."
+            % (type(exc).__name__, exc)
+        )
+    if not record or not record.get("items"):
+        return _fail("No checkable statements could be extracted from %s; read its sections with read_literature." % slug)
+    if _session is not None:
+        # The whole text was read on the agent's behalf, so every section is opened, and
+        # recorded the way a section read is, so a plan may cite it.
+        titles = {s["id"]: s.get("title", "") for s in live.section_index(_session, slug) or ()}
+        for sid in record["sections"]:
+            _session.setdefault("sections_read", set()).add("%s#%s" % (slug, sid))
+            _ledger(_session, "section", {
+                "reference": "%s#%s" % (slug, sid), "paper": slug, "section_id": sid,
+                "title": titles.get(sid, ""), "source": live.source_of(_session, slug),
+                "doi": item.get("doi", ""), "via": "digest",
+            })
+    body = "\n".join("[%s] (%s) %s" % (i["ref"], i["kind"], i["statement"]) for i in record["items"])
+    text = untrusted.wrap(body, "%s#digest" % slug, "published paper (digest)", item.get("license", ""))
+    figures = [
+        {"figure_id": f.get("id"), "title": f.get("title", "")}
+        for f in (item.get("figures") or ()) if f.get("id")
+    ]
+    summary = (
+        "%s key statement(s) from %s, %s. Cite each by its marker; open a section with "
+        "read_literature only to check a detail."
+        % (
+            len(record["items"]), slug,
+            "already read in full earlier in this session" if cached else
+            "read in full once for this session (%d statement(s) dropped because a number "
+            "was not in their section)" % record.get("dropped", 0),
+        )
+    )
+    result = _ok(
+        summary,
+        {"slug": slug, "title": item.get("title", ""), "doi": item.get("doi", ""),
+         "text": text, "statements": len(record["items"]), "cached": cached, "figures": figures},
+        citations=sorted({i["ref"] for i in record["items"]}),
+    )
+    _ledger(_session, "digest", {"paper": slug, "sections": record["sections"],
+                                 "statements": len(record["items"])})
+    return result

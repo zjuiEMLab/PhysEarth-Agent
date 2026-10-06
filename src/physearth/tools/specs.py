@@ -66,6 +66,27 @@ SPECS = [
 ]
 
 
+PAPER_DIGEST_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "read_paper_digest",
+        "description": (
+            "Read a whole paper once for this session and get its key information: what each "
+            "figure plots, stated results and ranges, configurations and limitations, each with "
+            "the section it came from as a citable marker. Call it first for a paper you will "
+            "plan or report from; a second call returns the same digest at no cost. Open a "
+            "section with read_literature only to check a detail."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"slug": {"type": "string", "description": "Paper slug from list_literature."}},
+            "required": ["slug"],
+        },
+    },
+}
+SPECS.append(PAPER_DIGEST_SPEC)
+
+
 RESEARCH_GUIDELINE_SPEC = {
     "type": "function",
     "function": {
@@ -520,7 +541,12 @@ RESEARCH_PLAN_SPEC = {
                 },
                 "literature_evidence": {
                     "type": "array",
-                    "description": "Opened section or figure references and the role of each.",
+                    "description": (
+                        "Opened section or figure references and the role of each. Give each "
+                        "a `finding`: what that source states that the result will be compared "
+                        "with, as a short quote or close paraphrase with its numbers. The "
+                        "report is written from what the plan records here."
+                    ),
                     "items": {"type": "object"},
                 },
                 "reproduction_targets": {

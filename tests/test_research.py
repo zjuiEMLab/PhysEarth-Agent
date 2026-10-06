@@ -443,20 +443,19 @@ def test_research_review_card_exposes_agent_plan_and_pseudo_data():
     box = session.new_session("m")
     _proposal(box)
     card = render.approval_bar(box)
-    assert "Research review" in card
-    assert "research-steps" in card
-    assert "Research plan flow" in card
-    assert "How to edit this plan" in card
+    assert "Research plan <b>v001</b>" in card
+    assert "Reply in Conversation to continue" in card and "<code>approve</code>" in card
     assert "data-research-phase='plan_review'" in card
-    assert "data-chart-id='density_curve'" in card and "disabled" in card
+    # Chart choices only appear once there is a preview to choose from.
+    assert "data-chart-id='density_curve'" not in card
     research.approve_plan(box)
     research.pseudo_preview(box)
     card = render.approval_bar(box)
     assert "PSEUDO-DATA" in card
     assert "Pseudo-data are deterministic layout demonstrations" in card
-    assert "Revise plan in chat" in card
-    assert "Chart options" in card
-    assert "data-chart-id='density_curve' disabled" not in card
+    assert "is a change to the plan" in card
+    assert "Figures to run" in card
+    assert "data-chart-id='density_curve'" in card and "disabled" not in card
 
 
 def test_pseudo_preview_uses_generic_range_parameter():

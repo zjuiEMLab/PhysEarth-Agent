@@ -31,6 +31,7 @@ class _Completion:
     def __init__(self):
         self.content = ""
         self.reasoning = 0
+        self.reasoning_tokens = None
         self.calls = {}
         self.finish_reason = None
         self.prompt_tokens = None
@@ -55,6 +56,10 @@ class _Completion:
             cached = getattr(prompt_details, "cached_tokens", None) if prompt_details else None
             if cached is not None:
                 self.cached_prompt_tokens = int(cached)
+            completion_details = getattr(usage, "completion_tokens_details", None)
+            thought = getattr(completion_details, "reasoning_tokens", None) if completion_details else None
+            if thought is not None:
+                self.reasoning_tokens = int(thought)
             details = getattr(usage, "cost_details", None)
             if details is not None:
                 self.cost_details = (
@@ -70,9 +75,18 @@ class _Completion:
         if delta is None:
             return False
         grew = False
-        if getattr(delta, "reasoning_content", None):
-            self.reasoning += len(delta.reasoning_content)
+        # DashScope names the streamed reasoning `reasoning_content`; OpenRouter names it
+        # `reasoning`. Reading only the first made every OpenRouter call look like a long
+        # silence followed by an answer, when the silence was the model thinking.
+        thought = getattr(delta, "reasoning_content", None) or getattr(delta, "reasoning", None)
+        if isinstance(thought, str) and thought:
+            self.reasoning += len(thought)
             grew = True
+            # first_token_s stays the first token of the answer itself, so the wait before
+            # it still shows how long the model thought.
+            reasoning_only = True
+        else:
+            reasoning_only = False
         if getattr(delta, "content", None):
             self.content += delta.content
             grew = True
@@ -87,7 +101,8 @@ class _Completion:
                 if fn.arguments:
                     slot["arguments"] += fn.arguments
             grew = True
-        if grew and self.first_token_s is None:
+        answered = grew and not (reasoning_only and not self.content and not self.calls)
+        if answered and self.first_token_s is None:
             self.first_token_s = round(time.perf_counter() - self.started, 2)
         return grew
 

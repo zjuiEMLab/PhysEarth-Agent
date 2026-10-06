@@ -87,4 +87,6 @@ from apps.studio.views.trace import (
     _trace_metrics,
     trace,
     trace_metrics,
+    turn_timing,
 )
+from apps.studio.views.trace import _seconds as trace_seconds

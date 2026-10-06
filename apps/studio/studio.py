@@ -9,6 +9,8 @@ import gradio as gr
 from apps.studio import theme
 from apps.studio import views as render
 from apps.studio.views import evaluation as evals
+from apps.studio.views import exports
+from apps.studio.views.trace import turn_timing
 from physearth.api import (
     agent,
     approval,
@@ -203,6 +205,188 @@ def _archive(turn, state, events, question, answer):
     }
 
 
+# The continuation an approval starts. The person approved; this tells the agent what the
+# approval covers. It is never shown as their message.
+EXECUTION_COMMAND = (
+    "I approve formal execution of the reviewed research plan. Continue now: "
+    "run the registered physical model, create the selected plot from its actual "
+    "outputs, check the result, and only then report the interpretation and conclusion."
+)
+
+_SCRIPT_REPLIES = frozenset({
+    "yes", "y", "yes please", "sure", "ok", "okay", "generate", "generate scripts",
+    "generate the scripts", "generate script", "scripts", "the scripts", "download scripts",
+    "是", "要", "需要", "好", "好的", "生成", "生成脚本", "需要脚本",
+})
+
+
+def _research_card(session):
+    """The review card, with the current plan written out as a page beside it first."""
+    if isinstance(session, dict) and (session.get("research") or {}).get("plan"):
+        exports.ensure_plan_export(session)
+    return render.research_context(session)
+
+
+_PROTOCOL_WORDS = frozenset({
+    "protocol", "the protocol", "show protocol", "show the protocol", "protocol yaml",
+    "generated protocol", "download protocol", "download the protocol", "协议", "方案文件",
+})
+
+
+def _wants_protocol(session, text):
+    """The generated protocol file is only produced when someone asks for it by name."""
+    if not ((session or {}).get("research") or {}).get("plan"):
+        return False
+    return " ".join(str(text or "").lower().split()).strip(" .!?。！？") in _PROTOCOL_WORDS
+
+
+def _protocol_reply(session):
+    url, name = exports.write_protocol(session)
+    if not url:
+        return "There is no research plan in this session to write a protocol from.", []
+    version = int((session.get("research") or {}).get("plan_version") or 1)
+    return (
+        "Here is the protocol generated from plan v%03d. It is the plan in machine-readable "
+        "form, for records and reruns; to change the plan, describe the change here." % version,
+        [{"label": "Download protocol (%s)" % name, "url": url, "download": name}],
+    )
+
+
+def _wants_scripts(session, text):
+    """Whether this message accepts the offer of figure scripts made after the report."""
+    project = (session or {}).get("research") or {}
+    if not project.get("scripts_offered"):
+        return False
+    words = " ".join(str(text or "").lower().split()).strip(" .!。！")
+    if words in _SCRIPT_REPLIES:
+        return True
+    if len(words) > 80 or any(no in words.split() for no in ("no", "not", "don't", "dont")):
+        return False
+    return ("script" in words or "代码" in words or "脚本" in words) and any(
+        verb in words for verb in (
+            "generate", "yes", "download", "give", "want", "need", "create", "write", "please",
+            "生成", "下载", "需要",
+        )
+    )
+
+
+def _scripts_reply(session):
+    bundle = research.script_bundle(session)
+    if not bundle.get("path"):
+        return (
+            "There are no model-generated figures in this session to write scripts for.",
+            [],
+        )
+    text = (
+        "The scripts are ready: one Python file per figure, the recorded run data in data/, "
+        "and a README. Each script holds the exact specification of every run behind its "
+        "figure.\n\n"
+        "- `python reproduce_figure_01.py --recorded` redraws the figure from the recorded "
+        "arrays (needs matplotlib).\n"
+        "- `python reproduce_figure_01.py` re-runs each model through its registered adapter "
+        "first (needs this repository installed)."
+    )
+    if bundle.get("missing"):
+        text += (
+            "\n\n%d run record(s) could not be found, so their curves are left out: %s."
+            % (len(bundle["missing"]), ", ".join(bundle["missing"]))
+        )
+    name = Path(bundle["path"]).name
+    links = [{"label": "Download scripts (%s)" % name, "url": exports.file_url(bundle["path"]), "download": name}]
+    return text, links
+
+
+def _start_clock(session):
+    session["turn_clock"] = {"started_at": time.time(), "finished_at": None}
+
+
+def _stop_clock(session, events):
+    clock = session.get("turn_clock") or {}
+    started = clock.get("started_at") or time.time()
+    clock["finished_at"] = time.time()
+    session["turn_clock"] = clock
+    timing = turn_timing(events)
+    totals = session.setdefault(
+        "timing_totals", {"wall_s": 0.0, "model_s": 0.0, "tool_s": 0.0, "first_token_s": 0.0}
+    )
+    totals["wall_s"] = float(totals.get("wall_s") or 0) + clock["finished_at"] - started
+    for key in ("model_s", "tool_s", "first_token_s"):
+        totals[key] = float(totals.get(key) or 0) + timing[key]
+    return clock["finished_at"] - started
+
+
+def _publish_report(session, answer, model_id, turn):
+    """A finished study: the full report becomes a page, and the chat keeps its findings."""
+    project = (session or {}).get("research") or {}
+    if project.get("phase") != "completed" or not str(answer or "").strip():
+        return turn
+    if (project.get("report_export") or {}).get("version") == project.get("plan_version"):
+        return turn
+    totals = session.get("timing_totals") or {}
+    url = exports.write_report(
+        session, answer, model_id,
+        timing=render.trace_seconds(totals.get("wall_s")) if totals.get("wall_s") else None,
+    )
+    if not url:
+        return turn
+    name = Path(project["report_export"]["path"]).name
+    display = (
+        "## Key findings\n\n%s\n\nThe full report -- every section, the figures, and the "
+        "runs behind them -- is on its own page, linked below." % exports.key_findings(answer)
+    )
+    links = [
+        {"label": "Open the full report", "url": url, "download": ""},
+        {"label": "Download report (HTML)", "url": url, "download": name},
+    ]
+    if research.scripts.has_figures(session):
+        project["scripts_offered"] = True
+        display += (
+            "\n\nWould you like the Python scripts that reproduce these figures? Reply "
+            "**generate scripts** and they will be written from the recorded runs, ready to "
+            "download."
+        )
+    turn = dict(turn)
+    turn["display"] = display
+    turn["links"] = links
+    return turn
+
+
+def _final_frame(model_id, session, turns, events, state, live_html=None):
+    return (
+        render.hero(model_id, running=False, status="Idle - %d events last run" % len(events)),
+        render.conversation_head(len(turns), session=session, events=events, state=state),
+        render.history(turns, session=session),
+        live_html if live_html is not None else render.live("", ""),
+        render.trace(events, state, running=False, include_footer=False),
+        render.trace_metrics(state, events, False),
+        render.evidence(session),
+        _research_card(session),
+        turns,
+        session,
+        gr.update(),
+    )
+
+
+def _local_turn(question, turns, session, model_id, index, reply, links=None):
+    """A turn the interface answers itself: a review command, or the scripts it offered.
+
+    No model call. The exchange is still archived, so the next real turn sees it.
+    """
+    _start_clock(session)
+    state = agent.new_state(model_id, session)
+    state["phase"] = "done"
+    _stop_clock(session, [])
+    turn = _archive(index, state, [], question, reply)
+    if links:
+        turn["links"] = links
+    turns = list(turns) + [turn]
+    audit.emit(
+        "ui_turn_finished", session=session, ui_turn=index, answer=reply, event_count=0,
+        final_agent_event=None, state_phase="done", counters={}, local=True,
+    )
+    yield _final_frame(model_id, session, turns, [], state)
+
+
 def respond(question, turns, box, model_id, preserve_conversation=False):
     question = (question or "").strip()
     turns = list(turns or [])
@@ -232,6 +416,45 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
         question=question,
         archived_turns=len(turns),
     )
+    # A typed review command is decided here, from the person's own words, before any
+    # model sees the message. The model can describe a plan; only this can approve one.
+    agent_question = question
+    command = None if preserve_conversation else research.chat_command(session, question)
+    if command:
+        phase_before = (session.get("research") or {}).get("phase")
+        result = research.apply_chat_command(session, command)
+        audit.emit(
+            "human_research_review",
+            session=session,
+            action="chat:%s" % command,
+            phase_before=phase_before,
+            phase_after=(session.get("research") or {}).get("phase"),
+            result_status=(result or {}).get("status"),
+            result_summary=(result or {}).get("summary"),
+        )
+        project = session.get("research") or {}
+        if research.allow_model(session) and not project.get("execution_resume_sent"):
+            project["execution_resume_sent"] = True
+            approval.set_mode(session, approval.ALWAYS)
+            agent_question = EXECUTION_COMMAND
+        else:
+            reply = (
+                research.review_guidance(project)
+                if project.get("phase") != phase_before
+                else (result or {}).get("summary") or research.review_guidance(project)
+            )
+            yield from _local_turn(question, turns, session, model_id, index, reply)
+            return
+    elif not preserve_conversation and _wants_protocol(session, question):
+        reply, links = _protocol_reply(session)
+        yield from _local_turn(question, turns, session, model_id, index, reply, links)
+        return
+    elif not preserve_conversation and _wants_scripts(session, question):
+        reply, links = _scripts_reply(session)
+        yield from _local_turn(question, turns, session, model_id, index, reply, links)
+        return
+
+    _start_clock(session)
     # A turn that died upstream produced no answer, only an apology. Replaying it as an
     # assistant message would teach the model that such text is a valid reply.
     seen = [
@@ -264,9 +487,9 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
             render.history(turns, pending=True, session=session),
             render.live(question, "", running=True),
             render.trace([], agent.new_state(model_id, session), running=True, include_footer=False),
-            render.trace_metrics(agent.new_state(model_id, session)),
+            render.trace_metrics(agent.new_state(model_id, session), [], True),
             render.evidence(session),
-            render.research_context(session),
+            _research_card(session),
             turns,
             session,
             "",
@@ -286,8 +509,8 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
     trace_html = render.trace(
         [], agent.new_state(model_id, session), running=True, include_footer=False
     )
-    metrics_html = render.trace_metrics(agent.new_state(model_id, session))
-    approval_html = render.research_context(session)
+    metrics_html = render.trace_metrics(agent.new_state(model_id, session), [], True)
+    approval_html = _research_card(session)
     head_html = render.conversation_head(index, session=session, events=events, state=state)
     # Only the Conversation changes on a content token. The trace, the metrics, the head
     # and the research card change on a checkpoint -- an event appended, a counter moved,
@@ -296,11 +519,11 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
     # milliseconds a turn and growing with the length of the trace. These keys are the
     # same idea as _evidence_key above, applied to the rest of the page.
     trace_key = _trace_key(events, state, True)
-    metrics_key = _metrics_key(state)
+    metrics_key = (_metrics_key(state), 0, True)
     head_key = _head_key(events, state, session)
     logged_agent_events = []
     try:
-        for answer, events, state in agent.stream(question, seen, model_id, session):
+        for answer, events, state in agent.stream(agent_question, seen, model_id, session):
             # Gradio may resume a streaming generator in a fresh context, so ContextVar
             # bindings made inside agent.stream are not guaranteed to reach every event.
             # Mirror each newly visible trace event with an explicit session reference.
@@ -345,10 +568,10 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
                     trace_html = next_trace
 
             metrics_update = gr.update()
-            next_metrics_key = _metrics_key(state)
+            next_metrics_key = (_metrics_key(state), len(events), running)
             if next_metrics_key != metrics_key:
                 metrics_key = next_metrics_key
-                next_metrics = render.trace_metrics(state)
+                next_metrics = render.trace_metrics(state, events, running)
                 if next_metrics != metrics_html:
                     metrics_update = next_metrics
                     metrics_html = next_metrics
@@ -365,7 +588,7 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
                     head_html = next_head
                 # A card that ends the turn waits for the final frame, which also carries
                 # the archived turn its continuation is appended to.
-                next_approval = render.research_context(session) if running else approval_html
+                next_approval = _research_card(session) if running else approval_html
                 if next_approval != approval_html:
                     approval_update = next_approval
                     approval_html = next_approval
@@ -406,6 +629,9 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
         turns = turns[:-1] + [previous]
     else:
         turns = turns + [_archive(index, state, events, question, answer)]
+    _stop_clock(session, events)
+    if turns and not preserve_conversation:
+        turns = turns[:-1] + [_publish_report(session, answer, model_id, turns[-1])]
     audit.emit(
         "ui_turn_finished",
         session=session,
@@ -421,21 +647,14 @@ def respond(question, turns, box, model_id, preserve_conversation=False):
             "interventions": state.get("interventions", 0),
         },
     )
-    yield (
-        render.hero(model_id, running=False, status="Idle - %d events last run" % len(events)),
-        render.conversation_head(len(turns), session=session, events=events, state=state),
-        gr.update() if preserve_conversation else render.history(turns, session=session),
-        render.live_result(answer, running=False) if preserve_conversation else render.live("", ""),
-        render.trace(events, state, running=False, include_footer=False),
-        render.trace_metrics(state),
-        render.evidence(session),
-        render.research_context(session),
-        turns,
-        session,
-        # The box was emptied on the first yield, when this question was consumed. Whatever
-        # is in it now is the next question, typed while this one ran, and is not ours to clear.
-        gr.update(),
-    )
+    frame = list(_final_frame(model_id, session, turns, events, state))
+    if preserve_conversation:
+        frame[2] = gr.update()
+        frame[3] = render.live_result(answer, running=False)
+    # The box was emptied on the first yield, when this question was consumed. Whatever
+    # is in it now is the next question, typed while this one ran, and is not ours to
+    # clear -- _final_frame leaves it alone.
+    yield tuple(frame)
 
 
 def reset(model_id):
@@ -451,7 +670,7 @@ def reset(model_id):
         render.trace([], agent.new_state(model_id, session), running=False, include_footer=False),
         render.trace_metrics(agent.new_state(model_id, session)),
         render.evidence(session),
-        render.research_context(session),
+        _research_card(session),
         [],
         session,
         "",
@@ -500,11 +719,7 @@ def review_click(box, action):
             # repainted the button.
             if not session["research"].get("execution_resume_sent"):
                 session["research"]["execution_resume_sent"] = True
-                command = (
-                    "I approve formal execution of the reviewed research plan. Continue now: "
-                    "run the registered physical model, create the selected plot from its actual "
-                    "outputs, check the result, and only then report the interpretation and conclusion."
-                )
+                command = EXECUTION_COMMAND
     else:
         # A ``run_model`` request paused its turn. The first verdict on it starts the
         # continuation, which is appended to the paused turn; a second click finds the
@@ -518,7 +733,7 @@ def review_click(box, action):
     # Review actions can create or remove pseudo figures.  Refresh evidence in the same
     # click response; waiting for a later agent stream left the Figures badge at zero and
     # made a valid preview look empty to the user.
-    return render.research_context(session), render.evidence(session), session, command
+    return _research_card(session), render.evidence(session), session, command
 
 
 def resume_after_review(command, turns, box, model_id):
@@ -551,7 +766,7 @@ def select_chart_click(box, chart_id):
         )
     # Selecting the final package clears pseudo figures, so evidence must be refreshed
     # here as well rather than retaining stale preview cards until formal execution.
-    return render.research_context(session), render.evidence(session), session, ""
+    return _research_card(session), render.evidence(session), session, ""
 
 
 def _evaluation_session(box, model_id):

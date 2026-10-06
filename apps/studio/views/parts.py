@@ -131,6 +131,24 @@ def _source_chip(tag, ref=""):
     )
 
 
+def _breakable(text):
+    """Escaped text that may wrap after an underscore, never inside a word."""
+    return _e(text).replace("_", "_<wbr>")
+
+
+def _parameter_cell(item):
+    """`frequency` with its code name and the card's one-line description under it."""
+    name = item["name"]
+    shown = item.get("label") or name
+    suffix = " (%s)" % name
+    title = shown[: -len(suffix)] if shown.endswith(suffix) else shown
+    return "<b>%s</b>%s%s" % (
+        _e(title),
+        " <code>%s</code>" % _e(name) if title != name else "",
+        "<div class='plan-sheet__about'>%s</div>" % _e(item["about"]) if item.get("about") else "",
+    )
+
+
 def plan_sheet_html(plan, conditions=True):
     """The plan as conditions once, with their sources, and a matrix of what differs per run."""
     sheet = research.sheet.build(plan)
@@ -139,8 +157,11 @@ def plan_sheet_html(plan, conditions=True):
     out = ["<div class='plan-sheet'>"]
     if conditions and sheet["decisions"]:
         items = "".join(
-            "<li><b>%s</b> %s = %s %s</li>" % (
-                _e(d["model"]), _e(d["name"]), _e(research.sheet.fmt(d["value"])), _source_chip(d["tag"]),
+            "<li><b>%s</b> = %s %s%s</li>" % (
+                _e(d.get("label") or d["name"]),
+                _e(d.get("shown") or research.sheet.fmt(d["value"])),
+                _source_chip(d["tag"]),
+                " <span class='plan-sheet__hint'>%s</span>" % _e(d["note"]) if d.get("note") else "",
             )
             for d in sheet["decisions"]
         )
@@ -154,14 +175,22 @@ def plan_sheet_html(plan, conditions=True):
             group["model"] or "model", " v%s" % group["version"] if group["version"] else "",
             len(group["runs"]), "" if len(group["runs"]) == 1 else "s",
         )
-        out.append("<div class='plan-sheet__group'><div class='plan-sheet__title'>%s</div>" % _e(title))
+        purpose = group.get("purpose") or ""
+        if group.get("outputs"):
+            purpose = "%s%sOutputs used: %s." % (
+                purpose, " " if purpose else "", ", ".join(group["outputs"]),
+            )
+        out.append(
+            "<div class='plan-sheet__group'><div class='plan-sheet__title'>%s</div>%s"
+            % (_e(title), "<div class='plan-sheet__purpose'>%s</div>" % _e(purpose) if purpose else "")
+        )
         if conditions:
             rows = [
                 [
-                    "<code>%s</code>" % _e(c["name"]),
-                    _e(("%s %s" % (research.sheet.fmt(c["value"]), c["unit"] if c["unit"] != "none" else "")).strip()),
+                    _parameter_cell(c),
+                    _breakable(c.get("shown") or research.sheet.fmt(c["value"])),
                     _source_chip(c["tag"], c["ref"]),
-                    _e(c["note"]),
+                    _e(c["note"]) or "<span class='plan-sheet__hint'>-</span>",
                 ]
                 for c in group["conditions"]
             ]
@@ -173,15 +202,21 @@ def plan_sheet_html(plan, conditions=True):
                 out.append("<div class='plan-sheet__sweep'><b>Swept in every run:</b> %s</div>" % _e(group["sweep"]))
         columns = group["columns"]
         headers = ["Run"] + [
-            c["name"] + (" (%s)" % c["unit"] if c["unit"] and c["unit"] != "none" else "") for c in columns
+            (c.get("label") or c["name"])
+            + (" (%s)" % research.sheet.unit_text(c["unit"]) if research.sheet.unit_text(c["unit"]) else "")
+            for c in columns
         ]
         if group["sweep_varies"]:
             headers.append("Sweep")
         headers.append("Feeds")
         rows = []
         for run in group["runs"]:
-            cells = ["<b>%s</b>%s" % (_e(run["id"]), " <span class='plan-sheet__stage'>%s</span>" % _e(run["stage"]) if run["stage"] and run["stage"] != "main" else "")]
-            cells += [_e(research.sheet.fmt(run["values"].get(c["name"]))) for c in columns]
+            cells = ["<b>%s</b>%s%s" % (
+                _e(run["id"]),
+                " <span class='plan-sheet__stage'>%s</span>" % _e(run["stage"]) if run["stage"] and run["stage"] != "main" else "",
+                "<div class='plan-sheet__about'>%s</div>" % _e(run["label"]) if run.get("label") and run["label"] != run["id"] else "",
+            )]
+            cells += [_breakable(research.sheet.fmt(run["values"].get(c["name"]))) for c in columns]
             if group["sweep_varies"]:
                 cells.append(_e(run["sweep"]))
             cells.append(_e(", ".join(run["feeds"]) or "-"))
@@ -192,7 +227,7 @@ def plan_sheet_html(plan, conditions=True):
         )
         if columns:
             out.append("<div class='plan-sheet__sources'>%s</div>" % " ".join(
-                "<span><code>%s</code> %s</span>" % (_e(c["name"]), _source_chip(c["tag"], c["ref"])) for c in columns
+                "<span>%s %s</span>" % (_e(c.get("label") or c["name"]), _source_chip(c["tag"], c["ref"])) for c in columns
             ))
         out.append("</div>")
     out.append("</div>")

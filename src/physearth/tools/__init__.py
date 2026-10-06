@@ -32,6 +32,7 @@ from physearth.tools.literature import (
     list_literature,
     read_literature,
     read_model_instruction,
+    read_paper_digest,
     read_paper_figure,
     read_research_guideline,
     research_capability_check,
@@ -56,6 +57,7 @@ DISPATCH = {
     "list_literature": list_literature,
     "read_reference_dataset": read_reference_dataset,
     "read_literature": read_literature,
+    "read_paper_digest": read_paper_digest,
     "read_research_guideline": read_research_guideline,
     "read_model_instruction": read_model_instruction,
     "research_capability_check": research_capability_check,
@@ -92,9 +94,9 @@ SESSION_SCOPED = (
 )
 SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model", "run_planned_model", "plot_planned_chart")
 SESSION_SCOPED = SESSION_SCOPED + ("plot",)
-SESSION_SCOPED = SESSION_SCOPED + ("read_raw_paper", "run_raw_smrt")
+SESSION_SCOPED = SESSION_SCOPED + ("read_raw_paper", "run_raw_smrt", "read_paper_digest")
 CORPUS_TOOLS = (
-    "list_literature", "read_literature", "read_research_guideline",
+    "list_literature", "read_literature", "read_paper_digest", "read_research_guideline",
     "read_paper_figure", "inspect_paper_figure", "discover_literature", "ingest_paper",
 )
 ONLINE_TOOLS = ("discover_literature", "inspect_github_model_repo")

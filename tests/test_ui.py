@@ -251,20 +251,20 @@ def test_research_plan_preview_is_structured_and_keeps_yaml_in_a_disclosure():
         },
     }
     out = render.approval_bar(box)
+    # Conversation carries a summary and what to type; the plan itself is a page.
+    assert "Research plan <b>v002</b>" in out and "<code>approve</code>" in out
+    assert "Conditions and runs" not in out and '{"' not in out
 
-    assert "Question and hypothesis" in out
-    assert "Literature evidence" in out
-    assert "Reproduction targets" in out
-    assert "Paper concept" in out and "Model input" in out
-    # The runs are a conditions sheet and a matrix of what differs, not one parameter dump per run.
-    assert "Conditions and runs" in out and "Runs, only what differs" in out
-    assert "Resolved parameters" not in out
-    assert "Validation sources and warnings" in out
-    assert "paper_context_difference" in out
-    assert "non-blocking" in out
-    assert "REVISION SUMMARY · v001 → v002" in out
-    assert "Raw generated protocol YAML" in out
-    assert "research-plan-yaml" in out
+    from apps.studio.views import exports
+
+    page = exports.plan_document(box)
+    assert "Conditions and runs" in page and "Runs, only what differs" in page
+    assert "Resolved parameters" not in page
+    assert "What is reproduced" in page and "Things to check" in page
+    assert "plan has 1" in page
+    # Machinery a reviewer does not decide on stays off the page.
+    assert "Literature evidence" not in page and "Paper concept" not in page
+    assert "plan_version:" not in page and "Generated protocol" not in page
     assert "Pasted revision text" not in out
 
 
@@ -303,13 +303,17 @@ def test_revised_plan_card_is_collapsed_while_revision_summary_remains_visible()
         baseline_run_id="density",
     )
     assert result["status"] == "needs_input"
-    assert "data-collapsed='false'" in render.approval_bar(box)
+    assert "WHAT CHANGED" not in render.approval_bar(box)
 
     revised = research.revise(box, {"assumptions": ["revised layer assumption"]})
     assert revised["status"] == "needs_input"
-    out = render.approval_bar(box)
-    assert "data-collapsed='true'" in out
-    assert "REVISION SUMMARY" in out
+    from apps.studio.views import exports
+
+    # The reply names the changes in sentences, and the plan page repeats them.
+    assert "Added assumption: revised layer assumption" in revised["summary"]
+    assert "Removed assumption: homogeneous layer" in revised["summary"]
+    assert "[" not in revised["summary"]
+    assert "What changed from v001" in exports.plan_document(box)
 
 
 def test_plan_review_exposes_only_the_two_review_controls():
@@ -356,7 +360,7 @@ def test_guided_research_context_shows_live_capability_and_agent_paper_session()
     assert "PAPER SESSION" in brief
     assert status.count("LIVE RESEARCH STATUS") == 1
     assert "Idle" in status
-    assert "FROM PAPER SECTIONS" in brief.upper()
+    assert "3.1.1" in brief
     assert "Open DOI / paper source" in brief
     assert "rayleigh" not in status and "sticky_hard_spheres" not in status
 
@@ -424,11 +428,8 @@ def test_guided_demo_does_not_inject_evaluation_data_before_agent_discovery():
     assert "LIVE RESEARCH STATUS" not in updated
     assert "LIVE RESEARCH STATUS" in render.conversation_head(1, guided_session)
     assert "3.1.1" in render.guided_brief(guided_session)
-    assert "AGENT PLAN: RUNS" in render.guided_brief(guided_session)
-    assert "AGENT PLAN: EXPECTED OUTPUTS" in render.guided_brief(guided_session)
-    assert "From paper sections" in render.guided_brief(guided_session)
-    assert "dry snow" in render.guided_brief(guided_session)
-    assert "q1_iba_sticky" in render.guided_brief(guided_session)
+    # The brief names the paper; the plan is on its own page, not repeated above the chat.
+    assert "q1_iba_sticky" not in render.guided_brief(guided_session)
     assert "q1_rayleigh_independent" not in render.guided_brief(guided_session)
 
 

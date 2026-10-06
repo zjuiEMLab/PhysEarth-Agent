@@ -5,6 +5,7 @@ import json
 
 from physearth import registry
 from physearth.harness import audit
+from physearth.research import sheet
 from physearth.research.approval import _clear_previews
 from physearth.research.charts import _chart_y_names, _run_produces_chart, _validate_chart_runs
 from physearth.research.common import (
@@ -106,6 +107,21 @@ def revision_summary_text(summary):
     """Plain-text status for a successful revision; it contains no new scientific claim."""
     if not summary:
         return "The research plan was revised. Review the updated plan before continuing."
+    if summary.get("readable") is not None:
+        lines = [
+            "- %s %s" % ({"added": "Added", "removed": "Removed"}.get(item["kind"], "Changed"), item["text"])
+            if item["kind"] in ("added", "removed") else "- %s" % item["text"]
+            for item in summary["readable"]
+        ]
+        return (
+            "Plan revised from v%03d to v%03d. What changed:\n\n%s\n\n"
+            "The layout preview and any figure selection were cleared. Open the plan to check "
+            "it, then reply **approve** to run it or describe another change."
+            % (
+                summary.get("from_version", 0), summary.get("to_version", 0),
+                "\n".join(lines) or "- nothing a run or figure depends on",
+            )
+        )
     changes = []
     for group in ("changed", "added", "removed"):
         for item in summary.get(group) or []:
@@ -361,6 +377,7 @@ def revise(session, changes=None, note=""):
     summary = _revision_diff(before_plan, plan, changes)
     summary.update(
         {
+            "readable": sheet.changes(before_plan, plan),
             "from_version": project["plan_version"] - 1,
             "to_version": project["plan_version"],
             "invalidated": ["pseudo_preview", "chart_selection", "execution_approval"],

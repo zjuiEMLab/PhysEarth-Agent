@@ -1,7 +1,7 @@
 """The conversation itself: the hero, the composer, one message, the guided brief."""
 
 from apps.studio.views.context import current_activity_status
-from apps.studio.views.parts import _mapping_text, _reproduction_state, plan_sheet_html
+from apps.studio.views.parts import _reproduction_state, plan_sheet_html
 from apps.studio.views.text import _e, _paragraphs, _svg, answer_html
 from physearth.api import agent
 
@@ -81,11 +81,14 @@ def _plan_run_rows(plan):
 
 
 def guided_brief(session):
-    """Render agent-discovered paper state and the later agent-authored plan."""
+    """The paper this session reproduces, and nothing of the plan.
+
+    The plan's conditions, sources and runs are on the plan page the review card links to;
+    repeating them here put a second, narrower copy of the plan above the conversation.
+    """
     state = _reproduction_state(session)
     if not state:
         return ""
-    plan = state["plan"]
     doi = state["doi"]
     paper_link = (
         "<a href='https://doi.org/%s' target='_blank' rel='noopener'>Open DOI / paper source</a>"
@@ -93,57 +96,18 @@ def guided_brief(session):
         if doi
         else ""
     )
-    source_fixed = plan.get("paper_conditions") or {}
-    provenance = plan.get("condition_provenance") or {}
-    plan_params = plan.get("parameters") or {}
-    extra_params = {key: value for key, value in plan_params.items() if key not in source_fixed}
-    assumptions = plan.get("assumptions") or []
-    source_html = (
-        "<p><b>From paper sections:</b> %s</p>"
-        % _e(_mapping_text(source_fixed) or "not declared yet")
-    )
-    assumption_text = _mapping_text(extra_params)
-    if assumptions:
-        assumption_text = "; ".join(filter(None, [assumption_text] + [str(item) for item in assumptions]))
-    assumption_html = (
-        "<p><b>Agent/model assumptions to review:</b> %s</p>"
-        % _e(assumption_text or "none declared outside the generated protocol")
-    )
-    provenance_html = (
-        "<p><b>Condition evidence:</b> %s</p>"
-        % _e(_mapping_text(provenance) or "not declared; review against the paper sections")
-    )
-    expected = list(plan.get("quantities") or [])
-    for chart in plan.get("charts") or []:
-        expected.extend(chart.get("ys") or ([chart.get("y")] if chart.get("y") else []))
-    expected = list(dict.fromkeys(str(item) for item in expected))
-    plan_html = ""
-    if plan:
-        plan_html = (
-            _plan_run_rows(plan)
-            + "<div class='research-context__label'>AGENT PLAN: EXPECTED OUTPUTS</div>"
-            + "<p><b>Plan-declared quantities and chart outputs:</b> %s</p>"
-            % _e(", ".join(expected) or "not specified")
-        )
     return (
         "<article class='guided-brief'><div class='guided-brief__head'>"
-        "<span class='badge badge--model'>PAPER SESSION · AGENT DISCOVERED</span>"
-        "<span class='guided-brief__hint'>Plan values remain editable</span></div>"
-        "<div class='guided-brief__body'><div class='research-context__label'>PAPER SESSION</div>"
-        "<h3>%s</h3><p><b>Protocol:</b> %s; <b>Paper section:</b> %s%s</p>"
+        "<span class='badge badge--model'>PAPER SESSION</span></div>"
+        "<div class='guided-brief__body'>"
+        "<h3>%s</h3><p><b>Section:</b> %s%s</p>"
         "<p><b>Research question:</b> %s</p>"
-        "<div class='research-context__label'>CONDITION PROVENANCE</div>%s%s%s%s"
         "</div></article>"
         % (
             _e(state["title"]),
-            _e(state["source_section"] or "pending"),
-            _e(state["paper_section"] or "pending"),
+            _e(state["paper_section"] or state["source_section"] or "pending"),
             " · " + paper_link if paper_link else "",
             _e(state["question"] or "pending plan question"),
-            source_html,
-            assumption_html,
-            provenance_html,
-            plan_html,
         )
     )
 
@@ -170,7 +134,16 @@ def history(turns, pending=False, session=None):
         out = []
         for turn in turns:
             out.append(_message("you", turn["question"], user=True))
-            out.append(_message("physearth", turn["answer"], faulted=turn.get("faulted")))
+            # A finished study keeps its full report in `answer`, which later turns send
+            # to the model; what the conversation shows is `display`, its findings.
+            out.append(
+                _message(
+                    "physearth",
+                    turn.get("display") or turn["answer"],
+                    faulted=turn.get("faulted"),
+                    links=turn.get("links"),
+                )
+            )
         empty = "<div class='msg-group'>%s</div>" % "".join(out)
     return brief + empty
 
@@ -192,7 +165,26 @@ def _user_body(text):
     )
 
 
-def _message(who, text, user=False, running=False, faulted=False):
+def _links_html(links):
+    """Download and open links under a message. Only URLs the interface wrote get here."""
+    items = []
+    for link in links or ():
+        url = str(link.get("url") or "")
+        if not url.startswith("/gradio_api/file="):
+            continue
+        download = link.get("download")
+        items.append(
+            "<a href='%s'%s>%s</a>"
+            % (
+                _e(url),
+                " download='%s'" % _e(download) if download else " target='_blank' rel='noopener'",
+                _e(link.get("label") or "Open"),
+            )
+        )
+    return "<div class='report-downloads'>%s</div>" % "".join(items) if items else ""
+
+
+def _message(who, text, user=False, running=False, faulted=False, links=None):
     # Render user text through the same small, escaped Markdown subset as answers. This
     # keeps long research questions readable and avoids exposing literal ** markers in the
     # conversation bubble.
@@ -205,8 +197,11 @@ def _message(who, text, user=False, running=False, faulted=False):
     return (
         "<div class='msg msg--%s%s'><div class='msg__head'>"
         "<span class='msg__who'>%s</span>%s</div>"
-        "<div class='msg__body'>%s</div></div>"
-        % ("user" if user else "agent", " msg--fault" if faulted else "", _e(who), note, body)
+        "<div class='msg__body'>%s%s</div></div>"
+        % (
+            "user" if user else "agent", " msg--fault" if faulted else "", _e(who), note, body,
+            _links_html(links),
+        )
     )
 
 
@@ -235,10 +230,12 @@ NEXT_STEP = {
     "completed": "Explain what this result does and does not establish, and what would "
     "make it stronger.",
     "approved": "Run the approved plan and report the result.",
-    "chart_selected": "Confirm the chart selection and continue.",
-    "pseudo_preview": "The preview looks right; continue with the plan.",
-    "plan_approved": "Show me the pseudo-data preview of the planned charts.",
-    "plan_review": "Revise the plan: ",
+    "chart_selected": "",
+    "pseudo_preview": "",
+    "plan_approved": "",
+    # Empty on purpose: the plan card says what to type, and a prefilled sentence would
+    # sit in the way of the one-word approval.
+    "plan_review": "",
 }
 
 
@@ -255,6 +252,10 @@ def next_step(session, state=None):
         return ""
     project = session.get("research") or {}
     phase = project.get("phase")
+    if phase == "completed" and project.get("scripts_offered"):
+        # The last message asked whether to write the scripts; the composer stays empty
+        # for the answer rather than suggesting a different question.
+        return ""
     if phase in NEXT_STEP:
         return NEXT_STEP[phase]
     if session.get("research_required") and not project:

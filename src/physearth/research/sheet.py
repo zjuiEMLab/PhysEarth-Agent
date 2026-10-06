@@ -26,7 +26,7 @@ TAGS = {
     "model_assumption": "assumed",
 }
 DECIDE = ("assumed", "guessed", "unlabelled")
-_NOTE_CHARS = 140
+_NOTE_CHARS = 400
 
 
 def _same(left, right):
@@ -46,6 +46,74 @@ def fmt(value):
     if isinstance(value, (dict, list)):
         return json.dumps(value, ensure_ascii=False, sort_keys=True)
     return str(value)
+
+
+# How a unit is spelled inside a parameter name, when that differs from how the card writes
+# it: "latitude_deg" for degree, "temperature_c" for degC, "radiation_mj_m2_day" for d-1.
+_UNIT_ALIASES = {"degree": ("deg",), "degc": ("c",), "d": ("day",), "percent": ("pct",)}
+_UNIT_SHOWN = {"none": "", "count": "", "degree": "°", "percent": "%"}
+
+
+def _unit_words(unit):
+    words = set()
+    for token in str(unit or "").lower().replace("/", " ").split():
+        for form in (token, token.replace("-", ""), "".join(ch for ch in token if ch.isalpha())):
+            words.add(form)
+            words.update(_UNIT_ALIASES.get(form, ()))
+    return words
+
+
+def label(name, spec=None):
+    """A parameter as a person names it: the card's label, or its name without its unit.
+
+    Only words of the parameter's own declared unit are dropped, so "temperature_k" in K
+    reads "temperature" while "coefficient_c", which has no unit, keeps its letter.
+    """
+    spec = spec or {}
+    if str(spec.get("label") or "").strip():
+        return str(spec["label"]).strip()
+    words = str(name or "").split("_")
+    unit_words = _unit_words(spec.get("unit"))
+    while len(words) > 1 and words[-1].lower() in unit_words:
+        words.pop()
+    # "ks_per_m" in m-1: the unit went, so its "per" goes too.
+    if len(words) > 1 and words[-1].lower() == "per" and words != str(name).split("_"):
+        words.pop()
+    return " ".join(words)
+
+
+def unit_text(unit):
+    """A unit as it is printed after a value; empty for none, counts and relative units."""
+    unit = str(unit or "").strip()
+    if unit.lower() in _UNIT_SHOWN:
+        return _UNIT_SHOWN[unit.lower()]
+    if unit.lower().startswith("same as"):
+        return ""
+    return unit
+
+
+def with_unit(value, unit):
+    """`12 m`, `55°`, `on` -- a value with the unit it was declared in."""
+    shown, unit = fmt(value), unit_text(unit)
+    if not unit or shown == "-" or isinstance(value, (str, bool)):
+        return shown
+    return "%s%s%s" % (shown, "" if unit in ("°", "%") else " ", unit)
+
+
+def about(spec):
+    """The card's description, cut to its first sentence."""
+    text = " ".join(str((spec or {}).get("description") or "").split())
+    if not text:
+        return ""
+    end = text.find(". ")
+    text = text if end < 0 else text[: end + 1]
+    return text if len(text) <= 120 else text[:119].rstrip() + "…"
+
+
+def named(name, spec=None):
+    """`depth (depth_m)`, or just the name when it already reads as words."""
+    human = label(name, spec)
+    return human if human == str(name) else "%s (%s)" % (human, name)
 
 
 def _params(run):
@@ -89,7 +157,7 @@ def _source(plan, mapping, model, name, group_runs):
         note = str(first.get("rationale") or "").strip()
         if not note and first.get("paper_value") not in (None, ""):
             note = "paper value: %s" % fmt(first.get("paper_value"))
-        return tag, ref, note[:_NOTE_CHARS]
+        return tag, ref, note if len(note) <= _NOTE_CHARS else note[: _NOTE_CHARS - 1].rstrip() + "…"
     if group_runs and all(name in (run.get("defaulted_parameters") or ()) for run in group_runs):
         return "default", "", "the model card's default"
     label = (plan.get("condition_provenance") or {}).get(name)
@@ -104,13 +172,14 @@ def _spec(model, name):
     return ((entry.card.get("parameters") or {}).get(name) or {}) if entry else {}
 
 
-def _sweep_text(params):
+def _sweep_text(params, model=""):
     name = params.get("sweep_parameter")
     if name in (None, "", "none"):
         return ""
     points = params.get("sweep_points")
-    return "%s %s to %s%s" % (
-        name, fmt(params.get("sweep_start")), fmt(params.get("sweep_stop")),
+    spec = _spec(model, name) if model else {}
+    return "%s from %s to %s%s" % (
+        named(name, spec), fmt(params.get("sweep_start")), with_unit(params.get("sweep_stop"), spec.get("unit")),
         " (%s points)" % fmt(points) if points not in (None, "") else "",
     )
 
@@ -136,15 +205,21 @@ def _group(plan, mapping, charts, model, runs):
             conditions.append({
                 "name": name, "value": values[0], "unit": spec.get("unit") or "",
                 "tag": tag, "ref": ref, "note": note,
+                "label": named(name, spec), "about": about(spec),
+                "shown": with_unit(values[0], spec.get("unit")),
             })
         else:
             varying.append(name)
-    sweeps = {_sweep_text(p) for p in all_params}
+    sweeps = {_sweep_text(p, model) for p in all_params}
     sweep = sweeps.pop() if len(sweeps) == 1 else None
     columns = []
     for name in varying:
         tag, ref, note = _source(plan, mapping, model, name, runs)
-        columns.append({"name": name, "unit": _spec(model, name).get("unit") or "", "tag": tag, "ref": ref})
+        spec = _spec(model, name)
+        columns.append({
+            "name": name, "unit": spec.get("unit") or "", "tag": tag, "ref": ref,
+            "label": label(name, spec), "about": about(spec), "note": note,
+        })
     rows = []
     from physearth.research.charts import _run_produces_chart
 
@@ -155,13 +230,24 @@ def _group(plan, mapping, charts, model, runs):
             "label": run.get("label") or "",
             "stage": run.get("stage") or "",
             "values": {name: params.get(name) for name in varying},
-            "sweep": "" if sweep is not None else _sweep_text(params),
+            "sweep": "" if sweep is not None else _sweep_text(params, model),
             "feeds": [c.get("id") for c in charts if _run_produces_chart(run, c)],
         })
     entry = registry.get(model)
+    chosen = next(
+        (item for item in plan.get("selected_models") or ()
+         if isinstance(item, dict) and str(item.get("model") or "") == model),
+        {},
+    )
     return {
         "model": model,
         "version": (entry.card.get("version") if entry else "") or "",
+        "purpose": str(chosen.get("purpose") or chosen.get("role") or "").strip(),
+        "outputs": [
+            named(name, ((entry.card.get("outputs") or {}).get(name) or {}) if entry else {})
+            for name in chosen.get("outputs_used") or ()
+        ],
+        "status": str(chosen.get("capability_status") or "").strip(),
         "conditions": conditions,
         "sweep": sweep or "",
         "sweep_varies": sweep is None,
@@ -200,3 +286,152 @@ def build(plan):
         ],
         "run_count": len(runs),
     }
+
+
+# ------------------------------------------------------------------ what a revision changed
+
+_TEXT_LISTS = (
+    ("assumptions", "assumption"),
+    ("limitations", "limitation"),
+    ("success_criteria", "success criterion"),
+)
+_TEXT_FIELDS = (("hypothesis", "hypothesis"), ("objective", "objective"))
+
+
+def _clip(text, limit=160):
+    text = " ".join(str(text or "").split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _run_values(plan):
+    runs = {}
+    for run in plan.get("runs") or ():
+        if isinstance(run, dict) and run.get("id"):
+            runs[str(run["id"])] = run
+    return runs
+
+
+def changes(before, after):
+    """What a revision changed, in sentences a reviewer reads without opening any JSON.
+
+    Each item is {"kind": "changed"|"added"|"removed", "text": ...}. A value changed the same
+    way in every run of a model is one line for the model, not one per run.
+    """
+    before, after = before or {}, after or {}
+    out = []
+
+    def say(kind, text):
+        out.append({"kind": kind, "text": text})
+
+    old_runs, new_runs = _run_values(before), _run_values(after)
+    for run_id in new_runs.keys() - old_runs.keys():
+        run = new_runs[run_id]
+        say("added", "run %s (%s)%s" % (
+            run_id, run.get("model") or "model",
+            ": %s" % _clip(run.get("label"), 90) if run.get("label") else "",
+        ))
+    for run_id in old_runs.keys() - new_runs.keys():
+        say("removed", "run %s" % run_id)
+
+    # Parameter edits on runs present in both versions, grouped by model and edit.
+    edits = {}
+    for run_id in sorted(old_runs.keys() & new_runs.keys()):
+        old, new = old_runs[run_id], new_runs[run_id]
+        model = str(new.get("model") or old.get("model") or "")
+        old_p, new_p = _params(old), _params(new)
+        old_sweep, new_sweep = _sweep_text(old_p, model), _sweep_text(new_p, model)
+        if old_sweep != new_sweep:
+            swept = old_p.get("sweep_parameter")
+            if swept and swept == new_p.get("sweep_parameter"):
+                # The same sweep, a different range: name the parameter once.
+                prefix = "%s from " % named(swept, _spec(model, swept))
+                key = (model, "%s sweep" % named(swept, _spec(model, swept)),
+                       old_sweep.replace(prefix, "", 1), new_sweep.replace(prefix, "", 1))
+            else:
+                key = (model, "sweep", old_sweep or "none", new_sweep or "none")
+            edits.setdefault(key, []).append(run_id)
+        for name in dict.fromkeys(list(old_p) + list(new_p)):
+            if name in _SWEEP_FIELDS or _same(old_p.get(name), new_p.get(name)):
+                continue
+            spec = _spec(model, name)
+            edits.setdefault(
+                (model, named(name, spec), with_unit(old_p.get(name), spec.get("unit")),
+                 with_unit(new_p.get(name), spec.get("unit"))),
+                [],
+            ).append(run_id)
+    for (model, what, old, new), run_ids in edits.items():
+        common = [i for i in old_runs.keys() & new_runs.keys()
+                  if str(new_runs[i].get("model") or "") == model]
+        where = ("every %s run" % (model or "model")) if len(run_ids) == len(common) and len(common) > 1 \
+            else "run%s %s" % ("s" if len(run_ids) > 1 else "", ", ".join(run_ids))
+        say("changed", "%s, %s: %s → %s" % (what, where, old, new))
+
+    # Where a value comes from.
+    old_map, new_map = _index_mapping(before), _index_mapping(after)
+    for key in dict.fromkeys(list(old_map) + list(new_map)):
+        model, name = key
+        spec = _spec(model, name)
+        def source(entries):
+            if not entries:
+                return ""
+            item = entries[0]
+            tag = TAGS.get(str(item.get("provenance_class") or ""), "unlabelled")
+            ref = item.get("evidence_ref") or ""
+            return "%s%s" % (tag, " (%s)" % ref if ref else "")
+        old_s, new_s = source(old_map.get(key)), source(new_map.get(key))
+        if old_s != new_s:
+            if not old_s:
+                say("added", "source of %s: %s" % (named(name, spec), new_s))
+            elif not new_s:
+                say("removed", "recorded source of %s" % named(name, spec))
+            else:
+                say("changed", "source of %s: %s → %s" % (named(name, spec), old_s, new_s))
+
+    # Figures.
+    old_charts = {c.get("id"): c for c in before.get("charts") or () if isinstance(c, dict)}
+    new_charts = {c.get("id"): c for c in after.get("charts") or () if isinstance(c, dict)}
+    def chart_text(chart):
+        return "%s (%s against %s)" % (
+            _clip(chart.get("label") or chart.get("id"), 80),
+            ", ".join(str(y) for y in chart.get("ys") or [chart.get("y")] if y),
+            chart.get("x"),
+        )
+    for chart_id in new_charts.keys() - old_charts.keys():
+        say("added", "figure %s" % chart_text(new_charts[chart_id]))
+    for chart_id in old_charts.keys() - new_charts.keys():
+        say("removed", "figure %s" % chart_text(old_charts[chart_id]))
+    for chart_id in new_charts.keys() & old_charts.keys():
+        if chart_text(old_charts[chart_id]) != chart_text(new_charts[chart_id]):
+            say("changed", "figure %s → %s" % (chart_text(old_charts[chart_id]), chart_text(new_charts[chart_id])))
+        if bool(old_charts[chart_id].get("required", True)) != bool(new_charts[chart_id].get("required", True)):
+            say("changed", "figure %s is now %s" % (
+                _clip(new_charts[chart_id].get("label") or chart_id, 80),
+                "required" if new_charts[chart_id].get("required", True) else "optional",
+            ))
+
+    for field, word in _TEXT_FIELDS:
+        if _clip(before.get(field), 10000) != _clip(after.get(field), 10000) and after.get(field):
+            say("changed", "%s now reads: %s" % (word, _clip(after.get(field))))
+    for field, word in _TEXT_LISTS:
+        old = [_clip(x) for x in before.get(field) or ()]
+        new = [_clip(x) for x in after.get(field) or ()]
+        for item in new:
+            if item not in old:
+                say("added", "%s: %s" % (word, item))
+        for item in old:
+            if item not in new:
+                say("removed", "%s: %s" % (word, item))
+    return out
+
+
+def axis_name(plan, name):
+    """A chart axis named by whichever model in the plan declares it, parameter or output."""
+    for model in dict.fromkeys(str(r.get("model") or "") for r in (plan or {}).get("runs") or () if isinstance(r, dict)):
+        entry = registry.get(model)
+        if not entry:
+            continue
+        spec = (entry.card.get("parameters") or {}).get(name) or (entry.card.get("outputs") or {}).get(name)
+        if spec:
+            unit = unit_text(spec.get("unit"))
+            return "%s%s" % (named(name, spec), " [%s]" % unit if unit else "")
+    return str(name or "")

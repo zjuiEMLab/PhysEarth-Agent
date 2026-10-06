@@ -72,6 +72,30 @@ def _near_registered(name, session=None):
     return sorted(set(close))[:4]
 
 
+_PARENTHETICAL = re.compile(r"\([^)]*\)")
+_VERSION = re.compile(r"(?:^|[\s@])(?:v|version\s*)?(\d+(?:\.\d+)+|\d+(?=\s*$))\s*$", re.I)
+
+
+def _qualified(name):
+    """A model name with its version and an aside taken off: (base, version) or None.
+
+    A paper and an agent both write "SMRT v1.0 (paper implementation of ...)". The model is
+    SMRT; v1.0 is the release the paper describes and the parenthesis is commentary.
+    Without this the check reported the registered smrt as unavailable and as "not an
+    equivalent implementation" of itself, and the demo stopped to ask the user about it.
+    """
+    text = _PARENTHETICAL.sub(" ", str(name or "")).strip()
+    version = None
+    match = _VERSION.search(text)
+    if match:
+        version = match.group(1)
+        text = text[: match.start()].strip()
+    text = " ".join(text.split())
+    if not text or (text == str(name or "").strip() and version is None):
+        return None
+    return text, version
+
+
 _DOI_RE = re.compile(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", re.I)
 
 
@@ -241,6 +265,27 @@ def _capability_check_one(
         # _resolve_from_paper_evidence has established the identity from opened evidence.
         entry, canonical, configuration, options = registry.resolve_configuration(name, session)
         evidence_resolution = None
+        version_note = None
+        if entry is None:
+            qualified = _qualified(name)
+            if qualified:
+                entry, canonical, configuration, options = registry.resolve_configuration(
+                    qualified[0], session
+                )
+                if entry is not None:
+                    registered_version = str(entry.card.get("version") or "")
+                    asked_version = qualified[1]
+                    version_note = {
+                        "match_basis": (
+                            "same model; the source describes version %s and the registry "
+                            "runs %s, so small numerical differences are possible"
+                            % (asked_version, registered_version)
+                            if asked_version and asked_version != registered_version
+                            else "same model, named with a version or a note"
+                        ),
+                        "asked_version": asked_version,
+                        "registered_version": registered_version,
+                    }
         if entry is None:
             evidence_resolution = _resolve_from_paper_evidence(name, session, targets)
             if evidence_resolution:
@@ -278,6 +323,8 @@ def _capability_check_one(
             }
             if evidence_resolution:
                 resolution.update(evidence_resolution[-1])
+            if version_note:
+                resolution.update(version_note)
             resolved_names.append(resolution)
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))
@@ -408,9 +455,20 @@ def _capability_check_one(
         for item in supported
         for output in item.get("outputs") or ()
     })
-    unavailable_outputs = [
-        output for output in outputs if output not in supported_outputs
-    ]
+    # What a figure plots against is a parameter, not an output: density_kg_m3 on the
+    # x-axis was reported as an output no registered model declares. And a requested output
+    # written as a phrase ("ks_per_m vs density over 0-100 kg m-3") names its output.
+    supported_parameters = {
+        parameter for item in supported for parameter in item.get("parameters") or ()
+    }
+
+    def _declared(output):
+        if output in supported_outputs or output in supported_parameters:
+            return True
+        words = re.findall(r"[a-z][a-z0-9_]*", str(output).lower())
+        return any(word in supported_outputs for word in words)
+
+    unavailable_outputs = [output for output in outputs if not _declared(output)]
     not_comparable = []
     if unavailable:
         for missing in unavailable:
