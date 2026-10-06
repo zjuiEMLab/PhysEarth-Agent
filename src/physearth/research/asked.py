@@ -53,7 +53,7 @@ def asked_quantities(session):
 
 
 def _compact(text):
-    """Lower-case, ASCII exponents and no spaces, so 'kg m-3', 'kg m⁻³' and 'kg/m3' meet."""
+    """Lower-case, ASCII exponents and no spaces, so 'm s-1', 'm s⁻¹' and 'm/s1' meet."""
     text = str(text or "").translate(_SUPERSCRIPTS).lower()
     text = re.sub(r"[\^·*_]", " ", text)
     text = re.sub(r"([a-z]+)\s*-\s*(\d)", r"/\1\2", text)
@@ -100,7 +100,7 @@ def _candidates(session, quantity):
     """(cue count, marker, sentence) for every opened-section sentence that gives the quantity.
 
     A sentence qualifies when it carries a number with the quantity's unit and names the
-    quantity, so a passage about something else that happens to quote a density is not
+    quantity, so a passage about something else that happens to quote a number in that unit is not
     offered. Sentences that speak of a range, threshold or limit rank first.
     """
     stem = quantity["phrase"].lower().split()[0][:5]
@@ -132,10 +132,10 @@ def _spans(text, unit):
 
 
 def required_spans(session, quantity):
-    """The numbers the opened sources give for the quantity, e.g. '10-20'.
+    """The numbers the opened sources give for the quantity, e.g. '4-8' for a range.
 
     Taken from the sentences that speak of a range, threshold or limit when there are any,
-    otherwise from the best sentence. A report that gives only its own sweep range does not
+    otherwise from the best sentence. A report that gives only the range it swept does not
     state what the paper says.
     """
     candidates = _candidates(session, quantity)
@@ -183,7 +183,7 @@ def check(text, session, state=None):
     """The gate: every asked quantity is answered from the evidence, or honestly left open.
 
     When an opened source gives the quantity as a number or range, the report must state that
-    value with its unit; a different number with the same unit (its own sweep range) does not
+    value with its unit; a different number with the same unit (the range it swept) does not
     count. When none does, any value with the unit, or an honest "not identifiable", will do.
     """
     if not applies(session, state):

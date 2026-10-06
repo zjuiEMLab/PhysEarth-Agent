@@ -310,7 +310,7 @@ def _gives_value(sentence, unit, numbers):
     """A sentence that gives the value in play: a number equal to the assumed value or the default.
 
     A number in the right unit is not enough, since a paper quotes many unrelated frequencies,
-    lengths and temperatures ("below 19 GHz"), and naming the parameter is not enough either.
+    lengths and temperatures, and naming the parameter is not enough either.
     The sentence must state the number the plan assumed or the number the card defaults to,
     which is the one case where an unread section decides what the plan should say.
     """
@@ -318,7 +318,7 @@ def _gives_value(sentence, unit, numbers):
         return False
     for span in asked._spans(sentence, unit):
         if "-" in span:
-            continue  # "37-89 GHz" is a range the paper mentions, not a value it states
+            continue  # a range the paper mentions is not a value it states
         if any(_same_number(span, number) for number in numbers):
             return True
     return False
