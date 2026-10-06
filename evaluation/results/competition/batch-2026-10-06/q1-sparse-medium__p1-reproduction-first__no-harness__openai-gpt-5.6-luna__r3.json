@@ -1,0 +1,907 @@
+{
+  "schema_version": "competition-run-v1",
+  "task": "q1-sparse-medium",
+  "suite": "tier2",
+  "quality": "complete",
+  "config": "no-harness",
+  "switches": {
+    "harness": false,
+    "literature": false,
+    "capability": false,
+    "figures": false,
+    "paper_access": "raw_pdf",
+    "execution_access": "raw_smrt"
+  },
+  "prompt_profile": "p1-reproduction-first",
+  "prompt_version": "1.0",
+  "prompt_path": "evaluation/prompts/p1-reproduction-first.yaml",
+  "condition_sha256": "81cfdf8838ad0726bf160c048fe2f7b44e72f84c76132f49311294908541c7f3",
+  "provider": "openrouter",
+  "llm": "openai/gpt-5.6-luna",
+  "repeat": 3,
+  "build": "dc5970c+dirty",
+  "question": "Reproduce Figure 3, \"Sparse-medium scattering coefficient comparison\", from the paper \"SMRT: an active-passive microwave radiative transfer model for snow with multiple microstructure and scattering formulations (v1.0)\" by Picard et al. (2018, DOI: 10.5194/gmd-11-2763-2018), Section 3.1.1. Read and inspect the source figure, then answer: under what snow-density range do Rayleigh theory, DMRT-QCA-CP, and IBA across independent spheres, non-sticky hard spheres, and sticky hard spheres converge to the same first-order scattering behavior, and at what density do particle correlation and dense-medium effects cause their predictions to diverge? Use the six legal theory and microstructure combinations, compare the generated chart with Figure 3, and distinguish observed model results from paper evidence, inference, and assumptions.",
+  "answer": "The raw SMRT result is now plotted as an 18-point curve of scattering coefficient \\(k_s\\) (m⁻¹) versus snow density (kg m⁻³). The chart contains only the SMRT model output; no measured or source-paper digitized curve was available, so no bias, RMSE, MAE, or correlation can be computed.\n\nThis is therefore a **model-only reproduction**, not a quantitative validation against the paper’s figure. The source page previously inspected contains implementation details rather than the requested plotted comparison.",
+  "planning_answer": "The raw SMRT result is now plotted as an 18-point curve of scattering coefficient \\(k_s\\) (m⁻¹) versus snow density (kg m⁻³). The chart contains only the SMRT model output; no measured or source-paper digitized curve was available, so no bias, RMSE, MAE, or correlation can be computed.\n\nThis is therefore a **model-only reproduction**, not a quantitative validation against the paper’s figure. The source page previously inspected contains implementation details rather than the requested plotted comparison.",
+  "elapsed_s": 43.95,
+  "stop_rule": null,
+  "model_calls": 6,
+  "llm_usage": {
+    "calls": 6,
+    "prompt_tokens": 46153,
+    "completion_tokens": 1039,
+    "total_tokens": 47192,
+    "cost_usd": 0.0088919,
+    "cost_complete": true,
+    "failed_attempts": 0,
+    "failed_attempt_faults": [],
+    "cached_prompt_tokens": 16840,
+    "per_call": [
+      {
+        "turn": 1,
+        "index": 1,
+        "prompt_tokens": 2046,
+        "cached_prompt_tokens": 1915,
+        "completion_tokens": 42,
+        "cost_usd": 0.0001149,
+        "reasoning_chars": 0,
+        "elapsed_s": 2.53,
+        "first_token_s": 2.13,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 2,
+        "prompt_tokens": 9257,
+        "cached_prompt_tokens": 9126,
+        "completion_tokens": 104,
+        "cost_usd": 0.00033352,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.58,
+        "first_token_s": 2.72,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 3,
+        "prompt_tokens": 10185,
+        "cached_prompt_tokens": 1481,
+        "completion_tokens": 237,
+        "cost_usd": 0.00248987,
+        "reasoning_chars": 525,
+        "elapsed_s": 7.86,
+        "first_token_s": 7.63,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 4,
+        "prompt_tokens": 4849,
+        "cached_prompt_tokens": 1481,
+        "completion_tokens": 284,
+        "cost_usd": 0.00121227,
+        "reasoning_chars": 434,
+        "elapsed_s": 17.85,
+        "first_token_s": 17.1,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 5,
+        "prompt_tokens": 9739,
+        "cached_prompt_tokens": 1356,
+        "completion_tokens": 114,
+        "cost_usd": 0.00225327,
+        "reasoning_chars": 0,
+        "elapsed_s": 3.33,
+        "first_token_s": 2.3,
+        "attempt": 1
+      },
+      {
+        "turn": 1,
+        "index": 6,
+        "prompt_tokens": 10077,
+        "cached_prompt_tokens": 1481,
+        "completion_tokens": 258,
+        "cost_usd": 0.00248807,
+        "reasoning_chars": 470,
+        "elapsed_s": 8.47,
+        "first_token_s": 8.1,
+        "attempt": 1
+      }
+    ]
+  },
+  "tool_calls": 4,
+  "interventions": 0,
+  "qc_failures": 0,
+  "workflow": {
+    "research_required": false,
+    "approval_policy": "not_applicable_safe_refusal",
+    "review_actions": [],
+    "review_error": null,
+    "final_phase": null,
+    "plan_version": null
+  },
+  "research": null,
+  "successful_runs": [
+    {
+      "model": "smrt",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "frequency_ghz": 37,
+        "densities_kg_m3": [
+          50,
+          100,
+          150,
+          200,
+          250,
+          300,
+          350,
+          400,
+          450,
+          500,
+          550,
+          600,
+          650,
+          700,
+          750,
+          800,
+          850,
+          900
+        ],
+        "radius_m": 0.0005,
+        "temperature_k": 265,
+        "thickness_m": 1
+      },
+      "handle": "res_9402caa1eac4",
+      "planned_run_id": null
+    }
+  ],
+  "numeric_results": [
+    {
+      "handle": "res_9402caa1eac4",
+      "planned_run_id": null,
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "frequency_ghz": 37,
+        "densities_kg_m3": [
+          50,
+          100,
+          150,
+          200,
+          250,
+          300,
+          350,
+          400,
+          450,
+          500,
+          550,
+          600,
+          650,
+          700,
+          750,
+          800,
+          850,
+          900
+        ],
+        "radius_m": 0.0005,
+        "temperature_k": 265,
+        "thickness_m": 1
+      },
+      "axis": {
+        "name": "density_kg_m3",
+        "values": [
+          50.0,
+          100.0,
+          150.0,
+          200.0,
+          250.0,
+          300.0,
+          350.0,
+          400.0,
+          450.0,
+          500.0,
+          550.0,
+          600.0,
+          650.0,
+          700.0,
+          750.0,
+          800.0,
+          850.0,
+          900.0
+        ]
+      },
+      "series": {
+        "ks_per_m": [
+          0.8737904730374354,
+          1.7475809460748708,
+          2.621371419112306,
+          3.4951618921497416,
+          4.368952365187177,
+          5.242742838224612,
+          6.116533311262047,
+          6.990323784299483,
+          7.864114257336918,
+          8.737904730374353,
+          9.611695203411788,
+          10.485485676449224,
+          11.359276149486659,
+          12.233066622524094,
+          13.106857095561532,
+          13.980647568598966,
+          14.854438041636401,
+          15.728228514673836
+        ]
+      },
+      "units": {
+        "ks_per_m": "m-1"
+      }
+    }
+  ],
+  "tool_log": [
+    {
+      "turn": 1,
+      "name": "read_raw_paper",
+      "arguments": {
+        "doi": "10.5194/gmd-11-2763-2018",
+        "page": 1,
+        "include_image": true
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "run_raw_smrt",
+      "arguments": {
+        "recipe": {
+          "electromagnetic_model": "rayleigh",
+          "microstructure_model": "independent_sphere",
+          "frequency_ghz": 37,
+          "densities_kg_m3": [
+            50,
+            100,
+            150,
+            200,
+            250,
+            300,
+            350,
+            400,
+            450,
+            500,
+            550,
+            600,
+            650,
+            700,
+            750,
+            800,
+            850,
+            900
+          ],
+          "radius_m": 0.0005,
+          "temperature_k": 265,
+          "thickness_m": 1
+        }
+      },
+      "status": "success",
+      "model": "smrt",
+      "version": "1.5.1",
+      "spec": {
+        "electromagnetic_model": "rayleigh",
+        "microstructure_model": "independent_sphere",
+        "frequency_ghz": 37,
+        "densities_kg_m3": [
+          50,
+          100,
+          150,
+          200,
+          250,
+          300,
+          350,
+          400,
+          450,
+          500,
+          550,
+          600,
+          650,
+          700,
+          750,
+          800,
+          850,
+          900
+        ],
+        "radius_m": 0.0005,
+        "temperature_k": 265,
+        "thickness_m": 1
+      },
+      "handle": "res_9402caa1eac4",
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": true
+    },
+    {
+      "turn": 1,
+      "name": "read_raw_paper",
+      "arguments": {
+        "doi": "10.5194/gmd-11-2763-2018",
+        "page": 8,
+        "include_image": true
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "turn": 1,
+      "name": "plot",
+      "arguments": {
+        "series": [
+          {
+            "handle": "res_9402caa1eac4",
+            "x": "density_kg_m3",
+            "y": "ks_per_m",
+            "label": "SMRT raw result"
+          }
+        ],
+        "kind": "line+markers",
+        "title": "Snow scattering coefficient versus density",
+        "subtitle": "SMRT v1.5.1; raw reproduced configuration",
+        "x_label": "Density (kg m⁻³)",
+        "y_label": "Scattering coefficient ks (m⁻¹)",
+        "dry_run": false,
+        "metrics": []
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "event_log": [
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 2046,
+      "cached_prompt_tokens": 1915,
+      "completion_tokens": 42,
+      "first_token_s": 2.13,
+      "attempt": 1,
+      "cost_usd": 0.0001149,
+      "reasoning_chars": 0,
+      "elapsed_s": 2.53
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_raw_paper",
+      "status": "success",
+      "elapsed_s": 0.06,
+      "summary": "Read raw publisher PDF page 1 of 26 with its page image.",
+      "arguments": {
+        "doi": "10.5194/gmd-11-2763-2018",
+        "page": 1,
+        "include_image": true
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 9257,
+      "cached_prompt_tokens": 9126,
+      "completion_tokens": 104,
+      "first_token_s": 2.72,
+      "attempt": 1,
+      "cost_usd": 0.00033352,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.58
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "run_raw_smrt",
+      "status": "success",
+      "qc": true,
+      "elapsed_s": 0.005,
+      "summary": "Raw upstream SMRT recipe returned 18 scattering-coefficient points.",
+      "arguments": {
+        "recipe": {
+          "electromagnetic_model": "rayleigh",
+          "microstructure_model": "independent_sphere",
+          "frequency_ghz": 37,
+          "densities_kg_m3": [
+            50,
+            100,
+            150,
+            200,
+            250,
+            300,
+            350,
+            400,
+            450,
+            500,
+            550,
+            600,
+            650,
+            700,
+            750,
+            800,
+            850,
+            900
+          ],
+          "radius_m": 0.0005,
+          "temperature_k": 265,
+          "thickness_m": 1
+        }
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 10185,
+      "cached_prompt_tokens": 1481,
+      "completion_tokens": 237,
+      "first_token_s": 7.63,
+      "attempt": 1,
+      "cost_usd": 0.00248987,
+      "reasoning_chars": 525,
+      "elapsed_s": 7.86
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "read_raw_paper",
+      "status": "success",
+      "elapsed_s": 0.061,
+      "summary": "Read raw publisher PDF page 8 of 26 with its page image.",
+      "arguments": {
+        "doi": "10.5194/gmd-11-2763-2018",
+        "page": 8,
+        "include_image": true
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 4849,
+      "cached_prompt_tokens": 1481,
+      "completion_tokens": 284,
+      "first_token_s": 17.1,
+      "attempt": 1,
+      "cost_usd": 0.00121227,
+      "reasoning_chars": 434,
+      "elapsed_s": 17.85
+    },
+    {
+      "kind": "raw_workflow_block",
+      "turn": 1,
+      "rule": "raw_reproduction_step_required",
+      "tool": "plot",
+      "detail": "Continue the raw reproduction. At least one raw result handle is available; call plot with the returned handle(s), a common comparison axis, title, units, and legend before writing the scientific conclusion."
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 9739,
+      "cached_prompt_tokens": 1356,
+      "completion_tokens": 114,
+      "first_token_s": 2.3,
+      "attempt": 1,
+      "cost_usd": 0.00225327,
+      "reasoning_chars": 0,
+      "elapsed_s": 3.33
+    },
+    {
+      "kind": "tool_call",
+      "turn": 1,
+      "name": "plot",
+      "status": "success",
+      "elapsed_s": 0.084,
+      "summary": "Drew a line+markers chart with 1 series over 18 point(s). It is on screen; do not restate its values. Agreement statistics were refused: agreement statistics need exactly two series, got 1. Draw the model run and the thing you are comparing it with, and nothing else. The chart is still on screen; report the two curves separately and say why they cannot be differenced.",
+      "arguments": {
+        "series": [
+          {
+            "handle": "res_9402caa1eac4",
+            "x": "density_kg_m3",
+            "y": "ks_per_m",
+            "label": "SMRT raw result"
+          }
+        ],
+        "kind": "line+markers",
+        "title": "Snow scattering coefficient versus density",
+        "subtitle": "SMRT v1.5.1; raw reproduced configuration",
+        "x_label": "Density (kg m⁻³)",
+        "y_label": "Scattering coefficient ks (m⁻¹)",
+        "dry_run": false,
+        "metrics": []
+      }
+    },
+    {
+      "kind": "model_call",
+      "turn": 1,
+      "prompt_tokens": 10077,
+      "cached_prompt_tokens": 1481,
+      "completion_tokens": 258,
+      "first_token_s": 8.1,
+      "attempt": 1,
+      "cost_usd": 0.00248807,
+      "reasoning_chars": 470,
+      "elapsed_s": 8.47
+    },
+    {
+      "kind": "harness_pass",
+      "turn": 1,
+      "rule": "citation_integrity",
+      "markers": []
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": [],
+    "abstracts": [],
+    "skills": [],
+    "guidelines": [],
+    "paper_figures": [],
+    "raw_pdf_pages": [
+      "10.5194/gmd-11-2763-2018#page-1",
+      "10.5194/gmd-11-2763-2018#page-8"
+    ]
+  },
+  "citation_check": {
+    "rule": "citation_integrity",
+    "markers": [],
+    "unresolved": [],
+    "passed": true
+  },
+  "figures": [
+    {
+      "planned_chart_id": null,
+      "figure_number": 1,
+      "title": "Snow scattering coefficient versus density",
+      "subtitle": "SMRT v1.5.1; raw reproduced configuration",
+      "x_label": "Density (kg m⁻³)",
+      "y_label": "Scattering coefficient ks (m⁻¹)",
+      "kind": "line+markers",
+      "series": [
+        {
+          "label": "SMRT raw result",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 18,
+          "handle": "res_9402caa1eac4",
+          "x": "density_kg_m3",
+          "y": "ks_per_m"
+        }
+      ],
+      "quality_review": null,
+      "provenance": [
+        "model_run"
+      ],
+      "archived_image_path": "evaluation/results/competition/batch-2026-10-06/figures/0da1beb6de9d935852f3622b_q1-sparse-medium_p1-reproduction-first_openai-gpt-5.6-luna_r3_baseline.png"
+    }
+  ],
+  "markers": {
+    "literature": [],
+    "model": [],
+    "data": []
+  },
+  "parameter_provenance": [],
+  "provenance_parse_error": "appendix_missing",
+  "reproduction_outcome": null,
+  "archived_report_path": "evaluation/results/competition/batch-2026-10-06/reports/e0cfdf4ce2de7906f0109422_q1-sparse-medium_p1-reproduction-first_openai-gpt-5.6-luna_r3_report_baseline.md",
+  "report_artifact": {
+    "path": "evaluation/results/competition/batch-2026-10-06/reports/e0cfdf4ce2de7906f0109422_q1-sparse-medium_p1-reproduction-first_openai-gpt-5.6-luna_r3_report_baseline.md",
+    "format": "markdown",
+    "editable": true
+  },
+  "evaluation_standards": {
+    "figure": "evaluation/standards/q1_figure3.yaml",
+    "report_judge": "evaluation/standards/report_judge.yaml"
+  },
+  "dashboard_metrics": {
+    "evaluation_complete": true,
+    "successful": true,
+    "figure_result_correct": "fail",
+    "report_correct": "fail",
+    "overall_correct": "fail",
+    "figure_result": {
+      "passed": false,
+      "complete": true,
+      "status": "fail",
+      "structural_passed": false,
+      "oracle_smrt_version": "1.5.1",
+      "recipe": {
+        "passed": null,
+        "status": "diagnostic_only",
+        "curves": [
+          {
+            "curve": "independent_rayleigh",
+            "present": true,
+            "experiment_exact": false,
+            "axis_exact": false,
+            "version_matched": true,
+            "stickiness_match": true
+          },
+          {
+            "curve": "independent_iba",
+            "present": false,
+            "axis_exact": false
+          },
+          {
+            "curve": "non_sticky_dmrt",
+            "present": false,
+            "axis_exact": false
+          },
+          {
+            "curve": "non_sticky_iba",
+            "present": false,
+            "axis_exact": false
+          },
+          {
+            "curve": "sticky_dmrt",
+            "present": false,
+            "axis_exact": false
+          },
+          {
+            "curve": "sticky_iba",
+            "present": false,
+            "axis_exact": false
+          }
+        ]
+      },
+      "numeric": {
+        "passed": null,
+        "status": "not_scoreable",
+        "curves": [
+          {
+            "curve": "independent_rayleigh",
+            "normalized_rmse": null,
+            "normalized_max_absolute_error": null,
+            "within": null,
+            "comparable": false
+          },
+          {
+            "curve": "independent_iba",
+            "within": null,
+            "detail": "missing curve"
+          },
+          {
+            "curve": "non_sticky_dmrt",
+            "within": null,
+            "detail": "missing curve"
+          },
+          {
+            "curve": "non_sticky_iba",
+            "within": null,
+            "detail": "missing curve"
+          },
+          {
+            "curve": "sticky_dmrt",
+            "within": null,
+            "detail": "missing curve"
+          },
+          {
+            "curve": "sticky_iba",
+            "within": null,
+            "detail": "missing curve"
+          }
+        ]
+      },
+      "numeric_b3": {
+        "oracle_smrt_version": "1.5.1",
+        "curves": [
+          {
+            "curve": "independent_rayleigh",
+            "present": true,
+            "as_chosen": {
+              "normalized_rmse": 217.13708640799788,
+              "normalized_max_absolute_error": 278.3440082954042,
+              "points_compared": 10,
+              "points_in_reference": 20
+            },
+            "notebook_settings": {
+              "normalized_rmse": null,
+              "normalized_max_absolute_error": null
+            }
+          },
+          {
+            "curve": "independent_iba",
+            "present": false
+          },
+          {
+            "curve": "non_sticky_dmrt",
+            "present": false
+          },
+          {
+            "curve": "non_sticky_iba",
+            "present": false
+          },
+          {
+            "curve": "sticky_dmrt",
+            "present": false
+          },
+          {
+            "curve": "sticky_iba",
+            "present": false
+          }
+        ]
+      },
+      "plot": {
+        "passed": false,
+        "status": "fail",
+        "checks": {
+          "rendered": true,
+          "title": false,
+          "caption": false,
+          "axes": true,
+          "legend": false,
+          "quality": true
+        },
+        "figure": {
+          "planned_chart_id": null,
+          "figure_number": 1,
+          "title": "Snow scattering coefficient versus density",
+          "subtitle": "SMRT v1.5.1; raw reproduced configuration",
+          "x_label": "Density (kg m⁻³)",
+          "y_label": "Scattering coefficient ks (m⁻¹)",
+          "kind": "line+markers",
+          "series": [
+            {
+              "label": "SMRT raw result",
+              "source": "model_run",
+              "origin": "smrt@1.5.1",
+              "n_points": 18,
+              "handle": "res_9402caa1eac4",
+              "x": "density_kg_m3",
+              "y": "ks_per_m"
+            }
+          ],
+          "quality_review": null,
+          "provenance": [
+            "model_run"
+          ],
+          "archived_image_path": "evaluation/results/competition/batch-2026-10-06/figures/0da1beb6de9d935852f3622b_q1-sparse-medium_p1-reproduction-first_openai-gpt-5.6-luna_r3_baseline.png"
+        }
+      }
+    },
+    "figure_judgement": {
+      "complete": true,
+      "passed": false,
+      "status": "fail",
+      "total": 2,
+      "scores": {
+        "line_count": 0,
+        "patterns": 1,
+        "grouping": 0,
+        "visual_correspondence": 1
+      },
+      "observations": [
+        "The reference has six curves in three separated pairs; the candidate shows only one curve.",
+        "Both figures show scattering coefficient increasing with density, but the candidate’s single near-linear trend does not reproduce the reference’s distinct curvature or group ordering."
+      ],
+      "summary": "The candidate shares the broad increasing relationship but omits the reference’s six curves and their three distinct families.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 515,
+          "elapsed_s": 6.513,
+          "usage": {
+            "prompt_tokens": 2426,
+            "completion_tokens": 294,
+            "total_tokens": 2720,
+            "cost_usd": 0.000450175
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2426,
+        "completion_tokens": 294,
+        "total_tokens": 2720,
+        "cost_usd": 0.000450175
+      }
+    },
+    "deterministic_report": {
+      "passed": false,
+      "checks": {
+        "report_exists": true,
+        "outcome_declared": false,
+        "evidence_resolved": false,
+        "computed_result_identified": true,
+        "model_version_qualified": false,
+        "calibrated_outcome": true
+      },
+      "unresolved_markers": [],
+      "visual_validation": "not_passed",
+      "plot_checks_are_diagnostic": true
+    },
+    "report_judgement": {
+      "complete": true,
+      "passed": false,
+      "standard": "report-judge-standard-v4",
+      "total": 4,
+      "maximum": 16,
+      "scores": {
+        "source_fidelity": 0,
+        "answer": 0,
+        "factuality": 1,
+        "technical_completeness": 0,
+        "assumed_parameters": 0,
+        "evidence": 0,
+        "calibration": 1,
+        "clarity": 2
+      },
+      "factual_errors": [
+        "The report says the requested source-paper comparison was unavailable, but Figure 3 is the specified source; it also does not reproduce the six required theory–microstructure curves."
+      ],
+      "summary": "The report clearly describes a single model-only output and appropriately avoids quantitative validation claims, but it neither answers the density-range question nor reproduces the required comparison. It omits source evidence, run conditions, assumptions, and model-version qualification.",
+      "judge_model": "openai/gpt-6-luna",
+      "attempts": [
+        {
+          "status": "success",
+          "model": "openai/gpt-6-luna",
+          "response_model": "openai/gpt-6-luna",
+          "finish_reason": "stop",
+          "response_chars": 656,
+          "elapsed_s": 12.943,
+          "usage": {
+            "prompt_tokens": 2583,
+            "completion_tokens": 760,
+            "total_tokens": 3343,
+            "cost_usd": 0.00056894
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 2583,
+        "completion_tokens": 760,
+        "total_tokens": 3343,
+        "cost_usd": 0.00056894
+      }
+    },
+    "judge_usage": {
+      "prompt_tokens": 5009,
+      "completion_tokens": 1054,
+      "total_tokens": 6063,
+      "cost_usd": 0.001019115
+    },
+    "figure_judge_usage": {
+      "prompt_tokens": 2426,
+      "completion_tokens": 294,
+      "total_tokens": 2720,
+      "cost_usd": 0.000450175
+    }
+  }
+}
