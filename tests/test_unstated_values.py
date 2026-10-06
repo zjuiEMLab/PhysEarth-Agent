@@ -40,7 +40,16 @@ def test_an_assumption_is_refused_while_an_unopened_section_gives_a_value_in_tha
     problems = evidence._unstated_value_problems(_session({"smrt-v1#08"}), _mapping(37.0), RUNS)
     sources = [p["source"] for p in problems]
     assert "smrt-v1#07" in sources
-    assert any("37 GHz" in p["repair"] for p in problems if p["source"] == "smrt-v1#07")
+    repair = next(p["repair"] for p in problems if p["source"] == "smrt-v1#07")
+    assert "37 GHz" in repair
+    # The agent cited the section without reading it and was refused for that; name the call.
+    assert "read_literature" in repair and "section_id=07" in repair
+
+
+def test_a_section_that_only_mentions_the_parameter_is_not_required_reading():
+    """Section 01 says 'frequencies below 19 GHz': a different number, so not the value in play."""
+    problems = evidence._unstated_value_problems(_session({"smrt-v1#08"}), _mapping(37.0), RUNS)
+    assert "smrt-v1#01" not in [p["source"] for p in problems]
 
 
 def test_reading_the_sections_closes_the_second_refusal():

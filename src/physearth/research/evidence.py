@@ -306,29 +306,28 @@ def _swept_names(runs, model):
     }
 
 
-def _gives_value(sentence, unit, stem, numbers):
-    """A sentence that bears on the parameter: it names it, or gives the value in play.
+def _gives_value(sentence, unit, numbers):
+    """A sentence that gives the value in play: a number equal to the assumed value or the default.
 
-    A number in the right unit is not enough on its own, since a paper quotes many unrelated
-    frequencies, lengths and temperatures. The sentence must name the parameter, or give a
-    number equal to the assumed value or to the card default.
+    A number in the right unit is not enough, since a paper quotes many unrelated frequencies,
+    lengths and temperatures ("below 19 GHz"), and naming the parameter is not enough either.
+    The sentence must state the number the plan assumed or the number the card defaults to,
+    which is the one case where an unread section decides what the plan should say.
     """
     if not asked.states_value(sentence, unit):
         return False
-    if stem and stem in sentence.lower():
-        return True
     for span in asked._spans(sentence, unit):
-        for part in span.split("-"):
-            if any(_same_number(part, number) for number in numbers):
-                return True
+        if "-" in span:
+            continue  # "37-89 GHz" is a range the paper mentions, not a value it states
+        if any(_same_number(span, number) for number in numbers):
+            return True
     return False
 
 
-def _unopened_sections_naming(session, name, unit, numbers):
-    """Sections of papers already opened that bear on the parameter and are still unopened."""
+def _unopened_sections_naming(session, unit, numbers):
+    """Sections of papers already opened that state the value in play and are still unopened."""
     if len(str(unit or "").strip()) < 2 or str(unit).strip().lower() == "none":
         return []
-    stem = name.split("_")[0].lower()[:5] if name else ""
     opened = set(session.get("sections_read") or ())
     found = []
     for slug in sorted({str(key).partition("#")[0] for key in opened}):
@@ -338,7 +337,7 @@ def _unopened_sections_naming(session, name, unit, numbers):
                 continue
             section = knowledge.read_section(slug, item["id"])
             for sentence in asked._sentences((section or {}).get("text")):
-                if _gives_value(sentence, unit, stem, numbers):
+                if _gives_value(sentence, unit, numbers):
                     found.append((key, sentence[: asked.MAX_PASSAGE_CHARS]))
                     break
     return found[:_MAX_UNOPENED_SECTIONS]
@@ -373,15 +372,17 @@ def _unstated_value_problems(session, parameter_mapping, runs):
         value = item.get("mapped_value")
         unit = spec.get("unit") or ""
         numbers = [number for number in (value, default) if number is not None]
-        for key, sentence in _unopened_sections_naming(session, name, unit, numbers):
+        for key, sentence in _unopened_sections_naming(session, unit, numbers):
+            slug, _, section_id = key.partition("#")
             problems.append({
                 "field": "parameter_mapping[%d]" % index,
                 "source": key,
-                "expected": "unopened sections that give a value in %s read before %s is assumed"
-                % (unit, name),
-                "repair": "Read %s before labelling %s a model assumption; it says: \"%s\". "
-                "Cite it if it states the value."
-                % (key, name, sentence),
+                "expected": "a section stating %s read before %s is assumed" % (unit, name),
+                "repair": "%s is labelled model_assumption, but %s, which you have not opened, says: "
+                "\"%s\". Call read_literature with slug=%s and section_id=%s first: citing it "
+                "without reading it is refused. Then, if it states the value, set the mapping to "
+                "paper_explicit with evidence_ref %s."
+                % (name, key, sentence, slug, section_id, key),
             })
         if default is not None and value is not None and not _same_number(value, default):
             problems.append({
@@ -389,9 +390,11 @@ def _unstated_value_problems(session, parameter_mapping, runs):
                 "source": "registered_model_declaration",
                 "actual": value,
                 "expected": "the card default %s %s, or a value an opened source states" % (default, unit),
-                "repair": "%s = %s is labelled model_assumption with no evidence. Use the card default "
-                "%s (provenance_class backend_default), or cite the opened section that states %s."
-                % (name, value, default, value),
+                "repair": "%s = %s is labelled model_assumption with no evidence. If an opened source "
+                "states it (a figure caption, a section), change the mapping to paper_explicit and "
+                "give its evidence_ref; otherwise use the card default %s with provenance_class "
+                "backend_default."
+                % (name, value, default),
             })
     return problems
 
