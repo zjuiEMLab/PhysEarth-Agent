@@ -647,6 +647,12 @@ def run_one(
         "prompt_profile": profile["id"],
         "prompt_version": profile["version"],
         "prompt_path": profile["_path"],
+        # The task prompt only. TODO (planned 2026-10-07): also record
+        # `system_prompt_sha256`, the digest of prompt.build(...) for this cell's switches,
+        # so a record says which system prompt it ran with. Today that link exists only in
+        # tests/fixtures/prompts, which no record points to; the evaluation page should
+        # then compare batches only when their system-prompt digests match, or say they
+        # differ.
         "condition_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
         "provider": _provider_name(config.llm_api_base()),
         "llm": llm,

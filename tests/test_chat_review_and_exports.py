@@ -465,3 +465,48 @@ def test_the_plotted_axis_and_a_phrased_output_are_not_missing_outputs():
     assert review["unavailable_outputs"] == [] and review["status"] == "ready"
     _result, review = _checked("SMRT", ["brightness_noise_k"])
     assert review["unavailable_outputs"] == ["brightness_noise_k"]
+
+
+def _ready_for_report(box, monkeypatch, guideline_read=True):
+    from physearth.agent import loop
+
+    research.apply_chat_command(box, "approve")
+    box["research_required"] = True
+    box["research_context"]["reproduction_case"] = "paper-reproduction"
+    box["figures"] = [{"title": "Figure 1", "quality_review": {"reviewed": True}, "series": []}]
+    if guideline_read:
+        box.setdefault("research_guidelines_read", set()).add("research-reporting")
+    monkeypatch.setattr(loop.research, "execution_gaps", lambda session: {
+        "missing_runs": [], "missing_chart_ids": [], "unreviewed_chart_ids": [],
+        "figure_problem": "", "failed_runs": [], "target_gaps": [],
+    })
+    return loop
+
+
+def test_the_report_stage_asks_for_the_guideline_then_the_contract(state, monkeypatch):
+    box = _box()
+    loop = _ready_for_report(box, monkeypatch, guideline_read=False)
+    assert loop._report_stage(box) == "guideline"
+    box["research_guidelines_read"] = {"research-reporting"}
+    assert loop._report_stage(box) == "contract"
+    box["research_report_prompt_sent"] = True
+    assert loop._report_stage(box) is None
+
+
+def test_the_report_contract_reaches_the_model_before_its_first_draft(state, monkeypatch):
+    from tests.test_approval import _Chunk, _Delta, _fake_client
+
+    box = _box()
+    loop = _ready_for_report(box, monkeypatch)
+    monkeypatch.setattr(loop.research, "report_generation_prompt", lambda session: "REPORT CONTRACT")
+    client, sent = _fake_client([[_Chunk(_Delta(content="Report."))]] * 4)
+    monkeypatch.setattr(agent.completion, "_client", lambda: client)
+    agent.run("Write the report.", session=box)
+    # The first request already carries the contract: no draft is written without it.
+    assert any(m.get("content") == "REPORT CONTRACT" for m in sent[0])
+    assert sum(1 for request in sent for m in request if m.get("content") == "REPORT CONTRACT") == len(sent)
+
+
+def test_a_parameter_asked_for_on_its_own_is_still_an_inversion():
+    _result, review = _checked("SMRT", ["density_kg_m3"])
+    assert review["unavailable_outputs"] == ["density_kg_m3"]

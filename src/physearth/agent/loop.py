@@ -143,6 +143,29 @@ def _reasoning_effort():
     return {"thinking_budget": {"low": 2048, "medium": 8192, "high": 32768}[effort]}
 
 
+def _report_stage(session):
+    """What the report needs before its first draft: "guideline", "contract" or None."""
+    if not (
+        session.get("research_required")
+        and (session.get("research_context") or {}).get("reproduction_case") == "paper-reproduction"
+        and research.allow_model(session)
+        and not session.get("research_report_prompt_sent")
+    ):
+        return None
+    figures = [figure for figure in session.get("figures") or () if not figure.get("preview")]
+    if not figures or not all((f.get("quality_review") or {}).get("reviewed") for f in figures):
+        return None
+    gaps = research.execution_gaps(session)
+    if (
+        gaps["missing_runs"] or gaps["missing_chart_ids"] or gaps["unreviewed_chart_ids"]
+        or gaps["figure_problem"]
+    ):
+        return None
+    if "research-reporting" not in set(session.get("research_guidelines_read") or ()):
+        return "guideline"
+    return "contract"
+
+
 def _requests_tool_bypass(question):
     """Recognize an explicit request to disable evidence/model tools.
 
@@ -347,6 +370,33 @@ def stream(question, history=None, model=None, session=None, switches=None):
         else:
             raw_prompted_stage = None
             session.pop("raw_force_plot", None)
+
+        # The report stage, before the model writes rather than after. The guideline and
+        # the report contract (ledger, figures, asked values) used to be sent only once the
+        # model had produced a complete report, which was then thrown away and written
+        # again: in the recorded runs that discarded first draft was 100 to 200 seconds of
+        # a 300-second turn. Once every planned run and figure is in, they go out first.
+        stage = _report_stage(session)
+        if stage == "guideline" and not session.get("research_report_guideline_requested"):
+            session["research_report_guideline_requested"] = True
+            forced_tool_name = "read_research_guideline"
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Every planned run and figure is complete. Before writing the report, "
+                    "call read_research_guideline(topic='research-reporting')."
+                ),
+            })
+        elif stage == "contract":
+            session["research_report_prompt_sent"] = True
+            events.append(
+                _event(
+                    "research_block",
+                    rule="research_reporting_contract",
+                    detail="The report contract was sent before the first draft.",
+                )
+            )
+            messages.append({"role": "user", "content": research.report_generation_prompt(session)})
 
         state["phase"] = "calling_model"
         yield answer, events, state
