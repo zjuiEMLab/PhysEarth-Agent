@@ -59,6 +59,15 @@ not always the same, and a value outside the declared range is a refusal, not an
 **Compare two models.** Difference the curves only after checking that both declare the same
 observable in the same units. `list_models` gives the declarations.
 
+**Solve, fit or interpolate around a model.** A figure that asks "which input gives this result"
+needs a search, a fit or an interpolation over runs. You run Python yourself, so write it: call the
+registered model for every trial, use a standard method (a bracketing root finder, least squares,
+`scipy.interpolate`), and keep the script. State the method, its tolerance and the number of model
+runs in the answer. The model's numbers come from its runs; never replace the model with your own
+physics, and never swap in a different quantity because the one asked for needs a search. The
+engine's own agent has a `run_analysis_script` tool with a person reading the code first; the plugin
+does not expose it because you already have an environment.
+
 ## Refusals are results
 
 A tool result carries `status`. `success` means the run happened. `terminal_error` is an error.

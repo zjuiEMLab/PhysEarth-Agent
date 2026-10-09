@@ -595,6 +595,26 @@ function peBoot() {
   var reviewInFlight = false;
   var reviewPhaseAtClick = "";
 
+  /* Gradio scopes every rule under its own container, so a rule keyed on a class of
+     <body> never matches; the Stop button carries its own state instead. */
+  var composerHints = { "pe-stop": "Stop", "pe-clear": "Delete", "pe-send": "Send" };
+  function labelComposer() {
+    for (var id in composerHints) {
+      var button = document.getElementById(id);
+      if (button && button.title !== composerHints[id]) {
+        button.title = composerHints[id];
+        button.setAttribute("aria-label", composerHints[id]);
+      }
+    }
+  }
+
+  function syncStop() {
+    labelComposer();
+    var stop = document.getElementById("pe-stop");
+    if (stop) stop.classList.toggle("is-live", document.body.classList.contains("is-reasoning"));
+  }
+  new MutationObserver(syncStop).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
   function optimisticSend() {
     var area = textarea();
     var text = area ? area.value.trim() : "";
@@ -748,6 +768,7 @@ function peBoot() {
       }
       restoreState(document);
       syncResearchControls();
+      labelComposer();
       autoScroll();
       tickClocks();
       var running = !!document.querySelector("[data-running]");

@@ -59,8 +59,11 @@ def test_reading_the_sections_closes_the_second_refusal():
 
 def test_a_value_with_evidence_or_a_stronger_label_is_left_alone():
     session = _session({"smrt-v1#08"})
+    # a citation excuses the value only when the cited section states it
     assert evidence._unstated_value_problems(
-        session, _mapping(50, evidence_ref="smrt-v1#07"), RUNS) == []
+        session, _mapping(37, evidence_ref="smrt-v1#07"), RUNS) == []
+    assert evidence._unstated_value_problems(
+        session, _mapping(50, evidence_ref="smrt-v1#07"), RUNS) != []
     assert evidence._unstated_value_problems(
         session, _mapping(50, provenance="paper_explicit"), RUNS) == []
     assert evidence._unstated_value_problems(session, _mapping(50, paper_value=37), RUNS) == []

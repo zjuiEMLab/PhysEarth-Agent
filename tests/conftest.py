@@ -19,3 +19,7 @@ for _name in (
     "PHYSEARTH_MAX_QUESTIONS_PER_HOUR",
 ):
     os.environ[_name] = config._DEFAULTS[_name]
+
+# The router's model call would consume a scripted client's first reply. The suite tests the
+# rules; test_router.py turns the model call on for the cases that exercise it.
+os.environ["PHYSEARTH_ROUTER"] = "rules"

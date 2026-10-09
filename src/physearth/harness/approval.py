@@ -54,8 +54,30 @@ def required(session):
     return mode(session) == ASK
 
 
-def describe(name, arguments):
+def _describe_script(arguments, session):
+    """A script is approved by reading it, so the description carries the code itself."""
+    from physearth.tools import analysis
+
+    arguments = arguments or {}
+    report = analysis.inspect_code(arguments.get("code"), arguments.get("requirements"), session)
+    shape = "%d lines of Python" % report["lines"]
+    if report["missing"]:
+        shape += ", needing packages that are not installed: %s" % ", ".join(report["missing"])
+    return {
+        "model": "an analysis script",
+        "shape": shape,
+        "parameters": {},
+        "raw": {"purpose": arguments.get("purpose", ""), "requirements": arguments.get("requirements") or []},
+        "code": str(arguments.get("code") or ""),
+        "purpose": str(arguments.get("purpose") or ""),
+        "inspection": report,
+    }
+
+
+def describe(name, arguments, session=None):
     """What the person is being asked to approve, in their terms rather than the model's."""
+    if name == "run_analysis_script":
+        return _describe_script(arguments, session)
     parameters = dict((arguments or {}).get("parameters") or {})
     parameters.update(
         {k: v for k, v in (arguments or {}).items() if k not in ("model", "parameters")}
@@ -89,7 +111,7 @@ def request(session, name, arguments, resume=None):
     entry["pending"] = {
         "tool": name,
         "arguments": arguments or {},
-        "description": describe(name, arguments),
+        "description": describe(name, arguments, session),
         "asked_at": time.time(),
         "resume": resume,
     }

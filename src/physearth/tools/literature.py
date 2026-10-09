@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 from physearth import config, registry, research
+from physearth.research import operations
 from physearth.corpus import knowledge, live, model_guidelines
 from physearth.harness import switches, untrusted
 from physearth.ingest import discover, fulltext, http, pdf
@@ -211,10 +212,18 @@ def research_capability_check(
     requested_outputs=None,
     local_models=None,
     targets=None,
+    needed_operations=None,
     _session=None,
 ):
     if _session is None:
         return _fail("research_capability_check requires a session.")
+    if str(action or "check").strip().lower() == "check" and needed_operations is None:
+        # Asking costs the agent one short step and nothing when the answer is "none".
+        return _fail(
+            "Pass needed_operations: the steps this reproduction needs besides running "
+            "registered models (an empty list if it needs none). Known steps: %s."
+            % operations.vocabulary()
+        )
     # Once this checkpoint is called, the turn is in the reproduction workflow. A
     # later direct run_model call must therefore meet the research approval gate even
     # if the model never submits a plan.
@@ -228,6 +237,7 @@ def research_capability_check(
         local_models=local_models,
         targets=targets,
         decision=action,
+        needed_operations=needed_operations,
     )
     if report.get("status") == "error":
         return _fail(
@@ -284,7 +294,7 @@ def research_capability_check(
                 for item in target.get("not_comparable") or ()
             ) or "none"
             target_sections.append(
-                "%s [%s]\nSupported: %s\nUnavailable: %s\nNot comparable: %s"
+                "**%s** [%s]\n\n- Supported: %s\n- Unavailable: %s\n- Not comparable: %s"
                 % (
                     target.get("label") or target.get("id"),
                     target.get("id"),
@@ -294,9 +304,9 @@ def research_capability_check(
                 )
             )
         summary = (
-            "Capability check by reproduction target\n\n%s\n\n"
-            "Unified summary\nResolved names: %s\nSupported: %s\nUnavailable: %s\n"
-            "Not comparable: %s\nOutputs no registered model declares: %s"
+            "**Capability check by reproduction target**\n\n%s\n\n"
+            "**Unified summary**\n\n- Resolved names: %s\n- Supported: %s\n- Unavailable: %s\n"
+            "- Not comparable: %s\n- Outputs no registered model declares: %s"
             % (
                 "\n\n".join(target_sections), resolved_text, supported_text,
                 unavailable_text, incomparable_text, unavailable_outputs_text,
@@ -350,16 +360,35 @@ def research_capability_check(
             "error": "capability checks are incomplete",
         }
     if report.get("status") == "waiting_user":
-        summary += (
-            "\n\nExact reproduction is not possible with the currently registered models. "
-            "Would you like me to generate a partial plan using only the supported components?"
-        )
+        missing_operations = report.get("missing_operations") or []
+        needs = ["- %s (not available)" % item.get("need", "A tool for this step") for item in missing_operations]
+        if unavailable_outputs_text != "none" and not missing_operations:
+            needs.append("- A tool that computes %s (no registered model or tool does)" % unavailable_outputs_text)
+        for item in report.get("unavailable") or ():
+            needs.append("- The model %s (not registered)" % item.get("model"))
+        blocks = ["**This reproduction needs what is not available:**\n\n" + "\n".join(needs)]
+        blocks.extend(operations.explain(item) for item in missing_operations)
+        if missing_operations:
+            blocks.append("**Which option do you want?** Reply A, B or C. Only options marked available now can go ahead.")
+        elif unavailable_outputs_text != "none":
+            blocks.append(
+                "How would you like to go on? I can generate a partial plan using only the supported "
+                "components, or you can tell me how this quantity should be computed (a method, an "
+                "equation, a procedure) and I will write an analysis script for it. You read and "
+                "approve the code before it runs."
+            )
+        else:
+            blocks.append(
+                "Would you like me to generate a partial plan using only the supported components?"
+            )
+        summary += "\n\n" + "\n\n".join(blocks)
         return {
             "status": "needs_input",
             "summary": summary,
             "data": {
                 "error_code": "capability_review_required",
                 "capability_review": report,
+                "if_the_person_chooses": operations.next_steps(missing_operations),
                 "source": "session.capability_review",
                 "expected": "explicit user confirmation for partial scope",
                 "repair": "Ask the user whether to generate a plan for supported components.",

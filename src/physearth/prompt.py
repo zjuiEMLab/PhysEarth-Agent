@@ -56,6 +56,8 @@ RESEARCH_WORKFLOW = _text("21-research.md")
 TRIGGERS = _text("22-triggers.md")
 NO_CORPUS_WORKFLOW = _text("23-workflow-no-corpus.md")
 RAW_EVALUATION_WORKFLOW = _text("24-raw-evaluation.md")
+RUN_WORKFLOW = _text("25-workflow-run.md")
+SCRIPT_WORKFLOW = _text("26-workflow-script.md")
 
 
 def models_section(declared=True, session=None):
@@ -169,6 +171,43 @@ def build(state=None, tail=True):
             STYLE,
         ]
         if state and tail:
+            blocks.append(status_block(state))
+        return "\n\n".join(blocks)
+    if (state or {}).get("path") == "script" and flags["literature"]:
+        # The person chose to have a script written: the sources stay readable, the plan and
+        # capability steps are done.
+        blocks = [
+            ROLE,
+            models_section(flags["capability"], (state or {}).get("session")),
+            reference_section(),
+            catalogue_section(),
+            SCRIPT_WORKFLOW,
+            untrusted.RULE,
+            CITATION_RULES,
+            STYLE,
+        ]
+        if state and tail:
+            held = session_state.held_block(state.get("session"))
+            if held:
+                blocks.append(held)
+            blocks.append(status_block(state))
+        return "\n\n".join(blocks)
+    if (state or {}).get("path") == "run":
+        # A direct model question: no corpus catalogue, no method-note listing, no research
+        # workflow. The citation rules stay, since a run is cited like any other result.
+        blocks = [
+            ROLE,
+            models_section(flags["capability"], (state or {}).get("session")),
+            reference_section(),
+            RUN_WORKFLOW,
+            untrusted.RULE,
+            CITATION_RULES if flags["literature"] else NO_CORPUS_CITATION_RULES,
+            STYLE,
+        ]
+        if state and tail:
+            held = session_state.held_block(state.get("session"))
+            if held:
+                blocks.append(held)
             blocks.append(status_block(state))
         return "\n\n".join(blocks)
     research_workflow = RESEARCH_WORKFLOW

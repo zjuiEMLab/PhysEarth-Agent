@@ -4,7 +4,7 @@ import re
 
 from physearth import registry
 from physearth.corpus import knowledge
-from physearth.research import asked
+from physearth.research import asked, claims
 from physearth.research.common import PARAMETER_PROVENANCE
 from physearth.research.coverage import _target_coverage
 from physearth.research.mapping import (
@@ -284,7 +284,8 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
             })
     if not outputs:
         problems.append({"field": "outputs", "source": "research_plan", "expected": "model outputs used to evaluate the target", "repair": "Declare the quantities/outputs that will be compared."})
-    problems.extend(_unstated_value_problems(session, parameter_mapping, runs))
+    problems.extend(_unstated_value_problems(session, parameter_mapping, runs, reproduction_targets))
+    problems.extend(_semi_infinite_problems(session, parameter_mapping, reproduction_targets, runs))
     return problems
 
 
@@ -343,7 +344,66 @@ def _unopened_sections_naming(session, unit, numbers):
     return found[:_MAX_UNOPENED_SECTIONS]
 
 
-def _unstated_value_problems(session, parameter_mapping, runs):
+def _runs_depend_on_depth(entry, model, runs):
+    """Whether any run of the model asks for an output that the layer's depth affects.
+
+    The coefficients of a layer (scattering, absorption, permittivity) are properties of the
+    medium, not of how deep it is. Brightness temperature and backscatter are.
+    """
+    if runs is None:
+        return True
+    default = (((entry.card.get("parameters") or {}).get("output") or {}).get("default")) if entry else None
+    for run in runs:
+        if str(run.get("model") or "") != model:
+            continue
+        output = (run.get("parameters") or {}).get("output") or default
+        if output != "coefficients":
+            return True
+    return False
+
+
+def _semi_infinite_problems(session, parameter_mapping, reproduction_targets, runs=None):
+    """A layer left at its small default where the paper states a semi-infinite medium.
+
+    The card says a value far above a few metres stands in for such a medium; a default does not.
+    The number is the card's, the statement is the paper's, and the plan has to join them.
+    """
+    figures = claims.target_figures(reproduction_targets)
+    problems = []
+    source = None
+    for index, item in enumerate(parameter_mapping or ()):
+        if not isinstance(item, dict) or item.get("provenance_class") in ("user_specified", "paper_explicit"):
+            continue
+        model = str(item.get("model") or "")
+        name = str(item.get("model_input") or "")
+        entry = registry.get(model, session) if model else None
+        spec = ((entry.card.get("parameters") or {}).get(name) or {}) if entry else {}
+        value, default = item.get("mapped_value"), spec.get("default")
+        if not _runs_depend_on_depth(entry, model, runs):
+            continue
+        if (
+            not claims.stands_in_for_semi_infinite(spec)
+            or not isinstance(value, (int, float)) or not isinstance(default, (int, float))
+            or value >= claims.STAND_IN_RATIO * default
+        ):
+            continue
+        source = source or claims.semi_infinite_stated(session, figures)
+        if not source:
+            return []
+        problems.append({
+            "field": "parameter_mapping[%d].mapped_value" % index,
+            "source": source,
+            "actual": value,
+            "expected": "a value far above a few metres, as a stand-in for the semi-infinite medium %s states" % source,
+            "repair": "%s states a semi-infinite medium, and %s = %s is not one: the model card says a "
+            "value far above a few metres stands in for it. Set %s to such a value in the runs and "
+            "map it as model_assumption with evidence_ref %s, saying in the rationale that it is a "
+            "stand-in." % (source, name, value, name, source),
+        })
+    return problems
+
+
+def _unstated_value_problems(session, parameter_mapping, runs, reproduction_targets=None):
     """A value the paper did not state is the card's default, not an invented one.
 
     A reproduction fills what the source leaves open, and the honest fill is the registered
@@ -356,12 +416,21 @@ def _unstated_value_problems(session, parameter_mapping, runs):
     for index, item in enumerate(parameter_mapping or ()):
         if not isinstance(item, dict) or item.get("provenance_class") != "model_assumption":
             continue
-        if item.get("evidence_ref") or item.get("paper_value") not in (None, ""):
-            continue
         name = str(item.get("model_input") or "")
         model = str(item.get("model") or "")
         entry = registry.get(model, session) if model else None
         spec = ((entry.card.get("parameters") or {}).get(name) or {}) if entry else {}
+        if item.get("evidence_ref"):
+            # A citation is evidence only if the cited section states the value for this
+            # experiment. A value borrowed from a worked example or another figure's setup is
+            # an assumption with a source nearby, and is treated like any other.
+            if not claims.paper_claim_problem(
+                item.get("evidence_ref"), item.get("mapped_value"),
+                claims.target_figures(reproduction_targets), name, spec.get("unit"),
+            ):
+                continue
+        elif item.get("paper_value") not in (None, ""):
+            continue
         if not spec or name in _swept_names(runs, model):
             continue
         if spec.get("type") not in ("number", "integer"):
@@ -371,6 +440,28 @@ def _unstated_value_problems(session, parameter_mapping, runs):
         default = spec.get("default")
         value = item.get("mapped_value")
         unit = spec.get("unit") or ""
+        if (
+            claims.stands_in_for_semi_infinite(spec)
+            and isinstance(value, (int, float)) and isinstance(default, (int, float))
+            and value >= claims.STAND_IN_RATIO * default
+        ):
+            figures = claims.target_figures(reproduction_targets)
+            if claims.semi_infinite_stated(session, figures):
+                continue  # a thick layer standing in for the medium the paper states
+            unopened = claims.semi_infinite_unopened(session, figures)
+            if unopened:
+                key, sentence = unopened
+                slug, _, section_id = key.partition("#")
+                problems.append({
+                    "field": "parameter_mapping[%d]" % index,
+                    "source": key,
+                    "expected": "the section that states the medium read before %s is assumed" % name,
+                    "repair": "%s = %s stands in for a semi-infinite medium, and %s, which you have not "
+                    "opened, says: \"%s\". Call read_literature with slug=%s and section_id=%s first, "
+                    "then map %s as model_assumption with evidence_ref %s and say it is a stand-in."
+                    % (name, value, key, sentence, slug, section_id, name, key),
+                })
+                continue
         numbers = [number for number in (value, default) if number is not None]
         for key, sentence in _unopened_sections_naming(session, unit, numbers):
             slug, _, section_id = key.partition("#")

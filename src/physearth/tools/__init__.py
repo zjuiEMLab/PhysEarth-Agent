@@ -22,6 +22,7 @@ from physearth.tools import (
     runs,
     specs,
 )
+from physearth.tools.analysis import run_analysis_script
 from physearth.tools.charts import plot, plot_planned_chart
 from physearth.tools.common import _fail, _ledger, _ok
 from physearth.tools.literature import (
@@ -68,6 +69,7 @@ DISPATCH = {
     "register_github_model_repo": register_github_model_repo,
     "list_models": list_models,
     "run_model": run_model,
+    "run_analysis_script": run_analysis_script,
     "run_planned_model": run_planned_model,
     "plot": plot,
     "plot_planned_chart": plot_planned_chart,
@@ -83,9 +85,12 @@ DISPATCH = {
 # tool call.
 OWNER_SCOPED = (
     "run_model", "run_planned_model", "run_raw_smrt", "read_reference_dataset", "plot",
-    "plot_planned_chart",
+    "plot_planned_chart", "run_analysis_script",
 )
-SWITCH_AWARE = ("run_model", "run_planned_model", "list_models", "read_literature")
+SWITCH_AWARE = ("run_model", "run_planned_model", "list_models", "read_literature", "run_analysis_script")
+# Offered to the engine's own agent only. A host such as Claude Code or Codex already runs Python
+# in the user's own environment, so the plugin does not expose a second, narrower way to do it.
+HOST_RUNS_PYTHON = ("run_analysis_script",)
 SESSION_SCOPED = (
     "list_literature", "read_literature", "list_models", "read_research_guideline", "read_model_instruction",
     "research_capability_check",
@@ -93,7 +98,7 @@ SESSION_SCOPED = (
     "inspect_github_model_repo", "register_github_model_repo", "discover_literature", "ingest_paper"
 )
 SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model", "run_planned_model", "plot_planned_chart")
-SESSION_SCOPED = SESSION_SCOPED + ("plot",)
+SESSION_SCOPED = SESSION_SCOPED + ("plot", "run_analysis_script")
 SESSION_SCOPED = SESSION_SCOPED + ("read_raw_paper", "run_raw_smrt", "read_paper_digest")
 CORPUS_TOOLS = (
     "list_literature", "read_literature", "read_paper_digest", "read_research_guideline",
@@ -105,7 +110,27 @@ RAW_TOOLS = ("read_raw_paper", "run_raw_smrt")
 RAW_BASELINE_TOOLS = {"read_raw_paper", "run_raw_smrt", "plot"}
 
 
-def specs(switches_in=None):
+# What a direct model question is offered. research_plan stays as the way up to the reviewed
+# workflow; the reading tools do not, because a direct run does not read.
+RUN_PATH_TOOLS = (
+    "list_models", "read_model_instruction", "run_model", "plot", "read_reference_dataset",
+    "run_analysis_script", "research_plan",
+)
+# After the person chose a script for a missing step: the reading tools to set its conditions
+# from the source, the script, and the chart. No plan, no capability check.
+SCRIPT_PATH_TOOLS = (
+    "list_literature", "read_literature", "read_paper_digest", "read_paper_figure",
+    "inspect_paper_figure", "list_models", "read_model_instruction", "read_reference_dataset",
+    "run_analysis_script", "plot",
+)
+# An explanation may cite sources and inspect models, but runs and plans nothing.
+ANSWER_PATH_TOOLS = (
+    "list_literature", "read_literature", "read_paper_digest", "discover_literature",
+    "list_models", "read_model_instruction", "read_reference_dataset",
+)
+
+
+def specs(switches_in=None, path=None):
     """The tool list the model is offered.
 
     The corpus ablation removes the literature tools. The online layer removes the two
@@ -123,12 +148,17 @@ def specs(switches_in=None):
         hidden |= set(FIGURE_TOOLS)
     if not http.online():
         hidden |= set(ONLINE_TOOLS)
-    return [s for s in SPECS if s["function"]["name"] not in hidden]
+    offered = [s for s in SPECS if s["function"]["name"] not in hidden]
+    keep = {"run": RUN_PATH_TOOLS, "answer": ANSWER_PATH_TOOLS, "script": SCRIPT_PATH_TOOLS}.get(path)
+    if keep:
+        offered = [s for s in offered if s["function"]["name"] in keep]
+    return offered
 
 
 def call(name, arguments, owner=None, switches_in=None, session=None):
     flags = switches.resolve(switches_in)
-    offered = {t["function"]["name"] for t in specs(switches_in)}
+    path = ((session or {}).get("route") or {}).get("path")
+    offered = {t["function"]["name"] for t in specs(switches_in, path)}
     if name in DISPATCH and name not in offered:
         return _fail("Unknown tool %r. Available tools: %s." % (name, ", ".join(sorted(offered))))
     handler = DISPATCH.get(name)

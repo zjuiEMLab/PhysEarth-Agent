@@ -258,6 +258,7 @@ def test_switching_the_layer_off_leaves_the_offline_path_whole(monkeypatch):
         "plot_planned_chart",
         "read_reference_dataset",
         "plot",
+        "run_analysis_script",
         "research_plan",
     }
     box = session.new_session("m")

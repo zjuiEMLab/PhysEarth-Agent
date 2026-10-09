@@ -29,6 +29,7 @@ BADGES = {
     "tool_bypass_requested": ("badge--warn", "TOOLS DISABLED", "step-card--warn"),
     "tool_bypass_blocked": ("badge--block", "SAFE REFUSAL", "step-card--block"),
     "research_mode_selected": ("badge--ok", "RESEARCH MODE", "step-card--pass"),
+    "route": ("badge--ok", "ROUTE", "step-card--pass"),
 }
 
 
@@ -161,6 +162,14 @@ def _event_body(event, index):
     if kind == "approval":
         return "<div class='step-card__line'>%s</div>" % _e(
             APPROVAL_WORDS.get(event.get("decision"), event.get("decision") or "")
+        )
+
+    if kind == "route":
+        labels = {"run": "direct model question", "answer": "explanation", "reproduce": "paper reproduction",
+                  "auto": "all tools"}
+        return "<div class='step-card__line'>%s: %s (%s).</div>" % (
+            _e(labels.get(event.get("path"), event.get("path"))), _e(event.get("reason") or ""),
+            _e(event.get("source") or ""),
         )
 
     if kind == "tool_bypass_requested":

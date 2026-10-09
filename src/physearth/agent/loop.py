@@ -1,11 +1,16 @@
 """One turn of the agent: prompt, completion, tool calls, and the trace of both."""
 
+import contextvars
 import json
+import queue
+import threading
 import time
 
 from physearth import config, harness, prompt, research, tools
 from physearth import session as session_state
 from physearth.agent import completion as _completion
+from physearth.agent import router
+from physearth.research import operations
 from physearth.agent.catalogue import CATALOGUE, new_session, new_state, resolve_model
 from physearth.agent.completion import _Completion, _tool_arguments
 from physearth.agent.constants import (
@@ -210,6 +215,114 @@ def _raw_reproduction_step(session):
     return None
 
 
+STOP_NOTICE = "Stopped at your request. Nothing after this point was run."
+
+
+def stop_requested(session):
+    return bool((session or {}).get("stop_requested"))
+
+
+def _pause(session, seconds):
+    """Sleep in short slices so a stop request ends a rate-limit backoff at once."""
+    end = time.monotonic() + seconds
+    while not stop_requested(session) and time.monotonic() < end:
+        time.sleep(min(0.25, max(0.0, end - time.monotonic())))
+
+
+def _watched(session, open_stream):
+    """Chunks of a provider response, produced on a worker thread.
+
+    The provider call can sit for minutes before its first token. Reading it on a thread
+    lets the caller notice a stop request within a quarter of a second and walk away from
+    a response it no longer wants; the abandoned thread ends with the request.
+    """
+    done = object()
+    feed = queue.Queue()
+    context = contextvars.copy_context()
+
+    def work():
+        try:
+            for chunk in open_stream():
+                feed.put(chunk)
+                if stop_requested(session):
+                    break
+        except BaseException as exc:
+            feed.put(exc)
+        feed.put(done)
+
+    threading.Thread(target=context.run, args=(work,), daemon=True).start()
+    while True:
+        try:
+            item = feed.get(timeout=0.25)
+        except queue.Empty:
+            if stop_requested(session):
+                return
+            continue
+        if item is done:
+            return
+        if isinstance(item, BaseException):
+            raise item
+        yield item
+
+
+def _call_watched(session, call):
+    """Run one tool call on a worker thread, or give up on it (None) if a stop is requested.
+
+    Literature and paper tools can take a minute or more; without this a stop would only
+    land when the call returned. The abandoned call finishes in the background and its
+    result is dropped.
+    """
+    outcome = {}
+    finished = threading.Event()
+    context = contextvars.copy_context()
+
+    def work():
+        try:
+            outcome["result"] = call()
+        except BaseException as exc:
+            outcome["error"] = exc
+        finished.set()
+
+    threading.Thread(target=context.run, args=(work,), daemon=True).start()
+    while not finished.wait(0.25):
+        if stop_requested(session):
+            return None
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome["result"]
+
+
+ROUTER_TIMEOUT_S = 20
+
+
+def _classify_turn(session, question, model_id):
+    """One short call, reasoning off, that names the kind of turn. None if it was stopped."""
+    client = _completion._client()
+
+    def ask():
+        chunks = client.chat.completions.create(
+            model=model_id,
+            messages=[
+                {"role": "system", "content": router.CLASSIFIER_PROMPT},
+                {"role": "user", "content": str(question)[:2000]},
+            ],
+            max_tokens=16,
+            temperature=0,
+            stream=True,
+            timeout=ROUTER_TIMEOUT_S,
+            extra_body=_thinking_off(),
+        )
+        text = []
+        for chunk in chunks:
+            for choice in getattr(chunk, "choices", None) or ():
+                piece = getattr(getattr(choice, "delta", None), "content", None)
+                if piece:
+                    text.append(piece)
+        return "".join(text)
+
+    return _call_watched(session, ask)
+
+
 def stream(question, history=None, model=None, session=None, switches=None):
     """Run one turn, yielding (answer, events, state) every time something happens.
 
@@ -220,6 +333,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
     the application leaves it None, which turns everything on.
     """
     session = new_session(model) if session is None else session
+    session.pop("stop_requested", None)
     session["model"] = resolve_model(
         model or session.get("model"), session.get("unrestricted", False)
     )
@@ -305,6 +419,13 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 ),
             )
         )
+    route = router.decide(
+        question, session, held=bool(held), reproduction=reproduction_preflight,
+        classify=lambda text: _classify_turn(session, text, state["model"]),
+    )
+    session["route"] = route
+    state["path"] = None if route["path"] == router.AUTO else route["path"]
+    events.append(_event("route", path=route["path"], source=route["source"], reason=route["reason"]))
     review_attempts = {}
     tool_failure_streak = {"name": None, "count": 0, "detail": ""}
     unsuccessful_calls = {}
@@ -327,7 +448,24 @@ def stream(question, history=None, model=None, session=None, switches=None):
         yield message, events, state
         return
 
-    messages = list(held["resume"]["messages"]) if held else _messages(question, history, state)
+    picked = None if held else operations.choice(session.get("capability_review"), question)
+    chosen = picked["instruction"] if picked else None
+    if chosen:
+        events.append(_event("option_chosen", rule="capability_option", detail=chosen))
+        if picked["id"] == "A" and picked["available"]:
+            # A script was chosen: this turn writes and runs it. The plan gate and the capability
+            # check are behind us, so research mode is left for the turn.
+            session["research_required"] = False
+            reproduction_preflight = False
+            session["route"] = {
+                "path": "script", "source": "option", "reason": "the person chose a script",
+            }
+            state["path"] = "script"
+            events.append(_event("route", path="script", source="option", reason="the person chose a script"))
+    messages = (
+        list(held["resume"]["messages"]) if held
+        else _messages(chosen or question, history, state)
+    )
     # An approved plan's execution turn starts with the plan and the paper's key statements
     # in front of the agent, once per plan version, whoever approved it (the Studio, a chat
     # reply or the evaluation's scripted reviewer).
@@ -346,6 +484,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
     model_id = state["model"]
 
     while True:
+        if stop_requested(session):
+            events.append(_event("harness_stop", rule="stopped_by_user", reason=STOP_NOTICE))
+            answer = answer or STOP_NOTICE
+            break
         spend = harness.check_budget(state)
         if not spend["passed"]:
             events.append(
@@ -417,7 +559,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
             attempt += 1
             started = time.perf_counter()
             candidate = _Completion()
-            offered_specs = tools.specs(state["switches"])
+            offered_specs = tools.specs(state["switches"], state.get("path"))
             offered_names = {item["function"]["name"] for item in offered_specs}
             if requested_tool and requested_tool not in offered_names:
                 events.append(
@@ -429,7 +571,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 )
                 requested_tool = None
             try:
-                chunks = client.chat.completions.create(
+                def _open(requested_tool=requested_tool, output_tokens=output_tokens,
+                          offered_specs=offered_specs):
+                    return client.chat.completions.create(
                     model=model_id,
                     messages=_request(messages, state),
                     tools=offered_specs,
@@ -444,8 +588,10 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     # Qwen3.8 rejects a forced tool_choice in thinking mode with HTTP 400,
                     # and long reasoning truncates a forced research_plan on other models.
                     extra_body=_thinking_off() if requested_tool else _reasoning_effort(),
-                )
-                for chunk in chunks:
+                    )
+                for chunk in _watched(session, _open):
+                    if stop_requested(session):
+                        break
                     if candidate.feed(chunk) and candidate.content:
                         # Keep the authoritative answer in sync with the streamed frame.
                         # Several lifecycle events are yielded immediately after streaming
@@ -455,6 +601,8 @@ def stream(question, history=None, model=None, session=None, switches=None):
                         # next token, which looks like the Conversation panel is flashing.
                         answer = transcript(segments, candidate.content)
                         yield answer, events, state
+                if stop_requested(session):
+                    break
             except Exception as exc:
                 last_fault = _fault(exc)
                 last_upstream = _upstream_text(exc)
@@ -477,12 +625,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 # a slow answer into no answer. It gets its own, longer, retry budget.
                 if _rate_limited(exc):
                     budget_left = max(budget_left, RATE_LIMIT_RETRIES)
-                    time.sleep(RATE_LIMIT_BACKOFF_S * attempt)
+                    _pause(session, RATE_LIMIT_BACKOFF_S * attempt)
                 elif _connection_fault(exc):
                     budget_left = max(budget_left, CONNECTION_RETRIES)
-                    time.sleep(min(CONNECTION_BACKOFF_MAX_S, CONNECTION_BACKOFF_S * attempt))
+                    _pause(session, min(CONNECTION_BACKOFF_MAX_S, CONNECTION_BACKOFF_S * attempt))
                 else:
-                    time.sleep(RETRY_BACKOFF_S * attempt)
+                    _pause(session, RETRY_BACKOFF_S * attempt)
+                if stop_requested(session):
+                    break
                 continue
             if not candidate.empty():
                 completion = candidate
@@ -490,7 +640,12 @@ def stream(question, history=None, model=None, session=None, switches=None):
             last_fault = "no choices"
             events.append(_event("empty_response", attempt=attempt, detail=last_fault))
             yield answer, events, state
-            time.sleep(RETRY_BACKOFF_S * attempt)
+            _pause(session, RETRY_BACKOFF_S * attempt)
+
+        if completion is None and stop_requested(session):
+            events.append(_event("harness_stop", rule="stopped_by_user", reason=STOP_NOTICE))
+            answer = answer or STOP_NOTICE
+            break
 
         if completion is None:
             events.append(
@@ -717,6 +872,19 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 # for an otherwise ordinary question.
                 if name == "research_plan" and not session.get("research_required"):
                     session["research_required"] = True
+                    if state.get("path") in (router.RUN, router.ANSWER):
+                        # The model asked for the reviewed workflow: lift the lean tool set and
+                        # the lean prompt, so the reading tools it now needs are there.
+                        session["route"] = {
+                            "path": router.REPRODUCE, "source": "escalation",
+                            "reason": "the agent called research_plan",
+                        }
+                        state["path"] = None
+                        messages[0] = {"role": "system", "content": prompt.build(state, tail=False)}
+                        events.append(_event(
+                            "route", path=router.REPRODUCE, source="escalation",
+                            reason="the agent called research_plan",
+                        ))
                     events.append(
                         _event(
                             "research_mode_selected",
@@ -738,6 +906,14 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     declined = verdict["decision"] not in ("approve", "edit")
                     if verdict["decision"] == "edit" and verdict["arguments"]:
                         arguments = verdict["arguments"]
+                    if name == "run_analysis_script" and not declined:
+                        # Written by the loop from the interface's verdict, never by a tool
+                        # argument, and keyed to the exact code that was shown.
+                        from physearth.tools import analysis
+
+                        session.setdefault("approved_scripts", set()).add(
+                            analysis.code_hash(arguments.get("code"))
+                        )
                     events.append(
                         _event(
                             "approval",
@@ -749,10 +925,9 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     )
                     yield answer, events, state
                 elif (
-                    name == "run_model"
-                    and approval.required(session)
-                    and not session.get("research_required")
-                ):
+                    (name == "run_model" and not session.get("research_required"))
+                    or name == "run_analysis_script"
+                ) and approval.required(session):
                     # Asking ends the turn rather than holding a worker for an answer. The
                     # request carries what the turn needs to continue from this call.
                     approval.request(
@@ -765,7 +940,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                             "index": position,
                         },
                     )
-                    described = approval.describe(name, arguments)
+                    described = approval.describe(name, arguments, session)
                     answer = transcript(
                         segments,
                         "Waiting for your approval to run %s as %s. Nothing has been computed "
@@ -781,14 +956,25 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 result = (
                     approval.declined_result(name, arguments)
                     if declined
-                    else tools.call(
-                        name,
-                        arguments,
-                        owner=session["id"],
-                        switches_in=state["switches"],
-                        session=session,
+                    else _call_watched(
+                        session,
+                        lambda: tools.call(
+                            name,
+                            arguments,
+                            owner=session["id"],
+                            switches_in=state["switches"],
+                            session=session,
+                        ),
                     )
                 )
+                if result is None:
+                    events.append(
+                        _event("harness_stop", rule="stopped_by_user", reason=STOP_NOTICE)
+                    )
+                    answer = answer or STOP_NOTICE
+                    state["phase"] = "done"
+                    yield answer, events, state
+                    return
                 session_state.bump(state, "tool_calls")
                 _record_tool_result(name, result, state, events)
 
@@ -1248,7 +1434,13 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     _event("harness_stop", rule="plan_no_progress", reason=answer)
                 )
                 break
-            forced_tool_name = "research_plan"
+            # A plan is refused until a capability check exists, so forcing research_plan again
+            # would loop: the model could never make the check call it is being told to make.
+            needs_check = (
+                research.is_reproduction_question(question, session)
+                and (session.get("capability_review") or {}).get("status") in (None, "", "incomplete")
+            )
+            forced_tool_name = "research_capability_check" if needs_check else "research_plan"
             events.append(
                 _event(
                     "research_block",
@@ -1262,12 +1454,20 @@ def stream(question, history=None, model=None, session=None, switches=None):
                 {
                     "role": "user",
                     "content": (
-                        "Your next response must be a research_plan function call, not prose. "
-                        "Analyse this specific research question from the evidence already read, "
-                        "then call research_plan "
-                        "with action=propose and a question-specific objective, hypothesis, "
-                        "executable steps, parameters, chart options, assumptions, limitations and "
-                        "success criteria."
+                        (
+                            "Your next response must be a research_capability_check function call, "
+                            "not prose: action='check', the reference models named as the paper "
+                            "names them, requested_outputs, local_models, needed_operations (the "
+                            "steps beyond model runs, or an empty list) and targets. The plan "
+                            "follows it."
+                            if needs_check else
+                            "Your next response must be a research_plan function call, not prose. "
+                            "Analyse this specific research question from the evidence already read, "
+                            "then call research_plan "
+                            "with action=propose and a question-specific objective, hypothesis, "
+                            "executable steps, parameters, chart options, assumptions, limitations "
+                            "and success criteria."
+                        )
                     ),
                 }
             )

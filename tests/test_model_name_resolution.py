@@ -215,7 +215,7 @@ def test_the_capability_summary_names_outputs_no_card_declares():
         tools.call(name, {"model": "pyet"}, owner=owner, session=session)
     result = tools.call(
         "research_capability_check",
-        {"reference_models": ["pyet"], "requested_outputs": ["et0_mm_day", "published_et0"]},
+        {"needed_operations": [], "reference_models": ["pyet"], "requested_outputs": ["et0_mm_day", "published_et0"]},
         owner=owner,
         session=session,
     )
@@ -233,3 +233,4 @@ def test_a_versioned_local_candidate_is_reported_as_supported():
         local_models=["pywatershed@3.0.0"],
     )
     assert [item["model"] for item in report["supported"]] == ["pywatershed"]
+

@@ -43,8 +43,11 @@ def _model_failure(model, spec, exc):
     )
 
 
-def run_model(model, parameters=None, _owner=None, _switches=None, _session=None, **extra):
-    if _session is not None and _session.get("research_required") and not research.allow_model(_session):
+def run_model(model, parameters=None, _owner=None, _switches=None, _session=None, _via_script=False, **extra):
+    # A run made by an approved analysis script is covered by the person's approval of that
+    # script, so the plan gate that holds a hand-written call does not apply to it. Everything
+    # else -- parameter validation, quality control, the result store -- still does.
+    if _session is not None and _session.get("research_required") and not _via_script and not research.allow_model(_session):
         return {
             "status": "needs_input",
             "summary": "Formal model execution is blocked until an LLM-authored plan, chart and execution are approved.",
@@ -80,7 +83,7 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
             "ui": None,
             "error": "; ".join(problems),
         }
-    if _session is not None and _session.get("research_required") and research.allow_model(_session):
+    if _session is not None and _session.get("research_required") and not _via_script and research.allow_model(_session):
         plan_problem = research.planned_run_problem(_session, model, spec)
         if plan_problem:
             return {

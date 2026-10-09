@@ -5,6 +5,7 @@ told it may ask for, in the words it is told to ask in.
 """
 
 from physearth import plotting
+from physearth.research import operations
 
 SPECS = [
     {
@@ -140,7 +141,13 @@ CAPABILITY_CHECK_SPEC = {
                 "reference_models": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Models the paper target explicitly compares against.",
+                    "description": (
+                        "Models the paper target explicitly compares against, each named the way "
+                        "the paper names it: a code or package name, with its formulation if the "
+                        "paper gives one. Not a sentence describing what a curve shows; a "
+                        "description does not match a registered model and is reported as one that "
+                        "is not available."
+                    ),
                 },
                 "requested_outputs": {
                     "type": "array",
@@ -150,6 +157,21 @@ CAPABILITY_CHECK_SPEC = {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Registered local candidates; never treated as equivalent automatically.",
+                },
+                "needed_operations": {
+                    "type": "array",
+                    "items": {"anyOf": [{"type": "string"}, {"type": "object"}]},
+                    "description": (
+                        "Required when action=check. An item is a step id, or an object "
+                        '{"step": id, "find": the unknown quantity, "must_match": what it has to '
+                        'equal or reach, "repeated_for": what it is repeated over} so the user can '
+                        "be told exactly what has to be found. "
+                        "The steps this reproduction needs besides "
+                        "running registered models, from this list: %s. Pass an empty list if "
+                        "it needs none. A step with no tool is reported to the user with the "
+                        "options available; do not substitute a different quantity for it."
+                        % operations.vocabulary()
+                    ),
                 },
                 "targets": {
                     "type": "array",
@@ -164,6 +186,39 @@ CAPABILITY_CHECK_SPEC = {
                 },
             },
             "required": ["action"],
+        },
+    },
+}
+
+ANALYSIS_SCRIPT_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "run_analysis_script",
+        "description": (
+            "Write and run a short Python script for an analysis step around a registered model "
+            "that no other tool provides: solving for an input value, fitting parameters, "
+            "interpolating or integrating over runs, or any numerical method. Import whatever you "
+            "need. Inside the script, `run_model(model, **parameters)` runs a registered model "
+            "through the usual validation and returns {'series': {output: [values]}, 'axis': ..., "
+            "'outputs': {output: value} for a single point, 'units': ...}; "
+            "`save_series(name, x, {series_name: [values]}, x_name='...', units={...})` keeps a "
+            "result so it can be charted and cited: save one result per chart, with one series per curve "
+            "(at most 20 series each, 30 results per script). Never compute the physics yourself: every "
+            "model quantity comes from run_model. A person reads the code and approves it before "
+            "it runs, and approves any package that is not installed, which you name in "
+            "`requirements`. Limits: 300 seconds, 2000 model runs, no network."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "code": {"type": "string", "description": "The Python script, at most 20000 characters."},
+                "purpose": {"type": "string", "description": "One sentence: what this script finds or computes, for the person approving it."},
+                "requirements": {
+                    "type": "array", "items": {"type": "string"},
+                    "description": "pip package names for imports that are not installed, such as 'scikit-learn'. Plain names only.",
+                },
+            },
+            "required": ["code", "purpose"],
         },
     },
 }
@@ -504,6 +559,7 @@ SPECS.append(RUN_MODEL_SPEC)
 SPECS.append(RUN_PLANNED_MODEL_SPEC)
 SPECS.append(READ_REFERENCE_SPEC)
 SPECS.append(PLOT_SPEC)
+SPECS.append(ANALYSIS_SCRIPT_SPEC)
 SPECS.append(DISCOVER_SPEC)
 SPECS.append(INGEST_SPEC)
 

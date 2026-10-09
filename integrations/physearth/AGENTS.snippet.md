@@ -51,3 +51,18 @@ free-form prompts when the user asks for one of those three things.
 Codex cannot change this project's interface. Figures, the run trace and the evidence panel
 are in the Studio (`python app.py`, default port 7860); point the user there for visual
 review rather than describing what a figure looks like.
+
+## Analysis around a registered model (root finding, fitting, interpolation)
+
+You already run Python, so do this yourself, and keep it honest:
+
+- Every model quantity comes from the registered model, never from your own physics. Call it from
+  your script (`from physearth import registry` in a checkout, or `run_model` through the server),
+  and keep the script.
+- Say in the answer which step is yours: the method (for example a bracketing root finder, or least
+  squares), its tolerance and how many model runs it took. Cite the model run, not the script, for
+  the model's numbers.
+- Do not substitute a different quantity when the one asked for needs a search. If you cannot do the
+  search, say which step is missing and what you ran instead.
+- The engine's own agent has a `run_analysis_script` tool for the same purpose, with a person reading
+  the code first. The server does not expose it: you have your own environment.

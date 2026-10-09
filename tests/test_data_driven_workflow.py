@@ -164,7 +164,7 @@ def _reproduction_resources(box):
     capability = tools.call(
         "research_capability_check",
         {
-            "action": "check",
+            "action": "check", "needed_operations": [],
             "reference_models": ["smrt"],
             "requested_outputs": ["ks_per_m"],
             "local_models": ["smrt"],
@@ -343,7 +343,7 @@ def _q1_resources(box):
     capability = tools.call(
         "research_capability_check",
         {
-            "action": "check",
+            "action": "check", "needed_operations": [],
             "reference_models": ["smrt"],
             "requested_outputs": ["ks_per_m"],
             "local_models": ["smrt"],

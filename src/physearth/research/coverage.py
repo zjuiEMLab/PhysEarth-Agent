@@ -64,7 +64,11 @@ def _target_coverage(targets, runs, charts, session=None):
         if bad_charts:
             problems.append("target %s references unknown chart_ids: %s" % (target_id, ", ".join(bad_charts)))
         if target.get("status") not in ("partial", "unavailable") and not target.get("run_ids") and not target.get("chart_ids"):
-            problems.append("target %s has no run_ids or chart_ids coverage" % target_id)
+            problems.append(
+                "target %s has no run_ids or chart_ids coverage; list the runs or charts that "
+                "reproduce it, or remove the target if it is a side check rather than a paper "
+                "result (a diagnostic run or chart needs no reproduction target)" % target_id
+            )
         if target.get("status") in ("partial", "unavailable") and not target.get("availability_reason"):
             problems.append("target %s is %s without an availability_reason" % (target_id, target.get("status")))
         reference_models = {
