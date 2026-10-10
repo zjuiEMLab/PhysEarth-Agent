@@ -677,6 +677,15 @@ def reset(model_id):
     )
 
 
+def stop_click(box):
+    """Ask the running turn to end. The agent loop reads the flag between chunks, tool
+    calls and rate-limit waits, so the turn finishes through its normal path and is
+    archived with what it had, instead of being torn down mid-yield."""
+    if isinstance(box, dict):
+        box["stop_requested"] = True
+        audit.emit("ui_stop_requested", session=box)
+
+
 def review_click(box, action):
     """Advance a human gate and request an agent continuation only after final approval."""
     session = box if isinstance(box, dict) else None
@@ -1035,6 +1044,7 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                                 lines=3,
                                 placeholder=render.PLACEHOLDER,
                             )
+                            stop = gr.Button("Stop the agent", elem_id="pe-stop")
                             clear = gr.Button("Clear the session", elem_id="pe-clear")
                             send = gr.Button("Send", variant="primary", elem_id="pe-send")
                     with gr.Column(
@@ -1198,6 +1208,11 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
                 outputs,
             )
             active_stream_events.append(resume_event)
+
+    # Like the review buttons, Stop has to run while `respond` is still streaming.
+    stop.click(
+        stop_click, [session_box], None, concurrency_limit=None, queue=False,
+    )
 
     # Resetting the panels is not enough while a streamed response is still alive: its
     # next yield can repaint the freshly cleared UI with the old question's trace and

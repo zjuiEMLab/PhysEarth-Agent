@@ -1,9 +1,11 @@
 """Whether the registered models can answer the question that was asked."""
 
+import json
 import re
 
 from physearth import registry
 from physearth.corpus import live
+from physearth.research import operations
 from physearth.research.charts import _capability_gaps
 
 
@@ -15,7 +17,7 @@ def _capability_strings(values):
     ))
 
 
-def _scope_signature(unavailable, not_comparable, unavailable_outputs):
+def _scope_signature(unavailable, not_comparable, unavailable_outputs, missing_operations=None):
     """Exactly what the user was asked to accept when they confirmed a partial scope."""
     return {
         "unavailable": sorted(
@@ -26,6 +28,7 @@ def _scope_signature(unavailable, not_comparable, unavailable_outputs):
             for item in not_comparable or ()
         ),
         "outputs": sorted(str(item) for item in unavailable_outputs or ()),
+        "operations": sorted(str(item.get("id") or "") for item in missing_operations or ()),
     }
 
 
@@ -43,7 +46,7 @@ def _within_confirmed_scope(signature, confirmed):
         return False
     return all(
         set(signature.get(key) or ()) <= set(confirmed.get(key) or ())
-        for key in ("unavailable", "not_comparable", "outputs")
+        for key in ("unavailable", "not_comparable", "outputs", "operations")
     )
 
 
@@ -202,6 +205,7 @@ def _capability_check_one(
     local_models=None,
     targets=None,
     decision="check",
+    needed_operations=None,
 ):
     """Create a session-scoped capability checkpoint before reproduction planning.
 
@@ -237,6 +241,7 @@ def _capability_check_one(
                 current.get("unavailable"),
                 current.get("not_comparable"),
                 current.get("unavailable_outputs"),
+                current.get("missing_operations"),
             ),
         })
         if session is not None:
@@ -263,12 +268,18 @@ def _capability_check_one(
         # card actually declares. MEMLS and DMRT-QMS still report as unregistered, which
         # is what this check exists to say. A paper slug can only take another route when
         # _resolve_from_paper_evidence has established the identity from opened evidence.
-        entry, canonical, configuration, options = registry.resolve_configuration(name, session)
         evidence_resolution = None
         version_note = None
-        if entry is None:
-            qualified = _qualified(name)
-            if qualified:
+        qualified = _qualified(name)
+        if qualified and registry.resolve_configuration(qualified[0], session)[0] is None:
+            # What stands outside the brackets names the model. "MEMLS (IBA, grain type 2)"
+            # is MEMLS described as using IBA; matching the IBA in the aside resolved it to
+            # smrt and reported an unregistered model as supported.
+            entry, canonical, configuration, options = None, None, {}, []
+        else:
+            entry, canonical, configuration, options = registry.resolve_configuration(name, session)
+        if entry is None and qualified:
+            if registry.resolve_configuration(qualified[0], session)[0] is not None:
                 entry, canonical, configuration, options = registry.resolve_configuration(
                     qualified[0], session
                 )
@@ -497,14 +508,22 @@ def _capability_check_one(
         and item.get("kind") in ("section", "figure", "figure_inspection")
     ]
     evidence = list(dict.fromkeys(evidence))
+    ops_available, ops_missing, ops_unknown = operations.resolve(needed_operations)
+    if len(ops_missing) > 1:
+        # A specific step (a solve, a fit) already says how the quantity is to be obtained.
+        ops_missing = [item for item in ops_missing if item["id"] != "derive_quantity"] or ops_missing
+    if unavailable_outputs and not ops_missing:
+        # Whether the model said so or not, a quantity no registered model outputs has to be
+        # derived. That does not depend on the model remembering to list the step.
+        ops_missing = [operations.derive_item(unavailable_outputs)]
     status = (
         "waiting_user"
-        if unavailable or not_comparable or unavailable_outputs
+        if unavailable or not_comparable or unavailable_outputs or ops_missing
         else "waiting_resources"
         if resource_gaps
         else "ready"
     )
-    signature = _scope_signature(unavailable, not_comparable, unavailable_outputs)
+    signature = _scope_signature(unavailable, not_comparable, unavailable_outputs, ops_missing)
     previous = current or {}
     confirmed_scope = previous.get("confirmed_scope")
     decision = None
@@ -525,6 +544,9 @@ def _capability_check_one(
         "supported_outputs": supported_outputs,
         "unavailable_outputs": unavailable_outputs,
         "resource_gaps": resource_gaps,
+        "needed_operations": ops_available + [item["id"] for item in ops_missing],
+        "missing_operations": ops_missing,
+        "unrecognised_operations": ops_unknown,
         # Visible rather than silent: if the paper's spelling was not the registered one,
         # the report says which name it was matched to, so a reader can object.
         "resolved_names": resolved_names,
@@ -583,8 +605,25 @@ def match_capability_targets(targets, reports):
     return pairs
 
 
+def _target_items(targets):
+    """The targets as a list. Some models send one string, a JSON text or one object where
+    the schema asks for a list, and iterating a string made one "target" of every character."""
+    if isinstance(targets, str):
+        text = targets.strip()
+        try:
+            targets = json.loads(text) if text[:1] in "[{" else None
+        except ValueError:
+            targets = None
+        if targets is None:
+            targets = [part.strip() for part in re.split(r"[\n;,]+", text) if part.strip()]
+    if isinstance(targets, dict):
+        targets = [targets]
+    return list(targets or ())
+
+
 def _target_specs(targets, reference_models, requested_outputs, local_models):
     specs = []
+    targets = _target_items(targets)
     for index, item in enumerate(targets or ()):
         item = dict(item) if isinstance(item, dict) else {"id": item}
         raw_id = (
@@ -674,7 +713,17 @@ def _aggregate_target_reports(reports, expected_targets, previous=None):
     evidence = []
     requested_models = []
     requested_outputs = []
+    needed_operations, unrecognised_operations, missing_operations = [], [], []
     for report in all_reports:
+        for name in report.get("needed_operations") or ():
+            if name not in needed_operations:
+                needed_operations.append(name)
+        for name in report.get("unrecognised_operations") or ():
+            if name not in unrecognised_operations:
+                unrecognised_operations.append(name)
+        for item in report.get("missing_operations") or ():
+            if item.get("id") not in [m.get("id") for m in missing_operations]:
+                missing_operations.append(item)
         for field, destination in (
             ("resource_gaps", resource_gaps),
             ("resolved_names", resolved_names),
@@ -701,6 +750,9 @@ def _aggregate_target_reports(reports, expected_targets, previous=None):
             output for item in supported for output in item.get("outputs") or ()
         }),
         "unavailable_outputs": unavailable_outputs,
+        "needed_operations": needed_operations,
+        "missing_operations": missing_operations,
+        "unrecognised_operations": unrecognised_operations,
         "resource_gaps": resource_gaps,
         "resolved_names": resolved_names,
         "evidence": evidence,
@@ -716,7 +768,7 @@ def _aggregate_target_reports(reports, expected_targets, previous=None):
         status == "waiting_user"
         and previous.get("user_decision") == "partial"
         and _within_confirmed_scope(
-            _scope_signature(unavailable, not_comparable, unavailable_outputs),
+            _scope_signature(unavailable, not_comparable, unavailable_outputs, missing_operations),
             previous.get("confirmed_scope"),
         )
     ):
@@ -736,6 +788,7 @@ def capability_check(
     local_models=None,
     targets=None,
     decision="check",
+    needed_operations=None,
 ):
     """Check every reproduction target, then publish one session-wide checkpoint.
 
@@ -756,6 +809,7 @@ def capability_check(
             local_models=local_models,
             targets=targets,
             decision=decision,
+            needed_operations=needed_operations,
         )
 
     if decision == "reject":
@@ -786,6 +840,7 @@ def capability_check(
                 current.get("unavailable"),
                 current.get("not_comparable"),
                 current.get("unavailable_outputs"),
+                current.get("missing_operations"),
             ),
         })
         session["capability_review"] = report
@@ -815,6 +870,7 @@ def capability_check(
             local_models=target.get("local_models"),
             targets=[target],
             decision="check",
+            needed_operations=target.get("needed_operations") or needed_operations,
         )
         reports[target["_key"]] = {
             **report,

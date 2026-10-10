@@ -196,6 +196,11 @@ def _record_tool_result(name, result, state, events):
             state["datasets_read"].add(data["dataset"])
         for row in data.get("datasets") or []:
             state["datasets_read"].add(row["slug"])
+    if name == "run_analysis_script" and result["status"] in ("success", "terminal_error"):
+        # Runs the script made count as runs, and the models they used may be cited.
+        session_state.bump(state, "model_runs", int(data.get("model_runs") or 0))
+        for key in data.get("models_run") or ():
+            state["models_run"].add(key)
     if name in ("run_model", "run_planned_model", "run_raw_smrt"):
         if result["status"] == "success":
             if not data.get("reused"):

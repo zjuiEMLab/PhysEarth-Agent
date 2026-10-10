@@ -303,6 +303,7 @@ def test_the_tool_count_did_not_grow_for_either_increment():
         "plot_planned_chart",
         "read_reference_dataset",
         "plot",
+        "run_analysis_script",
         "discover_literature",
         "ingest_paper",
         "read_research_guideline",

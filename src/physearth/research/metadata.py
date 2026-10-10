@@ -3,6 +3,7 @@
 import re
 
 from physearth import registry
+from physearth.research import claims
 from physearth.research.capability import match_capability_targets
 from physearth.research.common import _provenance_confidence
 from physearth.research.mapping import (
@@ -436,6 +437,17 @@ def _repair_reproduction_metadata(
                         confidence, confidence_basis = _provenance_confidence(provenance)
                         mapping["confidence"] = confidence
                         mapping["confidence_basis"] = confidence_basis
+
+    # A label is only as good as the text it cites: relabel what the source does not support.
+    claims.audit(
+        session, mappings, reproduction_targets,
+        lambda model, name: _model_parameter_spec(session, model, name),
+        paper_conditions, condition_provenance, repairs,
+    )
+
+    claims.relabel_defaults(
+        mappings, lambda model, name: _model_parameter_spec(session, model, name), repairs
+    )
 
     # Add evidence references to paper mappings only when they are actually available.
     for index, item in enumerate(mappings):

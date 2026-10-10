@@ -319,8 +319,10 @@ def test_research_plan_gate_allows_five_no_progress_answers(monkeypatch):
 
     assert len(sent) == 5
     assert client.tool_choices[0] == "auto"
+    # A reproduction cannot be planned before it has been checked, so the call the gate forces
+    # is the check, not a plan that would be refused for lacking one.
     assert all(
-        choice == {"type": "function", "function": {"name": "research_plan"}}
+        choice == {"type": "function", "function": {"name": "research_capability_check"}}
         for choice in client.tool_choices[1:]
     )
     assert "stopped after 5 no-progress attempts" in answer

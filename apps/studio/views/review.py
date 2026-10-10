@@ -576,6 +576,8 @@ def approval_bar(session):
     if not waiting:
         return "<div class='approve' hidden></div>"
     described = waiting["description"]
+    if described.get("code") is not None:
+        return _script_approval(described)
     rows = "".join(
         "<span class='approve__p'><b>%s</b> %s</span>" % (_e(k), _e(v))
         for k, v in sorted(described["parameters"].items())
@@ -592,5 +594,38 @@ def approval_bar(session):
             _e(described["model"]),
             _e(described["shape"]),
             rows or "<span class='approve__p'>every parameter at its declared default</span>",
+        )
+    )
+
+
+def _script_approval(described):
+    """A script is approved by reading it: show the code, what it will import and install."""
+    report = described.get("inspection") or {}
+    installs = ", ".join(report.get("requirements") or ())
+    missing = ", ".join(report.get("missing") or ())
+    notes = []
+    if missing:
+        notes.append(
+            "<div class='approve__note'><b>Packages not installed:</b> %s. Approving also "
+            "installs <b>%s</b> into a folder used only for this session.</div>"
+            % (_e(missing), _e(installs or "(none named: the script will fail on the import)"))
+        )
+    return (
+        "<div class='approve'>"
+        "<div class='approve__head'>Run this script? <b>%s</b></div>"
+        "<div class='approve__params'><span class='approve__p'>%s</span></div>"
+        "<details open class='approve__code'><summary>Code (%s)</summary><pre>%s</pre></details>"
+        "%s"
+        "<div class='approve__note'>The script calls registered models through the usual checks. "
+        "It runs in a separate process with a time limit and no network, and it is not a security "
+        "boundary: read the code. Nothing runs until you approve it. Asking a new question "
+        "instead drops this request.</div>"
+        "</div>"
+        % (
+            _e(described.get("purpose") or ""),
+            _e(described.get("shape") or ""),
+            _e(report.get("sha256", "")[:12]),
+            _e(described.get("code") or ""),
+            "".join(notes),
         )
     )

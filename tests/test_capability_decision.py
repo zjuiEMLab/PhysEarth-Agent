@@ -108,7 +108,7 @@ def test_multi_figure_capability_check_aggregates_only_after_every_target_is_che
     complete = tools.call(
         "research_capability_check",
         {
-            "action": "check",
+            "action": "check", "needed_operations": [],
             "local_models": ["smrt"],
             "targets": targets,
         },

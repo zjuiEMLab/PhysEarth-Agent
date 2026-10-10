@@ -247,7 +247,7 @@ def _engine_tools():
     declared = []
     for spec in tools.specs():
         function = spec.get("function") or {}
-        if not function.get("name"):
+        if not function.get("name") or function["name"] in tools.HOST_RUNS_PYTHON:
             continue
         declared.append(
             {

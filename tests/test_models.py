@@ -122,6 +122,75 @@ def test_smrt_executes_a_stickiness_sweep():
     assert result["data"]["n_points"] == 3
 
 
+def test_every_combination_the_card_declares_legal_can_actually_run():
+    """The card is what the agent is told to trust, so it must not promise the impossible.
+
+    Teubner-Strey and the Gaussian random field were declared legal while the adapter
+    never passed SMRT's mandatory repeat_distance, so all twelve of their combinations
+    failed at execution. A plan built from the declaration then had a run that could
+    never succeed, and no parameter repair could rescue it.
+    """
+    entry = registry.get("smrt")
+    theories = entry.card["parameters"]["electromagnetic_model"]["enum"]
+    microstructures = entry.card["parameters"]["microstructure_model"]["enum"]
+    declared_legal = [
+        (microstructure, theory)
+        for microstructure in microstructures
+        for theory in theories
+        if not validation.resolve(
+            entry.card,
+            {
+                "electromagnetic_model": theory,
+                "microstructure_model": microstructure,
+                "output": "coefficients",
+            },
+        )[1]
+    ]
+    assert len(declared_legal) == 24
+
+    unrunnable = []
+    for microstructure, theory in declared_legal:
+        spec, problems = validation.resolve(
+            entry.card,
+            {
+                "electromagnetic_model": theory,
+                "microstructure_model": microstructure,
+                "output": "coefficients",
+                "density_kg_m3": 250.0,
+            },
+        )
+        assert not problems
+        try:
+            entry.run(spec)
+        except Exception as exc:
+            unrunnable.append("%s + %s: %s" % (microstructure, theory, exc))
+    assert unrunnable == []
+
+
+def test_repeat_distance_drives_the_autocorrelation_microstructures_only():
+    entry = registry.get("smrt")
+
+    def scattering(microstructure, repeat_distance_m):
+        spec, problems = validation.resolve(
+            entry.card,
+            {
+                "electromagnetic_model": "iba",
+                "microstructure_model": microstructure,
+                "output": "coefficients",
+                "density_kg_m3": 250.0,
+                "repeat_distance_m": repeat_distance_m,
+            },
+        )
+        assert not problems
+        return entry.run(spec)["series"]["ks_per_m"][0]
+
+    for microstructure in ("gaussian_random_field", "teubner_strey"):
+        assert scattering(microstructure, 0.0005) != scattering(microstructure, 0.002)
+    # The sphere and exponential microstructures do not read it, so it must not move them.
+    for microstructure in ("exponential", "sticky_hard_spheres"):
+        assert scattering(microstructure, 0.0005) == scattering(microstructure, 0.002)
+
+
 def test_defaults_are_filled_from_the_card(card):
     spec, problems = validation.resolve(card, {})
     assert not problems

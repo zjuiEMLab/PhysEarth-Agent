@@ -223,7 +223,7 @@ def test_capability_checkpoint_pauses_before_an_unavailable_reference_plan():
     check = tools.call(
         "research_capability_check",
         {
-            "action": "check",
+            "action": "check", "needed_operations": [],
             "reference_models": ["DMRT-ML", "DMRT-QMS"],
             "requested_outputs": ["tb_v", "sigma_vv_db"],
             "local_models": ["smrt"],

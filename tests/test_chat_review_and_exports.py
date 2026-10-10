@@ -440,7 +440,7 @@ def _checked(reference, outputs):
     tools.call("list_models", {"model": "smrt"}, session=box)
     tools.call("read_model_instruction", {"model": "smrt"}, session=box)
     result = tools.call("research_capability_check", {
-        "action": "check", "question": "Reproduce Figure 3", "local_models": ["smrt"],
+        "action": "check", "needed_operations": [], "question": "Reproduce Figure 3", "local_models": ["smrt"],
         "targets": [{"id": "fig03", "label": "Fig. 3", "reference_models": [reference],
                      "requested_outputs": outputs}],
     }, session=box)
@@ -510,3 +510,4 @@ def test_the_report_contract_reaches_the_model_before_its_first_draft(state, mon
 def test_a_parameter_asked_for_on_its_own_is_still_an_inversion():
     _result, review = _checked("SMRT", ["density_kg_m3"])
     assert review["unavailable_outputs"] == ["density_kg_m3"]
+

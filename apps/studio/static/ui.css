@@ -1244,6 +1244,9 @@ body:not(.is-reasoning) .caret {
   background-color: #ffffff;
   -webkit-mask: var(--send-icon) center / contain no-repeat;
   mask: var(--send-icon) center / contain no-repeat;
+  position: absolute;
+  inset: 0;
+  margin: auto;
 }
 
 #pe-send:hover {
@@ -1286,12 +1289,53 @@ body:not(.is-reasoning) .caret {
   background-color: var(--ink-mute);
   -webkit-mask: var(--clear-icon) center / contain no-repeat;
   mask: var(--clear-icon) center / contain no-repeat;
+  position: absolute;
+  inset: 0;
+  margin: auto;
 }
 
 #pe-clear:hover {
   background: var(--hover) !important;
   border-color: var(--clay) !important;
 }
+
+#pe-stop {
+  position: absolute !important;
+  right: calc(var(--pad) + 93px) !important;
+  bottom: calc(var(--pad) + 9px) !important;
+  z-index: 2 !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 0 !important;
+  color: transparent !important;
+  border: 1px solid #a33a2a !important;
+  border-radius: 9px !important;
+  background: var(--paper-2) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  overflow: hidden !important;
+}
+
+#pe-stop.is-live { display: inline-flex !important; }
+
+#pe-stop::after {
+  content: "";
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
+  background-color: #a33a2a;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+
+#pe-stop:hover { background: var(--hover) !important; }
 
 #pe-model-bridge {
   position: absolute !important;
@@ -5398,3 +5442,9 @@ body.is-reasoning .segment--model > button:not(.is-active) {
 .research-plan-change__kind--added { color: var(--ok); }
 .research-plan-change__kind--removed { color: #a33a2a; }
 .plan-sheet-table td, .plan-sheet-table th { overflow-wrap: normal; word-break: normal; }
+
+.approve__code { margin: 8px 0; }
+.approve__code summary { cursor: pointer; font-size: 12.5px; color: var(--ink-mute); }
+.approve__code pre { max-height: 320px; overflow: auto; margin: 6px 0 0; padding: 10px 12px;
+  font: 12px/1.45 var(--mono, ui-monospace, Menlo, monospace); background: var(--paper-2);
+  border: 1px solid var(--line); border-radius: 8px; white-space: pre; }

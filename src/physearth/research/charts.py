@@ -220,7 +220,8 @@ def _validate_chart_runs(charts, runs):
             if auxiliary:
                 continue
             problems.append(
-                "%s contributes only to optional layouts; add a required result or diagnostic chart"
+                "%s contributes only to optional layouts; set its stage to \"diagnostic\" if it is a "
+                "side check, or put it in a required chart"
                 % run["label"]
             )
     return problems

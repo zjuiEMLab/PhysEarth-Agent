@@ -1,5 +1,7 @@
 """The research_plan tool: the model proposes, the harness disposes."""
 
+import json
+
 from physearth import registry, research
 from physearth.corpus import model_guidelines
 
@@ -64,6 +66,16 @@ def research_plan(
 ):
     if _session is None:
         return research._fail("research_plan requires a session.")
+    if not isinstance(changes, dict):
+        # Some models send the changes as a JSON string, or as prose. A string that holds an
+        # object is that object; anything else is no change, and the plan is judged as sent.
+        parsed = None
+        if isinstance(changes, str) and changes.strip()[:1] == "{":
+            try:
+                parsed = json.loads(changes)
+            except ValueError:
+                parsed = None
+        changes = parsed if isinstance(parsed, dict) else None
     if action == "revise_plan":
         # A revision sent as top-level fields rather than inside `changes` is still the
         # revision: one run answered "Add: metrics" five times with metrics=[...] beside an
@@ -109,8 +121,12 @@ def research_plan(
                     "expected": "ready or confirmed capability checkpoint",
                     "actual": capability_review.get("status") or "missing",
                     "repair": (
-                        "Call research_capability_check after the paper/model resources are read. "
-                        "If a required reference is unavailable, ask the user to confirm a partial scope."
+                        "Call research_capability_check(action='check', reference_models=[models "
+                        "named as the paper names them], requested_outputs=[...], "
+                        "local_models=[registered models], needed_operations=[steps beyond model "
+                        "runs, or []], targets=[...]) after the paper and model resources are read. "
+                        "It is a check, not a confirmation: confirm_partial is only for after the "
+                        "user has been asked about an unavailable part, and takes no other argument."
                     ),
                     "blocking": True,
                     "capability_review": capability_review,
