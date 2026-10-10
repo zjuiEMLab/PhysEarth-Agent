@@ -42,10 +42,22 @@ MAX_MODEL_RUNS = 2000
 MAX_SAVED_SERIES = 20
 MAX_SERIES_POINTS = 5000
 MAX_SAVED_RESULTS = 30
+MAX_SCRIPTS_PER_CHOICE = 4
 INSTALL_SECONDS = 300
 _REQUIREMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._\-]*(\[[A-Za-z0-9,._\-]+\])?([<>=!~]=?[A-Za-z0-9.*+!\-]+(,[<>=!~]=?[A-Za-z0-9.*+!\-]+)*)?$")
 _RUNNER = Path(__file__).with_name("_analysis_runner.py")
 _SECRET = re.compile(r"KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.IGNORECASE)
+
+
+def over_budget(session):
+    """True when this choice of a script has used up its scripts.
+
+    Each script is read by a person, and a model that is allowed to keep refining will. The
+    count starts at zero when the person picks the script option.
+    """
+    session = session or {}
+    used = len(session.get("analysis_runs") or ()) - int(session.get("script_budget_from") or 0)
+    return used >= MAX_SCRIPTS_PER_CHOICE
 
 
 def code_hash(code):
@@ -175,6 +187,18 @@ def run_analysis_script(code, requirements=None, purpose="", _owner=None, _switc
     from physearth.tools import runs
 
     code = str(code or "")
+    if over_budget(_session):
+        return {
+            "status": "needs_input",
+            "summary": (
+                "No more scripts: %d have run for this request. Write the report now from the "
+                "results you have, say what is still uncertain, and do not ask for another script."
+                % MAX_SCRIPTS_PER_CHOICE
+            ),
+            "data": {"error_code": "script_budget_used"},
+            "citations": [], "qc": None, "ui": None,
+            "error": "script budget used",
+        }
     if not code.strip():
         return _fail("run_analysis_script needs a non-empty Python script in `code`.")
     if len(code) > MAX_CODE_CHARS:

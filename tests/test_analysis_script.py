@@ -207,3 +207,16 @@ def test_a_refused_model_call_tells_the_script_why():
     result = _run(code, _approved(code))
     assert result["status"] == "terminal_error"
     assert "Problems:" in result["data"]["traceback"] and "density" in result["data"]["traceback"].lower()
+
+
+def test_a_choice_of_a_script_has_a_limited_number_of_scripts():
+    box = session.new_session("m")
+    box["script_budget_from"] = 0
+    box["analysis_runs"] = [{} for _ in range(analysis.MAX_SCRIPTS_PER_CHOICE)]
+    assert analysis.over_budget(box)
+    code = "print(1)"
+    box.setdefault("approved_scripts", set()).add(analysis.code_hash(code))
+    result = tools.call("run_analysis_script", {"code": code, "purpose": "x"}, owner=box["id"], session=box)
+    assert result["status"] == "needs_input" and "No more scripts" in result["summary"]
+    box["script_budget_from"] = len(box["analysis_runs"])  # a fresh choice resets the count
+    assert not analysis.over_budget(box)

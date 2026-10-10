@@ -295,6 +295,12 @@ def _call_watched(session, call):
 ROUTER_TIMEOUT_S = 20
 
 
+def _scripts_used_up(session):
+    from physearth.tools import analysis
+
+    return analysis.over_budget(session)
+
+
 def _classify_turn(session, question, model_id):
     """One short call, reasoning off, that names the kind of turn. None if it was stopped."""
     client = _completion._client()
@@ -456,6 +462,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
             # A script was chosen: this turn writes and runs it. The plan gate and the capability
             # check are behind us, so research mode is left for the turn.
             session["research_required"] = False
+            session["script_budget_from"] = len(session.get("analysis_runs") or ())
             reproduction_preflight = False
             session["route"] = {
                 "path": "script", "source": "option", "reason": "the person chose a script",
@@ -926,7 +933,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     yield answer, events, state
                 elif (
                     (name == "run_model" and not session.get("research_required"))
-                    or name == "run_analysis_script"
+                    or (name == "run_analysis_script" and not _scripts_used_up(session))
                 ) and approval.required(session):
                     # Asking ends the turn rather than holding a worker for an answer. The
                     # request carries what the turn needs to continue from this call.
