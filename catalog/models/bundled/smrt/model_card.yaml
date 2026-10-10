@@ -93,6 +93,17 @@ parameters:
     maximum: 3.0e-3
     default: 0.00015
     required: false
+  repeat_distance_m:
+    type: number
+    unit: m
+    description: >-
+      Quasi-periodic repeat distance of the autocorrelation-function microstructures.
+      Teubner-Strey and Gaussian random field require it alongside the correlation
+      length; the sphere-based microstructures ignore it.
+    minimum: 1.0e-6
+    maximum: 1.0e-2
+    default: 0.001
+    required: false
   radius_m:
     type: number
     unit: m
@@ -123,7 +134,7 @@ parameters:
     type: string
     unit: none
     description: Name of a numeric parameter to sweep instead of holding fixed.
-    enum: [none, frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, radius_m, stickiness, dort_streams]
+    enum: [none, frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, repeat_distance_m, radius_m, stickiness, dort_streams]
     default: none
     required: false
   sweep_start:

@@ -3,13 +3,22 @@ import math
 import sys
 import warnings
 
+# Card parameter -> SMRT argument, per microstructure. Teubner-Strey and the Gaussian
+# random field declare repeat_distance as a mandatory argument next to corr_length, so a
+# single-argument mapping made every combination using them fail inside SMRT.
 MICROSTRUCTURE_ARGS = {
-    "exponential": ("corr_length_m", "corr_length"),
-    "teubner_strey": ("corr_length_m", "corr_length"),
-    "gaussian_random_field": ("corr_length_m", "corr_length"),
-    "independent_sphere": ("radius_m", "radius"),
-    "sticky_hard_spheres": ("radius_m", "radius"),
-    "non_sticky_hard_spheres": ("radius_m", "radius"),
+    "exponential": (("corr_length_m", "corr_length"),),
+    "teubner_strey": (
+        ("corr_length_m", "corr_length"),
+        ("repeat_distance_m", "repeat_distance"),
+    ),
+    "gaussian_random_field": (
+        ("corr_length_m", "corr_length"),
+        ("repeat_distance_m", "repeat_distance"),
+    ),
+    "independent_sphere": (("radius_m", "radius"),),
+    "sticky_hard_spheres": (("radius_m", "radius"),),
+    "non_sticky_hard_spheres": (("radius_m", "radius"),),
 }
 
 DORT_DIAGONALIZATION_METHODS = (None, "shur", "shur_forcedtriu")
@@ -62,6 +71,21 @@ def _run_with_dort_recovery(values, sensor, snowpack):
     )
 
 
+def _ensure_numpy_trapezoid_alias():
+    """Restore ``numpy.trapz`` for SMRT's Gaussian random field on NumPy 2.
+
+    SMRT 1.5.1 integrates that autocorrelation function with ``np.trapz``, which NumPy 2.0
+    removed after renaming it ``np.trapezoid``. The two are the same composite-trapezoid
+    integrator with the same signature, so this restores the old name rather than changing
+    any numerical behaviour. Without it every Gaussian-random-field combination the model
+    card declares legal raises AttributeError inside SMRT.
+    """
+    import numpy
+
+    if not hasattr(numpy, "trapz") and hasattr(numpy, "trapezoid"):
+        numpy.trapz = numpy.trapezoid
+
+
 def _ensure_smrt_importable():
     """Load SMRT without Numba on Python versions where its cached ufunc cannot load.
 
@@ -93,12 +117,12 @@ def _ensure_smrt_importable():
 
 def _snowpack(spec, overrides=None):
     _ensure_smrt_importable()
+    _ensure_numpy_trapezoid_alias()
     from smrt import make_snowpack
 
     values = dict(spec)
     values.update(overrides or {})
     micro = values["microstructure_model"]
-    source_key, target_key = MICROSTRUCTURE_ARGS[micro]
     smrt_micro = (
         "sticky_hard_spheres"
         if micro == "non_sticky_hard_spheres"
@@ -109,8 +133,9 @@ def _snowpack(spec, overrides=None):
         "microstructure_model": smrt_micro,
         "density": [values["density_kg_m3"]],
         "temperature": [values["temperature_k"]],
-        target_key: [values[source_key]],
     }
+    for source_key, target_key in MICROSTRUCTURE_ARGS[micro]:
+        kwargs[target_key] = [values[source_key]]
     if micro == "sticky_hard_spheres":
         kwargs["stickiness"] = [values["stickiness"]]
     elif micro == "non_sticky_hard_spheres":
