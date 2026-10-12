@@ -189,3 +189,19 @@ def test_the_payload_names_the_session_that_answered():
     # session its handle belonged to.
     read = _payload("read_literature", {"slug": "research-planning"})
     assert read["session_id"].startswith("ses_")
+
+
+def test_the_session_tool_says_when_a_host_has_to_call_it():
+    # Measured, in the browser run of the Studio cover cases: the first case completed a SMRT
+    # reproduction and left `research_context.reproduction_case` on the session. The second case
+    # ran in the same session, so every plan it proposed was checked against the *previous*
+    # question's paper-reproduction targets and refused three times; the agent spent twenty
+    # minutes diagnosing it and then opened a new session itself.
+    #
+    # The description is the only place a model learns the contract, so the rule that prevents
+    # that has to live there and has to survive an edit.
+    tools = {item["name"]: item for item in _call("tools/list")["tools"]}
+    description = tools["geoai_session_new"]["description"]
+
+    assert "new conversation" in description
+    assert "first" in description
