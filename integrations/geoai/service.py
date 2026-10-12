@@ -83,6 +83,40 @@ def resolve_session(session_id=None, model=None, approve_runs=False):
     return get_session(created["session_id"]), None
 
 
+# One conversation, one engine session.
+#
+# Every invariant this engine enforces is session-scoped: which paper sections were read, which
+# model declarations were opened, which result handles exist, how far a research plan has got. A
+# host that drives the engine tool-by-tool has no id to pass unless it was told one — and nothing
+# told it one — so each call used to land in a *fresh* session. The symptom was not an error: the
+# research capability checkpoint looked at its session, saw that nothing had been read, and
+# correctly refused to proceed, after the model had in fact read the literature. One conversation
+# was being split into a session per tool call.
+_DEFAULT = {"id": None}
+
+
+def default_session(session_id=None, model=None, approve_runs=False):
+    """The session a host call belongs to: the one it named, or this process's conversation.
+
+    Named ids always win, so a host that manages its own sessions keeps working. Otherwise the
+    first call creates one and every later call joins it, which is what a host means by "the
+    conversation I am in". `new_default_session` replaces it.
+    """
+    if session_id:
+        return session_id
+    held = get_session(_DEFAULT["id"]) if _DEFAULT["id"] else None
+    if held is None:
+        _DEFAULT["id"] = new_session(model=model, approve_runs=approve_runs)["session_id"]
+    return _DEFAULT["id"]
+
+
+def new_default_session(model=None, approve_runs=False):
+    """Start a fresh default session, and return it; also the record for the older one."""
+    created = new_session(model=model, approve_runs=approve_runs)
+    _DEFAULT["id"] = created["session_id"]
+    return created
+
+
 def sessions():
     """Every session this process holds, newest id last."""
     with _LOCK:
@@ -277,7 +311,13 @@ def call(name, arguments=None, session_id=None, switches=None, approve_runs=Fals
     )
     session_state.bump(state, "tool_calls")
     agent._record_tool_result(name, result, state, [])
-    return _jsonable(result)
+    payload = _jsonable(result)
+    # Name the session in the payload. Nothing used to tell a host which session answered, so a
+    # host could not have passed one even if it wanted to — and every call silently started a new
+    # conversation.
+    if isinstance(payload, dict) and "session_id" not in payload:
+        payload["session_id"] = session["id"]
+    return payload
 
 
 def ask(question, session_id=None, model=None, switches=None, approve_runs=False):

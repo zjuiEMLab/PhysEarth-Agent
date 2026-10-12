@@ -229,8 +229,9 @@ def _call_host_tool(name, arguments):
     if name == "geoai_health":
         return _json_text(service.health())
     if name == "geoai_session_new":
+        # Also becomes the process's conversation, so the tool calls that follow join it.
         return _json_text(
-            service.new_session(
+            service.new_default_session(
                 model=arguments.get("model"),
                 approve_runs=bool(arguments.get("approve_runs")),
             )
@@ -239,17 +240,17 @@ def _call_host_tool(name, arguments):
         return _json_text(
             service.ask(
                 arguments.get("question", ""),
-                session_id=arguments.get("session_id"),
+                session_id=_session(arguments),
                 model=arguments.get("model"),
                 approve_runs=bool(arguments.get("approve_runs")),
             )
         )
     if name == "geoai_evidence":
-        return _json_text(service.evidence(arguments.get("session_id")))
+        return _json_text(service.evidence(_session(arguments)))
     if name == "geoai_plan_status":
-        return _json_text(service.plan_status(arguments.get("session_id")))
+        return _json_text(service.plan_status(_session(arguments)))
     if name == "geoai_review":
-        return _json_text(service.review(arguments.get("session_id"), arguments.get("choice")))
+        return _json_text(service.review(_session(arguments), arguments.get("choice")))
     if name == "geoai_prompt_stack":
         return _text(service.prompt_stack())
     return None
@@ -258,6 +259,21 @@ def _call_host_tool(name, arguments):
 # Keys this server consumes itself; the engine validates tool arguments strictly, so they
 # must not reach a tool's handler.
 HOST_ONLY_KEYS = ("session_id", "approve_runs")
+
+
+def _session(arguments):
+    """Which session this call belongs to: the caller's, or this process's conversation.
+
+    A host calls tool by tool and knows no id, so a per-call session split one conversation into
+    dozens: `read_literature` recorded a section in one, `run_model` ran in another, and the
+    research capability checkpoint then reported that nothing had been read — after it had been.
+    `service.default_session` keeps one session for the process unless the caller names another.
+    """
+    return service.default_session(
+        arguments.get("session_id"),
+        model=arguments.get("model"),
+        approve_runs=bool(arguments.get("approve_runs")),
+    )
 
 
 def call_tool(name, arguments=None):
@@ -270,7 +286,7 @@ def call_tool(name, arguments=None):
     result = service.call(
         name,
         engine_arguments,
-        session_id=arguments.get("session_id"),
+        session_id=_session(arguments),
         approve_runs=bool(arguments.get("approve_runs")),
     )
     return {"content": [{"type": "text", "text": _render(result)}], "isError": _failed(result)}
