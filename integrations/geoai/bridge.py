@@ -111,7 +111,7 @@ class _Handler(BaseHTTPRequestHandler):
                 service.call(
                     name,
                     body.get("arguments") or {},
-                    session_id=body.get("session_id"),
+                    session_id=service.default_session(body.get("session_id")),
                     switches=body.get("switches"),
                     approve_runs=bool(body.get("approve_runs")),
                 )
@@ -130,18 +130,20 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(
                 service.ask(
                     question,
-                    session_id=body.get("session_id"),
+                    session_id=service.default_session(body.get("session_id")),
                     model=body.get("model"),
                     switches=body.get("switches"),
                     approve_runs=bool(body.get("approve_runs")),
                 )
             )
         if path == "/evidence":
-            return self._send(service.evidence(body.get("session_id")))
+            return self._send(service.evidence(service.default_session(body.get("session_id"))))
         if path == "/plan":
-            return self._send(service.plan_status(body.get("session_id")))
+            return self._send(service.plan_status(service.default_session(body.get("session_id"))))
         if path == "/review":
-            return self._send(service.review(body.get("session_id"), body.get("choice")))
+            return self._send(
+                service.review(service.default_session(body.get("session_id")), body.get("choice"))
+            )
         if path == "/session/drop":
             return self._send({"dropped": service.drop_session(body.get("session_id"))})
         return self._send({"status": "terminal_error", "error": "unknown_route", "summary": path}, 404)
