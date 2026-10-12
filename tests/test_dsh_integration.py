@@ -178,3 +178,33 @@ def test_the_block_writer_is_idempotent_and_keeps_data_that_looks_like_a_placeho
     )
     kept, _ = _merged(with_data)
     assert "tags: []" in kept, "only the whole-document placeholder is removed"
+
+
+def test_the_block_writer_survives_a_real_profile_with_harness_tags_and_other_rows():
+    # Both halves of this were found on the operator's own profile, and neither on a throwaway
+    # one — which is the worst possible split, because a throwaway profile is what a test has:
+    #
+    #   1. the patch DSL allows `!!js` scalars, and `yaml.safe_load` raises ConstructorError on
+    #      them, so the "refuse to write invalid YAML" check crashed the installer instead of
+    #      guarding it;
+    #   2. a real layer holds other rows, so requiring the list to be *exactly* our two rows
+    #      would have refused to write a file that was perfectly valid.
+    real = (
+        "# The operator's own layer.\n"
+        "- insert:\n"
+        "    - id: mcp-cloudflare\n"
+        "      name: '@deepseek-ai/dsh-mcp-client'\n"
+        "      config:\n"
+        "        serverName: cloudflare\n"
+        "        headers: !!js >\n"
+        "          process.env.TOKEN ? { Authorization: `Bearer ${process.env.TOKEN}` } : {}\n"
+    )
+    updated, _ = _merged(real)
+
+    assert "!!js >" in updated, "somebody else's row is not ours to rewrite"
+    assert "mcp-cloudflare" in updated
+    assert updated.count(merge_patch_block.BEGIN) == 1
+
+    ids = [row.get("id") for row in merge_patch_block._load(updated)]
+    assert ids.count("geoai") == 1 and ids.count("mcp-geoai") == 1
+    assert None in ids, "the other row has no id of ours and is still there"

@@ -48,6 +48,25 @@ HEADER = """# Id-targeted overrides for this plugin's two rows. Complete, not pa
 # per-boot override behave as documented."""
 
 
+class _Lenient(yaml.SafeLoader):
+    """A loader that reads a patch list with the harness' own tags in it.
+
+    The harness' patch DSL allows `!!js` scalars — a real profile has them, e.g.
+    `headers: !!js >` — and `yaml.safe_load` refuses the whole file on an unknown tag. That is a
+    *validation* detail, not a reason to stop: this module never interprets those nodes, it only
+    needs to know the file is still one patch list with both of our rows in it. Refusing to parse
+    them made the installer crash on the operator's profile while working on every throwaway one,
+    which is the worst possible split.
+    """
+
+
+_Lenient.add_multi_constructor("", lambda loader, suffix, node: None)
+
+
+def _load(text: str):
+    return yaml.load(text, Loader=_Lenient)
+
+
 def rows_for(bundle_path: Path, checkout: str, python_cmd: str) -> list[dict]:
     """The two complete rows, derived from the bundle patch so there is one description of each."""
     bundle = yaml.safe_load(bundle_path.read_text())
@@ -116,9 +135,20 @@ def main(argv: list[str]) -> int:
 
     # Refuse to write something the harness will refuse to load: a parse error here is a profile
     # that boots to an exception, which is a much more confusing symptom than a failed install.
-    parsed = yaml.safe_load(updated)
-    if not isinstance(parsed, list) or [row.get("id") for row in parsed] != ["geoai", "mcp-geoai"]:
-        print(f"refusing to write {patch_path}: the result is not one patch list with both rows", file=sys.stderr)
+    # Other rows may be present — this is somebody's patch layer, not ours alone — so the check is
+    # "one list, both of our rows exactly once", not "exactly our rows".
+    try:
+        parsed = _load(updated)
+    except yaml.YAMLError as error:
+        print(f"refusing to write {patch_path}: the result is not valid YAML: {error}", file=sys.stderr)
+        return 1
+    ids = [row.get("id") for row in parsed] if isinstance(parsed, list) else []
+    if not isinstance(parsed, list) or ids.count("geoai") != 1 or ids.count("mcp-geoai") != 1:
+        print(
+            f"refusing to write {patch_path}: expected one patch list with one geoai and one "
+            f"mcp-geoai row, found {ids or type(parsed).__name__}",
+            file=sys.stderr,
+        )
         return 1
 
     if dry_run:
