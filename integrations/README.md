@@ -62,3 +62,17 @@ stdio, and `theme-codex.sh` validates the plist before claiming success.
 
 `integrations/geoai/README.md` documents the shared surface; `integrations/codex/README.md` is the
 install guide.
+
+## 在别的分支上你会看到什么
+
+本分支只带自己的宿主目录 `integrations/codex/`。另外两个宿主不在这个 checkout 里：plugin/dsh-geoai 带 integrations/dsh/，plugin/claude-geoai 带 integrations/claude/
+所以在这里 `ls integrations/` 只有 `geoai/`、`codex/`、`scripts/` 和这份 README。
+
+**切换分支后可能留下空壳目录。** `git checkout` 会删掉不再跟踪的*文件*，但**不会删目录**——git
+根本不跟踪目录。所以从 Codex 分支切回来时，工作树里可能还留着空的 `integrations/codex/plugin/`，
+看起来像"文件丢了"。它们不在版本库里，清掉即可：
+
+```bash
+git clean -nd integrations     # 先看一遍会删什么（现在是空的目录和缓存）
+git clean -fd integrations     # 真删
+```
