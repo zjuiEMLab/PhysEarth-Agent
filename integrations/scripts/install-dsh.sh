@@ -2,13 +2,13 @@
 # Install this plugin into a local DeepSeek Harness profile.
 #
 # Usage:
-#   integrations/dsh/scripts/install.sh                              # into $DSH_PROFILE (default web)
-#   DSH_PROFILE=geoai-verify integrations/dsh/scripts/install.sh
-#   scripts/verify-profile.sh geoai-verify 3199                      # create + install a throwaway one
+#   integrations/scripts/install-dsh.sh                              # into $DSH_PROFILE (default web)
+#   DSH_PROFILE=geoai-verify integrations/scripts/install-dsh.sh
+#   integrations/scripts/verify-dsh-profile.sh geoai-verify 3199     # create + install a throwaway one
 #
 # Four things happen, and each one exists because a live boot said so.
 #
-# 1. RESOLVE THE INTERPRETER. The search is `scripts/lib/find-python.sh`, shared with the Codex
+# 1. RESOLVE THE INTERPRETER. The search is `scripts/find-python.sh`, shared with the Codex
 #    and Claude integrations — every one of them had written the same wrong candidate list. A
 #    candidate is accepted only after it imports `integrations.geoai.service`, and not
 #    `physearth`: that package's `__init__` is lazy, so `import physearth` succeeds on an
@@ -39,15 +39,17 @@
 
 set -euo pipefail
 
-PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# This script sits in integrations/scripts/; the package it installs is integrations/dsh/. The
+# split exists so that every host's installer is in one place, which means the package directory
+# is a sibling rather than the parent.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$(cd "$HERE/../dsh" && pwd)"
 CHECKOUT="$(git -C "$PLUGIN_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
 PROFILE="${DSH_PROFILE:-web}"
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 PROFILE_DIR="$DSH_HOME/profiles/$PROFILE"
 PATCH="$PROFILE_DIR/cordis.patch.yml"
 PACKAGE_NAME="dsh-plugin-physearth-geoai"
-BLOCK_BEGIN="# >>> physearth-geoai (written by integrations/dsh/scripts/install.sh)"
-BLOCK_END="# <<< physearth-geoai"
 
 if [ -z "$CHECKOUT" ]; then
   echo "Cannot find the repository root: run this from a git checkout." >&2
@@ -57,12 +59,12 @@ echo "checkout:  $CHECKOUT"
 echo "profile:   $PROFILE_DIR"
 
 # ── 1. The interpreter ──────────────────────────────────────────────────────────────────────
-# The search itself is `scripts/lib/find-python.sh`, shared with the Codex and Claude
+# The search itself is `scripts/find-python.sh`, shared with the Codex and Claude
 # integrations. It has to be sourced after the checkout is known, which is why the root is
 # resolved with git rather than assumed to be two directories up: this script also ships inside
 # the plugin bundle.
-# shellcheck source=scripts/lib/find-python.sh
-. "$CHECKOUT/scripts/lib/find-python.sh"
+# shellcheck source=scripts/find-python.sh
+. "$CHECKOUT/scripts/find-python.sh"
 
 if PYTHON="$(physearth_find_python_for_engine "$CHECKOUT" || true)" && [ -n "$PYTHON" ]; then
   echo "python:    $PYTHON (imports the bridge service)"
@@ -171,72 +173,11 @@ PY
 # checkout itself (walking up from its own file) and it *verifies* interpreters it is offered,
 # but `python3` on this machine is a bare system interpreter with no PyYAML, so guessing is not
 # good enough — the installer knows, because it proved it above.
-"$PYTHON" - "$PATCH" "$PLUGIN_DIR/cordis.patch.yml" "$CHECKOUT" "$PYTHON" "$BLOCK_BEGIN" "$BLOCK_END" <<'PY'
-import sys
-
-import yaml
-
-patch_path, bundle_path, checkout, python_cmd, begin, end = sys.argv[1:7]
-
-with open(bundle_path) as handle:
-    bundle = yaml.safe_load(handle)
-rows = {entry["id"]: entry for group in bundle for entry in group.get("insert", [])}
-
-plugin_config = dict(rows["geoai"]["config"])
-plugin_config["projectRoot"] = checkout
-plugin_config["pythonCmd"] = python_cmd
-
-mcp_config = dict(rows["mcp-geoai"]["config"])
-mcp_config["command"] = python_cmd
-mcp_config["cwd"] = checkout
-mcp_config["env"] = {**mcp_config.get("env", {}), "PYTHONPATH": f"{checkout}/backend:{checkout}"}
-
-body = yaml.safe_dump(
-    [
-        {"id": "geoai", "config": plugin_config},
-        {"id": "mcp-geoai", "config": mcp_config},
-    ],
-    sort_keys=False,
-    default_flow_style=False,
-    allow_unicode=True,
-).rstrip("\n")
-
-block = f"""{begin}
-# Id-targeted overrides for this plugin's two rows. Complete, not partial: the harness composes
-# patch layers with a shallow per-entry assignment, so a `config` here REPLACES the row's own —
-# which is why this block restates every key rather than adding one field to it. The keys come
-# from the bundle patch (integrations/dsh/cordis.patch.yml), with the interpreter and the
-# checkout resolved for this machine. Re-run the installer after moving the checkout; delete the
-# block to fall back to the bundle patch's path-free defaults.
-#
-# A --patch overlay or a later layer still wins over these rows, so the switch and any
-# per-boot override behave as documented.
-{body}
-{end}
-"""
-
-try:
-    with open(patch_path) as handle:
-        current = handle.read()
-except FileNotFoundError:
-    current = "# Your patch layer for this dsh profile.\n[]\n"
-
-if begin in current and end in current:
-    head, rest = current.split(begin, 1)
-    _, tail = rest.split(end, 1)
-    updated = head + block + tail.lstrip("\n")
-    action = "replaced"
-else:
-    stripped = current.rstrip("\n")
-    if stripped.endswith("[]"):
-        stripped = stripped[: -len("[]")].rstrip("\n")
-    updated = f"{stripped}\n\n{block}"
-    action = "appended"
-
-with open(patch_path, "w") as handle:
-    handle.write(updated)
-print(f"==> {action} the managed block in {patch_path}")
-PY
+# The block itself — both rows, completed with this machine's answers, written inside sentinel
+# comments — is `merge-patch-block.py`: it is the part with the edge cases, and it is testable
+# without a harness, a profile or a package manager. It also refuses to write a file that is not
+# one valid patch list, which is the failure that used to reach the user as a boot error.
+"$PYTHON" "$HERE/merge-patch-block.py" "$PATCH" "$PLUGIN_DIR/cordis.patch.yml" "$CHECKOUT" "$PYTHON"
 
 cat <<NEXT
 

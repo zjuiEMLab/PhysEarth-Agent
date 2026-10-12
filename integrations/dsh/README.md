@@ -80,7 +80,7 @@ split, so it cannot quietly become a paraphrase.
 python -m integrations.geoai health
 
 # 2. install the plugin into the running profile
-integrations/dsh/scripts/install.sh
+integrations/scripts/install-dsh.sh
 
 # 3. restart the harness, then open 设置 → 插件
 dsh web
@@ -213,7 +213,7 @@ not come back.
 
 ```bash
 # an isolated profile: base + web-app bundles, this plugin, nothing else of the operator's
-integrations/dsh/scripts/verify-profile.sh geoai-verify 3199
+integrations/scripts/verify-dsh-profile.sh geoai-verify 3199
 
 # boot it, optionally turning the plugin on through the composition
 cat > /tmp/geoai-on.yml <<'YAML'

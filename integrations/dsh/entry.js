@@ -179,7 +179,7 @@ export function apply(ctx, config = {}) {
     ctx.logger?.error?.(
       'physearth-geoai: cannot find this repository. Set `projectRoot` in the plugin row to the ' +
         'checkout that holds backend/physearth and integrations/geoai, or run ' +
-        'integrations/dsh/scripts/install.sh, which resolves it for you.',
+        'integrations/scripts/install-dsh.sh, which resolves it for you.',
     )
   }
   // The interpreter is needed by the optional bridge, and by the prompt fetch whenever the
@@ -338,7 +338,7 @@ export function apply(ctx, config = {}) {
     Promise.resolve(ctx.loader.update(MCP_ENTRY_ID, { disabled })).catch((error) => {
       ctx.logger?.warn?.(
         `physearth-geoai: loader.update(${MCP_ENTRY_ID}, ${disabled}) failed: ${error.message}. ` +
-          'The row comes from this package’s bundle patch; run integrations/dsh/scripts/install.sh ' +
+          'The row comes from this package’s bundle patch; run integrations/scripts/install-dsh.sh ' +
           'if it is missing.',
       )
     })

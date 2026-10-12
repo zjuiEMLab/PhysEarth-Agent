@@ -13,7 +13,7 @@
 # is not one of the shipped templates, which is exactly why it does not touch `web`.
 #
 # Usage:
-#   scripts/verify-profile.sh [name] [port]
+#   integrations/scripts/verify-dsh-profile.sh [name] [port]
 #
 # Then:
 #   dsh --profile <name> --port <port>      # boot it
@@ -26,7 +26,6 @@ set -euo pipefail
 NAME="${1:-geoai-verify}"
 PORT="${2:-3199}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_DIR="$(cd "$HERE/.." && pwd)"
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 PROFILE_DIR="$DSH_HOME/profiles/$NAME"
 
@@ -79,7 +78,7 @@ fi
 
 # The installer owns everything else: the link, `dsh.profile.bundles`, the resolved interpreter,
 # and the id-targeted overrides inside this profile's own patch layer.
-DSH_PROFILE="$NAME" "$HERE/install.sh"
+DSH_PROFILE="$NAME" "$HERE/install-dsh.sh"
 
 cat <<NEXT
 

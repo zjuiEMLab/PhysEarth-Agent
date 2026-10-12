@@ -21,10 +21,10 @@ SERVER = ROOT / "integrations" / "geoai" / "mcp_server.py"
 
 
 def test_the_installer_uses_the_shared_interpreter_search():
-    body = (PLUGIN / "scripts" / "install.sh").read_text()
+    body = (ROOT / "integrations" / "scripts" / "install-dsh.sh").read_text()
 
     # Sourced after the checkout is known, because the library lives in the checkout.
-    assert '. "$CHECKOUT/scripts/lib/find-python.sh"' in body
+    assert '. "$CHECKOUT/scripts/find-python.sh"' in body
     assert "physearth_find_python_for_engine" in body
     # The private copy is gone rather than left as a fallback beside the shared one.
     assert "resolve_python" not in body
@@ -32,7 +32,7 @@ def test_the_installer_uses_the_shared_interpreter_search():
 
 
 def test_the_shared_library_answers_the_probe_this_branch_needs():
-    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    library = ROOT / "scripts" / "find-python.sh"
     assert library.is_file() and os.access(library, os.X_OK)
 
     # The engine, not `physearth`: that package's `__init__` is lazy, so an interpreter with no
@@ -104,5 +104,77 @@ def test_the_studio_launcher_is_here_and_does_not_reimplement_the_search():
         assert path.is_file(), name
         assert os.access(path, os.X_OK), name
     studio = (ROOT / "scripts" / "studio.sh").read_text()
-    assert "scripts/lib/find-python.sh" in studio
+    assert "scripts/find-python.sh" in studio
     assert "physearth_find_python_for_studio" in studio
+
+
+# ── the patch-block writer ────────────────────────────────────────────────────────────────────
+# Extracted from the installer's shell heredoc into `integrations/scripts/merge-patch-block.py`
+# because it has the edge cases and needs no harness, profile or package manager to test. Both
+# bugs below were found by a real boot refusing the profile, not by reading the code.
+
+sys.path.insert(0, str(ROOT / "integrations" / "scripts"))
+import importlib.util
+
+_spec = importlib.util.spec_from_file_location(
+    "merge_patch_block", ROOT / "integrations" / "scripts" / "merge-patch-block.py"
+)
+merge_patch_block = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(merge_patch_block)
+
+BUNDLE = ROOT / "integrations" / "dsh" / "cordis.patch.yml"
+OLD_BLOCK = (
+    "# The profile's own layer.\n[]\n\n"
+    "# >>> physearth-geoai (written by integrations/dsh/scripts/install.sh)\n"
+    "- id: geoai\n  config:\n    enabled: false\n"
+    "# <<< physearth-geoai\n"
+)
+
+
+def _merged(current: str) -> tuple[str, str]:
+    rows = merge_patch_block.rows_for(BUNDLE, "/repo", "/opt/python")
+    return merge_patch_block.merge(current, merge_patch_block.block_for(rows))
+
+
+def test_the_block_writer_replaces_an_older_block_instead_of_adding_a_second():
+    # Matched by prefix: the sentinel used to carry the installer's path in parentheses, so a
+    # profile installed by the previous layout has a BEGIN line that no longer matches exactly.
+    updated, action = _merged(OLD_BLOCK)
+
+    assert action == "replaced"
+    assert updated.count(merge_patch_block.BEGIN) == 1
+    assert "written by" not in updated, "the old parenthetical is gone, not left behind"
+    assert "/somewhere" not in updated
+
+
+def test_the_block_writer_leaves_one_yaml_document():
+    # The bug this pins: a file holding both the placeholder `[]` and a block used to come out as
+    # two documents — `[]` then a list — and the harness refused the whole profile with a parse
+    # error at the block's first line.
+    import yaml
+
+    updated, _ = _merged(OLD_BLOCK)
+    parsed = yaml.safe_load(updated)
+
+    assert isinstance(parsed, list), "one document, not a document per fragment"
+    assert [row["id"] for row in parsed] == ["geoai", "mcp-geoai"]
+    assert parsed[0]["config"]["projectRoot"] == "/repo"
+    assert parsed[1]["config"]["command"] == "/opt/python"
+    # And the bundle patch is the one description of each row, so nothing else was dropped.
+    assert parsed[1]["config"]["serverName"] == "geoai"
+    assert parsed[1]["config"]["env"]["PYTHONPATH"] == "/repo/backend:/repo"
+
+
+def test_the_block_writer_is_idempotent_and_keeps_data_that_looks_like_a_placeholder():
+    # Running the installer twice leaves one block, not two.
+    once, _ = _merged(OLD_BLOCK)
+    twice, action = _merged(once)
+    assert action == "replaced"
+    assert twice == once
+
+    # A `[]` that is somebody's data — an empty id list inside a real row — is not a placeholder.
+    with_data = (
+        "- id: geoai\n  config:\n    enabled: false\n    tags: []\n"
+    )
+    kept, _ = _merged(with_data)
+    assert "tags: []" in kept, "only the whole-document placeholder is removed"
