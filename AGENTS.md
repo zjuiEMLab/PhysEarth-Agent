@@ -11,10 +11,10 @@ session opened here already discovers the skill and needs one command to registe
 
 ```bash
 codex mcp add geoai -- "$PWD/.venv/bin/python" "$PWD/integrations/geoai/mcp_server.py" --stdio
-scripts/codex-doctor.sh     # proves the interpreter can import the engine, then lists the tools
+integrations/scripts/doctor-codex.sh     # proves the interpreter can import the engine, then lists the tools
 ```
 
-`codex/install-codex.md` is the full guide.
+`integrations/codex/README.md` is the full guide.
 `.agents/skills/geoai/references/troubleshooting.md` covers the failures that look like
 something else — chiefly a server pointed at an interpreter without PyYAML, which starts and
 offers an empty tool list with nothing in any log. DeepSeek Harness gets the same engine as the

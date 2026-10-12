@@ -11,8 +11,8 @@ Four artifacts make that up, and only the first needs installing:
 |---|---|---|
 | MCP server | `integrations/geoai/mcp_server.py` | the capability: 28 tools, resources, prompts |
 | Skill | `.agents/skills/geoai/` | the procedure: which tool for which question, what a valid run looks like, which refusals are results. Discovered from the repository, so nothing to install |
-| Config | `codex/config.snippet.toml` | the file form of the registration |
-| Guide | `codex/install-codex.md` | the two commands, the checks, and the honest limits |
+| Config | `integrations/codex/config/mcp.toml` | the file form of the registration |
+| Guide | `integrations/codex/README.md` | the two commands, the checks, and the honest limits |
 
 ## What ships
 
@@ -40,16 +40,16 @@ carries the evidence rules with the task, so the host's own reasoning is held to
 ## Install
 
 The server is stdio JSON-RPC and has no third-party dependency; it only needs this checkout
-importable. **`codex/install-codex.md` is the authoritative guide** — this is the short form.
+importable. **`integrations/codex/README.md` is the authoritative guide** — this is the short form.
 
 ```bash
 # from the repository root
 .venv/bin/python -c "import sys; sys.path[:0]=['backend','.']; \
   from integrations.geoai import service; print('ok')"    # which interpreter to register
-scripts/codex-doctor.sh                                   # checks the interpreter, then the tools
+integrations/scripts/doctor-codex.sh                                   # checks the interpreter, then the tools
 ```
 
-Register it with Codex (`codex.toml.example` has the same thing in file form):
+Register it with Codex (`integrations/codex/config/mcp-example.toml` has the same thing in file form):
 
 ```bash
 codex mcp add geoai -- "$PWD/.venv/bin/python" "$PWD/integrations/geoai/mcp_server.py" --stdio

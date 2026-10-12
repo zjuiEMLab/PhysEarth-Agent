@@ -38,7 +38,7 @@ that way gets its own directory on `sys.path`, which finds neither `integrations
 no `cwd` and no `PYTHONPATH` are needed, and it removes the failure where the module form dies of
 `ModuleNotFoundError` in a subprocess whose stderr nobody reads.
 
-Prefer the TOML? Merge `codex/config.snippet.toml` into `~/.codex/config.toml` instead. The key
+Prefer the TOML? Merge `integrations/codex/config/mcp.toml` into `~/.codex/config.toml` instead. The key
 is `mcp_servers`, not `mcpServers`, and `startup_timeout_sec = 30` is worth setting: the default
 10 s is tight for a scientific Python import.
 
@@ -47,7 +47,7 @@ is `mcp_servers`, not `mcpServers`, and `startup_timeout_sec = 30` is worth sett
 ```bash
 codex mcp list                                   # geoai should be listed, enabled
 codex mcp get geoai --json                       # transport, command, args, timeouts
-scripts/codex-doctor.sh                          # both of the above, plus an import check
+integrations/scripts/doctor-codex.sh                          # both of the above, plus an import check
 ```
 
 Then, in a Codex session, ask for something only the engine can answer — *"sweep snow density in
@@ -116,13 +116,13 @@ are the whole surface a third party can change. Both are supported properly, and
 shipped here.
 
 ```bash
-scripts/codex-theme-install.sh              # installs the scheme, prints the one manual step
-scripts/codex-theme-install.sh --check      # verifies an installed copy
+integrations/scripts/theme-codex.sh              # installs the scheme, prints the one manual step
+integrations/scripts/theme-codex.sh --check      # verifies an installed copy
 ```
 
 Then, in the TUI, `/theme` and choose **PhysEarth Geo-AI**. The scheme is
-`codex/geoai.tmTheme` — a TextMate/Sublime plist, which is what Codex parses (with the `two-face`
-crate) from `$CODEX_HOME/themes/`. `codex/config-theme.snippet.toml` explains each config key.
+`integrations/codex/theme/geoai.tmTheme` — a TextMate/Sublime plist, which is what Codex parses (with the `two-face`
+crate) from `$CODEX_HOME/themes/`. `integrations/codex/config/theme.toml` explains each config key.
 
 The three levers, and how far each reaches:
 
@@ -158,7 +158,7 @@ user's choice in `/theme`, and the plugin neither fights it nor reapplies itself
 
 ## Where this package stops, and why
 
-`plugins/geoai/` plus `.agents/plugins/marketplace.json` make this installable in two commands
+`integrations/codex/plugin/` plus `.agents/plugins/marketplace.json` make this installable in two commands
 from a repository marketplace:
 
 ```bash
@@ -168,7 +168,7 @@ codex plugin add geoai@physearth-agent
 
 That path exists for people who want the skill and the author metadata delivered as a unit. It
 is **not** the recommended install, and it does not register the MCP server — see
-`plugins/geoai/README.md` for why, and for the one command that finishes the job.
+`integrations/codex/plugin/README.md` for why, and for the one command that finishes the job.
 
 Both commands were run against this tree, in a throwaway `CODEX_HOME`, so what follows is a
 measurement rather than an expectation:
@@ -181,7 +181,7 @@ Marketplace `physearth-agent`
   /path/to/PhysEarth-Agent/.agents/plugins/marketplace.json
 
 PLUGIN                 STATUS         VERSION  SOURCE
-geoai@physearth-agent  not installed           /path/to/PhysEarth-Agent/plugins/geoai
+geoai@physearth-agent  not installed           /path/to/PhysEarth-Agent/integrations/codex/plugin
 
 $ codex plugin add geoai@physearth-agent
 Added plugin `geoai` from marketplace `physearth-agent`.
@@ -189,7 +189,7 @@ Installed plugin root: $CODEX_HOME/plugins/cache/physearth-agent/geoai/1.0.0
 
 $ codex plugin list
 PLUGIN                 STATUS              VERSION  SOURCE
-geoai@physearth-agent  installed, enabled  1.0.0    /path/to/PhysEarth-Agent/plugins/geoai
+geoai@physearth-agent  installed, enabled  1.0.0    /path/to/PhysEarth-Agent/integrations/codex/plugin
 ```
 
 The install copies the plugin into `$CODEX_HOME/plugins/cache/<marketplace>/<plugin>/<version>/`,

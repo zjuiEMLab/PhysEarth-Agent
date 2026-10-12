@@ -13,22 +13,28 @@
 # block, so removing it is deleting a marked region rather than untangling a merge.
 #
 # Usage:
-#   scripts/codex-theme-install.sh                  # copy the theme, print the next step
-#   scripts/codex-theme-install.sh --write-config   # and set tui.* in $CODEX_HOME/config.toml
-#   CODEX_HOME=/tmp/scratch scripts/codex-theme-install.sh
-#   scripts/codex-theme-install.sh --check          # verify an installed copy, change nothing
+#   integrations/scripts/theme-codex.sh                  # copy the theme, print the next step
+#   integrations/scripts/theme-codex.sh --write-config   # and set tui.* in $CODEX_HOME/config.toml
+#   CODEX_HOME=/tmp/scratch integrations/scripts/theme-codex.sh
+#   integrations/scripts/theme-codex.sh --check          # verify an installed copy, change nothing
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=scripts/lib/find-python.sh
-. "$ROOT/scripts/lib/find-python.sh"
-THEME_SRC="$ROOT/codex/geoai.tmTheme"
+# Two levels up: this script lives in integrations/scripts/, and the paths it reads are
+# relative to the repository root.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/find-python.sh
+. "$ROOT/scripts/find-python.sh"
+THEME_SRC="$ROOT/integrations/codex/theme/geoai.tmTheme"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 THEMES_DIR="$CODEX_HOME/themes"
 THEME_ID="geoai"
 CONFIG="$CODEX_HOME/config.toml"
-BEGIN="# >>> physearth-geoai (written by scripts/codex-theme-install.sh)"
+# Path-free on purpose. The sentinel used to name this script in parentheses, so moving the
+# script would have left every installed config.toml holding a block that no longer matched —
+# and the installer would have appended a second one instead of replacing it. `grep -F` matches
+# the prefix, so a block written by an older revision is still found and replaced.
+BEGIN="# >>> physearth-geoai"
 END="# <<< physearth-geoai"
 
 WRITE_CONFIG=0
@@ -125,7 +131,7 @@ For the status line's own item list, use the TUI picker — it writes the correc
 unknown id would be silently empty rather than an error:
   /statusline
 
-(\`codex/config-theme.snippet.toml\` records which keys were verified, how, and why the item ids
+(\`integrations/codex/config/theme.toml\` records which keys were verified, how, and why the item ids
 are left to the picker.)
 NEXT
   exit 0
@@ -180,5 +186,5 @@ cat <<NEXT
 Restart Codex (or open /theme once) and the scheme is active.
 
 Verify:
-  scripts/codex-theme-install.sh --check
+  integrations/scripts/theme-codex.sh --check
 NEXT

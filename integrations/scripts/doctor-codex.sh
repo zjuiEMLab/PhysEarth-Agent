@@ -14,15 +14,17 @@
 # server, asks it two questions over stdio, and stops it.
 #
 # Usage:
-#   scripts/codex-doctor.sh                 # discover the interpreter
-#   PHYSEARTH_PYTHON=/abs/py scripts/codex-doctor.sh
-#   CODEX_HOME=/tmp/scratch scripts/codex-doctor.sh   # inspect a different Codex home
+#   integrations/scripts/doctor-codex.sh                 # discover the interpreter
+#   PHYSEARTH_PYTHON=/abs/py integrations/scripts/doctor-codex.sh
+#   CODEX_HOME=/tmp/scratch integrations/scripts/doctor-codex.sh   # inspect a different Codex home
 
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=scripts/lib/find-python.sh
-. "$ROOT/scripts/lib/find-python.sh"
+# Two levels up: this script lives in integrations/scripts/, and the paths it reads are
+# relative to the repository root.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/find-python.sh
+. "$ROOT/scripts/find-python.sh"
 SERVER="$ROOT/integrations/geoai/mcp_server.py"
 NAME="${GEOAI_MCP_NAME:-geoai}"
 failures=0

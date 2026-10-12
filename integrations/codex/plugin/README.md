@@ -1,4 +1,4 @@
-# plugins/geoai — the installable bundle
+# integrations/codex/plugin — the installable bundle
 
 This directory exists so the skill and the author metadata can be delivered as one unit from a
 repository marketplace:
@@ -8,7 +8,7 @@ codex plugin marketplace add /path/to/PhysEarth-Agent
 codex plugin add geoai@physearth-agent
 ```
 
-**This is not the recommended install.** `codex/install-codex.md` is, and it needs one command
+**This is not the recommended install.** `integrations/codex/README.md` is, and it needs one command
 against a repository you already have. Read the next section before choosing this one.
 
 ## What it does and does not deliver
@@ -35,7 +35,7 @@ codex plugin add geoai@physearth-agent
 codex mcp add geoai -- "$PWD/.venv/bin/python" "$PWD/integrations/geoai/mcp_server.py" --stdio
 ```
 
-That third command is the same one `codex/install-codex.md` gives, and it is the one that has to
+That third command is the same one `integrations/codex/README.md` gives, and it is the one that has to
 know where your interpreter and checkout are. Nothing is lost by leaving it out of the manifest:
 a plugin that installs cleanly and then offers no tools, with nothing in any log, is exactly the
 failure mode this package spent its effort removing.
