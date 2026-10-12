@@ -3,6 +3,19 @@
 Working notes for anyone — human or coding agent — changing this repository. Only what is
 specific to this project and not obvious from the code.
 
+## Where the integration lives
+
+Everything that plugs this project into DeepSeek Harness is under `integrations/`, next to the one
+surface every host reaches the engine through:
+
+    integrations/geoai/     the host-neutral Python surface (service, MCP server, bridge, CLI)
+    integrations/dsh/       the DeepSeek Harness plugin package
+    integrations/scripts/   install, verify, and the patch-block writer
+    integrations/README.md  the layout, and why nothing here duplicates the engine
+
+A branch ships one host's integration plus the shared surface; the Codex and Claude Code packages
+live on their own branches (`plugin/codex-geoai`, `plugin/claude-geoai`).
+
 ## Commands
 
 ```bash
