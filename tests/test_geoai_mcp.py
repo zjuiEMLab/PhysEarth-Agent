@@ -139,3 +139,53 @@ def _read_json(result):
     import json
 
     return json.loads(result["content"][0]["text"])
+
+
+# ── one conversation, one session ─────────────────────────────────────────────────────────────
+
+def _payload(name, arguments=None, request_id=7):
+    import json
+
+    result = _call("tools/call", {"name": name, "arguments": arguments or {}}, request_id=request_id)
+    return json.loads(result["content"][0]["text"])
+
+
+def test_consecutive_tool_calls_share_one_session():
+    # The bug this pins, found by driving the plugin from a real harness: a host calls tool by
+    # tool and knows no session id, so every call used to land in a fresh session. `read_literature`
+    # recorded its section in one, `run_model` ran in another, and the research capability
+    # checkpoint then reported that nothing had been read — after it had been. The agent's
+    # response was to start reading this repository's source to debug its own plugin.
+    # `session_new` starts a fresh conversation *and* becomes the process default, so the calls
+    # that follow join it — that is how a host resets a conversation.
+    first = _payload("geoai_session_new", {})["session_id"]
+    second = _payload("geoai_session_new", {})["session_id"]
+    assert first != second
+
+    read = _payload("read_literature", {"slug": "research-planning", "section_id": "00"})
+    models = _payload("list_models", {"model": "smrt"})
+    evidence = _payload("geoai_evidence", {})
+
+    assert read["session_id"] == models["session_id"] == evidence["session_id"] == second
+    # And what the engine recorded is what a later check will look at.
+    assert "research-planning#00" in evidence["sections_read"]
+
+
+def test_an_explicit_session_id_still_wins():
+    # A host that manages its own sessions keeps working: the process default is a default, not a
+    # cage.
+    mine = _payload("geoai_session_new", {})["session_id"]
+    other = _payload("geoai_session_new", {})["session_id"]
+    assert mine != other
+
+    read = _payload("read_literature", {"slug": "research-planning", "section_id": "00", "session_id": other})
+    assert read["session_id"] == other
+    # Reads land in the session that was named, and the process default is untouched by them.
+    assert "research-planning#00" in _payload("geoai_evidence", {"session_id": other})["sections_read"]
+
+
+def test_the_payload_names_the_session_that_answered():
+    # Without this a host could not be explicit even if it wanted to: nothing told it which
+    # session its handle belonged to.
+    read = _payload("read_literature", {"slug": "research-planning"})
+    assert read["session_id"].startswith("ses_")
