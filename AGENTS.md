@@ -17,8 +17,11 @@ integrations/scripts/doctor-codex.sh     # proves the interpreter can import the
 `integrations/codex/README.md` is the full guide.
 `.agents/skills/geoai/references/troubleshooting.md` covers the failures that look like
 something else — chiefly a server pointed at an interpreter without PyYAML, which starts and
-offers an empty tool list with nothing in any log. DeepSeek Harness gets the same engine as the
-plugin in `integrations/dsh/`.
+offers an empty tool list with nothing in any log.
+
+Everything Codex-specific lives under `integrations/codex/`, next to the shared surface in
+`integrations/geoai/` and the scripts in `integrations/scripts/`; `integrations/README.md` has the
+layout table. DeepSeek Harness and Claude Code get the same engine from their own branches.
 
 ## Commands
 
