@@ -38,7 +38,7 @@ importable.
 python -m integrations.geoai health      # or: .venv/bin/python, with PYTHONPATH=backend
 ```
 
-Register it with Codex (see `codex.toml.example` for the same block in file form):
+Register it with Codex (see `integrations/codex/config/mcp-example.toml` for the same block in file form):
 
 ```bash
 codex mcp add physearth-geoai --env PYTHONPATH=backend -- python -m integrations.geoai serve

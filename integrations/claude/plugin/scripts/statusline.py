@@ -20,7 +20,7 @@ Design rules, from the same place as the rest of this repository:
   - **Nothing is written anywhere.** It reads stdin and prints; it has no side effects and no
     network access.
 
-Usage: configured by `scripts/claude-plugin-install.sh --write-settings`, or by hand:
+Usage: configured by `integrations/scripts/install-claude.sh --write-settings`, or by hand:
 
   {"statusLine": {"type": "command", "command": "python3 /abs/path/statusline.py",
                   "padding": 0, "refreshInterval": 10}}

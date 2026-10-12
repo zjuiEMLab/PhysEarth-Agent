@@ -16,7 +16,7 @@ release", so the experimental path is the one that will keep working.
 claude --settings ...                      # or set "theme" in settings.json
 ```
 
-Or let the installer do it: `scripts/claude-plugin-install.sh --write-settings` writes
+Or let the installer do it: `integrations/scripts/install-claude.sh --write-settings` writes
 `"theme": "custom:geoai-claude:geoai-night"` and the `statusLine` below, backing up first.
 
 Token names and accepted value forms (`#rrggbb`, `#rgb`, `rgb(r,g,b)`, `ansi256(n)`, `ansi:<name>`)

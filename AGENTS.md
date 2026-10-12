@@ -3,6 +3,21 @@
 Working notes for anyone — human or coding agent — changing this repository. Only what is
 specific to this project and not obvious from the code.
 
+## Where the integrations live
+
+Everything that plugs this project into a coding agent is under `integrations/`, one directory per
+host, plus one shared surface they all reach the engine through:
+
+    integrations/geoai/     the host-neutral Python surface (service, MCP server, bridge, CLI)
+    integrations/dsh/       DeepSeek Harness
+    integrations/codex/     Codex
+    integrations/claude/    Claude Code
+    integrations/scripts/   every host's installer
+    integrations/README.md  what this tree is, and the three files that must stay at the root
+
+`integrations/README.md` has the layout table and the reason the host-mandated paths
+(`.agents/`, `.claude-plugin/`) cannot be moved.
+
 ## Commands
 
 ```bash

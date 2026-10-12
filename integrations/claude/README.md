@@ -12,7 +12,7 @@ Two commands:
   from integrations.geoai import service; print('ok')"
 
 # 2. install the plugin, register the MCP server, and write the two settings
-scripts/claude-plugin-install.sh              # user scope; --scope project for a repo
+integrations/scripts/install-claude.sh              # user scope; --scope project for a repo
 ```
 
 Then start a **new** session — plugins, output styles and MCP servers are read at session start.
@@ -32,14 +32,14 @@ Claude Code is stricter than it looks, so the ranking here is by *reliability*, 
 
 **1. `statusLine` — the strongest colour lever.** Claude Code renders ANSI escape sequences from a
 status-line command's stdout, and re-runs it on session start, on every assistant message, on
-`/compact`, on a mode change and every `refreshInterval` seconds. `plugins/geoai-claude/scripts/statusline.py`
+`/compact`, on a mode change and every `refreshInterval` seconds. `integrations/claude/plugin/scripts/statusline.py`
 prints one coloured row: the model, the active output style, context remaining with a colour
 threshold, the branch, and the effort level.
 
 ```json
 "statusLine": {
   "type": "command",
-  "command": "python3 \"/abs/path/plugins/geoai-claude/scripts/statusline.py\"",
+  "command": "python3 \"/abs/path/integrations/claude/plugin/scripts/statusline.py\"",
   "padding": 0,
   "refreshInterval": 10
 }
@@ -85,9 +85,9 @@ Verified after install: `claude mcp list` → `geoai: … - ✓ Connected`.
 ## Verify
 
 ```bash
-claude plugin validate ./plugins/geoai-claude    # the manifest, before anything is installed
-claude plugin tag ./plugins/geoai-claude --dry-run   # plugin.json and the marketplace entry agree
-scripts/claude-plugin-install.sh --check         # plugin inventory, component list, settings
+claude plugin validate ./integrations/claude/plugin    # the manifest, before anything is installed
+claude plugin tag ./integrations/claude/plugin --dry-run   # plugin.json and the marketplace entry agree
+integrations/scripts/install-claude.sh --check         # plugin inventory, component list, settings
 claude plugin details geoai-claude               # skills / agents / MCP servers / token cost
 claude mcp list | grep geoai                     # must say ✓ Connected
 ```
@@ -113,7 +113,7 @@ brightness temperature"* — and confirm it calls the tools instead of answering
 ### Two facts measured here, one left to a session
 
 Measured: the status line renders colour (the row above was printed by
-`plugins/geoai-claude/scripts/statusline.py` with `FORCE_COLOR=1`), and the theme id form is
+`integrations/claude/plugin/scripts/statusline.py` with `FORCE_COLOR=1`), and the theme id form is
 `custom:<plugin>:<slug>` — `claude plugin details` reports the plugin as `geoai-claude`, and the
 installer writes `theme: "custom:geoai-claude:geoai-night"`, which is the form Claude Code resolves
 for a plugin-supplied theme.
@@ -145,7 +145,7 @@ claude -p "Reply with exactly: OK"   # then run /output-style and look for geoai
 
 ## Troubleshooting
 
-`plugins/geoai-claude/skills/geoai/references/troubleshooting.md` — the same engine-side guide the
+`integrations/claude/plugin/skills/geoai/references/troubleshooting.md` — the same engine-side guide the
 Codex and DSH integrations use. For this surface specifically:
 
 - **`✗ Failed to connect`** — the interpreter cannot import the engine. The installer proves its

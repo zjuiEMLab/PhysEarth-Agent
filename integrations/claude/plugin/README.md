@@ -1,4 +1,4 @@
-# plugins/geoai-claude — the Claude Code plugin
+# integrations/claude/plugin — the Claude Code plugin
 
 Installed from this repository's own marketplace:
 
@@ -10,10 +10,10 @@ claude plugin install geoai-claude@physearth-agent --scope user
 Or in one step, which also registers the MCP server and writes the two settings a plugin cannot:
 
 ```bash
-scripts/claude-plugin-install.sh
+integrations/scripts/install-claude.sh
 ```
 
-`claude/install-claude-code.md` is the full guide.
+`integrations/claude/README.md` is the full guide.
 
 ## Contents
 

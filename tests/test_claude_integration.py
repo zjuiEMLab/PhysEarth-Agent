@@ -18,7 +18,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-PLUGIN = ROOT / "plugins" / "geoai-claude"
+# The bundle lives in its host's directory (`integrations/claude/plugin`), so the directory
+# is named for the slot; the plugin's identity is the `name` in its manifest.
+PLUGIN = ROOT / "integrations" / "claude" / "plugin"
 MANIFEST = PLUGIN / ".claude-plugin" / "plugin.json"
 MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 STATUSLINE = PLUGIN / "scripts" / "statusline.py"
@@ -200,16 +202,18 @@ def test_the_marketplace_points_at_the_plugin_it_catalogues():
     assert catalog["name"] == "physearth-agent"
     assert catalog["owner"]["name"]
     entry, = catalog["plugins"]
-    assert entry["name"] == PLUGIN.name
+    # The directory is named for the host's slot; the plugin id is the manifest's `name`, and it
+    # is what a user types and what `claude plugin details` reports.
+    assert entry["name"] == manifest()["name"] == "geoai-claude"
     target = (ROOT / entry["source"]).resolve()
     assert target == PLUGIN.resolve(), target
     assert json.loads((target / ".claude-plugin" / "plugin.json").read_text())["name"] == entry["name"]
 
 
 def test_the_installer_proves_the_interpreter_and_is_reversible():
-    script = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    script = (ROOT / "integrations" / "scripts" / "install-claude.sh").read_text()
 
-    assert os.access(ROOT / "scripts" / "claude-plugin-install.sh", os.X_OK)
+    assert os.access(ROOT / "integrations" / "scripts" / "install-claude.sh", os.X_OK)
     # It must prove the engine imports, register the server by absolute path, back the settings up
     # before writing them, and offer a read-only mode.
     assert "physearth_find_python_for_engine" in script
@@ -222,14 +226,15 @@ def test_the_installer_proves_the_interpreter_and_is_reversible():
 def test_every_script_sources_the_shared_interpreter_search():
     # The same discovery bug was written three times — PATH finds a python3 without the scientific
     # stack, and the failure is always silent. One implementation, sourced, is the fix.
-    library = ROOT / "scripts" / "lib" / "find-python.sh"
+    library = ROOT / "scripts" / "find-python.sh"
     assert library.is_file()
     body = library.read_text()
     assert "physearth_find_python_for_engine" in body
     assert "conda info --base" in body, "asking conda beats guessing a home directory"
-    for script in ("claude-plugin-install.sh",):
-        text = (ROOT / "scripts" / script).read_text()
-        assert "scripts/lib/find-python.sh" in text, script
+    # The installer sits with the other hosts' installers; `studio.sh` is the project's own.
+    for directory, script in (("integrations/scripts", "install-claude.sh"), ("scripts", "studio.sh")):
+        text = (ROOT / directory / script).read_text()
+        assert "scripts/find-python.sh" in text, script
 
 
 def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
@@ -239,7 +244,7 @@ def test_the_studio_launcher_is_here_too_and_uses_the_same_search():
     launcher = ROOT / "scripts" / "studio.sh"
     assert launcher.is_file() and os.access(launcher, os.X_OK)
     body = launcher.read_text()
-    assert "scripts/lib/find-python.sh" in body
+    assert "scripts/find-python.sh" in body
     assert "physearth_find_python_for_studio" in body
     assert "PYTHONPATH=backend" in body, "the package lives under backend/"
     wrapper = ROOT / "start-local.command"
@@ -251,7 +256,7 @@ def test_the_settings_half_resolves_its_interpreter_before_the_read_only_path():
     # `--check` reads the settings file with PYTHON_BIN. When that assignment sat below the branch,
     # `set -u` turned the report into "unbound variable" — a crash in the one mode that exists to
     # keep working on a broken install. Order is the assertion, so it is asserted positionally.
-    script = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    script = (ROOT / "integrations" / "scripts" / "install-claude.sh").read_text()
     assignment = script.index('PYTHON_BIN=')
     read_only = script.index('if [ "$CHECK" = "1" ]; then')
     assert assignment < read_only
@@ -296,8 +301,21 @@ def test_the_theme_id_is_the_prefixed_form_claude_code_resolves():
     # A plugin *supplies* a theme; it cannot activate one, and the id a session resolves is
     # `custom:<plugin-name>:<slug>`. The installer builds that from the manifest name rather than
     # from a literal, so renaming the plugin cannot leave a theme id pointing at nothing.
-    installer = (ROOT / "scripts" / "claude-plugin-install.sh").read_text()
+    installer = (ROOT / "integrations" / "scripts" / "install-claude.sh").read_text()
 
     assert 'PLUGIN_NAME="geoai-claude"' in installer
     assert 'f"custom:{plugin}:geoai-night"' in installer
     assert 'settings.json' in installer and 'backed up' in installer
+
+
+def test_the_installer_finds_the_bundle_where_it_actually_is():
+    # The bundle directory is named for the host's slot, not for the plugin, so an installer that
+    # built a path out of the plugin name would write a status line pointing at nothing. It did:
+    # `--check` reported `…/plugins/geoai-claude/scripts/statusline.py` after the move.
+    installer = (ROOT / "integrations" / "scripts" / "install-claude.sh").read_text()
+
+    assert 'PLUGIN_DIR="$ROOT/integrations/claude/plugin"' in installer
+    assert '"$PLUGIN_DIR/scripts/statusline.py"' in installer
+    assert "ROOT/plugins" not in installer, "no path may be built out of the plugin name"
+    # And the directory it names is the one with the manifest in it.
+    assert (ROOT / "integrations" / "claude" / "plugin" / ".claude-plugin" / "plugin.json").is_file()

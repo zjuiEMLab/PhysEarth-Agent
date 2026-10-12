@@ -21,17 +21,22 @@
 # terminal is not a property of this repository.
 #
 # Usage:
-#   scripts/claude-plugin-install.sh                     # install plugin + settings (user scope)
-#   scripts/claude-plugin-install.sh --scope project
-#   scripts/claude-plugin-install.sh --plugin-only       # no settings changes at all
-#   scripts/claude-plugin-install.sh --check             # report state, change nothing
-#   HOME=/tmp/scratch scripts/claude-plugin-install.sh   # test in a throwaway home
+#   integrations/scripts/install-claude.sh                     # install plugin + settings (user scope)
+#   integrations/scripts/install-claude.sh --scope project
+#   integrations/scripts/install-claude.sh --plugin-only       # no settings changes at all
+#   integrations/scripts/install-claude.sh --check             # report state, change nothing
+#   HOME=/tmp/scratch integrations/scripts/install-claude.sh   # test in a throwaway home
 
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=scripts/lib/find-python.sh
-. "$ROOT/scripts/lib/find-python.sh"
+# Two levels up: this script lives in integrations/scripts/, and the paths it writes — the
+# marketplace root, the plugin bundle, the status line — are relative to the repository root.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/find-python.sh
+. "$ROOT/scripts/find-python.sh"
+# The plugin's id (what a user types, `geoai-claude@physearth-agent`) and the directory its bundle
+# lives in are two different things: bundles sit in their host's directory, named for the slot.
+PLUGIN_DIR="$ROOT/integrations/claude/plugin"
 PLUGIN_NAME="geoai-claude"
 MARKETPLACE="physearth-agent"
 SCOPE="user"
@@ -148,7 +153,7 @@ if [ "$DO_SETTINGS" = "1" ]; then
     cp "$PATH_JSON" "$PATH_JSON.bak-$(date +%Y%m%d-%H%M%S)"
     echo "==> backed up $PATH_JSON"
   fi
-  "$PYTHON_BIN" - "$PATH_JSON" "$ROOT/plugins/$PLUGIN_NAME/scripts/statusline.py" "$PLUGIN_NAME" "$PYTHON_BIN" <<'PY'
+  "$PYTHON_BIN" - "$PATH_JSON" "$PLUGIN_DIR/scripts/statusline.py" "$PLUGIN_NAME" "$PYTHON_BIN" <<'PY'
 import json
 import os
 import shlex
@@ -191,5 +196,5 @@ Next steps
      without asking), then look at the status line for the coloured Geo-AI row
 
 Verify later without changing anything:
-  scripts/claude-plugin-install.sh --check
+  integrations/scripts/install-claude.sh --check
 NEXT
