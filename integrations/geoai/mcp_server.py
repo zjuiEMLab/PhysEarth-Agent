@@ -73,7 +73,12 @@ HOST_TOOLS = (
         "name": "geoai_session_new",
         "description": (
             "Open a research session. Run results are handles that resolve only inside the "
-            "session that produced them, so open one before running a model."
+            "session that produced them, so open one before running a model. A session also "
+            "carries the research context — which papers are being reproduced, what a plan "
+            "already fixed — and that context is meant to cover one line of enquiry. Hosts "
+            "that call tool by tool keep one session for the whole process, so call this first "
+            "in a new conversation: otherwise the earlier conversation's context still governs "
+            "this one's plans and evidence checks."
         ),
         "inputSchema": {
             "type": "object",
