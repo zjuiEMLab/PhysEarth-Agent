@@ -135,6 +135,11 @@ def report_generation_prompt(session):
             "12. Quote every configuration value exactly as the ledger records it; do not round "
             "it or substitute a nominal value. A parameter-source table built from the ledger is "
             "appended to the report automatically, so do not reproduce the ledger row by row.",
+            "13. When a sentence states a value as a run's own, quote the number the run returned, "
+            "at the precision you were given: a run's value is never adjusted towards the paper's. "
+            "Quote a value from the paper beside the run's, marked as the paper's in brackets. A "
+            "number no recorded run produced is read as a claim about the run, and the draft is "
+            "sent back once to be corrected.",
             asked_values.evidence_block(session),
             "AUTHORITATIVE PARAMETER LEDGER:\n" + "\n".join(ledger),
             "RECORDED FORMAL FIGURES:\n" + "\n".join(figure_state),

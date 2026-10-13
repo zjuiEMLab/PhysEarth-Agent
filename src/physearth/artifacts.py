@@ -96,6 +96,36 @@ def persist_run(project_id, research_id, run_id, payload):
     return str(path)
 
 
+def recorded_runs(project_id, research_id):
+    """Every run this research has recorded, for the checks that read them back.
+
+    The reports are written from what the runs hold, so a check that a report's numbers
+    are the runs' numbers needs the same records. Kept beside `persist_run` so the path
+    convention lives in one place.
+    """
+    return _recorded(project_id, research_id, "runs")
+
+
+def recorded_figures(project_id, research_id):
+    """Every figure record this research has, comparisons and checks included."""
+    return _recorded(project_id, research_id, "figures")
+
+
+def _recorded(project_id, research_id, folder):
+    root = project_dir(project_id) / "research" / _safe(research_id, "research id") / folder
+    if not root.is_dir():
+        return []
+    records = []
+    for path in sorted(root.glob("*.json")):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(record, dict):
+            records.append(record)
+    return records
+
+
 def persist_figure(project_id, research_id, figure_number, payload):
     root = project_dir(project_id) / "research" / _safe(research_id, "research id") / "figures"
     root.mkdir(parents=True, exist_ok=True)

@@ -126,6 +126,15 @@ from physearth.research.normalise import (
 from physearth.research.propose import (
     propose,
 )
+from physearth.research.numbers import (
+    correction as unsupported_numbers_correction,
+)
+from physearth.research.numbers import (
+    summary as unsupported_numbers_summary,
+)
+from physearth.research.numbers import (
+    unsupported as unsupported_numbers,
+)
 from physearth.research.report import (
     parameter_sources_table,
     report_generation_prompt,

@@ -1953,6 +1953,41 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     detail=report_warning,
                 )
             )
+        # A report may state the paper's numbers, but not in a run's place. One draft was
+        # asked to be corrected before the person read it; if it comes back the same, the
+        # report is delivered with the finding named rather than held back, because advice
+        # that stops a report is worse than a report that says what it could not verify.
+        if session.get("research_required") and session.get("research_report_prompt_sent"):
+            unsupported = research.unsupported_numbers(session, answer)
+            if unsupported and review_attempts.get("report_numbers", 0) < 1:
+                review_attempts["report_numbers"] = 1
+                session_state.bump(state, "interventions")
+                events.append(
+                    _event(
+                        "harness_block",
+                        rule="report_numbers",
+                        detail=unsupported[0].get("context") or "",
+                        numbers=[item["number"] for item in unsupported],
+                        intervention=1,
+                    )
+                )
+                messages.append({"role": "assistant", "content": completion.content or ""})
+                messages.append({
+                    "role": "user",
+                    "content": research.unsupported_numbers_correction(unsupported),
+                })
+                segments = []
+                answer = ""
+                yield answer, events, state
+                continue
+            if unsupported:
+                detail = research.unsupported_numbers_summary(unsupported)
+                noted = session.setdefault("report_warnings", [])
+                if detail not in noted:
+                    noted.append(detail)
+                    events.append(
+                        _event("harness_warning", rule="report_numbers", detail=detail)
+                    )
         if (
             session.get("research_required")
             and research.lacks_narrative(session, answer)
