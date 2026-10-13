@@ -219,7 +219,7 @@ def test_run_model_returns_quality_controlled_output():
     result = tools.call("run_model", {"model": "smrt", "parameters": {"frequency_ghz": 19.0}})
     assert result["status"] == "success"
     assert result["qc"]["passed"]
-    assert set(result["data"]["series_summary"]) == {"tb_v", "tb_h"}
+    assert set(result["data"]["series_summary"]) == {"tb_v", "tb_h", "swe_mm"}
 
 
 def test_smrt_can_sweep_dort_stream_count_for_convergence():

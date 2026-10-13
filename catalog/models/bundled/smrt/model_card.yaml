@@ -10,8 +10,10 @@ citation: >-
   Geosci. Model Dev., 11, 2763-2788, 2018. https://doi.org/10.5194/gmd-11-2763-2018
 description: >-
   Snow Microwave Radiative Transfer. Computes brightness temperature and backscatter from a
-  homogeneous snow layer using a choice of electromagnetic theory and microstructure
-  representation. Documented by the smrt-v1 paper in the literature corpus.
+  homogeneous snow layer, dry or wet, lying on a rough frozen soil (the default), a flat soil
+  or nothing, using a choice of electromagnetic theory and microstructure representation. Every passive and
+  active run also returns the layer's snow water equivalent. Documented by the smrt-v1 paper
+  in the literature corpus.
 instruction_id: smrt
 instruction_version: "1.0"
 instruction_path: model_guideline.md
@@ -45,7 +47,10 @@ parameters:
   frequency_ghz:
     type: number
     unit: GHz
-    description: Sensor frequency.
+    description: >-
+      Sensor frequency. For backscatter (output sigma) on the default rough soil, use 17.2 GHz
+      or lower: its IEM soil model is outside its validity above that and the points are
+      refused; at higher frequency choose substrate flat_soil or a smoother soil.
     minimum: 1.0
     maximum: 250.0
     default: 37.0
@@ -60,7 +65,9 @@ parameters:
     type: number
     unit: m
     description: >-
-      Snow layer thickness. Thin layers over vacuum are optically shallow and unphysical.
+      Snow layer thickness. With substrate none, thin layers over vacuum are optically shallow
+      and unphysical, and brightness temperature rises with depth only because nothing below
+      emits; snow on the ground is substrate flat_soil, the default.
       How deep the result keeps changing depends on frequency and grain size, so there is no
       single safe default. Measured to within 0.5 K of a 1000 m layer for exponential
       microstructure at 300 kg m-3: about 1 m at 89 GHz, 10 m at 37 GHz with 0.15 mm, 50 m at
@@ -88,18 +95,32 @@ parameters:
   temperature_k:
     type: number
     unit: K
-    description: Snow physical temperature. Above the melting point the dry-snow assumption fails.
+    description: >-
+      Snow physical temperature. Wet snow is at the melting point, 273.15 K: any liquid water
+      requires it.
     minimum: 200.0
     maximum: 273.15
     default: 265.0
   corr_length_m:
     type: number
     unit: m
-    description: Exponential correlation length of the microstructure.
+    description: >-
+      Exponential correlation length of the microstructure, the grain-size control of the
+      autocorrelation-function microstructures. Scattering grows steeply with it, so it sets
+      how fast brightness temperature falls and backscatter rises with depth.
     minimum: 1.0e-6
     maximum: 3.0e-3
     default: 0.00015
     required: false
+    typical:
+      range: [5.0e-5, 4.0e-4]
+      source: >-
+        Mätzler (2002) and Montpetit et al. (2013): correlation length from specific surface
+        area by the Debye relation; seasonal snow spans fresh snow near 0.05 mm to depth hoar
+        near 0.3 to 0.4 mm.
+      why: the magnitude of the depth or SWE signal scales with it.
+    load_bearing: [tb_v, tb_h, sigma_vv_db, sigma_hh_db, sigma_hv_db]
+    load_bearing_when: {microstructure_model: [exponential, teubner_strey, gaussian_random_field]}
   repeat_distance_m:
     type: number
     unit: m
@@ -119,6 +140,14 @@ parameters:
     maximum: 5.0e-3
     default: 0.0002
     required: false
+    typical:
+      range: [5.0e-5, 1.0e-3]
+      source: >-
+        Picard et al. (2018, smrt-v1) and the sticky-hard-sphere snow literature: optical
+        radii of seasonal snow run from about 0.05 mm (fresh) to 1 mm (depth hoar).
+      why: the magnitude of the depth or SWE signal scales with it.
+    load_bearing: [tb_v, tb_h, sigma_vv_db, sigma_hh_db, sigma_hv_db]
+    load_bearing_when: {microstructure_model: [independent_sphere, sticky_hard_spheres, non_sticky_hard_spheres]}
   stickiness:
     type: number
     unit: none
@@ -141,6 +170,111 @@ parameters:
     maximum: 128
     default: 32
     required: false
+  volumetric_liquid_water:
+    type: number
+    unit: m3 m-3
+    description: >-
+      Liquid water as a fraction of the snow volume; dry snow is 0, and 0.01 is 1 %. Liquid
+      water exists only at the melting point, so any value above 0 requires temperature_k
+      273.15. SMRT then treats the grains as wet ice (Bohren and Huffman). Very little water
+      changes everything: the absorption it adds makes the layer opaque, so depth and SWE stop
+      mattering to brightness temperature, and backscatter falls by several dB. On flat soil
+      at 37 GHz 0.0005 already reverses the depth trend, and by 0.002 the layer is opaque. The
+      dry-to-wet change in the signal therefore lies between 0 and about 0.005, far below the
+      field classes of snow wetness (moist up to 3 %, wet 3 to 8 %). A comparison across
+      wetness needs values inside that transition as well as a dry and a wet case; 1, 2, 3
+      and 5 % all draw the same flat line.
+    minimum: 0.0
+    maximum: 0.15
+    default: 0.0
+    required: false
+    typical:
+      range: [0.0, 0.08]
+      source: >-
+        Fierz et al. (2009), The International Classification for Seasonal Snow on the Ground,
+        IHP-VII Technical Documents in Hydrology 83, UNESCO: dry 0, moist up to 3 %, wet 3 to
+        8 %, very wet 8 to 15 % liquid water by volume.
+  substrate:
+    type: string
+    unit: none
+    description: >-
+      What lies under the snow. rough_soil, the default, is the soil of SMRT's own examples and
+      of the seasonal-snow literature: the Wegmuller and Matzler (1999) rough-soil reflectivity
+      for emission (soil_roughness_rms_m) and the IEM surface scattering of Fung et al. (1992)
+      for backscatter (soil_iem_rms_height_m, soil_iem_corr_length_m), as SMRT's own examples
+      use. flat_soil is a mirror-flat Fresnel soil, the setup of the 89 to 243 GHz tundra
+      studies (Sandells et al. 2024): below about 90 GHz it over-polarises the ground, so H-pol
+      brightness temperature can rise with snow depth, and it returns no backscatter of its own.
+      none is snow over nothing, only a stand-in for a semi-infinite snowpack; a shallow layer
+      over nothing brightens with depth because the vacuum below emits nothing.
+    enum: [rough_soil, flat_soil, none]
+    default: rough_soil
+    required: false
+  soil_roughness_rms_m:
+    type: number
+    unit: m
+    description: >-
+      RMS height of the soil surface in the Wegmuller and Matzler emission model, used by
+      rough_soil in passive runs. 0.01 m is SMRT's own example value.
+    minimum: 0.0
+    maximum: 0.05
+    default: 0.01
+    required: false
+  soil_iem_rms_height_m:
+    type: number
+    unit: m
+    description: >-
+      RMS height of the soil surface in the IEM backscatter model (Fung et al. 1992), used by
+      rough_soil in active runs. IEM is valid only while k*s*k*l stays below the square root of
+      the soil-to-snow permittivity ratio, and under snow that ratio is only about 2.5; 1 mm
+      with a 4 mm correlation length stays valid up to 17.2 GHz from dry snow to 8 % liquid water. Larger values
+      make SMRT warn that the model is out of its domain.
+    minimum: 0.0001
+    maximum: 0.01
+    default: 0.001
+    required: false
+  soil_iem_corr_length_m:
+    type: number
+    unit: m
+    description: Correlation length of the soil surface in the IEM backscatter model.
+    minimum: 0.001
+    maximum: 0.1
+    default: 0.004
+    required: false
+  soil_permittivity_real:
+    type: number
+    unit: none
+    description: >-
+      Real part of the soil permittivity under the snow, used by rough_soil and flat_soil.
+      Frozen soil is about 4.
+    minimum: 1.5
+    maximum: 40.0
+    default: 4.0
+    required: false
+  soil_permittivity_imag:
+    type: number
+    unit: none
+    description: >-
+      Loss (imaginary) part of the soil permittivity, written positive as SMRT does; the
+      papers' 4 - 0.5j is real 4 and imaginary 0.5.
+    minimum: 0.0
+    maximum: 20.0
+    default: 0.5
+    required: false
+  soil_temperature_k:
+    type: number
+    unit: K
+    description: >-
+      Physical temperature of the soil under the snow. Unset, the soil is at the snow
+      temperature: snowpack and ground at one temperature. Under seasonal snow the ground is
+      the warm side, so a soil colder than the snow is an inversion; with fine or weakly
+      scattering snow it makes brightness temperature rise with depth. The SMRT tundra studies
+      use 258.15 K under colder multi-layer snow. Left unset in a sweep of temperature_k, the
+      soil follows the snow through the sweep; set it to hold the ground fixed.
+    minimum: 230.0
+    maximum: 300.0
+    required: false
+    follows: temperature_k
   dense_snow_correction:
     type: string
     unit: none
@@ -158,7 +292,7 @@ parameters:
     type: string
     unit: none
     description: Name of a numeric parameter to sweep instead of holding fixed.
-    enum: [none, frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, repeat_distance_m, radius_m, stickiness, dort_streams]
+    enum: [none, frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, repeat_distance_m, radius_m, stickiness, dort_streams, volumetric_liquid_water, soil_temperature_k, soil_roughness_rms_m, soil_iem_rms_height_m, soil_iem_corr_length_m]
     default: none
     required: false
   sweep_start:
@@ -222,7 +356,23 @@ combinations:
       short-range DMRT theories; the original IBA returns zero brightness temperature past
       the switch and the other two reject the option.
 
+# Numeric couplings that a list of allowed values cannot express.
+constraints:
+  - when: {volumetric_liquid_water: {gt: 0.0}}
+    require: {temperature_k: {eq: 273.15}}
+    reason: >-
+      Liquid water in snow exists only at the melting point. Wet snow below 273.15 K is not a
+      state of snow, and SMRT would return a plausible-looking number for it anyway. Set
+      temperature_k to 273.15 for every wet run, including the dry end of a wetness sweep.
+
 outputs:
+  swe_mm:
+    unit: mm
+    description: >-
+      Snow water equivalent of the layer, thickness times density (kg m-2, the same number in
+      mm of water). Returned with every tb and sigma run so a result can be drawn against SWE.
+    valid_min: 0.0
+    valid_max: 500000.0
   tb_v:
     unit: K
     description: Vertically polarised brightness temperature.
@@ -274,9 +424,205 @@ outputs:
 # The output selector is exclusive.  Publishing this mapping lets research-plan
 # validation reject a coefficients-only run that promises a brightness-temperature plot.
 output_groups:
-  tb: [tb_v, tb_h]
-  sigma: [sigma_vv_db, sigma_hh_db, sigma_hv_db]
+  tb: [tb_v, tb_h, swe_mm]
+  sigma: [sigma_vv_db, sigma_hh_db, sigma_hv_db, swe_mm]
   coefficients: [ks_per_m, ka_per_m, effective_permittivity, single_scattering_albedo]
+
+# Physical expectations: cited, and confirmed by forge probes of this adapter (see
+# model_card.provenance.yaml). A run that contradicts one is flagged in its quality control
+# as advisory: it may be a regime the card does not know, but it is never silent.
+physics:
+  expectations:
+    - id: tb-v-falls-with-swe
+      output: tb_v
+      input: swe_mm
+      sign: nonincreasing
+      tolerance: 0.5
+      source:
+        - "Chang et al. (1987), Ann. Glaciol. 9: 18 and 37 GHz brightness temperature falls as SWE grows"
+        - "probe: rough-soil grid, model_card.provenance.yaml (falls for grains >= 0.2 mm at 37 GHz, >= 0.3 mm at 18.7 GHz)"
+      reason: >-
+        Brightness temperature rising as SWE grows is not what dry seasonal snow on ground does
+        at 19 GHz and above, where volume scattering darkens it (the basis of the 18-37 GHz SWE
+        retrieval). It is physical in specific cases; the warning names the one this run matches.
+      causes:
+        - when: {sweep_parameter: [density_kg_m3]}
+          text: >-
+            SWE changed through density at a fixed depth, and denser snow scatters less, so the
+            snow brightens as it packs
+        - when: {substrate: [none]}
+          text: snow over nothing, so a deeper layer adds emission the vacuum below never gave
+        - when: {substrate: [flat_soil]}
+          text: a flat soil is over-polarised, and a weakly scattering layer lifts H-pol towards the snow temperature
+        - when: {frequency_ghz: {le: 11.0}}
+          text: at about 11 GHz and below snow barely scatters, so the layer adds its own emission
+        - when: {volumetric_liquid_water: {gt: 0.0}}
+          text: wet snow absorbs and emits, so a thin or barely wet layer brightens as it becomes opaque
+        - when: {microstructure_model: [exponential, teubner_strey, gaussian_random_field], corr_length_m: {lt: 1.0e-4}}
+          text: grains finer than 0.1 mm scatter too little, so the layer adds its own emission
+        - when: {microstructure_model: [exponential, teubner_strey, gaussian_random_field], corr_length_m: {lt: 2.0e-4}, frequency_ghz: {lt: 30.0}}
+          text: below 30 GHz grains under about 0.2 mm scatter too little, so the layer adds its own emission
+        - when: {microstructure_model: [sticky_hard_spheres, non_sticky_hard_spheres, independent_sphere], radius_m: {lt: 2.0e-4}}
+          text: spheres smaller than 0.2 mm radius scatter too little, so the layer adds its own emission
+        - when: {microstructure_model: [sticky_hard_spheres, non_sticky_hard_spheres, independent_sphere], radius_m: {lt: 3.0e-4}, frequency_ghz: {lt: 30.0}}
+          text: below 30 GHz spheres under about 0.3 mm radius scatter too little, so the layer adds its own emission
+    - id: tb-h-falls-with-swe
+      output: tb_h
+      input: swe_mm
+      sign: nonincreasing
+      tolerance: 0.5
+      source:
+        - "Chang et al. (1987), Ann. Glaciol. 9: 18 and 37 GHz brightness temperature falls as SWE grows"
+        - "probe: rough-soil grid, model_card.provenance.yaml (falls for grains >= 0.2 mm at 37 GHz, >= 0.3 mm at 18.7 GHz)"
+      reason: >-
+        Brightness temperature rising as SWE grows is not what dry seasonal snow on ground does
+        at 19 GHz and above, where volume scattering darkens it (the basis of the 18-37 GHz SWE
+        retrieval). It is physical in specific cases; the warning names the one this run matches.
+      causes:
+        - when: {sweep_parameter: [density_kg_m3]}
+          text: >-
+            SWE changed through density at a fixed depth, and denser snow scatters less, so the
+            snow brightens as it packs
+        - when: {substrate: [none]}
+          text: snow over nothing, so a deeper layer adds emission the vacuum below never gave
+        - when: {substrate: [flat_soil]}
+          text: a flat soil is over-polarised, and a weakly scattering layer lifts H-pol towards the snow temperature
+        - when: {frequency_ghz: {le: 11.0}}
+          text: at about 11 GHz and below snow barely scatters, so the layer adds its own emission
+        - when: {volumetric_liquid_water: {gt: 0.0}}
+          text: wet snow absorbs and emits, so a thin or barely wet layer brightens as it becomes opaque
+        - when: {microstructure_model: [exponential, teubner_strey, gaussian_random_field], corr_length_m: {lt: 1.0e-4}}
+          text: grains finer than 0.1 mm scatter too little, so the layer adds its own emission
+        - when: {microstructure_model: [exponential, teubner_strey, gaussian_random_field], corr_length_m: {lt: 2.0e-4}, frequency_ghz: {lt: 30.0}}
+          text: below 30 GHz grains under about 0.2 mm scatter too little, so the layer adds its own emission
+        - when: {microstructure_model: [sticky_hard_spheres, non_sticky_hard_spheres, independent_sphere], radius_m: {lt: 2.0e-4}}
+          text: spheres smaller than 0.2 mm radius scatter too little, so the layer adds its own emission
+        - when: {microstructure_model: [sticky_hard_spheres, non_sticky_hard_spheres, independent_sphere], radius_m: {lt: 3.0e-4}, frequency_ghz: {lt: 30.0}}
+          text: below 30 GHz spheres under about 0.3 mm radius scatter too little, so the layer adds its own emission
+    - id: dry-sigma-vv-rises-with-swe
+      output: sigma_vv_db
+      input: swe_mm
+      sign: nondecreasing
+      tolerance: 0.3
+      when: {volumetric_liquid_water: {eq: 0.0}}
+      source:
+        - "Rott et al. (2010), Proc. IEEE 98(5) (CoReH2O): X- and Ku-band backscatter of dry snow rises with SWE through volume scattering"
+        - "probe: IEM rough-soil grid, model_card.provenance.yaml"
+      reason: &sigma_reason >-
+        Dry snow backscatter rises with SWE because volume scattering grows with the amount of
+        snow. Over a rough soil, very fine grains (under about 0.1 mm) scatter so little that the
+        snow mostly dims the soil return, and backscatter falls by up to about 1.5 dB; say so if
+        that is the case.
+      causes: &sigma_causes
+        - when: {substrate: [rough_soil], microstructure_model: [exponential, teubner_strey, gaussian_random_field], corr_length_m: {lt: 1.0e-4}}
+          text: grains finer than 0.1 mm scatter too little, so the snow mostly dims the rough soil's return
+        - when: {substrate: [rough_soil], microstructure_model: [sticky_hard_spheres, independent_sphere], radius_m: {lt: 1.0e-4}}
+          text: grains finer than 0.1 mm scatter too little, so the snow mostly dims the rough soil's return
+    - id: dry-sigma-hh-rises-with-swe
+      output: sigma_hh_db
+      input: swe_mm
+      sign: nondecreasing
+      tolerance: 0.3
+      when: {volumetric_liquid_water: {eq: 0.0}}
+      source:
+        - "Rott et al. (2010), Proc. IEEE 98(5)"
+        - "probe: IEM rough-soil grid, model_card.provenance.yaml"
+      reason: *sigma_reason
+      causes: *sigma_causes
+    - id: dry-sigma-hv-rises-with-swe
+      output: sigma_hv_db
+      input: swe_mm
+      sign: nondecreasing
+      tolerance: 0.3
+      when: {volumetric_liquid_water: {eq: 0.0}}
+      source:
+        - "Rott et al. (2010), Proc. IEEE 98(5): cross-polarised backscatter is the most volume-sensitive channel"
+        - "probe: IEM rough-soil grid, model_card.provenance.yaml"
+      reason: >-
+        Cross-polarised backscatter comes almost entirely from multiple scattering in the snow,
+        so it rises with SWE; IEM gives the soil almost no cross-polarised return.
+    - id: wet-snow-tb-ignores-depth
+      output: tb_v
+      input: thickness_m
+      sign: flat
+      tolerance: 1.0
+      when: {volumetric_liquid_water: {ge: 0.02}, frequency_ghz: {ge: 18.0}}
+      source:
+        - "Ulaby, Moore and Fung (1986), Microwave Remote Sensing vol. III: wet snow is strongly absorbing and behaves as an opaque near-blackbody"
+        - "probe: wet-snow-tb-ignores-depth, model_card.provenance.yaml"
+      reason: &wet_reason >-
+        Liquid water makes the layer absorbing and opaque, so brightness temperature is the
+        emission of the top centimetres at the melting point, whatever the depth. Only a thin
+        or barely wet layer (under 0.5 % liquid water, or under 20 cm) still shows the ground.
+    - id: wet-snow-tb-ignores-depth-deep
+      output: tb_v
+      input: thickness_m
+      sign: flat
+      tolerance: 0.5
+      when: {volumetric_liquid_water: {ge: 0.005}, frequency_ghz: {ge: 18.0}, thickness_m: {ge: 0.2}}
+      source:
+        - "Ulaby, Moore and Fung (1986), Microwave Remote Sensing vol. III"
+        - "probe: wet-snow-tb-ignores-depth, model_card.provenance.yaml"
+      reason: *wet_reason
+    - id: wetness-raises-tb
+      output: tb_v
+      input: volumetric_liquid_water
+      sign: nondecreasing
+      tolerance: 0.5
+      when: {frequency_ghz: {ge: 18.0}}
+      source:
+        - "Ulaby, Moore and Fung (1986), Microwave Remote Sensing vol. III"
+        - "probe: wetness-raises-tb, model_card.provenance.yaml"
+      reason: >-
+        Water adds absorption and removes the scattering darkening of dry snow, so brightness
+        temperature rises towards the melting-point emission as the snow wets.
+    - id: wetness-lowers-sigma
+      output: sigma_vv_db
+      input: volumetric_liquid_water
+      sign: nonincreasing
+      tolerance: 0.3
+      when: {frequency_ghz: {ge: 5.0}}
+      source:
+        - "Nagler and Rott (2000), IEEE TGRS 38(2): wet snow lowers C-band backscatter by 3 dB or more, the basis of wet-snow mapping"
+        - "probe: wetness-lowers-sigma, model_card.provenance.yaml"
+      reason: >-
+        Absorption by liquid water extinguishes the volume scattering that dry snow
+        backscatter comes from, so backscatter falls as the snow wets.
+    - id: tb-v-rises-with-temperature
+      output: tb_v
+      input: temperature_k
+      sign: nondecreasing
+      tolerance: 0.5
+      when: {volumetric_liquid_water: {eq: 0.0}}
+      source:
+        - "Ulaby, Moore and Fung (1986), vol. III: emission scales with physical temperature"
+        - "probe: temperature sweep 230 to 273.15 K, model_card.provenance.yaml"
+      reason: &temp_reason >-
+        Emission scales with physical temperature, so a warmer snowpack is brighter. Left unset,
+        soil_temperature_k follows the snow temperature, which roughly doubles the rise at 18.7
+        to 37 GHz because the ground warms too; say whether the ground was held fixed.
+    - id: tb-h-rises-with-temperature
+      output: tb_h
+      input: temperature_k
+      sign: nondecreasing
+      tolerance: 0.5
+      when: {volumetric_liquid_water: {eq: 0.0}}
+      source:
+        - "Ulaby, Moore and Fung (1986), vol. III"
+        - "probe: temperature sweep 230 to 273.15 K, model_card.provenance.yaml"
+      reason: *temp_reason
+
+# The contexts a registration probe sweeps each expected trend across. SWE is not a parameter; depth drives it.
+probe:
+  grid:
+    frequency_ghz: [10.65, 17.2, 37.0]
+    corr_length_m: [5.0e-5, 1.5e-4, 3.0e-4]
+  sweeps:
+    thickness_m: [0.05, 2.0]
+    volumetric_liquid_water: [0.0, 0.03]
+    temperature_k: [230.0, 273.15]
+  derived_inputs:
+    swe_mm: thickness_m
 
 resource_profile:
   typical_call_seconds: 0.05

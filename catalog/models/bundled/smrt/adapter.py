@@ -123,6 +123,44 @@ def _ensure_smrt_importable():
             sys.modules["numba"] = previous
 
 
+def _substrate(values):
+    """The ground under the snow, or None for snow over nothing.
+
+    rough_soil is the soil of SMRT's own examples and of the seasonal-snow literature: the
+    Wegmuller and Matzler (1999) rough-soil reflectivity for emission, and the IEM surface
+    scattering of Fung et al. (1992) for backscatter, which Wegmuller's model cannot give. flat_soil is a
+    Fresnel (specular) soil, the setup of the 89 to 243 GHz tundra studies. SMRT writes a lossy
+    permittivity with a positive imaginary part, so the card's 0.5 is the papers' 4 - 0.5j.
+    """
+    kind = values.get("substrate", "none")
+    if kind not in ("rough_soil", "flat_soil"):
+        return None
+    from smrt import make_soil
+
+    permittivity = complex(values["soil_permittivity_real"], values["soil_permittivity_imag"])
+    temperature = values.get("soil_temperature_k")
+    if temperature is None:
+        temperature = values["temperature_k"]  # unset: ground at the snow temperature
+    if kind == "flat_soil":
+        return make_soil("flat", permittivity, temperature=temperature)
+    if values.get("output") == "sigma":
+        return make_soil(
+            "iem_fung92", permittivity, temperature=temperature,
+            roughness_rms=values["soil_iem_rms_height_m"],
+            corr_length=values["soil_iem_corr_length_m"],
+            autocorrelation_function="exponential",
+        )
+    return make_soil(
+        "soil_wegmuller", permittivity, temperature=temperature,
+        roughness_rms=values["soil_roughness_rms_m"],
+    )
+
+
+def _swe_mm(values):
+    """Snow water equivalent of the layer: kg m-2 of water, which is mm."""
+    return values["thickness_m"] * values["density_kg_m3"]
+
+
 def _snowpack(spec, overrides=None):
     _ensure_smrt_importable()
     _ensure_numpy_trapezoid_alias()
@@ -150,6 +188,13 @@ def _snowpack(spec, overrides=None):
         # SMRT represents the non-sticky limit as tau=infinity. Keep the public model
         # name explicit so plans can compare it independently from sticky hard spheres.
         kwargs["stickiness"] = [float("inf")]
+    wetness = values.get("volumetric_liquid_water") or 0.0
+    if wetness > 0:
+        # SMRT switches the scatterers to Bohren-Huffman wet ice when liquid water is set.
+        kwargs["volumetric_liquid_water"] = [wetness]
+    substrate = _substrate(values)
+    if substrate is not None:
+        kwargs["substrate"] = substrate
     return make_snowpack(**kwargs)
 
 
@@ -241,6 +286,30 @@ def _unphysical(spec, overrides=None):
         return "negative absorption coefficient (ka = %.3g m-1)" % ka
     if albedo > 1:
         return "single scattering albedo above 1 (%.3f)" % albedo
+    return _iem_invalid(dict(spec, **(overrides or {})), coefficients["effective_permittivity"])
+
+
+def _iem_invalid(values, snow_permittivity):
+    """Why the rough-soil backscatter model cannot represent this point, or "".
+
+    SMRT's IEM only prints a warning outside its validity and returns a number anyway. The
+    criterion is SMRT's own (iem_fung92.check_validity): k s < 3 and k s k l below the square
+    root of the soil-to-snow permittivity ratio, with k the wavenumber in the snow.
+    """
+    if values.get("output") != "sigma" or values.get("substrate") != "rough_soil":
+        return ""
+    snow = max(float(snow_permittivity), 1.0)
+    soil = abs(complex(values["soil_permittivity_real"], values["soil_permittivity_imag"]))
+    k = 2 * math.pi * values["frequency_ghz"] * 1e9 / 299792458.0 * math.sqrt(snow)
+    ks = k * values["soil_iem_rms_height_m"]
+    kl = k * values["soil_iem_corr_length_m"]
+    limit = math.sqrt(soil / snow)
+    if ks > 3 or ks * kl > limit:
+        return (
+            "the rough-soil (IEM) backscatter model is outside its validity at %.4g GHz "
+            "(k s k l = %.2f, limit %.2f); use 17.2 GHz or lower, a smoother soil, or "
+            "substrate flat_soil" % (values["frequency_ghz"], ks * kl, limit)
+        )
     return ""
 
 
@@ -289,6 +358,8 @@ def run(spec):
                         {"axis": None, "value": None, "method": method, "attempts": failures}
                     )
                 values = _extract(result, spec["output"])
+            if not coefficients_only:
+                values["swe_mm"] = _swe_mm(spec)
             return {
                 "axis": None,
                 "points": [{"index": 0, **values}],
@@ -331,6 +402,8 @@ def run(spec):
                         }
                     )
                 values = _extract(result, spec["output"])
+            if not coefficients_only:
+                values["swe_mm"] = _swe_mm(dict(spec, **override))
             points.append({"index": index, swept: value, **values})
             for key, item in values.items():
                 series.setdefault(key, []).append(item)

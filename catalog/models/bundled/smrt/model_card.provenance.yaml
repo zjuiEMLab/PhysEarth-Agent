@@ -1,0 +1,111 @@
+# Where each field added by the 2026-10-12 forge registration of SMRT came from.
+# Not read by the registry; read by people and, later, by the forge toolkit's review page.
+# Done by hand by Claude Code acting as the forge's coding agent, before the toolkit exists.
+# Probes ran this adapter through physearth.harness.validation, SMRT 1.5.1.
+
+forge_run:
+  date: 2026-10-12
+  agent: Claude Code (Opus 5.5)
+  sources_read:
+    repo: >-
+      smrt 1.5.1: inputs/make_medium.py (make_snowpack volumetric_liquid_water, wet-ice switch
+      to wetice_permittivity_bohren83), inputs/make_soil.py, substrate/flat.py,
+      permittivity/wetsnow.py
+    papers:
+      - "Sandells et al. (2024), TC 18, 3971 (corpus: arctic-snow-emission): flat soil, 258.15 K, permittivity 4-0.5j"
+      - "Wivell et al. (2023), EGUsphere-2023-878: same soil setup, after King et al. (2018)"
+      - "Picard et al. (2018), GMD 11, 2763 (corpus: smrt-v1): substrate options, Wegmuller and Matzler soil"
+      - "Larue et al. (2018), WRR, doi:10.1029/2017WR022132; Montpetit et al. (2018): rough-soil lineage, not adopted in this pass"
+  findings:
+    - id: vacuum-substrate
+      what: >-
+        The previous card simulated snow over vacuum. TbV at 37 GHz rose from 14.0 to 187.5 K
+        over 0.1 to 2 m and passed quality control. Fixed by substrate=flat_soil as default.
+    - id: wetness-not-exposed
+      what: >-
+        make_snowpack accepts volumetric_liquid_water; the card did not expose it. An agent
+        asked about wetness relabelled density as wetness (evaluation/results/physics_smrt_wetness_baseline.json).
+    - id: wet-temperature-coupling
+      what: Liquid water requires 273.15 K; expressed as a card constraint.
+    - id: snow-soil-temperature-inversion
+      what: >-
+        With a fixed 258.15 K soil under 270 K snow (stickiness 0.2, radius 0.2 mm, 37 GHz)
+        TbV rose 252.6 to 255.7 K with depth. A ground colder than the snow is an inversion;
+        the soil now defaults to the snow temperature, and TbV falls 263.5 to 258.7 K.
+    - id: fine-grain-boundary
+      what: >-
+        Dry snow brightens with depth on ground when grains are fine (correlation length
+        0.05 mm: +7.0 K at 37 GHz; sphere radius 0.1 mm: +7.0 K), even with snow and soil at
+        one temperature. The dry-snow expectation is scoped to correlation length >= 0.1 mm
+        and radius >= 0.2 mm at >= 30 GHz.
+    - id: thin-wet-layer
+      what: >-
+        Measured with the soil at a fixed 258.15 K under 273.15 K wet snow: 0.5 % liquid water
+        from 5 cm still varied 3 to 5 K with depth; flat from 2 % at any depth, or from 0.5 % at
+        20 cm or more. A thin wet layer shows the ground only when the ground differs from the
+        snow: with the soil at the snow temperature (the current default) the spread is 0.1 to
+        0.2 K on either soil (forge_probe.py).
+
+fields:
+  volumetric_liquid_water:
+    name_and_meaning: "repo: make_snowpack docstring, volume of liquid water over snow volume"
+    bounds: "0 to 0.15: Fierz et al. (2009) classes up to very wet"
+    typical: "Fierz et al. (2009), International Classification for Seasonal Snow on the Ground"
+    transition_text: "probe: 37 GHz exponential 0.15 mm, flat soil, TbV by depth at 0, 0.0005, 0.001, 0.002, 0.005, 0.01"
+  substrate:
+    rough_soil: >-
+      default from 2026-10-12 run-2 audit: SMRT repository practice (soil_wegmuller 8,
+      rough_choudhury79 5, soil_qnh 4 of 27 soil constructions; make_soil docstring example
+      soil_wegmuller roughness_rms=1e-2); seasonal-snow lineage (Roy et al. 2013, Montpetit et
+      al. 2018, Larue et al. 2018, 11 to 37 GHz)
+    rough_soil_regime: {frequency_ghz: [5.0, 37.0], source: "Larue et al. (2018); Montpetit et al. (2018); repo examples"}
+    flat_soil: "Sandells et al. (2024); Wivell et al. (2023); King et al. (2018)"
+    flat_soil_corpus: [arctic-snow-emission]
+    flat_soil_regime: {frequency_ghz: [89.0, 243.0], source: arctic-snow-emission}
+    none: "previous behaviour, kept for semi-infinite paper experiments"
+  soil_roughness_rms_m: "0.01 m: SMRT make_soil docstring example; repo examples"
+  soil_iem_rms_height_m: >-
+    ASSUMPTION, needs sign-off: 1 mm chosen to keep IEM inside ks*kl < sqrt(eps_soil/eps_snow)
+    up to 17.2 GHz from dry to 8 % wet snow; no field source
+  soil_iem_corr_length_m: "ASSUMPTION, needs sign-off: 4 mm, same reason"
+  soil_permittivity_real: "4, the papers above"
+  soil_permittivity_imag: "0.5; SMRT's positive-imaginary convention; probe: identical TbV for +0.5j and -0.5j with flat substrate"
+  soil_temperature_k: "unset = snow temperature: finding snow-soil-temperature-inversion"
+  swe_mm: "derived: thickness_m x density_kg_m3 (kg m-2 = mm)"
+  constraints.wet-at-melting-point: "physics; finding wet-temperature-coupling"
+  corr_length_m.typical: "Matzler (2002); Montpetit et al. (2013)"
+  radius_m.typical: "Picard et al. (2018)"
+  physics.expectations: >-
+    onboarding/forge_probe.py: 4 passive and 3 active frequencies x 5 grain sizes x 2
+    microstructures x 2 grounds; dry and wet depth sweeps, wetness sweeps and snow-temperature
+    sweeps. Every expectation with a `when` is met wherever it applies, except dry backscatter
+    over grains of 0.05 to 0.1 mm on rough soil (falls up to 1.4 dB), which its reason names.
+    The two TB-against-SWE expectations warn on any rise by design; the cells where they are not
+    met (fine grains, low frequency, flat soil H-pol) are the cases their reason lists. Results
+    and the reproduction of each finding above: evaluation/results/smrt_forge_probe.json
+
+run2_audit_findings:
+  - id: flat-soil-regime-transfer
+    what: >-
+      flat_soil was taken from 89 to 243 GHz studies and made the default at 19 to 37 GHz.
+      With 0.2 mm spheres TbH rose 9.8 K with SWE at 37 GHz (APGARSS run 2, arm B) and nothing
+      warned. Default changed to rough_soil; expectations now cover TbH and judge against SWE.
+  - id: go-mean-square-slope-convention
+    what: >-
+      OPEN: Montpetit et al. (2024) retrieved msssoil = 0.010 for a geometrical-optics soil,
+      but SMRT 1.5.1's geometrical_optics_backscatter with mean_square_slope 0.010 returns
+      -71 dB at 40 deg and -36 dB at 30 deg, no usable soil return across the paper's 19.5 to
+      65 deg. The paper's mss is probably defined differently; IEM is used instead until resolved.
+  - id: iem-validity
+    what: IEM defaults tightened from 1.5 mm / 7 mm to 1 mm / 4 mm after SMRT warned at 17.2 GHz under wet snow.
+  - id: soil-follows-snow-in-temperature-sweep
+    what: >-
+      With soil_temperature_k unset, a snow temperature sweep also warms the soil, roughly
+      doubling the rise at 18.7 to 37 GHz (+42.8 K against +4.6 K with soil fixed at 265 K,
+      18.7 GHz). The run summary now says so.
+
+not_done_in_this_pass:
+  - rough soil (Wegmuller and Matzler / geometrical optics) for active and passive
+  - multi-layer snowpacks
+  - load_bearing for stickiness and density
+  - the paper-figure reproduction stage

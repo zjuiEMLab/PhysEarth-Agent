@@ -23,9 +23,9 @@ Reading this list earns no citation: a [model:name@version] marker resolves only
   Catchment hydrology. Runs the PRMS process chain over the official Sagehen Creek test domain in the Sierra Nevada: solar geometry and atmosphere drive a canopy, a snowpack, a surface runoff scheme, a soil zone and a groundwater reservoir on daily time steps.
   outputs: time_index, value
 - smrt v1.5.1 (local)
-  Snow Microwave Radiative Transfer. Computes brightness temperature and backscatter from a homogeneous snow layer using a choice of electromagnetic theory and microstructure representation.
-  outputs: effective_permittivity, ka_per_m, ks_per_m, sigma_hh_db, sigma_hv_db, sigma_vv_db, single_scattering_albedo, tb_h, tb_v
-  sweepable: frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, repeat_distance_m, radius_m, stickiness, dort_streams
+  Snow Microwave Radiative Transfer. Computes brightness temperature and backscatter from a homogeneous snow layer, dry or wet, lying on a rough frozen soil (the default), a flat soil or nothing, using a choice of electromagnetic theory and microstructure representation.
+  outputs: effective_permittivity, ka_per_m, ks_per_m, sigma_hh_db, sigma_hv_db, sigma_vv_db, single_scattering_albedo, swe_mm, tb_h, tb_v
+  sweepable: frequency_ghz, angle_deg, thickness_m, density_kg_m3, temperature_k, corr_length_m, repeat_distance_m, radius_m, stickiness, dort_streams, volumetric_liquid_water, soil_temperature_k, soil_roughness_rms_m, soil_iem_rms_height_m, soil_iem_corr_length_m
 - tau_omega v1.0.0 (demo)
   Passive microwave emission of a vegetated soil surface. A soil dielectric mixing model feeds Fresnel reflectivity with an h-Q roughness correction, and a single vegetation layer attenuates and emits according to its optical depth and single scattering albedo.
   outputs: emissivity_h, emissivity_v, tb_h, tb_v

@@ -1,0 +1,71 @@
+id: x-smrt-wetness-depth
+suite: physics
+title: Brightness temperature against snow depth, as a function of wetness
+quality: underspecified
+shape: sweep
+observable: passive
+models: [smrt]
+question: >-
+  I want to compute brightness temperature vs. snow depth as a function of wetness.
+
+# Why this task exists. It is the baseline for the model registration forge
+# (docs/enhancements/model-registration-forge.md): a simple question whose honest answer needs
+# physics the card does not carry today. Each expectation below is checked by
+# evaluation/runners/physics_check.py, in two modes:
+#
+#   --card     the card and adapter alone, no language model: can the question be expressed,
+#              and does a literal run of it have the right physics?
+#   --record   an agent run: did the configuration it chose, re-executed, have the right
+#              physics, and does the answer say what matters?
+physics:
+  # The conditions a literal reading of the question runs at. Snow temperature 270 K for dry
+  # snow; a wet layer is at the melting point.
+  conditions:
+    frequency_ghz: 37.0
+    angle_deg: 55.0
+    microstructure_model: sticky_hard_spheres
+    stickiness: 0.2
+    radius_m: 0.0002
+    density_kg_m3: 300.0
+    temperature_k: 270.0
+  depth_sweep: {start: 0.1, stop: 2.0, points: 8}
+  wet_temperature_k: 273.15
+  # Dry snow over ground at 37 GHz: volume scattering grows with depth and masks the warmer
+  # ground, so brightness temperature falls as depth rises. Over vacuum it rises instead,
+  # because a thin layer over nothing emits almost nothing.
+  dry_depth_trend: {output: tb_v, sign: nonincreasing, tolerance_k: 0.5}
+  # A little liquid water makes the layer absorbing and opaque: the depth signal vanishes.
+  wet_saturation: {volumetric_liquid_water: 0.01, max_spread_k: 1.0}
+  # Curves that differ by less than this are the same curve for the purpose of a figure.
+  distinct_curve_k: 1.0
+  min_distinct_curves: 3
+  answer_mentions:
+    saturation: ["saturat", "insensitiv", "no longer", "flat", "independent of depth", "opaque", "vanish", "disappear", "lose", "loses"]
+    substrate: ["soil", "ground", "substrate"]
+
+# SMRT 1.5.1 run directly (make_snowpack / make_soil), 2026-10-12, at the conditions above,
+# TbV in K at depths 0.1, 0.3, 0.6, 1.0, 2.0 m. The soil is Wegmuller-Matzler over Dobson
+# permittivity (270 K, moisture 0.2, rms 1 cm). This is what the forge's probe found by hand;
+# it is evidence for the expectations, not a target value for an agent.
+reference:
+  vacuum_dry: [14.0, 41.5, 78.8, 120.0, 187.5]
+  soil_dry: [264.7, 263.5, 261.9, 260.5, 258.9]
+  soil_lwc_0.0005: [267.8, 269.9, 270.8, 271.0, 271.1]
+  soil_lwc_0.001: [269.5, 271.5, 271.9, 271.9, 271.9]
+  soil_lwc_0.002: [271.3, 272.3, 272.4, 272.4, 272.4]
+  soil_lwc_0.01: [272.8, 272.8, 272.8, 272.8, 272.8]
+  note: >-
+    The whole wet transition happens between 0 and 0.2 % liquid water, and the depth trend
+    reverses sign inside it. A sweep of 0, 1, 2, 3, 5 % draws one falling line and four
+    identical flat ones.
+
+underspecified:
+  missing: [volumetric_liquid_water range, substrate, grain size]
+  good_behaviour: >-
+    Run once at the card's defaults, see where the curves are distinct, and propose a wetness
+    range that resolves the transition; put the snow on ground; hold wet snow at 273.15 K;
+    say that depth stops mattering once the snow is wet and state the assumed substrate.
+capability:
+  basis: "the question names brightness temperature, snow depth and wetness"
+  reference_models: [SMRT]
+  outputs: [tb_v, tb_h]

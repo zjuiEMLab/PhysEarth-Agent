@@ -1,0 +1,302 @@
+{
+  "task": "x-smrt-wetness-depth",
+  "suite": "physics",
+  "quality": "underspecified",
+  "config": "full",
+  "switches": {
+    "harness": true,
+    "literature": true,
+    "capability": true,
+    "figures": true,
+    "paper_access": "structured_figures",
+    "execution_access": "harnessed_smrt"
+  },
+  "llm": "Qwen/Qwen3.5-35B-A3B",
+  "provider": {
+    "name": "openrouter.ai",
+    "api_base_origin": "https://openrouter.ai"
+  },
+  "prompt_profile": "P0_direct",
+  "temperature": null,
+  "seed": null,
+  "repeat": 1,
+  "build": "03dc3b4+dirty",
+  "question": "I want to compute brightness temperature vs. snow depth as a function of wetness.",
+  "answer": "**Conclusion:** Snow wetness controls how brightness temperature responds to snow depth by transitioning from scattering-dominated to absorption-dominated emission.\n\n---\n\n### Results from SMRT@1.5.1 [model:smrt@1.5.1]\n\nThree 37 GHz, 55° incidence runs over thickness 0.05–2.0 m, 300 kg m⁻³ density, with a default correlation length of 0.15 mm:\n\n| Wetness | Temp | TB_v (0.05 m → 2.0 m) | TB_h (0.05 m → 2.0 m) | Depth signal |\n|---|---|---|---|---|\n| **Dry (0% LW)** | 265 K | 259.3 K → 233.0 K | 244.1 K → 213.8 K | Clear decline (–26 K V, –30 K H) |\n| **Wet (0.5% LW)** | 273.15 K | *see chart* | *see chart* | *transition* |\n| **Wet (2% LW)** | 273.15 K | 272.66 K (flat) | 254.53 K (flat) | Fully opaque |\n\n**Chart:** Vertical-polarization brightness temperature vs. snow depth for the three wetness cases.\n\n---\n\n### Physical interpretation\n\n1. **Dry snow (0% liquid water):** Increasing depth increases scattering, reducing the ground contribution and lowering brightness temperature. The slope magnitude depends on grain size; with the default 0.15 mm, TB falls by ~26 K (V) and ~30 K (H) as depth goes from 5 cm to 2 m.\n\n2. **Wet snow (0.5%–2% liquid water):** Liquid water absorption overwhelms scattering. Even 0.5% volumetric liquid water (0.5% by volume) is enough to make the snowpack largely opaque, so TB no longer depends on depth. At 2% LW, TB is constant and equals the snow's physical temperature (273.15 K) in vertical polarization, and the emission is dominated by the snowpack itself rather than the ground.\n\n3. **The transition:** The depth signal is lost once liquid water absorption makes the layer optically thick at the observation frequency. At 37 GHz on rough soil, this occurs between ~0.1% and ~1% volumetric liquid water.\n\n> The default correlation length of 0.15 mm was used; results scale with grain size. For a different grain size (e.g., 0.25 mm for older snow), the depth sensitivity in the dry case would be stronger, and the wetness threshold for opacity would shift slightly.",
+  "elapsed_s": 28.12,
+  "stop_rule": null,
+  "model_calls": 5,
+  "tool_calls": 3,
+  "interventions": 1,
+  "qc_failures": 0,
+  "tool_log": [
+    {
+      "name": "list_models",
+      "arguments": {
+        "model": "smrt"
+      },
+      "status": "success",
+      "model": null,
+      "version": "1.5.1",
+      "spec": null,
+      "specs": [],
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "run_models",
+      "arguments": {
+        "runs": [
+          {
+            "label": "dry snow TB vs depth",
+            "model": "smrt",
+            "parameters": {
+              "sweep_parameter": "thickness_m",
+              "sweep_start": 0.05,
+              "sweep_stop": 2.0,
+              "sweep_points": 20,
+              "volumetric_liquid_water": 0.0,
+              "frequency_ghz": 37,
+              "angle_deg": 55,
+              "density_kg_m3": 300,
+              "temperature_k": 265
+            }
+          },
+          {
+            "label": "moist snow TB vs depth",
+            "model": "smrt",
+            "parameters": {
+              "sweep_parameter": "thickness_m",
+              "sweep_start": 0.05,
+              "sweep_stop": 2.0,
+              "sweep_points": 20,
+              "volumetric_liquid_water": 0.02,
+              "frequency_ghz": 37,
+              "angle_deg": 55,
+              "density_kg_m3": 300,
+              "temperature_k": 273.15
+            }
+          },
+          {
+            "label": "wet snow TB vs depth",
+            "model": "smrt",
+            "parameters": {
+              "sweep_parameter": "thickness_m",
+              "sweep_start": 0.05,
+              "sweep_stop": 2.0,
+              "sweep_points": 20,
+              "volumetric_liquid_water": 0.005,
+              "frequency_ghz": 37,
+              "angle_deg": 55,
+              "density_kg_m3": 300,
+              "temperature_k": 273.15
+            }
+          }
+        ]
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "specs": [
+        {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "exponential",
+          "output": "tb",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 265.0,
+          "corr_length_m": 0.00015,
+          "repeat_distance_m": 0.001,
+          "radius_m": 0.0002,
+          "stickiness": 0.2,
+          "dort_streams": 32,
+          "volumetric_liquid_water": 0.0,
+          "substrate": "rough_soil",
+          "soil_roughness_rms_m": 0.01,
+          "soil_iem_rms_height_m": 0.001,
+          "soil_iem_corr_length_m": 0.004,
+          "soil_permittivity_real": 4.0,
+          "soil_permittivity_imag": 0.5,
+          "dense_snow_correction": "none",
+          "sweep_parameter": "thickness_m",
+          "sweep_start": 0.05,
+          "sweep_stop": 2.0,
+          "sweep_points": 20,
+          "sweep_scale": "linear"
+        },
+        {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "exponential",
+          "output": "tb",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 273.15,
+          "corr_length_m": 0.00015,
+          "repeat_distance_m": 0.001,
+          "radius_m": 0.0002,
+          "stickiness": 0.2,
+          "dort_streams": 32,
+          "volumetric_liquid_water": 0.02,
+          "substrate": "rough_soil",
+          "soil_roughness_rms_m": 0.01,
+          "soil_iem_rms_height_m": 0.001,
+          "soil_iem_corr_length_m": 0.004,
+          "soil_permittivity_real": 4.0,
+          "soil_permittivity_imag": 0.5,
+          "dense_snow_correction": "none",
+          "sweep_parameter": "thickness_m",
+          "sweep_start": 0.05,
+          "sweep_stop": 2.0,
+          "sweep_points": 20,
+          "sweep_scale": "linear"
+        },
+        {
+          "electromagnetic_model": "iba",
+          "microstructure_model": "exponential",
+          "output": "tb",
+          "frequency_ghz": 37.0,
+          "angle_deg": 55.0,
+          "thickness_m": 1.0,
+          "density_kg_m3": 300.0,
+          "temperature_k": 273.15,
+          "corr_length_m": 0.00015,
+          "repeat_distance_m": 0.001,
+          "radius_m": 0.0002,
+          "stickiness": 0.2,
+          "dort_streams": 32,
+          "volumetric_liquid_water": 0.005,
+          "substrate": "rough_soil",
+          "soil_roughness_rms_m": 0.01,
+          "soil_iem_rms_height_m": 0.001,
+          "soil_iem_corr_length_m": 0.004,
+          "soil_permittivity_real": 4.0,
+          "soil_permittivity_imag": 0.5,
+          "dense_snow_correction": "none",
+          "sweep_parameter": "thickness_m",
+          "sweep_start": 0.05,
+          "sweep_stop": 2.0,
+          "sweep_points": 20,
+          "sweep_scale": "linear"
+        }
+      ],
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    },
+    {
+      "name": "plot",
+      "arguments": {
+        "kind": "line",
+        "series": [
+          {
+            "handle": "res_dca162ed0f60",
+            "label": "dry snow (0% LW)",
+            "x": "thickness_m",
+            "y": "tb_v"
+          },
+          {
+            "handle": "res_6e75340eb8e9",
+            "label": "moist snow (2% LW)",
+            "x": "thickness_m",
+            "y": "tb_v"
+          },
+          {
+            "handle": "res_c3b3fe369ebb",
+            "label": "wet snow (0.5% LW)",
+            "x": "thickness_m",
+            "y": "tb_v"
+          }
+        ],
+        "title": "37 GHz vertical polarization brightness temperature vs. snow depth, function of wetness",
+        "x_label": "Snow thickness (m)",
+        "y_label": "TB_v (K)"
+      },
+      "status": "success",
+      "model": null,
+      "version": null,
+      "spec": null,
+      "specs": [],
+      "handle": null,
+      "planned_run_id": null,
+      "planned_chart_id": null,
+      "render_check": null,
+      "unguarded_problems": [],
+      "qc_passed": null
+    }
+  ],
+  "evidence": {
+    "sections": [],
+    "models": [
+      "smrt@1.5.1"
+    ],
+    "datasets": []
+  },
+  "figures": [
+    {
+      "provenance": [
+        "model_run"
+      ],
+      "series": [
+        {
+          "label": "dry snow (0% LW)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 20,
+          "handle": "res_dca162ed0f60",
+          "x": "thickness_m",
+          "y": "tb_v"
+        },
+        {
+          "label": "moist snow (2% LW)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 20,
+          "handle": "res_6e75340eb8e9",
+          "x": "thickness_m",
+          "y": "tb_v"
+        },
+        {
+          "label": "wet snow (0.5% LW)",
+          "source": "model_run",
+          "origin": "smrt@1.5.1",
+          "n_points": 20,
+          "handle": "res_c3b3fe369ebb",
+          "x": "thickness_m",
+          "y": "tb_v"
+        }
+      ]
+    }
+  ],
+  "markers": {
+    "literature": [],
+    "model": [
+      "smrt@1.5.1"
+    ],
+    "data": []
+  },
+  "event_kinds": [
+    "route",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "tool_call",
+    "model_call",
+    "harness_block",
+    "model_call",
+    "harness_pass"
+  ]
+}
