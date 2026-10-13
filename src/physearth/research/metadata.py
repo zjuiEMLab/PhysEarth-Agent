@@ -13,6 +13,7 @@ from physearth.research.mapping import (
     _repair_item,
     _repair_parameter_mappings,
     _same_value,
+    mapping_field,
 )
 from physearth.research.normalise import (
     _clean_outputs,
@@ -454,7 +455,7 @@ def _repair_reproduction_metadata(
         if item.get("provenance_class") in ("paper_explicit", "paper_inferred") and not item.get("evidence_ref") and relevant_refs:
             item["evidence_ref"] = relevant_refs[0]
             repairs.append(_repair_item(
-                "parameter_mapping[%d].evidence_ref" % index,
+                mapping_field(item, index, "evidence_ref"),
                 "", relevant_refs[0],
                 "attach a paper mapping to the opened section evidence",
                 item.get("provenance_class"),

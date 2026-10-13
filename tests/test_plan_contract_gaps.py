@@ -1,9 +1,10 @@
-"""Three refusals that between them stopped a Figure 7 reproduction dead.
+"""Refusals that between them stopped a Figure 7 reproduction dead.
 
 Each one is a contract defect, not a model mistake: a stand-in value demanded to be the
 card default by one rule and past a depth threshold by another; a parameter the adapter
-never reads range-checked as if it did; and a figure whose y is solved for reported as
-unproducible however it was written.
+never reads range-checked as if it did; a figure whose y is solved for reported as
+unproducible however it was written; and a mapping problem that named a row by its position
+in a list the model rewrites every attempt, so the patch it asked for could not be merged.
 """
 
 import sys
@@ -350,3 +351,126 @@ def test_a_saved_result_under_another_name_is_not_the_declared_quantity():
                              "saved_results": [{"name": "something_else", "handle": handle}]}]
     assert execution.scripted_series(box, {"chart": plan["charts"][0],
                                            "derived": plan["derived"]}) == []
+
+
+# ------------------------------------------- a patch names the row it changes, not its place
+#
+# The recorded Figure 7 session answered four mapping problems with four patch rows, two of
+# them addressed by input name and two of them -- {"id": 7, "mapped_value": 37.0} -- by the
+# position the problem text had printed. The merger matches on (model, model_input), a patch
+# row carries no model, so nothing could be merged and the whole mapping list was replaced by
+# those four rows instead. The metadata rebuild then re-derived the sixteen rows that were
+# gone, re-derived the values the patch had set, and the same problems came back: seven
+# identical refusals, then `no_progress`.
+
+
+def _mapping_rows():
+    return [
+        {"model": "smrt", "model_input": "density_kg_m3", "mapped_value": 200.0,
+         "provenance_class": "model_assumption", "rationale": "auto"},
+        {"model": "smrt", "model_input": "stickiness", "mapped_value": 0.2,
+         "provenance_class": "backend_default", "rationale": "auto"},
+        {"model": "smrt", "model_input": "thickness_m", "mapped_value": 100.0,
+         "provenance_class": "model_assumption", "rationale": "auto"},
+    ]
+
+
+def _recorded_figure7_patch():
+    return [
+        {"id": 2, "model_input": "density_kg_m3", "paper_concept": "density",
+         "rationale": "The paper varies density across five values."},
+        {"id": 3, "model_input": "stickiness", "paper_concept": "stickiness",
+         "rationale": "The paper varies the stickiness parameter."},
+        {"id": 7, "mapped_value": 37.0, "provenance_class": "backend_default"},
+        {"id": 10, "mapped_value": 265.0, "provenance_class": "backend_default"},
+    ]
+
+
+def test_a_patch_row_without_its_model_still_reaches_the_row_it_names():
+    from physearth.research import ITEM_COMPLETE, ITEM_IDENTITY, merge_items
+
+    unaddressed = []
+    merged = merge_items(
+        _mapping_rows(), _recorded_figure7_patch(),
+        ITEM_IDENTITY["parameter_mapping"], ITEM_COMPLETE["parameter_mapping"], unaddressed,
+    )
+    # Nothing was lost, and the correction the model made is the correction that stuck.
+    assert [row["model_input"] for row in merged] == [
+        "density_kg_m3", "stickiness", "thickness_m",
+    ]
+    labels = {row["model_input"]: row["rationale"] for row in merged}
+    assert labels["density_kg_m3"] == "The paper varies density across five values."
+    assert labels["stickiness"] == "The paper varies the stickiness parameter."
+    # The two rows that named a position name nothing that can be applied, and say so.
+    assert [row.get("id") for row in unaddressed] == [7, 10]
+
+
+def test_a_patch_row_that_fits_two_models_is_reported_rather_than_guessed():
+    from physearth.research import ITEM_COMPLETE, ITEM_IDENTITY, merge_items
+
+    retained = [
+        {"model": "smrt", "model_input": "radius_m", "mapped_value": 1e-4},
+        {"model": "melsm", "model_input": "radius_m", "mapped_value": 2e-4},
+    ]
+    unaddressed = []
+    merged = merge_items(
+        retained, [{"model_input": "radius_m", "mapped_value": 3e-4}],
+        ITEM_IDENTITY["parameter_mapping"], ITEM_COMPLETE["parameter_mapping"], unaddressed,
+    )
+    assert merged == retained
+    assert unaddressed == [{"model_input": "radius_m", "mapped_value": 3e-4}]
+
+
+def test_a_list_that_names_nothing_is_still_the_whole_list():
+    from physearth.research import ITEM_COMPLETE, ITEM_IDENTITY, merge_items
+
+    supplied = [{"label": "no identity at all"}]
+    assert merge_items(
+        _mapping_rows(), supplied,
+        ITEM_IDENTITY["parameter_mapping"], ITEM_COMPLETE["parameter_mapping"], [],
+    ) == supplied
+
+
+def test_a_mapping_problem_is_named_by_its_input_not_by_its_place():
+    from physearth.research import evidence
+
+    session = session_state.new_session("m")
+    session["sections_read"] = {"smrt-v1#07"}
+    mapping = [{
+        "model": "smrt", "model_input": "thickness_m", "mapped_value": 2.0,
+        "provenance_class": "model_assumption",
+    }]
+    problems = evidence._semi_infinite_problems(
+        session, mapping, [{"id": "fig07", "source_id": "smrt-v1#fig07"}],
+        [{"id": "r1", "model": "smrt", "parameters": {"thickness_m": 2.0, "substrate": "none"}}],
+    )
+    # The field is the vocabulary a revision is read in, so quoting it back merges.
+    assert problems[0]["field"] == "parameter_mapping[smrt.thickness_m].mapped_value"
+
+
+def test_a_row_that_names_neither_an_input_nor_a_concept_is_not_kept_as_a_mapping():
+    from physearth.research.mapping import _repair_parameter_mappings
+
+    box = session_state.new_session("m")
+    kept, repairs, problems, _, _ = _repair_parameter_mappings(
+        box, [
+            {"mapped_value": 37.0, "provenance_class": "backend_default"},
+            {"concept_name": "frequency", "registered_input": "frequency_ghz",
+             "mapped_value": 37.0},
+            "not a row",
+        ], [], None, {}, {}, (),
+    )
+    # A value, a provenance class and a rationale are attributes of a mapping, not one.
+    assert kept == []
+    assert all(problem == [] for problem in (problems,))
+    # The repair names the keys that were submitted, so the shape is learnable.
+    assert len(repairs) == 3
+    assert repairs[0]["field"] == "parameter_mapping[0]"
+    assert "concept_name, registered_input" in repairs[1]["reason"]
+
+    kept, _, _, _, _ = _repair_parameter_mappings(
+        box, [{"model_input": "frequency_ghz", "mapped_value": 37.0,
+               "provenance_class": "backend_default"}],
+        [], None, {}, {}, (),
+    )
+    assert [row["model_input"] for row in kept] == ["frequency_ghz"]

@@ -11,6 +11,7 @@ from physearth.research.mapping import (
     _expected_mapping_inputs,
     _ledger_entries,
     _registered_parameter_index,
+    mapping_field,
 )
 from physearth.research.normalise import (
     _normalise_evidence_ref,
@@ -170,7 +171,7 @@ def _evidence_plan_problems(session, question, literature_evidence, reproduction
         for model, parameters in parameter_index.items()
     }
     for index, item in enumerate(parameter_mapping):
-        prefix = "parameter_mapping[%d]" % index
+        prefix = mapping_field(item, index)
         if not item.get("paper_concept"):
             problems.append({"field": prefix + ".paper_concept", "source": "research_plan", "actual": "", "expected": "paper-side concept", "repair": "Name the concept used by the paper.", "blocking": True})
         if not item.get("model_input"):
@@ -392,7 +393,7 @@ def _semi_infinite_problems(session, parameter_mapping, reproduction_targets, ru
             return []
         at_least = claims.STAND_IN_RATIO * default
         problems.append({
-            "field": "parameter_mapping[%d].mapped_value" % index,
+            "field": mapping_field(item, index, "mapped_value"),
             "physical": True,
             "source": source,
             "actual": value,
@@ -478,7 +479,7 @@ def _unstated_value_problems(session, parameter_mapping, runs, reproduction_targ
                     key, sentence = unopened
                     slug, _, section_id = key.partition("#")
                     problems.append({
-                        "field": "parameter_mapping[%d]" % index,
+                        "field": mapping_field(item, index),
                         "source": key,
                         "expected": "the section that states the medium read before %s is assumed" % name,
                         "repair": "%s = %s stands in for a semi-infinite medium, and %s, which you have not "
@@ -493,7 +494,7 @@ def _unstated_value_problems(session, parameter_mapping, runs, reproduction_targ
         for key, sentence in _unopened_sections_naming(session, unit, numbers):
             slug, _, section_id = key.partition("#")
             problems.append({
-                "field": "parameter_mapping[%d]" % index,
+                "field": mapping_field(item, index),
                 "source": key,
                 "expected": "a section stating %s read before %s is assumed" % (unit, name),
                 "repair": "%s is labelled model_assumption, but %s, which you have not opened, says: "
@@ -504,7 +505,7 @@ def _unstated_value_problems(session, parameter_mapping, runs, reproduction_targ
             })
         if default is not None and value is not None and not _same_number(value, default):
             problems.append({
-                "field": "parameter_mapping[%d].mapped_value" % index,
+                "field": mapping_field(item, index, "mapped_value"),
                 "source": "registered_model_declaration",
                 "actual": value,
                 "expected": "the card default %s %s, or a value an opened source states" % (default, unit),

@@ -166,7 +166,7 @@ def _is_complete(item, complete):
     )
 
 
-def merge_items(retained, supplied, keys, complete=()):
+def merge_items(retained, supplied, keys, complete=(), unaddressed=None):
     """Patch a retained list by item identity when the change is a patch.
 
     A repair often names only the items it fixes: one run's sweep, one target's source.
@@ -178,16 +178,63 @@ def merge_items(retained, supplied, keys, complete=()):
     to be and replaces it -- merging that kept every item the model had deliberately left
     out, and a refused item could then never be removed. A list without identities, or an
     empty one, also replaces.
+
+    A mixed list, and a partly named item, are the two cases that have to be read with care.
+
+    An item that gives only some of its identity still names one row, when only one retained
+    row agrees with the parts it does give: a Figure 7 revision sent
+    ``{"model_input": "density_kg_m3", "rationale": ...}`` with no ``model``, and every plan
+    row carries its model, so the pair could not be matched and the whole list was replaced
+    instead -- which discarded the correction and let the metadata rebuild re-derive the row
+    it had just been asked to fix, seven times. So a partly named item that agrees with
+    exactly one retained row takes that row's name. An item that agrees with none of them,
+    or with two of them, addresses nothing: it is handed back through ``unaddressed`` for the
+    caller to report, and the retained list is kept. A caller that passes no collector gets
+    the old behaviour.
     """
     def identity(item):
         return tuple(str(item.get(key) or "").strip() for key in keys)
 
-    if (
-        not supplied
-        or not isinstance(retained, list)
-        or not all(isinstance(item, dict) and all(identity(item)) for item in supplied)
-    ):
+    def given(item):
+        return tuple(pos for pos, part in enumerate(identity(item)) if part)
+
+    def agrees(item, row):
+        """Whether every identity part an item gives matches the retained row's."""
+        wanted, have = identity(item), identity(row)
+        positions = given(item)
+        return bool(positions) and all(wanted[pos] == have[pos] for pos in positions)
+
+    if not supplied or not isinstance(retained, list):
         return supplied
+    rows = [row for row in retained if isinstance(row, dict)]
+    addressed = []
+    unnamed = []
+    unmatched = []
+    for item in supplied:
+        if not isinstance(item, dict) or not given(item):
+            unnamed.append(item)
+            continue
+        if len(given(item)) == len(keys):
+            addressed.append(item)
+            continue
+        names = {identity(row) for row in rows if agrees(item, row)}
+        if len(names) == 1:
+            # One retained row answers to the parts it gives, so that is the row it means.
+            addressed.append({**item, **dict(zip(keys, names.pop()))})
+        else:
+            # None answers to it, or two do and it does not say which.
+            unmatched.append(item)
+    if not addressed:
+        if unmatched and unaddressed is not None:
+            unaddressed.extend(unmatched)
+            return retained
+        return supplied
+    if unnamed or unmatched:
+        if unaddressed is None:
+            return supplied
+        unaddressed.extend(unnamed)
+        unaddressed.extend(unmatched)
+        supplied = addressed
     if all(_is_complete(item, complete) and "remove" not in item for item in supplied):
         # A short list that names only items already retained is a repair of those items,
         # not a request to delete every other one: a traced run replaced ten parameter

@@ -16,7 +16,12 @@ from physearth.research.charts import (
 from physearth.research.common import _clean_list, _fail, _needs, _public
 from physearth.research.coverage import _target_coverage
 from physearth.research.evidence import _evidence_plan_problems, _evidence_problem_summary
-from physearth.research.mapping import _is_paper_context_problem, _repair_item, people_said
+from physearth.research.mapping import (
+    _is_paper_context_problem,
+    _repair_item,
+    mapping_field,
+    people_said,
+)
 from physearth.research.metadata import _repair_reproduction_metadata
 from physearth.research.normalise import (
     _clean_charts,
@@ -100,7 +105,7 @@ def _ground_user_labels(parameter_mapping, question):
         note = "The question does not give this value; it was relabelled from user_specified."
         item["rationale"] = ("%s %s" % (str(item.get("rationale") or "").strip(), note)).strip()
         repairs.append({
-            "field": "parameter_mapping[%d].provenance_class" % index,
+            "field": mapping_field(item, index, "provenance_class"),
             "from": "user_specified", "to": "model_assumption",
             "reason": "%s = %s is not in the question" % (item.get("model_input"), value),
         })

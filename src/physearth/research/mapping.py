@@ -19,6 +19,28 @@ def _ledger_entries(session, kind=None):
     ]
 
 
+def mapping_field(item, index, leaf=""):
+    """The name a message about one mapping row uses for that row.
+
+    A row is addressed the way a revision addresses it -- by the pair the merger matches
+    on, ``(model, model_input)`` -- and not by its position in the list. The position was
+    the harness's own vocabulary: a problem said "parameter_mapping[7].mapped_value", the
+    model answered with a row ``{"id": 7, "mapped_value": 37.0}``, and a patch that named
+    no input could not be merged, so it replaced the whole mapping list instead. Nothing
+    in the message told the model the name the merger needed, and seven identical Figure 7
+    refusals came out of that. A row that names no input can only be pointed at by
+    position; mapping.py drops such a row rather than keeping it to be asked about.
+    """
+    record = item if isinstance(item, dict) else {}
+    name = str(record.get("model_input") or record.get("paper_concept") or "").strip()
+    model = str(record.get("model") or "").strip()
+    if name and model:
+        key = "%s.%s" % (model, name) if not name.startswith(model + ".") else name
+    else:
+        key = name or str(index)
+    return "parameter_mapping[%s]%s" % (key, ".%s" % leaf if leaf else "")
+
+
 def _repair_item(field, before, after, reason, provenance=None, source=None):
     item = {
         "field": field,
@@ -55,6 +77,14 @@ def _units_compatible(left, right):
     left = _normalise_units(left)
     right = _normalise_units(right)
     return not left or not right or left == right
+
+
+# The keys `_clean_parameter_mapping` writes itself. A row whose only keys are these was
+# submitted without a model input or a paper concept, and cannot be read as a mapping.
+_DERIVED_MAPPING_KEYS = frozenset({
+    "model", "paper_concept", "paper_value", "model_input", "mapped_value", "units",
+    "provenance_class", "confidence", "confidence_basis", "evidence_ref", "rationale",
+})
 
 
 def _registered_parameter_index(session, model_names):
@@ -165,9 +195,43 @@ def _repair_parameter_mappings(
     evidence_refs = set(evidence_refs or ())
 
     for index, item in enumerate(mappings or ()):
+        if not isinstance(item, dict):
+            # `_clean_parameter_mapping` drops these, so this is a guard rather than a path:
+            # a mapping is an object with named fields, and every reader here says so.
+            repaired.append(_repair_item(
+                "parameter_mapping[%d]" % index,
+                item,
+                None,
+                "a mapping row is an object with named fields; this entry is not one and was "
+                "dropped",
+                "research_plan",
+                "research_plan",
+            ))
+            continue
         record = dict(item)
         raw_name = str(record.get("model_input") or "").strip()
         model_name = str(record.get("model") or "").strip()
+        if not raw_name and not str(record.get("paper_concept") or "").strip():
+            # A row that names neither a model input nor a paper concept is not a mapping,
+            # whatever else it holds: a value, a rationale and a provenance class are
+            # attributes of a mapping, not one. Such rows used to be carried through as they
+            # were, and a later check then demanded four fields of a row that carried
+            # nothing -- by list index, in a list the model rewrites every attempt. Seven
+            # identical refusals of a Figure 7 plan came from exactly that. The row is
+            # dropped instead, and the submitted keys are named so the shape is learnable.
+            keys = sorted(key for key in record if key not in _DERIVED_MAPPING_KEYS)
+            repaired.append(_repair_item(
+                mapping_field(record, index),
+                keys or "{}",
+                None,
+                "a mapping row names one registered model input (model_input) and the paper "
+                "concept it comes from (paper_concept); a row with neither was dropped -- "
+                "send one row per input, each with its own mapped_value and provenance_class"
+                + ("; this row was submitted with the keys %s" % ", ".join(keys) if keys else ""),
+                "research_plan",
+                "research_plan",
+            ))
+            continue
         if raw_name:
             candidates = _mapping_candidates(
                 raw_name, model_name, parameter_index, record.get("units")
@@ -176,7 +240,7 @@ def _repair_parameter_mappings(
                 candidate_model, candidate_name = candidates[0]
                 if candidate_name != raw_name:
                     repaired.append(_repair_item(
-                        "parameter_mapping[%d].model_input" % index,
+                        mapping_field(record, index, "model_input"),
                         raw_name,
                         candidate_name,
                         "replace an unambiguous alias with the exact registered model input",
@@ -188,7 +252,7 @@ def _repair_parameter_mappings(
                     record["model"] = candidate_model
                     model_name = candidate_model
                     repaired.append(_repair_item(
-                        "parameter_mapping[%d].model" % index,
+                        mapping_field(record, index, "model"),
                         "",
                         candidate_model,
                         "bind the mapping to the registered model that declares the input",
@@ -197,7 +261,7 @@ def _repair_parameter_mappings(
                     ))
                 elif model_name and candidate_model != model_name:
                     problems.append({
-                        "field": "parameter_mapping[%d].model" % index,
+                        "field": mapping_field(record, index, "model"),
                         "source": model_name,
                         "actual": model_name,
                         "expected": candidate_model,
@@ -263,7 +327,7 @@ def _repair_parameter_mappings(
                     )
                     expected = "an exact registered model input"
                 problems.append({
-                    "field": "parameter_mapping[%d].model_input" % index,
+                    "field": mapping_field(record, index, "model_input"),
                     "source": "registered_model_declaration",
                     "actual": raw_name,
                     "expected": expected,
@@ -283,7 +347,7 @@ def _repair_parameter_mappings(
         if not record.get("units") and spec.get("unit"):
             record["units"] = str(spec.get("unit"))
             repaired.append(_repair_item(
-                "parameter_mapping[%d].units" % index,
+                mapping_field(record, index, "units"),
                 "",
                 record["units"],
                 "copy the declared unit for the registered model input",
@@ -293,7 +357,7 @@ def _repair_parameter_mappings(
         if not record.get("paper_concept"):
             record["paper_concept"] = model_input
             repaired.append(_repair_item(
-                "parameter_mapping[%d].paper_concept" % index,
+                mapping_field(record, index, "paper_concept"),
                 "",
                 model_input,
                 "use the registered input label when no paper-side concept was supplied",
@@ -318,7 +382,7 @@ def _repair_parameter_mappings(
             before = record.get("provenance_class") or ""
             record["provenance_class"] = provenance
             repaired.append(_repair_item(
-                "parameter_mapping[%d].provenance_class" % index,
+                mapping_field(record, index, "provenance_class"),
                 before,
                 provenance,
                 "classify mapping provenance from registered resolution and opened evidence",
@@ -336,7 +400,7 @@ def _repair_parameter_mappings(
                 rationale = "The registered input was mapped to the opened paper evidence."
             record["rationale"] = rationale
             repaired.append(_repair_item(
-                "parameter_mapping[%d].rationale" % index,
+                mapping_field(record, index, "rationale"),
                 "",
                 rationale,
                 "add an auditable explanation for the paper-to-model mapping",
@@ -348,7 +412,7 @@ def _repair_parameter_mappings(
             before = record.get("confidence") or ""
             record["confidence"] = confidence
             repaired.append(_repair_item(
-                "parameter_mapping[%d].confidence" % index,
+                mapping_field(record, index, "confidence"),
                 before,
                 confidence,
                 "label confidence from the mapping provenance without changing the run value",
@@ -358,7 +422,7 @@ def _repair_parameter_mappings(
         if not record.get("confidence_basis"):
             record["confidence_basis"] = confidence_basis
             repaired.append(_repair_item(
-                "parameter_mapping[%d].confidence_basis" % index,
+                mapping_field(record, index, "confidence_basis"),
                 "",
                 confidence_basis,
                 "explain why the mapping is paper-supported, user-specified, backend-provided, assumed, or guessed",

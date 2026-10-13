@@ -163,6 +163,7 @@ def revise(session, changes=None, note=""):
         "quantities", "controls", "metrics", "diagnostics", "success_criteria",
         "stop_conditions", "assumptions", "limitations", "baseline_run_id",
     }
+    unaddressed_mapping_entries = []
     for key, identity in ITEM_IDENTITY.items():
         if isinstance(changes.get(key), list):
             retained = plan.get(key) or []
@@ -178,7 +179,8 @@ def revise(session, changes=None, note=""):
                     for run in retained
                 ]
             changes[key] = merge_items(
-                retained, changes[key], identity, ITEM_COMPLETE.get(key, ())
+                retained, changes[key], identity, ITEM_COMPLETE.get(key, ()),
+                unaddressed_mapping_entries if key == "parameter_mapping" else None,
             )
     # Apply revisions to a copy. A provider can submit valid chart changes together with
     # invalid runs; mutating the live plan before run validation leaves a half-revised
@@ -322,6 +324,27 @@ def revise(session, changes=None, note=""):
         plan.get("charts") or [],
         plan.get("parameter_resolution") or [],
     )
+    # A patch entry that names no model input cannot be matched to an existing mapping, and
+    # is not a mapping of its own either. It is reported and ignored: the plan keeps every
+    # mapping it had, and the model is told which vocabulary addresses a row. It is not
+    # blocking, because nothing about the plan is wrong -- only the patch could not be read.
+    for entry in unaddressed_mapping_entries:
+        evidence_problems.append({
+            "field": "parameter_mapping",
+            "blocking": False,
+            "source": "research_plan",
+            "actual": json.dumps(entry, ensure_ascii=False, sort_keys=True, default=str),
+            "expected": "a patch row that names the mapping it changes",
+            "repair": (
+                "This parameter_mapping patch entry could not be matched to any mapping, so "
+                "it was ignored and every existing mapping was kept: send the row's registered "
+                "input name (model_input) and, when the plan runs more than one model, the "
+                "model that declares it. Address a row as parameter_mapping[density_kg_m3] or "
+                "parameter_mapping[smrt.stickiness] and send only the fields that row changes. "
+                "A row that names none of its identity -- {'id': 7, 'mapped_value': 37.0} -- "
+                "addresses a position in the list it was copied from, which is not a name."
+            ),
+        })
     blocking_metadata_problems = [
         item for item in metadata_problems
         if item.get("blocking", True)

@@ -165,8 +165,11 @@ def test_a_mapping_to_an_input_the_model_does_not_declare_is_still_refused():
     }]
     result = tools.call("research_plan", fields, session=box)
     assert result["status"] == "terminal_error"
+    # The problem names the row by the input it submitted, so the same name comes back in a
+    # patch and the merger can find the row again.
     assert any(
-        item.get("field") == "parameter_mapping[0].model_input" for item in result["data"]["problems"]
+        item.get("field") == "parameter_mapping[snow_density].model_input"
+        for item in result["data"]["problems"]
     )
 
 
@@ -252,7 +255,7 @@ def test_a_value_the_question_does_not_give_is_not_labelled_user_specified():
     repairs = propose._ground_user_labels(mapping, "Run SMRT at 37 GHz with a 100 um radius.")
     labels = {item["model_input"]: item["provenance_class"] for item in mapping}
     assert labels == {"stickiness": "model_assumption", "frequency_ghz": "user_specified", "radius_m": "user_specified"}
-    assert [item["field"] for item in repairs] == ["parameter_mapping[0].provenance_class"]
+    assert [item["field"] for item in repairs] == ["parameter_mapping[smrt.stickiness].provenance_class"]
     assert "not give this value" in mapping[0]["rationale"]
 
 

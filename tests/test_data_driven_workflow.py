@@ -507,13 +507,13 @@ def test_unknown_mapping_alias_returns_registered_candidates_and_keeps_plan_uncr
     assert result["data"]["error_code"] == "reproduction_evidence_incomplete"
     problem = next(
         item for item in result["data"]["problems"]
-        if item.get("field") == "parameter_mapping[0].model_input"
+        if item.get("field") == "parameter_mapping[snow_density].model_input"
     )
     assert problem["source"] == "registered_model_declaration"
     assert problem["actual"] == "snow_density"
     assert "density_kg_m3" in problem["allowed_values"]
     assert problem["blocking"] is True
-    assert "parameter_mapping[0].model_input" in result["summary"]
+    assert "parameter_mapping[snow_density].model_input" in result["summary"]
     assert not (box.get("research") or {}).get("plan", {}).get("approval_state") == "plan_review"
 
 

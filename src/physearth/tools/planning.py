@@ -427,6 +427,7 @@ def research_plan(
             return research._fail("No LLM-authored research proposal exists yet.")
         corrected = dict(retained)
         supplied = dict(changes or {})
+        unaddressed_mapping_entries = []
         for key, value in supplied.items():
             if key == "parameters" and isinstance(value, dict):
                 corrected[key] = {**dict(corrected.get(key) or {}), **value}
@@ -434,12 +435,38 @@ def research_plan(
                 corrected[key] = research.merge_items(
                     corrected.get(key), value, research.ITEM_IDENTITY[key],
                     research.ITEM_COMPLETE.get(key, ()),
+                    unaddressed_mapping_entries if key == "parameter_mapping" else None,
                 )
                 if key == "runs":
                     corrected[key] = _drop_refused_parameters(corrected[key], value)
             elif value is not None:
                 corrected[key] = value
-        return research_plan(action="propose", _session=_session, **corrected)
+        result = research_plan(action="propose", _session=_session, **corrected)
+        # A mapping patch entry that names no input is ignored, not merged, and the retained
+        # proposal keeps every mapping it had. Say so once, in the vocabulary that addresses
+        # a row, so the next attempt can be read.
+        if unaddressed_mapping_entries and isinstance(result.get("data"), dict):
+            result["data"].setdefault("validation_warnings", []).extend(
+                {
+                    "field": "parameter_mapping",
+                    "blocking": False,
+                    "source": "research_plan",
+                    "actual": json.dumps(entry, ensure_ascii=False, sort_keys=True, default=str),
+                    "expected": "a patch row that names the mapping it changes",
+                    "repair": (
+                        "This parameter_mapping patch entry could not be matched to any "
+                        "mapping, so it was ignored and every existing mapping was kept: send "
+                        "the row's registered input name (model_input) and, when the plan runs "
+                        "more than one model, the model that declares it. Address a row as "
+                        "parameter_mapping[density_kg_m3] or parameter_mapping[smrt.stickiness] "
+                        "and send only the fields that row changes. A row that names none of its "
+                        "identity -- {'id': 7, 'mapped_value': 37.0} -- addresses a position in "
+                        "the list it was copied from, which is not a name."
+                    ),
+                }
+                for entry in unaddressed_mapping_entries
+            )
+        return result
 
     handlers = {
         "propose": propose_with_recovery_draft,
