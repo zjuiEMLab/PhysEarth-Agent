@@ -1,6 +1,15 @@
 """The MCP server: the same capabilities and knowledge, addressed by a coding agent."""
 
+import base64
+
 from integrations.geoai import mcp_server
+
+# The smallest thing the host will accept as an image: a real PNG, so the test exercises the bytes
+# rather than a placeholder string.
+_ONE_PIXEL_PNG = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/wFH"
+    "CgAAAABJRU5ErkJggg=="
+)
 
 
 def _call(method, params=None, request_id=1):
@@ -189,6 +198,59 @@ def test_the_payload_names_the_session_that_answered():
     # session its handle belonged to.
     read = _payload("read_literature", {"slug": "research-planning"})
     assert read["session_id"].startswith("ses_")
+
+
+def test_a_drawn_figure_travels_as_an_image_and_not_only_as_a_path(tmp_path, monkeypatch):
+    # The product's answer to "plot it" is the picture. The engine already hands every chart back
+    # with `ui.figure.image_path` — that is how the Studio shows it — but a host that only forwards
+    # the JSON text renders nothing, so the user reads a file name where the plot should be.
+    # Measured in the browser run of the cover cases: the figure was on disk, named in the answer,
+    # and visible nowhere in the conversation.
+    monkeypatch.setattr(mcp_server, "_figure_root", lambda: tmp_path)
+    figure = tmp_path / "figures" / "drawn.png"
+    figure.parent.mkdir(parents=True)
+    png = base64.b64decode(_ONE_PIXEL_PNG)
+    figure.write_bytes(png)
+
+    monkeypatch.setattr(
+        mcp_server.service,
+        "call",
+        lambda *args, **kwargs: {"status": "success", "ui": {"figure": {"image_path": str(figure)}}},
+    )
+    result = mcp_server.call_tool("plot", {"kind": "line"})
+
+    assert result["isError"] is False
+    assert [block["type"] for block in result["content"]] == ["text", "image"]
+    image = result["content"][1]
+    assert image["mimeType"] == "image/png"
+    assert base64.b64decode(image["data"]) == png
+
+
+def test_the_figure_root_is_the_engines_state_directory():
+    # Previews live in a session subdirectory of the state directory and results live in
+    # `<state>/figures`, so one root covers both.
+    from physearth import config
+
+    assert mcp_server._figure_root() == config.state_dir().resolve()
+
+
+def test_a_figure_path_from_outside_the_state_directory_is_not_read_out(tmp_path, monkeypatch):
+    # A tool result is data from a subprocess and a model; if any path in it were read and attached,
+    # a result naming ~/.ssh/id_rsa or .env would hand the file to the host. Only what this
+    # checkout drew under its own state directory is allowed out.
+    monkeypatch.setattr(mcp_server, "_figure_root", lambda: tmp_path / "state")
+    (tmp_path / "state").mkdir()
+    secret = tmp_path / "secret.png"
+    secret.write_bytes(base64.b64decode(_ONE_PIXEL_PNG))
+
+    monkeypatch.setattr(
+        mcp_server.service,
+        "call",
+        lambda *args, **kwargs: {"status": "success", "ui": {"figure": {"image_path": str(secret)}}},
+    )
+    result = mcp_server.call_tool("plot", {"kind": "line"})
+
+    assert [block["type"] for block in result["content"]] == ["text"]
 
 
 def test_the_session_tool_says_when_a_host_has_to_call_it():

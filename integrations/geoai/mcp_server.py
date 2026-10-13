@@ -21,8 +21,10 @@ it owns that decision (`approve_runs`).
 
 from __future__ import annotations
 
+import base64
 import json
 import sys
+from pathlib import Path
 
 
 def _bootstrap_path() -> None:
@@ -294,7 +296,54 @@ def call_tool(name, arguments=None):
         session_id=_session(arguments),
         approve_runs=bool(arguments.get("approve_runs")),
     )
-    return {"content": [{"type": "text", "text": _render(result)}], "isError": _failed(result)}
+    content = [{"type": "text", "text": _render(result)}]
+    figure = _figure_image(result)
+    if figure is not None:
+        content.append(figure)
+    return {"content": content, "isError": _failed(result)}
+
+
+# What a host will render inline. The harness stores an image block in its own attachment store and
+# serves it to the browser, so this is the difference between a figure the user sees and a path in
+# a JSON blob that only the model can read back.
+FIGURE_MEDIA_TYPE = "image/png"
+FIGURE_BYTE_LIMIT = 8 * 1024 * 1024
+
+
+def _figure_image(result):
+    """The figure a chart tool just drew, as an MCP image block, or ``None``.
+
+    Every chart the engine draws comes back with ``ui.figure.image_path`` — that is how the
+    Studio shows it too. A host that only forwards the text leaves the conversation without the
+    picture, which for this product is the answer.
+    """
+    if not isinstance(result, dict):
+        return None
+    figure = (result.get("ui") or {}).get("figure") or {}
+    named = figure.get("image_path")
+    if not named:
+        return None
+    try:
+        path = Path(str(named)).resolve(strict=True)
+        # Only figures this checkout drew. A tool result is untrusted text; if it could name an
+        # arbitrary path, a host would read that file out on its behalf.
+        path.relative_to(_figure_root())
+    except (OSError, ValueError):
+        return None
+    if path.suffix.lower() != ".png" or path.stat().st_size > FIGURE_BYTE_LIMIT:
+        return None
+    return {
+        "type": "image",
+        "data": base64.b64encode(path.read_bytes()).decode("ascii"),
+        "mimeType": FIGURE_MEDIA_TYPE,
+    }
+
+
+def _figure_root():
+    """Where the engine keeps drawn figures — results, and a session's previews under it."""
+    from physearth import config
+
+    return config.state_dir().resolve()
 
 
 def _failed(result):
