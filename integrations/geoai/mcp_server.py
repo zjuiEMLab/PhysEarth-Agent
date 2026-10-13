@@ -297,9 +297,7 @@ def call_tool(name, arguments=None):
         approve_runs=bool(arguments.get("approve_runs")),
     )
     content = [{"type": "text", "text": _render(result)}]
-    figure = _figure_image(result)
-    if figure is not None:
-        content.append(figure)
+    content.extend(_answer_figures(_session(arguments), result))
     return {"content": content, "isError": _failed(result)}
 
 
@@ -308,6 +306,44 @@ def call_tool(name, arguments=None):
 # a JSON blob that only the model can read back.
 FIGURE_MEDIA_TYPE = "image/png"
 FIGURE_BYTE_LIMIT = 8 * 1024 * 1024
+
+
+# Figures already handed to this conversation, per session, so a figure drawn once is shown once
+# even though the session keeps every one of them.
+_DELIVERED_FIGURES: dict[str, set[str]] = {}
+FIGURES_PER_CALL = 6
+
+
+def _answer_figures(session_id, result):
+    """Every figure this session has drawn and this conversation has not been shown yet.
+
+    The result's own ``ui.figure`` is the common case, but it is not the only one: the engine
+    renders one **preview** figure per planned chart straight into ``session["figures"]`` while it
+    asks the human to confirm the figure package, and that payload carries no ``ui`` at all
+    (``research/common.py`` builds its replies with ``ui=None``). Reading the session as well is
+    what puts those previews in front of the person choosing between them — measured, they were on
+    disk and invisible in the conversation.
+    """
+    if not session_id:
+        return []
+    session = service.get_session(session_id) or {}
+    delivered = _DELIVERED_FIGURES.setdefault(session_id, set())
+    blocks = []
+    for figure in session.get("figures") or []:
+        named = str(figure.get("image_path") or "")
+        if not named or named in delivered:
+            continue
+        delivered.add(named)
+        block = _figure_block(named)
+        if block is not None:
+            blocks.append(block)
+        if len(blocks) >= FIGURES_PER_CALL:
+            break
+    if not blocks:
+        # A host that drops its sessions should not leave this map growing for the process's life.
+        if not session:
+            _DELIVERED_FIGURES.pop(session_id, None)
+    return blocks
 
 
 def _figure_image(result):
@@ -320,13 +356,19 @@ def _figure_image(result):
     if not isinstance(result, dict):
         return None
     figure = (result.get("ui") or {}).get("figure") or {}
-    named = figure.get("image_path")
+    return _figure_block(figure.get("image_path"))
+
+
+def _figure_block(named):
+    """One PNG inside the state directory as an MCP image block, or ``None``.
+
+    Only figures this checkout drew: a tool result is data from a subprocess and a model, so a
+    result naming an arbitrary path must not have that file read out on its behalf.
+    """
     if not named:
         return None
     try:
         path = Path(str(named)).resolve(strict=True)
-        # Only figures this checkout drew. A tool result is untrusted text; if it could name an
-        # arbitrary path, a host would read that file out on its behalf.
         path.relative_to(_figure_root())
     except (OSError, ValueError):
         return None

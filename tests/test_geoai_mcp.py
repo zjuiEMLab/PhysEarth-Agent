@@ -200,30 +200,86 @@ def test_the_payload_names_the_session_that_answered():
     assert read["session_id"].startswith("ses_")
 
 
-def test_a_drawn_figure_travels_as_an_image_and_not_only_as_a_path(tmp_path, monkeypatch):
-    # The product's answer to "plot it" is the picture. The engine already hands every chart back
-    # with `ui.figure.image_path` — that is how the Studio shows it — but a host that only forwards
-    # the JSON text renders nothing, so the user reads a file name where the plot should be.
-    # Measured in the browser run of the cover cases: the figure was on disk, named in the answer,
-    # and visible nowhere in the conversation.
-    monkeypatch.setattr(mcp_server, "_figure_root", lambda: tmp_path)
-    figure = tmp_path / "figures" / "drawn.png"
-    figure.parent.mkdir(parents=True)
-    png = base64.b64decode(_ONE_PIXEL_PNG)
-    figure.write_bytes(png)
+def _png(tmp_path, name="drawn.png"):
+    path = tmp_path / "figures" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = base64.b64decode(_ONE_PIXEL_PNG)
+    path.write_bytes(payload)
+    return path, payload
 
-    monkeypatch.setattr(
-        mcp_server.service,
-        "call",
-        lambda *args, **kwargs: {"status": "success", "ui": {"figure": {"image_path": str(figure)}}},
+
+def _engine_says(monkeypatch, result, session):
+    """Stand in for the engine: one call that returns `result`, one session holding `session`."""
+    monkeypatch.setattr(mcp_server.service, "call", lambda *a, **k: result)
+    monkeypatch.setattr(mcp_server.service, "get_session", lambda *a, **k: session)
+    monkeypatch.setattr(mcp_server, "_DELIVERED_FIGURES", {})
+
+
+def test_a_drawn_figure_travels_as_an_image_and_not_only_as_a_path(tmp_path, monkeypatch):
+    # The product's answer to "plot it" is the picture. The engine hands every chart back with
+    # `ui.figure.image_path` — that is how the Studio shows it — but a host that only forwards the
+    # JSON text renders nothing, so the user reads a file name where the plot should be.
+    monkeypatch.setattr(mcp_server, "_figure_root", lambda: tmp_path)
+    path, payload = _png(tmp_path)
+    _engine_says(
+        monkeypatch,
+        {"status": "success", "ui": {"figure": {"image_path": str(path)}}},
+        {"figures": [{"image_path": str(path)}]},
     )
+
     result = mcp_server.call_tool("plot", {"kind": "line"})
 
     assert result["isError"] is False
-    assert [block["type"] for block in result["content"]] == ["text", "image"]
-    image = result["content"][1]
-    assert image["mimeType"] == "image/png"
-    assert base64.b64decode(image["data"]) == png
+    assert result["content"][0]["type"] == "text"
+    images = [block for block in result["content"] if block["type"] == "image"]
+    assert len(images) == 1, "the same figure must not be sent twice"
+    assert images[0]["mimeType"] == "image/png"
+    assert base64.b64decode(images[0]["data"]) == payload
+
+
+def test_the_preview_figures_the_human_chooses_between_are_sent_too(tmp_path, monkeypatch):
+    # Measured in the browser run: the engine renders one preview figure per planned chart into
+    # `session["figures"]` and asks the human to confirm the package, but its own reply is built
+    # with `ui=None` (`research/common.py`), so the carousel of choices reached the conversation as
+    # text only. Reading the session is what puts them in front of the person choosing.
+    monkeypatch.setattr(mcp_server, "_figure_root", lambda: tmp_path)
+    first, _ = _png(tmp_path, "preview-1.png")
+    second, _ = _png(tmp_path, "preview-2.png")
+    _engine_says(
+        monkeypatch,
+        {"status": "needs_input", "ui": None, "summary": "Pseudo-data preview v001 is ready"},
+        {"figures": [
+            {"image_path": str(first), "preview": True, "research_preview": True},
+            {"image_path": str(second), "preview": True, "research_preview": True},
+        ]},
+    )
+
+    result = mcp_server.call_tool("research_plan", {"action": "preview"})
+
+    images = [block for block in result["content"] if block["type"] == "image"]
+    assert len(images) == 2, "both candidate layouts belong to the choice the human is making"
+
+    # And only once: the session keeps them, the conversation is shown them once.
+    again = mcp_server.call_tool("research_plan", {"action": "status"})
+    assert [b for b in again["content"] if b["type"] == "image"] == []
+
+
+def test_a_figure_path_from_outside_the_state_directory_is_not_read_out(tmp_path, monkeypatch):
+    # A tool result is data from a subprocess and a model; if any path in it were read and attached,
+    # a result naming ~/.ssh/id_rsa or .env would hand the file to the host.
+    monkeypatch.setattr(mcp_server, "_figure_root", lambda: tmp_path / "state")
+    (tmp_path / "state").mkdir()
+    secret = tmp_path / "secret.png"
+    secret.write_bytes(base64.b64decode(_ONE_PIXEL_PNG))
+    _engine_says(
+        monkeypatch,
+        {"status": "success", "ui": {"figure": {"image_path": str(secret)}}},
+        {"figures": [{"image_path": str(secret)}]},
+    )
+
+    result = mcp_server.call_tool("plot", {"kind": "line"})
+
+    assert [block["type"] for block in result["content"]] == ["text"]
 
 
 def test_the_figure_root_is_the_engines_state_directory():
@@ -232,25 +288,6 @@ def test_the_figure_root_is_the_engines_state_directory():
     from physearth import config
 
     assert mcp_server._figure_root() == config.state_dir().resolve()
-
-
-def test_a_figure_path_from_outside_the_state_directory_is_not_read_out(tmp_path, monkeypatch):
-    # A tool result is data from a subprocess and a model; if any path in it were read and attached,
-    # a result naming ~/.ssh/id_rsa or .env would hand the file to the host. Only what this
-    # checkout drew under its own state directory is allowed out.
-    monkeypatch.setattr(mcp_server, "_figure_root", lambda: tmp_path / "state")
-    (tmp_path / "state").mkdir()
-    secret = tmp_path / "secret.png"
-    secret.write_bytes(base64.b64decode(_ONE_PIXEL_PNG))
-
-    monkeypatch.setattr(
-        mcp_server.service,
-        "call",
-        lambda *args, **kwargs: {"status": "success", "ui": {"figure": {"image_path": str(secret)}}},
-    )
-    result = mcp_server.call_tool("plot", {"kind": "line"})
-
-    assert [block["type"] for block in result["content"]] == ["text"]
 
 
 def test_the_session_tool_says_when_a_host_has_to_call_it():
