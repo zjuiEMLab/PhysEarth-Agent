@@ -286,12 +286,63 @@ def _defaults_to_review(card, given, spec, series):
 MAX_BATCH_RUNS = 24
 
 
+def _short_number(value):
+    """Two decimals, without trailing zeros: a summary is read, not computed with."""
+    text = "%.2f" % float(value)
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def _batch_reading(data):
+    """One run's numbers, in the fewest characters that keep them usable.
+
+    A six-run batch serialises to tens of thousands of characters, and the agent keeps only the
+    first 12,000 of a tool result in the transcript it sends to the model. A run whose numbers
+    live only in its preview therefore reaches the model as a handle and a "quality control
+    passed" — measured, in a six-run snow study: all three backscatter runs were cut that way,
+    and the answer then reported backscatter values that appear nowhere in the engine's own
+    output, with the trend inverted. The summary is the part of a result that always arrives, so
+    the numbers belong in it.
+    """
+    parts = []
+    for name, entry in (data.get("series_summary") or {}).items():
+        if not isinstance(entry, dict) or "first" not in entry or "last" not in entry:
+            continue
+        unit = " " + entry["unit"] if entry.get("unit") else ""
+        text = "%s %s -> %s%s" % (
+            name, _short_number(entry["first"]), _short_number(entry["last"]), unit,
+        )
+        movement = float(entry["last"]) - float(entry["first"])
+        if entry.get("monotonic"):
+            text += " (%s, %s%s)" % (
+                entry["monotonic"],
+                "+" if movement >= 0 else "-",
+                _short_number(abs(movement)),
+            )
+        parts.append(text)
+    return ", ".join(parts)
+
+
+def _batch_line(item):
+    """One run, as the batch summary reports it: stable identity first, then the numbers."""
+    head = "run %d%s%s" % (
+        item["index"],
+        " '%s'" % item["label"] if item.get("label") else "",
+        " -> handle %s" % item["data"]["handle"] if item["data"].get("handle") else "",
+    )
+    reading = _batch_reading(item["data"])
+    return "%s: %s%s%s" % (head, reading, "; " if reading else "", item["summary"])
+
+
 def run_models(runs=None, _owner=None, _switches=None, _session=None):
     """Several direct runs under one human approval.
 
     Each item is an ordinary run_model call: the same validation, quality control, physical
     expectations and result store. The batch only means the person approves the set once,
     seeing every configuration, instead of once per run.
+
+    The summary carries each run's numbers — first, last, unit and direction — not only its
+    handle: this is the part of a result that reaches the model even when the payload is long
+    enough to be truncated, and a handle alone leaves the answer with nothing to quote.
     """
     if not isinstance(runs, (list, tuple)) or not runs:
         return _fail("run_models requires a non-empty runs array of {model, parameters}.")
@@ -318,15 +369,7 @@ def run_models(runs=None, _owner=None, _switches=None, _session=None):
     failed = [item["index"] for item in items if item["status"] != "success"]
     summary = "Ran %d of %d run(s) in one approved batch. %s" % (
         len(items) - len(failed), len(items),
-        " | ".join(
-            "run %d%s%s: %s" % (
-                item["index"],
-                " '%s'" % item["label"] if item.get("label") else "",
-                " -> handle %s" % item["data"]["handle"] if item["data"].get("handle") else "",
-                item["summary"],
-            )
-            for item in items
-        ),
+        " | ".join(_batch_line(item) for item in items),
     )
     payload = {
         "runs": items,
