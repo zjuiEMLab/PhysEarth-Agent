@@ -176,21 +176,6 @@ def propose(
     charts = _clean_charts(charts)
     runs, run_problems, run_repairs, parameter_resolution, run_problem_details = _clean_runs(runs)
     derived, derived_problems = _clean_derived(derived, runs)
-    if derived_problems:
-        refuse(
-            "The proposed derived quantities are invalid: %s" % "; ".join(derived_problems),
-            {
-                "error_code": "derived_quantity_invalid",
-                "problems": derived_problems,
-                "repair_hints": [
-                    "A derived quantity is a value the runs cannot output, computed from them "
-                    "by a script: name the planned runs it is computed from, the step with no "
-                    "tool (solve_for_parameter, derive_quantity, fit_parameters), and how the "
-                    "script computes it. Then give a chart that plots it: its x must be an "
-                    "axis those runs sweep."
-                ],
-            },
-        )
     quantities = _clean_list(quantities, 12)
     controls = _clean_list(controls, 12)
     metrics = _clean_list(metrics, 12)
@@ -225,6 +210,22 @@ def propose(
 
     def advise(summary, data):
         advisories.append((summary, data))
+
+    if derived_problems:
+        refuse(
+            "The proposed derived quantities are invalid: %s" % "; ".join(derived_problems),
+            {
+                "error_code": "derived_quantity_invalid",
+                "problems": derived_problems,
+                "repair_hints": [
+                    "A derived quantity is a value the runs cannot output, computed from them "
+                    "by a script: name the planned runs it is computed from, the step with no "
+                    "tool (solve_for_parameter, derive_quantity, fit_parameters), and how the "
+                    "script computes it. Then give a chart that plots it: its x must be an "
+                    "axis those runs sweep."
+                ],
+            },
+        )
 
     if run_problems:
         run_refusal = (

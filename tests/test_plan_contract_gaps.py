@@ -14,6 +14,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from physearth import registry, session as session_state, tools  # noqa: E402
+from physearth.research import propose  # noqa: E402
 from physearth.harness import validation  # noqa: E402
 from physearth.research import charts, execution  # noqa: E402
 
@@ -240,3 +241,44 @@ def test_the_plan_sheet_says_a_figure_comes_from_a_script():
     built = sheet.build(_fig7_plan())
     assert built["derived"][0]["id"] == "scaling_factor"
     assert built["charts"][0]["scripted"] is True
+
+
+def test_an_invalid_derived_step_is_refused_rather_than_crashing():
+    """The refusal is raised after the closure it calls exists.
+
+    It was called before `refuse` was defined, so a proposal carrying a derived step the
+    workflow cannot use died with `UnboundLocalError: cannot access local variable 'refuse'`
+    instead of coming back as a repairable refusal -- and only that path reached it.
+    """
+    box = session_state.new_session("m")
+    tools.call("list_models", {"model": "smrt"}, session=box)
+    tools.call("read_model_instruction", {"model": "smrt"}, session=box)
+    runs = [{
+        "id": "sticky_200", "label": "Sticky HS", "model": "smrt",
+        "parameters": {
+            "output": "tb", "electromagnetic_model": "iba",
+            "microstructure_model": "sticky_hard_spheres", "stickiness": 0.2,
+            "frequency_ghz": 37.0, "density_kg_m3": 200.0, "temperature_k": 265.0,
+            "thickness_m": 100.0, "radius_m": 1e-4, "dort_streams": 32,
+            "sweep_parameter": "stickiness", "sweep_start": 0.08, "sweep_stop": 1.0,
+            "sweep_points": 5,
+        },
+    }]
+    result = propose(
+        box, question="Reproduce Figure 7", objective="scaling equivalence",
+        hypothesis="a scaling factor exists", steps=["run", "solve"],
+        runs=runs,
+        derived=[{
+            "id": "scaling_factor", "label": "scaling factor",
+            "operation": "plot_results",  # a tool provides this: not a derived step
+            "from_runs": ["sticky_200"],
+        }],
+        charts=[{"id": "fig07", "label": "factor vs stickiness", "x": "stickiness", "y": "tb_v"}],
+        quantities=["factor"], controls=["37 GHz"], metrics=["factor"],
+        diagnostics=["convergence"], success_criteria=["drawn"],
+        stop_conditions=["a run fails"], assumptions=["semi-infinite"],
+        limitations=["one frequency"],
+    )
+    assert result["status"] == "terminal_error"
+    assert result["data"]["error_code"] == "derived_quantity_invalid"
+    assert any("registered tool computes" in str(item) for item in result["data"]["problems"])
