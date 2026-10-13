@@ -160,12 +160,24 @@ In the browser, the observable acceptance steps are:
 - **The engine decides.** Validation, the approval gate, QC and evidence rules live in Python.
   `approveRuns` is off by default; turning it on says the deployment owns the consent step, and
   the card says so in those words.
-- **The restyle is tokens first.** 60 of the host's 89 `--dsw-alias-*` / `--dsw-specific-*`
-  names are overridden — surfaces, four border weights, three label weights, the state colours,
-  code blocks, bubbles, the sidebar, the scrollbars — so the whole interface moves together
-  without this plugin guessing at a single component class name. The stylesheet only adds what
-  tokens cannot express: type, focus rings, scrollbar thumbs, selection, motion policy, and the
-  card itself.
+- **The restyle is tokens first.** The host's `--dsw-alias-*` / `--dsw-specific-*` names are
+  overridden — surfaces, four border weights, three label weights, the state colours, code blocks,
+  bubbles, the sidebar, the scrollbars — so the whole interface moves together without this plugin
+  guessing at a single component class name. The stylesheet only adds what tokens cannot express:
+  type, focus rings, scrollbar thumbs, selection, motion policy, and the card itself.
+
+  The table is only as good as the host build it was read from, and one name was missed: this build
+  fills its primary control — the composer's send button — from `--dsw-alias-button-info-fill`,
+  which the table did not carry, so enabling the plugin restyled every surface *except* the one the
+  eye lands on. Measured on a running page, before and after:
+
+      send button background   before rgb(103, 158, 254)   after rgb(34, 211, 238)
+      text on that button      before rgb(255, 255, 255)   after rgb(4, 18, 26)
+
+  The fill alone was not enough: the host's rule for that control hardcodes white text, which is
+  unreadable on the accent, so the stylesheet restates the ink as well. Both halves are pinned by
+  living in one rule for that control. Re-check the table after a host upgrade by diffing the names
+  the running page resolves against the role map in `lib/client.js`.
 - **Two exposures, not one design plus a fallback.** Every token carries a light and a dark
   value, and the accent has separate fills per exposure, because a bright cyan fill with dark
   text is legible on an OLED field and the same pair is not on a white one.

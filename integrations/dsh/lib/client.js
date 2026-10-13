@@ -251,6 +251,30 @@ window.__ModuleLoader__.load({
       '--dsw-alias-button-primary-fill': 'fill',
       '--dsw-alias-button-primary-hover': 'fillHover',
       '--dsw-alias-button-primary-dimmed': 'buttonDimmed',
+      // Token names this host build paints with that the table above never carried. Read off the
+      // running page: every custom property its own stylesheets resolve, minus the names here.
+      // The one that mattered is `--dsw-alias-button-info-fill` — the send button is filled from
+      // it, so with the table as it was, enabling the plugin restyled every surface *except* the
+      // primary control, which stayed the host's blue.
+      '--dsw-alias-button-info-fill': 'fill',
+      '--dsw-alias-button-info-hover': 'fillHover',
+      '--dsw-alias-button-contrast-fill': 'labelPrimary',
+      '--dsw-alias-button-elevated-fill': 'layer3',
+      '--dsw-alias-button-ghost-active-border': 'borderL2',
+      '--dsw-alias-button-tool-bar-fill': 'hoverSolid',
+      '--dsw-alias-button-tool-bar-hover': 'hover',
+      '--dsw-alias-interactive-bg-primary': 'hoverSolid',
+      '--dsw-alias-fill-l2': 'skeleton',
+      '--dsw-alias-fill-tsp-secondary': 'hover',
+      '--dsw-alias-bg-primary': 'base',
+      '--dsw-alias-border-secondary': 'borderL2',
+      '--dsw-alias-line-secondary': 'borderL2',
+      '--dsw-alias-separator-primary': 'borderL1',
+      '--dsw-alias-label-inverse': 'labelPrimaryInverted',
+      '--dsw-alias-label-quaternary': 'labelTertiary',
+      '--dsw-alias-label-primary-bluish': 'labelPrimary',
+      '--dsw-alias-label-error': 'error',
+      '--dsw-alias-brand-primary-new-colorprimary-new-color': 'fill',
       '--dsw-alias-button-floating-fill': 'floating',
       '--dsw-alias-button-floating-hover': 'floatingHover',
       '--dsw-alias-button-ghost-active-fill': 'ghostActive',
@@ -554,6 +578,14 @@ body.geoai-restyled *::-webkit-scrollbar-thumb:hover {
 .geoai-switch.is-on .geoai-switch__knob {
   transform: translateX(20px);
   background: var(--geoai-accent-on-fill, #04121a);
+}
+
+/* The host's own rule for that primary control hardcodes white text, so an accent-filled button
+   would read white-on-cyan. The class names are the host's hashed modules, hence the substring
+   match; the fill and its text colour are declared together here so they cannot drift apart. */
+body.geoai-restyled [class*='_primary']:not(:disabled),
+body.geoai-restyled [class*='primaryButton']:not(:disabled) {
+  color: var(--geoai-accent-on-fill, #04121a);
 }
 
 .geoai-grid {
