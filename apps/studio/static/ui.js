@@ -561,6 +561,34 @@ function peBoot() {
       return;
     }
 
+    var decision = event.target.closest ? event.target.closest("[data-capability-decision]") : null;
+    if (decision) {
+      event.preventDefault();
+      if (decision.disabled) return;
+      var decisionBridge = document.getElementById("pe-decision-bridge");
+      var decisionInput = decisionBridge ? decisionBridge.querySelector("textarea, input") : null;
+      if (decisionInput) {
+        var decisionProto = decisionInput.tagName === "TEXTAREA"
+          ? window.HTMLTextAreaElement.prototype
+          : window.HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(decisionProto, "value").set.call(
+          decisionInput,
+          decision.getAttribute("data-capability-decision")
+        );
+        decisionInput.dispatchEvent(new Event("input", { bubbles: true }));
+        /* One decision per review: a second click before the repaint would answer a
+           question that has already been answered. */
+        var group = document.querySelectorAll("[data-capability-decision]");
+        for (var i = 0; i < group.length; i++) group[i].disabled = true;
+        decision.classList.add("is-chosen");
+        setTimeout(function () {
+          var submitDecision = document.getElementById("pe-decision-submit");
+          if (submitDecision) submitDecision.click();
+        }, 0);
+      }
+      return;
+    }
+
     var jump = event.target.closest ? event.target.closest("[data-jump]") : null;
     if (jump) {
       event.preventDefault();

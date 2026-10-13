@@ -285,13 +285,129 @@ def _structured_approval_bar(session, project, research):
     )
 
 
+def capability_decision_bar(session):
+    """The one decision the capability review is waiting for, as something to click.
+
+    The check reported "Capability review requires the user's partial-scope decision" while
+    the review card offered nothing to press: the decision existed only as a sentence in the
+    conversation, so a person who read the trace and looked for the control found none. This
+    is the same gate the plan and run cards already have, on the same contract -- the click
+    records the decision where the tool reads it, and then the agent continues.
+    """
+    review = (session or {}).get("capability_review") or {}
+    if review.get("status") != "waiting_user":
+        return ""
+    supported = review.get("supported") or []
+    unavailable = review.get("unavailable") or []
+    not_comparable = review.get("not_comparable") or []
+    missing_operations = review.get("missing_operations") or []
+    unavailable_outputs = [str(item) for item in review.get("unavailable_outputs") or ()]
+
+    supported_text = "; ".join(
+        "%s@%s (%s)" % (
+            item.get("model"), item.get("version"),
+            ", ".join(item.get("outputs") or ()) or "outputs not declared",
+        )
+        for item in supported
+    ) or "none"
+    gaps = []
+    for item in unavailable:
+        gaps.append(
+            "<li><b>%s</b> is not registered%s.</li>"
+            % (
+                _e(item.get("model")),
+                _e(
+                    " -- it resembles %s, which is a different model"
+                    % ", ".join(item.get("resembles") or ())
+                    if item.get("resembles") else ""
+                ),
+            )
+        )
+    for item in not_comparable:
+        gaps.append(
+            "<li><b>%s</b> is not an equivalent implementation of <b>%s</b>.</li>"
+            % (_e(item.get("local_model")), _e(item.get("reference_model")))
+        )
+    for item in missing_operations:
+        detail = (item.get("details") or {}).get("find")
+        gaps.append(
+            "<li><b>%s</b> -- %s%s</li>"
+            % (
+                _e(item.get("need") or item.get("label")),
+                _e(item.get("why") or item.get("reason") or ""),
+                _e(" To find: %s." % detail if detail else ""),
+            )
+        )
+    if unavailable_outputs and not missing_operations:
+        gaps.append(
+            "<li><b>%s</b> -- no registered model or tool computes this.</li>"
+            % _e(", ".join(unavailable_outputs))
+        )
+
+    # The choices the agent's own missing step declares, with the ones that cannot run shown
+    # as such rather than left out: an option a person cannot see is one they cannot ask for.
+    options = []
+    seen = set()
+    for item in missing_operations:
+        for option in item.get("options") or ():
+            identifier = str(option.get("id") or "")
+            if not identifier or identifier in seen:
+                continue
+            seen.add(identifier)
+            available = option.get("available", True)
+            options.append(
+                "<button type='button' class='capability__option'%s "
+                "data-capability-decision='confirm_partial:%s'>"
+                "<b>%s.</b> %s <span>%s</span></button>"
+                % (
+                    "" if available else " disabled",
+                    _e(identifier), _e(identifier), _e(option.get("label")),
+                    _e(
+                        option.get("note")
+                        or ("available now" if available else "not available")
+                    ),
+                )
+            )
+    return (
+        "<div class='approve approve--capability' data-capability-status='waiting_user' "
+        "data-capability-gaps='%d' data-capability-options='%d'>"
+        "<div class='approve__head'>Capability review <b>waiting for your decision</b></div>"
+        "<div class='approve__params'><span class='approve__p'><b>Supported</b> %s</span></div>"
+        "%s"
+        "%s"
+        "<div class='capability__actions'>"
+        "<button type='button' class='capability__option capability__option--primary' "
+        "data-capability-decision='confirm_partial'>"
+        "Continue with the supported components only</button>"
+        "<button type='button' class='capability__option' "
+        "data-capability-decision='reject'>Do not continue with a partial scope</button>"
+        "</div>"
+        "<div class='approve__note'>This is the decision the agent cannot make for you: it "
+        "will not present a partial reproduction as the whole one. Choosing a partial scope "
+        "says which components to plan for, and the report then states what was left out.</div>"
+        "</div>"
+        % (
+            len(gaps), len(options),
+            _e(supported_text),
+            "<ul class='capability__gaps'>%s</ul>" % "".join(gaps) if gaps else "",
+            "<div class='approve__note'><b>Options for the step with no tool</b></div>"
+            "<div class='capability__options'>%s</div>" % "".join(options)
+            if options else "",
+        )
+    )
+
+
 def approval_bar(session):
     """Render either the research review card or the physical-run approval gate."""
     from physearth.api import approval as gate
 
+    # The decision rides in front of whatever else the card says: while the capability
+    # review is open, nothing downstream can start, and the plan card is not the thing
+    # being asked for.
+    decision = capability_decision_bar(session)
     project = (session or {}).get("research") or {}
     if project and project.get("phase") not in ("approved", "completed"):
-        return _structured_approval_bar(session, project, research)
+        return decision + _structured_approval_bar(session, project, research)
     if project and project.get("phase") not in ("approved", "completed"):
         plan = project.get("plan") or {}
         phase = project.get("phase", "plan_review")
@@ -574,16 +690,17 @@ def approval_bar(session):
 
     waiting = gate.pending(session)
     if not waiting:
-        return "<div class='approve' hidden></div>"
+        return decision or "<div class='approve' hidden></div>"
     described = waiting["description"]
     if described.get("code") is not None:
-        return _script_approval(described)
+        return decision + _script_approval(described)
     rows = "".join(
         "<span class='approve__p'><b>%s</b> %s</span>" % (_e(k), _e(v))
         for k, v in sorted(described["parameters"].items())
     )
     return (
-        "<div class='approve'>"
+        decision
+        + "<div class='approve'>"
         "<div class='approve__head'>Run <b>%s</b> as %s?</div>"
         "<div class='approve__params'>%s</div>"
         "<div class='approve__note'>The model cannot answer this for itself. Nothing runs "

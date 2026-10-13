@@ -16,7 +16,11 @@ def research_context(session):
     session = session if isinstance(session, dict) else {}
     project = session.get("research") or {}
     waiting = gate.pending(session)
-    if not project and not waiting:
+    # A capability review waiting for its decision is a card the person has to act on, and
+    # it happens before any plan exists. Hiding the panel for want of a plan left the trace
+    # saying "waiting for your decision" over an empty space with nothing to press.
+    review = session.get("capability_review") or {}
+    if not project and not waiting and review.get("status") != "waiting_user":
         return "<div class='research-context' hidden></div>"
     return (
         "<div class='research-context'>%s</div>"

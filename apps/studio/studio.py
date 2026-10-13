@@ -788,6 +788,69 @@ def select_chart_click(box, chart_id):
     return _research_card(session), render.evidence(session), session, ""
 
 
+def _capability_decision_command(session, action, option, report):
+    """What to tell the agent after the person answered the capability review.
+
+    The person's click is the answer, not a hint: the decision is already recorded where
+    the tool reads it, so the message says what was decided and what to do next instead of
+    asking the agent to guess or to ask again.
+    """
+    if action == "reject":
+        return (
+            "The capability review card: I chose not to continue with a partial scope. Do "
+            "not propose a partial plan. State which reference model or step is missing and "
+            "what would have to change for the full reproduction to be possible."
+        )
+    chosen = ""
+    for item in report.get("missing_operations") or ():
+        for candidate in item.get("options") or ():
+            if option and str(candidate.get("id")) == option:
+                # The option's meaning, not its `next`: that text still tells the agent to
+                # call the confirmation tool, which is what this click has just done.
+                chosen = " I chose option %s (%s): %s" % (
+                    option, candidate.get("label"),
+                    candidate.get("detail") or candidate.get("note") or "",
+                )
+    return (
+        "The capability review card: I confirmed a partial scope, using only the components "
+        "the report marks as supported.%s Continue without asking again: propose the research "
+        "plan for the part that can run, and state in the report what was left out and why."
+        % chosen
+    )
+
+
+def capability_decision_click(box, decision):
+    """The capability review's missing control: a click that answers it.
+
+    The plan and run gates had buttons; this one asked for its decision in a sentence, so
+    the review card could say it was waiting for the user while the page showed nothing to
+    press. The decision goes through the same check the tool runs, so what the session
+    holds afterwards is exactly what a typed answer would have produced, and the agent's
+    continuation is triggered here rather than left to the next typed message.
+    """
+    session = box if isinstance(box, dict) else None
+    action, _separator, option = str(decision or "").partition(":")
+    action = action.strip()
+    option = option.strip()
+    command = ""
+    if session and action in ("confirm_partial", "reject"):
+        report = research.capability_check(session, decision=action)
+        audit.bind(session)
+        audit.emit(
+            "human_capability_decision",
+            session=session,
+            action=action,
+            option=option or None,
+            status_before="waiting_user",
+            status_after=report.get("status"),
+            error_code=report.get("error_code"),
+            confirmed_scope=report.get("confirmed_scope") or None,
+        )
+        if report.get("status") in ("confirmed", "rejected"):
+            command = _capability_decision_command(session, action, option, report)
+    return _research_card(session), render.evidence(session), session, command
+
+
 def _evaluation_session(box, model_id):
     if isinstance(box, dict) and box.get("evaluation"):
         if evaluation.expired(box):
@@ -1101,6 +1164,10 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
             value="", elem_id="pe-chart-bridge", show_label=False, container=False,
         )
         chart_submit = gr.Button("Select chart", elem_id="pe-chart-submit")
+        decision_bridge = gr.Textbox(
+            value="", elem_id="pe-decision-bridge", show_label=False, container=False,
+        )
+        decision_submit = gr.Button("Capability decision", elem_id="pe-decision-submit")
 
     outputs = [
         hero,
@@ -1203,6 +1270,24 @@ with gr.Blocks(title="PhysEarth-Agent", fill_height=True) as demo:
         [research_context_slot, evidence_slot, session_box, chart_bridge],
         concurrency_limit=None,
         queue=False,
+    )
+    # The capability review's decision runs while nothing else is: the turn that asked for
+    # it has already ended, and this is what starts the next one. Approving it here resumes
+    # the agent through the same route the plan gate uses, so the answer produces work
+    # rather than a state label.
+    decision_event = decision_submit.click(
+        capability_decision_click,
+        [session_box, decision_bridge],
+        [research_context_slot, evidence_slot, session_box, review_command],
+        concurrency_limit=None,
+        queue=False,
+    )
+    active_stream_events.append(
+        decision_event.then(
+            resume_after_review,
+            [review_command, turns_state, session_box, model_bridge],
+            outputs,
+        )
     )
 
     # These two must be able to run while `respond` is blocked inside the gate waiting

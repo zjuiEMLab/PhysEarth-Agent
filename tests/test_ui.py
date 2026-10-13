@@ -802,6 +802,88 @@ def test_chart_click_records_the_human_choice_without_an_llm_turn():
     assert cleared == ""
 
 
+def test_a_capability_review_waiting_for_a_decision_offers_the_decision():
+    """The trace said it was waiting for a partial-scope decision; the page showed nothing.
+
+    The card has to carry the decision itself: which components are supported, what is
+    missing, the choices the missing step declares, and a way to answer.
+    """
+    from apps.studio import studio as app
+    from physearth import session, tools
+
+    box = session.new_session("m")
+    tools.call("list_models", {"model": "smrt"}, session=box)
+    tools.call("read_model_instruction", {"model": "smrt"}, session=box)
+    result = tools.call("research_capability_check", {
+        "action": "check", "needed_operations": ["solve_for_parameter"],
+        "question": "Reproduce Figure 3", "local_models": ["smrt"],
+        "targets": [{
+            "id": "fig03", "label": "Fig. 3",
+            "reference_models": ["SMRT", "MEMLS (IBA)"],
+            "requested_outputs": ["ks_per_m"],
+        }],
+    }, session=box)
+    assert result["data"]["error_code"] == "capability_review_required"
+    # The panel is hidden when there is nothing to do; this is something to do.
+    card = render.research_context(box)
+    assert "data-capability-status='waiting_user'" in card
+    assert "MEMLS (IBA)" in card
+    assert "A model run maps inputs to outputs" in card
+    # Every declared option is shown, including the one that cannot run yet, and every
+    # available one answers with its own id.
+    for option in ("A", "B", "C"):
+        assert "data-capability-decision='confirm_partial:%s'" % option in card
+    assert "disabled" in card, "the unavailable option is not marked as unavailable"
+    assert "data-capability-decision='reject'" in card
+
+    approved, _evidence, updated, command = app.capability_decision_click(box, "confirm_partial:B")
+    assert updated["capability_review"]["status"] == "confirmed"
+    assert updated["capability_review"]["user_decision"] == "partial"
+    assert updated["capability_review"]["confirmed_scope"]
+    assert "confirmed a partial scope" in command and "option B" in command
+    assert "data-capability-status" not in approved, "an answered review stays on the page"
+    # The decision is a decision, not a question aimed back at the agent.
+    assert "confirm_partial" not in command
+
+
+def test_declining_the_partial_scope_is_recorded_and_asked_for_plainly():
+    from apps.studio import studio as app
+    from physearth import session, tools
+
+    box = session.new_session("m")
+    tools.call("list_models", {"model": "smrt"}, session=box)
+    tools.call("read_model_instruction", {"model": "smrt"}, session=box)
+    tools.call("research_capability_check", {
+        "action": "check", "needed_operations": [], "question": "Reproduce Figure 3",
+        "local_models": ["smrt"],
+        "targets": [{
+            "id": "fig03", "label": "Fig. 3", "reference_models": ["MEMLS (IBA)"],
+            "requested_outputs": ["ks_per_m"],
+        }],
+    }, session=box)
+    _card, _evidence, updated, command = app.capability_decision_click(box, "reject")
+    assert updated["capability_review"]["status"] == "rejected"
+    assert updated["capability_review"]["user_decision"] == "reject"
+    assert "not to continue with a partial scope" in command
+    # A rejection is not an approval: no plan may be proposed from it.
+    assert "Do not propose a partial plan" in command
+
+
+def test_the_capability_decision_is_reachable_from_a_click():
+    """The card's buttons are wired to a bridge, not to nothing."""
+    root = Path(__file__).parents[1] / "apps" / "studio"
+    script = (root / "static" / "ui.js").read_text(encoding="utf-8")
+    sheet = (root / "static" / "ui.css").read_text(encoding="utf-8")
+    assert 'closest("[data-capability-decision]")' in script
+    assert 'getElementById("pe-decision-bridge")' in script
+    assert 'getElementById("pe-decision-submit")' in script
+    # A hidden bridge still has to be laid out; without this the click is never delivered
+    # and the card that carries the buttons is not painted at all.
+    assert "#pe-app #pe-decision-bridge" in sheet and "#pe-decision-submit" in sheet
+    assert ".capability__option:disabled" in sheet
+    assert ".capability__option--primary" in sheet
+
+
 def test_a_windowed_rate_limit_is_waited_out_not_reported_as_a_fault():
     """Three fault classes that look alike and must not be treated alike: a limit that
     clears by waiting, a quota that will not clear until tomorrow, and a model the
