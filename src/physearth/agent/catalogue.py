@@ -14,6 +14,13 @@ _MODEL_LABELS = {
     "qwen-plus": "Qwen Plus",
     "qwen-turbo": "Qwen Turbo",
     "qwen-max": "Qwen Max",
+    # The same models under OpenRouter's vendor-prefixed ids, so the switcher reads as a
+    # name rather than as a slug.
+    "qwen/qwen3.7-plus": "Qwen3.7 Plus",
+    "qwen/qwen3.7-flash": "Qwen3.7 Flash",
+    "qwen/qwen3.7-max": "Qwen3.7 Max",
+    "qwen/qwen3.8-flash": "Qwen3.8 Flash",
+    "qwen/qwen3.8-max-0902": "Qwen3.8 Max",
 }
 
 
