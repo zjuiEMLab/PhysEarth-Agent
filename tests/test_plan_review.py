@@ -132,3 +132,83 @@ def test_the_bundled_figure_reaches_the_reviewer_as_an_image():
 
     found = literature.source_figure_images(session.new_session("m"), ["smrt-v1#fig06"])
     assert found and found[0][0] == "smrt-v1#fig06" and found[0][1].startswith("data:image/png;base64,")
+
+
+def test_a_review_written_after_prose_is_still_read():
+    """A reviewer that narrates first has still reviewed the plan.
+
+    The reply is read by matching braces, so prose of its own around the answer -- including
+    prose with braces in it, which used to swallow the answer into one unparseable span --
+    does not turn a review into "could not be made".
+    """
+    raw = (
+        "Based on the review of the plan {c_fig03} against the paper:\n\n"
+        "1. FIGURES: the plan draws the comparison.\n"
+        "2. CONDITIONS: the radius looks right.\n\n"
+        '{"verdict": "revise", "issues": [{"kind": "extra", '
+        '"what": "run r_zoom is a zoom the paper does not show", "fix": "drop it"}]}'
+    )
+    found = plan_review.parse(raw)
+    assert found["verdict"] == "revise"
+    assert found["issues"][0]["kind"] == "extra"
+
+    nested = plan_review.parse(
+        'Here: {"verdict": "ok", "issues": [], "notes": {"drawn": ["c_fig03"]}}'
+    )
+    assert nested == {"verdict": "ok", "issues": []}
+    # A reply that stops mid-object has no review in it, and is not guessed at.
+    assert plan_review.parse('{"verdict": "revise", "issues": [{"kind": "extr') is None
+
+
+def _client(reply, finish_reason="stop", reject_json_mode=False, calls=None):
+    """A client that answers with `reply` and records what it was asked for."""
+    calls = calls if calls is not None else []
+
+    def create(**kwargs):
+        calls.append(kwargs)
+        if reject_json_mode and "response_format" in kwargs:
+            raise TypeError("unexpected keyword argument 'response_format'")
+        return [_Chunk(_Delta(content=reply), finish_reason=finish_reason)]
+
+    return type("C", (), {"chat": type("Chat", (), {
+        "completions": type("Completions", (), {"create": staticmethod(create)})()})()})(), calls
+
+
+def test_the_reviewer_asks_the_endpoint_for_json(monkeypatch):
+    """The format is asked for in the request, not only in the prompt."""
+    client, calls = _client('{"verdict": "ok", "issues": []}')
+    monkeypatch.setattr(completion, "_client", lambda: client)
+    box = session.new_session("m")
+
+    found = loop._review_plan(box, "m")
+
+    assert found == {"verdict": "ok", "issues": []}
+    assert len(calls) == 1 and calls[0]["response_format"] == {"type": "json_object"}
+
+
+def test_an_endpoint_without_json_mode_still_reviews_the_plan(monkeypatch):
+    client, calls = _client(
+        'Review follows.\n{"verdict": "ok", "issues": []}', reject_json_mode=True
+    )
+    monkeypatch.setattr(completion, "_client", lambda: client)
+    box = session.new_session("m")
+
+    found = loop._review_plan(box, "m")
+
+    assert found == {"verdict": "ok", "issues": []}
+    assert len(calls) == 2 and "response_format" not in calls[1]
+    assert "plan_review_note" not in box
+
+
+def test_an_unreadable_review_says_what_was_wrong_with_it(monkeypatch):
+    """The note is what the person reads in the trace, so it names the failure."""
+    prose = "Based on the review of the research plan against the paper: 1. FIGURES: it draws one chart."
+    for reply, finish, expected in (
+        (prose, "stop", "answered in prose instead of the JSON"),
+        (prose, "length", "cut off at the token budget"),
+    ):
+        client, _calls = _client(reply, finish_reason=finish)
+        monkeypatch.setattr(completion, "_client", lambda: client)
+        box = session.new_session("m")
+        assert loop._review_plan(box, "m") is None
+        assert expected in box["plan_review_note"]

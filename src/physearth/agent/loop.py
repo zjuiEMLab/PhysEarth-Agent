@@ -306,6 +306,9 @@ PLAN_REVIEW_TIMEOUT_S = 90
 
 def _review_plan(session, model_id):
     """One call, reasoning off, that reads the plan like a person would. None if it cannot be made."""
+    # Why the reviewer stopped writing, when it did: only the request's own reply carries it,
+    # and an unreadable reply has to say whether the model ran out of room or ignored the format.
+    stopped = {}
 
     def ask():
         client = _completion._client()
@@ -317,26 +320,44 @@ def _review_plan(session, model_id):
         except Exception:  # the figure is a help to the reviewer, never a reason to skip it
             images = []
 
-        def call(content):
-            chunks = client.chat.completions.create(
-                model=model_id,
-                messages=[
-                    {"role": "system", "content": plan_review.PROMPT},
-                    {"role": "user", "content": content},
-                ],
-                max_tokens=700,
-                temperature=0,
-                stream=True,
-                timeout=PLAN_REVIEW_TIMEOUT_S,
-                extra_body=_thinking_off(),
-            )
-            text = []
+        def read(request):
+            """The reply, and why the model stopped writing it."""
+            chunks = client.chat.completions.create(**request)
+            text, finish = [], None
             for chunk in chunks:
                 for choice in getattr(chunk, "choices", None) or ():
                     piece = getattr(getattr(choice, "delta", None), "content", None)
                     if piece:
                         text.append(piece)
+                    if getattr(choice, "finish_reason", None):
+                        finish = choice.finish_reason
+            stopped["finish"] = finish
             return "".join(text)
+
+        def call(content):
+            request = {
+                "model": model_id,
+                "messages": [
+                    {"role": "system", "content": plan_review.PROMPT},
+                    {"role": "user", "content": content},
+                ],
+                "max_tokens": 700,
+                "temperature": 0,
+                "stream": True,
+                "timeout": PLAN_REVIEW_TIMEOUT_S,
+                "extra_body": _thinking_off(),
+                # Asked for in the request, not only in the prompt. A reviewer that answers
+                # in prose has written a review nobody can read, and the plan then reached
+                # the person saying the review could not be made, over prose that was one.
+                "response_format": {"type": "json_object"},
+            }
+            try:
+                return read(request)
+            except Exception:
+                # An endpoint without JSON mode still reviews the text: the reply is read
+                # the same way, and an unreadable one is reported as unreadable.
+                request.pop("response_format")
+                return read(request)
 
         if not images:
             return call(brief)
@@ -356,7 +377,7 @@ def _review_plan(session, model_id):
         return None
     found = plan_review.parse(raw)
     if found is None:
-        session["plan_review_note"] = "unreadable reply: %r" % str(raw)[:160]
+        session["plan_review_note"] = plan_review.unreadable_note(raw, stopped.get("finish"))
     return found
 
 

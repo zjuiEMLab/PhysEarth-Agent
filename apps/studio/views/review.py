@@ -194,6 +194,51 @@ def _chat_commands_html(phase):
     )
 
 
+def _repairs_html(plan):
+    """What the backend changed in the proposal, item by item, to be reviewed.
+
+    The plan's own summary says these are auditable and asks for them to be reviewed
+    explicitly, so the card that carries the summary has to carry the list. It used to be
+    rendered only in a branch whose condition repeated the one above it, which meant a plan
+    could ask a person to review 33 repairs and show none of them.
+    """
+    repairs = [
+        item for item in (plan or {}).get("automatic_repairs") or () if isinstance(item, dict)
+    ]
+    if not repairs:
+        return ""
+    items = "".join(
+        "<li><b>%s</b>%s: %s → %s <span>%s%s</span></li>"
+        % (
+            _e(
+                "%s.%s" % (
+                    item.get("chart_id") or item.get("run_id") or "plan",
+                    item.get("field") or "field",
+                )
+            ),
+            _e(" %s" % item["label"]) if item.get("label") else "",
+            # An empty "from" is a value the backend filled in, not one it changed.
+            _e(item["from"] if item.get("from") is not None else "(empty)"),
+            _e(item.get("to")),
+            _e(item.get("reason") or ""),
+            _e(
+                " (source=%s)" % item["source"]
+                if item.get("source") else ""
+            ),
+        )
+        for item in repairs
+    )
+    return (
+        "<details class='research-plan-repairs'><summary>%d backend repair%s to review"
+        "</summary><ul class='research-plan-repairs__list'>%s</ul>"
+        "<div class='approve__note'>The backend changed these before review, and every one "
+        "of them is listed: a value it filled in, a reference tag it grounded, or a field it "
+        "completed. Change any of them by describing the change in Conversation.</div>"
+        "</details>"
+        % (len(repairs), "" if len(repairs) == 1 else "s", items)
+    )
+
+
 def _structured_approval_bar(session, project, research):
     """The plan as it appears in Conversation: what it is, what to type, and a link.
 
@@ -274,13 +319,13 @@ def _structured_approval_bar(session, project, research):
         "<div class='approve__head'>Research plan <b>v%03d</b> · %s</div>"
         "<div class='research-card__facts'><div><b>Question.</b> %s</div>"
         "<div><b>Runs.</b> %s</div><div><b>Figures.</b> %s</div></div>"
-        "%s%s%s%s%s</div></div>"
+        "%s%s%s%s%s%s</div></div>"
         % (
             _e(phase), len(project.get("selected_charts") or []), len(plan.get("runs") or []), len(charts),
             version, _e(phase_labels.get(phase, phase)),
             _e(plan.get("question") or project.get("question") or ""), _e(models), _e(figures),
             "",  # what changed is the reply above the card, and on the plan page
-            decide_html, _chat_commands_html(phase), links, chart_buttons,
+            decide_html, _repairs_html(plan), _chat_commands_html(phase), links, chart_buttons,
         )
     )
 
@@ -408,6 +453,10 @@ def approval_bar(session):
     project = (session or {}).get("research") or {}
     if project and project.get("phase") not in ("approved", "completed"):
         return decision + _structured_approval_bar(session, project, research)
+    # Unreachable: the condition above repeats this one, so everything below it is dead
+    # code. It is left in place rather than deleted in passing, but nothing here is shown:
+    # the audit list it renders was the only rendering of the backend's repairs, which is
+    # how a plan came to ask for 33 of them to be reviewed while showing none.
     if project and project.get("phase") not in ("approved", "completed"):
         plan = project.get("plan") or {}
         phase = project.get("phase", "plan_review")

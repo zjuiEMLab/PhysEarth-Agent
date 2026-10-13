@@ -1096,6 +1096,54 @@ def test_popped_transient_events_do_not_hide_the_next_trace_event():
     assert len(mirrored) == 3
 
 
+def test_the_plan_card_lists_the_repairs_its_summary_asks_to_review():
+    """The summary says "review them explicitly", so the card has to show them.
+
+    The list was rendered only inside a branch whose condition repeated the one above it,
+    which is unreachable: a plan could tell the person to review 33 repairs, and the card
+    they were reading carried none of them.
+    """
+    from apps.studio.views.review import _repairs_html
+
+    plan = {"automatic_repairs": [
+        {"chart_id": "c_fig03", "field": "runs", "from": "[]", "to": "[r_iba_shs]",
+         "reason": "the run that produces the curve was not linked",
+         "source": "submitted_runs"},
+        {"run_id": "r_rayleigh_ind", "field": "parameters.output", "from": None,
+         "to": "coefficients", "reason": "the paper plots a scattering coefficient",
+         "source": "paper_conditions"},
+    ]}
+    html = _repairs_html(plan)
+    assert "2 backend repairs to review" in html
+    assert "c_fig03.runs" in html and "[] → [r_iba_shs]" in html
+    # A value with no "from" reads as filled in, not as changed from nothing in particular.
+    assert "None" not in html and "(empty) → coefficients" in html
+    assert "paper_conditions" in html
+    assert _repairs_html({}) == "" and _repairs_html(None) == ""
+
+    # And it reaches the card the person sees, in the phase the plan is actually shown in.
+    from apps.studio import views as render
+
+    box = {
+        "id": "s1",
+        "research": {
+            "phase": "plan_review", "plan_version": 1, "question": "q",
+            "plan": {
+                "question": "q", "outputs": ["ks_per_m"], "quantities": ["ks_per_m"],
+                "selected_models": [{"model": "smrt", "version": "1.5.1"}],
+                "runs": [{"id": "r1", "label": "r1", "model": "smrt", "parameters": {
+                    "output": "coefficients", "sweep_parameter": "density_kg_m3",
+                    "sweep_start": 0.0, "sweep_stop": 100.0, "sweep_points": 21}}],
+                "charts": [{"id": "c_fig03", "label": "Fig. 3", "kind": "line",
+                            "x": "density_kg_m3", "ys": ["ks_per_m"], "required": True}],
+                "automatic_repairs": plan["automatic_repairs"],
+            },
+        },
+    }
+    card = render.research_context(box)
+    assert "research-plan-repairs" in card and "c_fig03.runs" in card
+
+
 def test_execution_steps_follow_the_plan_and_name_the_model():
     """The steps must describe the current plan, not the prose written at propose time.
 

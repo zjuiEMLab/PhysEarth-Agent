@@ -11,7 +11,6 @@ Set PHYSEARTH_PLAN_REVIEW=off to skip it, as the tests do.
 """
 
 import json
-import re
 
 from physearth import config
 from physearth.corpus import digest as paper_digest
@@ -110,30 +109,66 @@ def brief(session):
     return "\n".join(lines)[:BRIEF_CHARS]
 
 
+def _json_objects(text):
+    """Every brace-balanced JSON object in a reply, in the order they appear.
+
+    The reply is asked for JSON only and a model sometimes answers in prose anyway, with
+    the JSON after it, or with braces of its own inside that prose. Matching from the first
+    `{` to the last `}` spans all of it and is not JSON, so the review of a plan that had
+    been reviewed read back as "could not be made": counting braces finds the object the
+    reviewer actually wrote, whatever it wrote around it.
+    """
+    found = []
+    for start, character in enumerate(text):
+        if character != "{":
+            continue
+        depth = 0
+        for index in range(start, len(text)):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        candidate = json.loads(text[start:index + 1])
+                    except ValueError:
+                        break
+                    if isinstance(candidate, dict):
+                        found.append(candidate)
+                    break
+    return found
+
+
+def unreadable_note(raw, finish_reason=None):
+    """Why a reply could not be read, in words the person reading the trace can act on."""
+    text = " ".join(str(raw or "").split())
+    if finish_reason == "length":
+        return "the reviewer's reply was cut off at the token budget: %r" % text[:160]
+    return (
+        "the reviewer answered in prose instead of the JSON the review is read from: %r"
+        % text[:200]
+    )
+
+
 def parse(text):
     """{"verdict", "issues"} from the reviewer's reply, or None when it is not that."""
-    match = re.search(r"\{.*\}", str(text or ""), re.S)
-    if not match:
-        return None
-    try:
-        data = json.loads(match.group(0))
-    except ValueError:
-        return None
-    verdict = str(data.get("verdict") or "").strip().lower()
-    if verdict not in ("ok", "revise"):
-        return None
-    issues = []
-    for item in data.get("issues") or ():
-        if not isinstance(item, dict):
+    for data in _json_objects(str(text or "")):
+        verdict = str(data.get("verdict") or "").strip().lower()
+        if verdict not in ("ok", "revise"):
             continue
-        kind = str(item.get("kind") or "").strip().lower()
-        issues.append({
-            "kind": kind if kind in KINDS else "question",
-            "what": str(item.get("what") or "").strip()[:300],
-            "fix": str(item.get("fix") or "").strip()[:300],
-        })
-    issues = [item for item in issues if item["what"]][:4]
-    return {"verdict": "revise" if issues and verdict == "revise" else "ok", "issues": issues}
+        issues = []
+        for item in data.get("issues") or ():
+            if not isinstance(item, dict):
+                continue
+            kind = str(item.get("kind") or "").strip().lower()
+            issues.append({
+                "kind": kind if kind in KINDS else "question",
+                "what": str(item.get("what") or "").strip()[:300],
+                "fix": str(item.get("fix") or "").strip()[:300],
+            })
+        issues = [item for item in issues if item["what"]][:4]
+        return {"verdict": "revise" if issues and verdict == "revise" else "ok", "issues": issues}
+    return None
 
 
 def feedback(findings):
