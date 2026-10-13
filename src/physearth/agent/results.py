@@ -14,9 +14,10 @@ def _handle_line(name, data):
             if axis.get("name")
             else "%d point(s)" % data.get("n_points", 0)
         )
-        return "%s@%s, %s, columns %s" % (
+        return "%s@%s%s, %s, columns %s" % (
             data.get("model"),
             data.get("version"),
+            " '%s'" % data["label"] if data.get("label") else "",
             span,
             ", ".join(sorted(data.get("series_summary") or {})) or "none",
         )
@@ -48,6 +49,17 @@ def _allowed_marker_correction(state, unresolved):
 
 
 def _record_tool_result(name, result, state, events):
+    if name == "run_models":
+        # A batch is bookkept run by run, exactly as if each had been its own run_model call.
+        for item in (result.get("data") or {}).get("runs") or ():
+            data = dict(item.get("data") or {}, label=item.get("label") or "")
+            _record_tool_result(
+                "run_model",
+                {"status": item.get("status"), "data": data, "qc": item.get("qc"), "citations": []},
+                state,
+                events,
+            )
+        return
     for key in result.get("citations", []):
         state["sections_read"].add(key)
     data = result.get("data") or {}

@@ -96,6 +96,12 @@ def _tool_log(events):
                     "model": data.get("model"),
                     "version": data.get("version"),
                     "spec": data.get("spec"),
+                    # A run_models batch carries one spec per run.
+                    "specs": [
+                        (item.get("data") or {}).get("spec")
+                        for item in data.get("runs") or ()
+                        if item.get("status") == "success"
+                    ],
                     "handle": data.get("handle"),
                     "planned_run_id": data.get("planned_run_id"),
                     "planned_chart_id": data.get("planned_chart_id"),

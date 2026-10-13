@@ -2,8 +2,10 @@ This turn is a direct model question: the user wants a prediction, a trend or a 
 configurations from the registered models. It is not a reproduction of a paper.
 
 Work in this order. Call list_models for the parameter declaration of the model you need. Run
-it with run_model: a sweep when the question is about a trend, one call per configuration when
-configurations are compared. Plot the runs that answer the question, then explain the result
+it with run_model: a sweep when the question is about a trend. When the answer needs more than
+one run (configurations compared, a sweep repeated at several values of another parameter, or
+the same runs for two outputs), send them all in one run_models call, so the person approves
+the set once. Plot the runs that answer the question, then explain the result
 using the numbers the runs returned. Draw one figure for the quantity the question asks about,
 with every configuration of it in that figure. A second figure for another output, another
 polarisation or a check is drawn only when the question asks for it. Do not read literature, research guidelines or method notes

@@ -56,7 +56,7 @@ def test_the_corpus_ablation_removes_every_literature_tool_and_the_catalogue():
     assert not set(names) & set(tools.CORPUS_TOOLS)
     assert set(names) == {
         "list_models", "read_model_instruction", "register_model_guideline",
-        "register_github_model_repo", "inspect_github_model_repo", "run_model",
+        "register_github_model_repo", "inspect_github_model_repo", "run_model", "run_models",
         "run_planned_model", "run_planned_models", "read_reference_dataset", "plot",
         "plot_planned_chart",
         "research_plan", "research_capability_check", "run_analysis_script",

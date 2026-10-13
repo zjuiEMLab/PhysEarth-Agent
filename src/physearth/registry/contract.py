@@ -79,6 +79,114 @@ def validate_card(card):
     for index, rule in enumerate(card.get("combinations") or []):
         problems.extend(_validate_combination(index, rule, parameters))
 
+    for index, rule in enumerate(card.get("constraints") or []):
+        problems.extend(_validate_constraint(index, rule, parameters))
+
+    problems.extend(_validate_physics(card.get("physics"), parameters, outputs or {}))
+
+    return problems
+
+
+# Numeric couplings: `when` and `require` map a parameter to {operator: number}. Unlike a
+# combination they relate values, not enum members: liquid water above zero requires the
+# melting point, which no list of allowed values can say.
+OPERATORS = ("gt", "ge", "lt", "le", "eq")
+SIGNS = ("increasing", "decreasing", "nonincreasing", "nondecreasing", "flat")
+
+
+def _validate_condition(where, condition, parameters):
+    problems = []
+    if not isinstance(condition, dict) or not condition:
+        return ["%s must be a non-empty mapping of parameter to condition" % where]
+    for key, test in condition.items():
+        if key not in parameters:
+            problems.append("%s refers to unknown parameter %r" % (where, key))
+        elif isinstance(test, list):
+            if not test:
+                problems.append("%s gives an empty list for %r" % (where, key))
+        elif not isinstance(test, dict) or not test:
+            problems.append("%s must give %r a list of values or {operator: number}" % (where, key))
+        else:
+            for operator, value in test.items():
+                if operator not in OPERATORS:
+                    problems.append(
+                        "%s uses operator %r for %r; expected one of %s"
+                        % (where, operator, key, ", ".join(OPERATORS))
+                    )
+                elif not _is_number(value):
+                    problems.append("%s compares %r with a non-number %r" % (where, key, value))
+    return problems
+
+
+def _validate_constraint(index, rule, parameters):
+    where = "constraint %d" % index
+    if not isinstance(rule, dict):
+        return ["%s is not a mapping" % where]
+    problems = []
+    for side in ("when", "require"):
+        problems.extend(_validate_condition("%s %s" % (where, side), rule.get(side), parameters))
+    if not rule.get("reason"):
+        problems.append("%s must carry a reason the agent can be told" % where)
+    return problems
+
+
+def _validate_physics(physics, parameters, outputs):
+    """The optional `physics` section and the per-parameter `typical` and `load_bearing`."""
+    problems = []
+    for name, spec in parameters.items():
+        if not isinstance(spec, dict):
+            continue
+        typical = spec.get("typical")
+        if typical is not None:
+            span = typical.get("range") if isinstance(typical, dict) else None
+            if (
+                not isinstance(span, list) or len(span) != 2
+                or not all(_is_number(v) for v in span) or span[0] > span[1]
+            ):
+                problems.append("parameter %r typical.range must be [low, high]" % name)
+            elif not spec.get("minimum", span[0]) <= span[0] <= span[1] <= spec.get("maximum", span[1]):
+                problems.append(
+                    "parameter %r typical.range lies outside its minimum and maximum" % name
+                )
+            if not (isinstance(typical, dict) and typical.get("source")):
+                problems.append("parameter %r typical must name its source" % name)
+        bearing = spec.get("load_bearing")
+        if bearing is not None and (
+            not isinstance(bearing, list) or any(item not in outputs for item in bearing)
+        ):
+            problems.append("parameter %r load_bearing must list declared outputs" % name)
+        if spec.get("follows") is not None and spec["follows"] not in parameters:
+            problems.append("parameter %r follows unknown parameter %r" % (name, spec["follows"]))
+        if spec.get("load_bearing_when") is not None:
+            problems.extend(_validate_condition(
+                "parameter %r load_bearing_when" % name, spec["load_bearing_when"], parameters
+            ))
+    if physics is None:
+        return problems
+    if not isinstance(physics, dict):
+        return problems + ["physics must be a mapping"]
+    for index, item in enumerate(physics.get("expectations") or []):
+        where = "physics expectation %d" % index
+        if not isinstance(item, dict):
+            problems.append("%s is not a mapping" % where)
+            continue
+        if item.get("output") not in outputs:
+            problems.append("%s names unknown output %r" % (where, item.get("output")))
+        if item.get("input") not in parameters and item.get("input") not in outputs:
+            problems.append("%s names unknown input %r" % (where, item.get("input")))
+        if item.get("sign") not in SIGNS:
+            problems.append("%s sign must be one of %s" % (where, ", ".join(SIGNS)))
+        if item.get("when") is not None:
+            problems.extend(_validate_condition("%s when" % where, item["when"], parameters))
+        for number, cause in enumerate(item.get("causes") or []):
+            if not isinstance(cause, dict) or not cause.get("text"):
+                problems.append("%s cause %d must carry a text" % (where, number))
+            else:
+                problems.extend(_validate_condition("%s cause %d" % (where, number), cause.get("when"), parameters))
+        if not item.get("source"):
+            problems.append("%s must name its source" % where)
+        if not item.get("reason"):
+            problems.append("%s must carry a reason the agent can be told" % where)
     return problems
 
 

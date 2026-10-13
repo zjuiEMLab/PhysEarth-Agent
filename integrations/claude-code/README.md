@@ -26,7 +26,7 @@ want the nested research-agent loop, internal approval and hard report enforceme
 
 | Piece | Component | What a user notices |
 |---|---|---|
-| 31 MCP tools (33 in the regulated profile) | MCP server, registered by the installer | `run_model`, `research_plan`, `read_literature`, … as `mcp__physearth__*`; direct mode hides nested-agent/review tools |
+| 32 MCP tools (34 in the regulated profile) | MCP server, registered by the installer | `run_model`, `research_plan`, `read_literature`, … as `mcp__physearth__*`; direct mode hides nested-agent/review tools |
 | Workflow | `skills/physearth/` | the model knows which tool answers which geophysical question, and which refusals are results |
 | Answer discipline | `output-styles/physearth-brief.md` | every unit-bearing number is sourced, every claim carries a resolvable marker |
 | Colour | `themes/physearth-night.json` + the status line | ice/amber on a near-black field, and a coloured status row |

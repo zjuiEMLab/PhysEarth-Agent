@@ -88,6 +88,8 @@ def describe(name, arguments, session=None):
     """What the person is being asked to approve, in their terms rather than the model's."""
     if name == "run_analysis_script":
         return _describe_script(arguments, session)
+    if name == "run_models":
+        return _describe_batch(arguments, session)
     parameters = dict((arguments or {}).get("parameters") or {})
     parameters.update(
         {k: v for k, v in (arguments or {}).items() if k not in ("model", "parameters")}
@@ -111,6 +113,28 @@ def describe(name, arguments, session=None):
         "model": (arguments or {}).get("model", "?"),
         "shape": shape,
         "parameters": fixed,
+        "raw": arguments or {},
+    }
+
+
+def _describe_batch(arguments, session):
+    """A batch is approved once, so the request lists every run it will make."""
+    runs = [run for run in (arguments or {}).get("runs") or () if isinstance(run, dict)]
+    models = sorted({str(run.get("model") or "?") for run in runs})
+    rows = {}
+    for index, run in enumerate(runs, 1):
+        single = describe(
+            "run_model", {"model": run.get("model"), "parameters": run.get("parameters") or {}}, session
+        )
+        fixed = ", ".join("%s %s" % (k, v) for k, v in sorted(single["parameters"].items()))
+        label = str(run.get("label") or "").strip()
+        rows["run %02d" % index] = "%s%s; %s" % (
+            "%s: " % label if label else "", single["shape"], fixed or "card defaults",
+        )
+    return {
+        "model": ", ".join(models) or "?",
+        "shape": "a batch of %d run(s)" % len(runs),
+        "parameters": rows,
         "raw": arguments or {},
     }
 

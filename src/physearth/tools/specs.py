@@ -354,7 +354,8 @@ RUN_MODEL_SPEC = {
             "quality controlled afterwards. In an approved research plan, do not call this "
             "tool for exploratory variations: the first unplanned configuration is refused "
             "and further direct calls are disabled. Use run_planned_models with exact run_id "
-            "values from the approved plan instead."
+            "values from the approved plan instead. When a question needs several runs, send "
+            "them together with run_models so the person approves them once."
         ),
         "parameters": {
             "type": "object",
@@ -375,6 +376,49 @@ RUN_MODEL_SPEC = {
                 },
             },
             "required": ["model"],
+        },
+    },
+}
+
+RUN_MODELS_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "run_models",
+        "description": (
+            "Run several registered-model configurations as one batch, which the person "
+            "approves once. Use it whenever a question needs more than one run: one sweep per "
+            "value of another parameter (for example a depth sweep at each of several snow "
+            "temperatures), or the same configuration for two outputs such as tb and sigma. "
+            "Each item is exactly what run_model takes and is checked, run and quality "
+            "controlled the same way, with its own result handle for plotting. Not for an "
+            "approved research plan: use run_planned_models there."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "runs": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 24,
+                    "description": "The runs, each {model, parameters, label}.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "model": {"type": "string", "description": "Registered model name."},
+                            "parameters": {
+                                "type": "object",
+                                "description": "As for run_model, including any sweep_* keys.",
+                            },
+                            "label": {
+                                "type": "string",
+                                "description": "Short name for this run, e.g. 'tb 240 K'.",
+                            },
+                        },
+                        "required": ["model"],
+                    },
+                }
+            },
+            "required": ["runs"],
         },
     },
 }
@@ -603,6 +647,7 @@ SPECS.append(LIST_MODELS_SPEC)
 SPECS.append(RUN_MODEL_SPEC)
 SPECS.append(RUN_PLANNED_MODEL_SPEC)
 SPECS.append(RUN_PLANNED_MODELS_SPEC)
+SPECS.append(RUN_MODELS_SPEC)
 SPECS.append(READ_REFERENCE_SPEC)
 SPECS.append(PLOT_SPEC)
 SPECS.append(ANALYSIS_SCRIPT_SPEC)

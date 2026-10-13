@@ -1072,3 +1072,21 @@ def test_execution_steps_follow_the_plan_and_name_the_model():
     assert before != after
     assert "0.0 to 100.0" in before and "1.0 to 100.0" in after
     assert "stale prose" not in before
+
+
+def test_a_paused_analysis_script_in_research_mode_is_approved_by_the_button():
+    """Figure 6 demo: after the plan was approved, Run it on a script went to the plan review."""
+    from apps.studio import studio as app
+    from physearth import session as session_state
+    from physearth.harness import approval
+
+    box = session_state.new_session("m")
+    box["research"] = {"phase": "approved"}
+    approval.set_mode(box, approval.ASK)
+    approval.request(box, "run_analysis_script", {"code": "print(1)", "purpose": "check"})
+
+    command = app.review_click(box, "primary")[3]
+
+    assert command.startswith("Approved the run of an analysis script")
+    assert approval.pending(box) is None
+    assert box["research"]["phase"] == "approved"

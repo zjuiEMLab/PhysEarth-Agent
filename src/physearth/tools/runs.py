@@ -133,7 +133,7 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
         executor.shutdown(wait=False)
     elapsed = time.perf_counter() - started
 
-    qc = validation.quality_control(entry.card, result)
+    qc = validation.quality_control(entry.card, result, spec)
     axis = result.get("axis")
     points = result.get("points") or []
     diagnostics = result.get("diagnostics") or {}
@@ -182,6 +182,42 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
     recovered = diagnostics.get("solver_recoveries") or []
     if recovered:
         summary += " DORT numerical recovery was used at %d point(s)." % len(recovered)
+    contradicted = [c for c in qc["checks"] if c.get("advisory") and not c["passed"]]
+    explained = [c for c in contradicted if c.get("causes")]
+    unexplained = [c for c in contradicted if not c.get("causes")]
+    if unexplained:
+        summary += " WARNING, physical expectation not met for %s: %s" % (
+            ", ".join("%s (%s)" % (c["output"], c["expectation"]) for c in unexplained),
+            unexplained[0]["detail"],
+        )
+    if explained:
+        # A departure the run's own configuration explains is flagged, not investigated: it is
+        # named in quality control and in the answer, and needs no further runs.
+        summary += (
+            " Note: %s departs from the card's expectation (%s), which this configuration "
+            "explains: %s. Say so in the answer; no further runs are needed for it."
+            % (
+                ", ".join(c["output"] for c in explained),
+                ", ".join(sorted({c["expectation"] for c in explained})),
+                explained[0]["causes"][0],
+            )
+        )
+    for name, declared in (entry.card.get("parameters") or {}).items():
+        if (
+            declared.get("follows") and declared["follows"] == spec.get("sweep_parameter")
+            and spec.get(name) is None
+        ):
+            summary += (
+                " %s was not set, so it followed %s through the sweep; set it to hold it fixed."
+                % (name, declared["follows"])
+            )
+    review = _defaults_to_review(entry.card, parameters, spec, result.get("series"))
+    if review:
+        summary += (
+            " %s took the card default although the result depends strongly on it. In the answer, "
+            "say so and suggest a value from its typical range for a follow-up run; do not run "
+            "it unless the user asks." % ", ".join(item["parameter"] for item in review)
+        )
     refused = diagnostics.get("invalid_points") or []
     if refused:
         summary += (
@@ -205,6 +241,7 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
             "units": units,
             "elapsed_s": round(elapsed, 3),
             "diagnostics": diagnostics,
+            "defaults_to_review": review,
             "note": (
                 "The full arrays are held under handle %s and deliberately kept out of this "
                 "message. The preview is evenly spaced and always includes the first and last "
@@ -214,6 +251,92 @@ def run_model(model, parameters=None, _owner=None, _switches=None, _session=None
         },
         qc=qc,
     )
+
+
+def _defaults_to_review(card, given, spec, series):
+    """Load-bearing parameters this run took from the card default rather than from anyone.
+
+    A first run has nothing better than the default to go on. What it must not do is let the
+    default stand unexamined when the card says the requested output depends strongly on it:
+    the result of this run is what tells a better value, so it is named here, once, with the
+    span the literature gives.
+    """
+    produced = set(series or {})
+    review = []
+    for name, declared in (card.get("parameters") or {}).items():
+        bearing = set(declared.get("load_bearing") or ()) & produced
+        if not bearing or name in (given or {}) or spec.get("sweep_parameter") == name:
+            continue
+        condition = declared.get("load_bearing_when")
+        if condition and not validation.conditions_hold(spec, condition, any_point=False):
+            continue  # a grain size the chosen microstructure does not read
+        typical = declared.get("typical") or {}
+        review.append({
+            "parameter": name,
+            "value": spec.get(name),
+            "unit": declared.get("unit"),
+            "outputs": sorted(bearing),
+            "typical_range": typical.get("range"),
+            "source": typical.get("source"),
+            "why": typical.get("why") or "",
+        })
+    return review
+
+
+MAX_BATCH_RUNS = 24
+
+
+def run_models(runs=None, _owner=None, _switches=None, _session=None):
+    """Several direct runs under one human approval.
+
+    Each item is an ordinary run_model call: the same validation, quality control, physical
+    expectations and result store. The batch only means the person approves the set once,
+    seeing every configuration, instead of once per run.
+    """
+    if not isinstance(runs, (list, tuple)) or not runs:
+        return _fail("run_models requires a non-empty runs array of {model, parameters}.")
+    if len(runs) > MAX_BATCH_RUNS:
+        return _fail("run_models accepts at most %d runs per batch." % MAX_BATCH_RUNS)
+    items = []
+    for index, run in enumerate(runs, 1):
+        if not isinstance(run, dict) or not run.get("model"):
+            items.append({"index": index, "status": "terminal_error",
+                          "summary": "run %d needs a model name." % index, "data": {}, "qc": None})
+            continue
+        result = run_model(
+            run["model"], run.get("parameters") or {},
+            _owner=_owner, _switches=_switches, _session=_session,
+        )
+        items.append({
+            "index": index,
+            "label": str(run.get("label") or ""),
+            "status": result.get("status"),
+            "summary": result.get("summary"),
+            "data": result.get("data") or {},
+            "qc": result.get("qc"),
+        })
+    failed = [item["index"] for item in items if item["status"] != "success"]
+    summary = "Ran %d of %d run(s) in one approved batch. %s" % (
+        len(items) - len(failed), len(items),
+        " | ".join(
+            "run %d%s%s: %s" % (
+                item["index"],
+                " '%s'" % item["label"] if item.get("label") else "",
+                " -> handle %s" % item["data"]["handle"] if item["data"].get("handle") else "",
+                item["summary"],
+            )
+            for item in items
+        ),
+    )
+    payload = {
+        "runs": items,
+        "handles": [item["data"].get("handle") for item in items if item["data"].get("handle")],
+        "failed_runs": failed,
+    }
+    if failed and len(failed) == len(items):
+        return {"status": "needs_input", "summary": summary, "data": payload, "citations": [],
+                "qc": None, "ui": None, "error": "every run in the batch failed"}
+    return _ok(summary, payload)
 
 
 def run_planned_model(run_id, _owner=None, _switches=None, _session=None):

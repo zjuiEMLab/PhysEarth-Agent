@@ -50,6 +50,7 @@ from physearth.tools.runs import (
     MAX_RUN_SECONDS,
     read_reference_dataset,
     run_model,
+    run_models,
     run_planned_model,
     run_planned_models,
 )
@@ -70,6 +71,7 @@ DISPATCH = {
     "register_github_model_repo": register_github_model_repo,
     "list_models": list_models,
     "run_model": run_model,
+    "run_models": run_models,
     "run_analysis_script": run_analysis_script,
     "run_planned_model": run_planned_model,
     "run_planned_models": run_planned_models,
@@ -86,10 +88,10 @@ DISPATCH = {
 # from whatever the model sent before dispatch, so none of these can be forged from a
 # tool call.
 OWNER_SCOPED = (
-    "run_model", "run_planned_model", "run_planned_models", "run_raw_smrt", "read_reference_dataset", "plot",
+    "run_model", "run_models", "run_planned_model", "run_planned_models", "run_raw_smrt", "read_reference_dataset", "plot",
     "plot_planned_chart", "run_analysis_script",
 )
-SWITCH_AWARE = ("run_model", "run_planned_model", "run_planned_models", "list_models", "read_literature", "run_analysis_script")
+SWITCH_AWARE = ("run_model", "run_models", "run_planned_model", "run_planned_models", "list_models", "read_literature", "run_analysis_script")
 # Offered to the engine's own agent only. A host such as Claude Code or Codex already runs Python
 # in the user's own environment, so the plugin does not expose a second, narrower way to do it.
 HOST_RUNS_PYTHON = ("run_analysis_script",)
@@ -99,7 +101,7 @@ SESSION_SCOPED = (
     "read_paper_figure", "inspect_paper_figure", "register_model_guideline",
     "inspect_github_model_repo", "register_github_model_repo", "discover_literature", "ingest_paper"
 )
-SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model", "run_planned_model", "run_planned_models", "plot_planned_chart")
+SESSION_SCOPED = SESSION_SCOPED + ("research_plan", "run_model", "run_models", "run_planned_model", "run_planned_models", "plot_planned_chart")
 SESSION_SCOPED = SESSION_SCOPED + ("plot", "run_analysis_script")
 SESSION_SCOPED = SESSION_SCOPED + ("read_raw_paper", "run_raw_smrt", "read_paper_digest")
 CORPUS_TOOLS = (
@@ -115,7 +117,7 @@ RAW_BASELINE_TOOLS = {"read_raw_paper", "run_raw_smrt", "plot"}
 # What a direct model question is offered. research_plan stays as the way up to the reviewed
 # workflow; the reading tools do not, because a direct run does not read.
 RUN_PATH_TOOLS = (
-    "list_models", "read_model_instruction", "run_model", "plot", "read_reference_dataset",
+    "list_models", "read_model_instruction", "run_model", "run_models", "plot", "read_reference_dataset",
     "run_analysis_script", "research_plan",
 )
 # After the person chose a script for a missing step: the reading tools to set its conditions

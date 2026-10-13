@@ -299,6 +299,7 @@ def test_the_tool_count_did_not_grow_for_either_increment():
         "read_paper_digest",
         "list_models",
         "run_model",
+        "run_models",
         "run_planned_model",
         "run_planned_models",
         "plot_planned_chart",

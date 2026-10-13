@@ -134,7 +134,147 @@ def resolve(card, arguments, enforce=True):
 
     problems.extend(_check_combinations(card, spec))
     problems.extend(_check_sweep(card, spec))
+    problems.extend(_check_constraints(card, spec))
     return spec, problems
+
+
+_COMPARE = {
+    "gt": lambda value, bound: value > bound,
+    "ge": lambda value, bound: value >= bound,
+    "lt": lambda value, bound: value < bound,
+    "le": lambda value, bound: value <= bound,
+    "eq": lambda value, bound: abs(value - bound) <= 1e-6 * max(1.0, abs(bound)),
+}
+
+
+def _values(spec, name):
+    """Every value a parameter takes in this run: its own, or the ends of its sweep."""
+    if spec.get("sweep_parameter") == name and spec.get("sweep_start") is not None:
+        return [spec["sweep_start"], spec["sweep_stop"]]
+    return [spec[name]] if name in spec else []
+
+
+def _matches(test, value):
+    if isinstance(test, list):
+        return value in test
+    return all(_COMPARE[op](value, bound) for op, bound in test.items())
+
+
+def conditions_hold(spec, condition, any_point=True):
+    """Whether a card condition holds for a run (at any point of a sweep, or at all)."""
+    for name, test in (condition or {}).items():
+        values = _values(spec, name)
+        if not values:
+            return False
+        hits = [_matches(test, value) for value in values]
+        if not (any(hits) if any_point else all(hits)):
+            return False
+    return True
+
+
+def _check_constraints(card, spec):
+    problems = []
+    for rule in card.get("constraints") or []:
+        if not conditions_hold(spec, rule["when"]):
+            continue
+        if conditions_hold(spec, rule["require"], any_point=False):
+            continue
+        problems.append(
+            "%s is required when %s, got %s. %s"
+            % (
+                ", ".join("%s %s" % (k, _describe(t)) for k, t in rule["require"].items()),
+                ", ".join("%s %s" % (k, _describe(t)) for k, t in rule["when"].items()),
+                ", ".join("%s = %s" % (k, _values(spec, k)) for k in rule["require"]),
+                rule["reason"],
+            )
+        )
+    return problems
+
+
+def _describe(test):
+    if isinstance(test, list):
+        return "in %s" % ", ".join(map(str, test))
+    words = {"gt": ">", "ge": ">=", "lt": "<", "le": "<=", "eq": "="}
+    return " and ".join("%s %s" % (words[op], bound) for op, bound in test.items())
+
+
+def _trend(axis, values):
+    pairs = sorted(
+        (x, y) for x, y in zip(axis, values, strict=False)
+        if isinstance(y, (int, float)) and y == y
+    )
+    steps = [b[1] - a[1] for a, b in zip(pairs, pairs[1:], strict=False)]
+    return steps, (pairs[-1][1] - pairs[0][1]) if pairs else 0.0
+
+
+def _contradicts(sign, steps, change, tolerance):
+    if sign == "flat":
+        return abs(change) > tolerance or any(abs(s) > tolerance for s in steps)
+    # A slow drift is judged on the net change as well as step by step, so a rise spread over
+    # many small steps is not missed.
+    if sign in ("decreasing", "nonincreasing"):
+        return change > tolerance or any(s > tolerance for s in steps)
+    return change < -tolerance or any(s < -tolerance for s in steps)
+
+
+def expectation_checks(card, spec, result):
+    """Advisory checks of a sweep against the card's physical expectations.
+
+    An expectation is a cited, probe-confirmed statement such as "dry snow on ground:
+    brightness temperature falls with depth". A run that contradicts one has not failed: the
+    physics may have a regime boundary the card does not know. But it must not pass silently,
+    so the check is reported, marked advisory, and the agent is told why it matters.
+    """
+    checks = []
+    axis = (result or {}).get("axis") or {}
+    series = (result or {}).get("series") or {}
+    if not spec or not axis.get("name"):
+        return checks
+    for item in (card.get("physics") or {}).get("expectations") or []:
+        if item["output"] not in series:
+            continue
+        if item["input"] == axis["name"]:
+            xs = axis.get("values") or []
+        elif item["input"] in series:
+            # A derived input, such as snow water equivalent, judged on its own values: it moves
+            # with whichever parameter was swept, so the expectation follows it.
+            xs = series[item["input"]]
+            if len(set(xs)) < 2:
+                continue
+        else:
+            continue
+        if item.get("when") and not conditions_hold(spec, item["when"], any_point=False):
+            continue
+        steps, change = _trend(xs, series[item["output"]])
+        tolerance = float(item.get("tolerance", 0.5))
+        wrong = _contradicts(item["sign"], steps, change, tolerance)
+        # Which of the card's known causes this run's own configuration matches. Naming it here
+        # is what stops an agent from running experiments to find out.
+        causes = [
+            cause["text"] for cause in item.get("causes") or ()
+            if conditions_hold(spec, cause["when"])
+        ] if wrong else []
+        checks.append({
+            "check": "physics_expectation",
+            "advisory": True,
+            "expectation": item.get("id"),
+            "output": item["output"],
+            "passed": not wrong,
+            "detail": "%s %s with %s as expected (%+.2f over the sweep)"
+            % (item["output"], item["sign"], item["input"], change)
+            if not wrong else
+            "%s changes by %+.2f over the %s sweep, but the card expects it to be %s here. %s %s"
+            % (
+                item["output"], change, item["input"], item["sign"], item["reason"],
+                "This configuration matches a known cause: %s. Report the trend with that cause; "
+                "no further runs are needed to establish it." % "; ".join(causes)
+                if causes else
+                "No known cause matches this configuration; check it before reporting the trend.",
+            ),
+            "causes": causes,
+            "source": item.get("source"),
+        })
+    return checks
 
 
 def _check_combinations(card, spec):
@@ -190,8 +330,12 @@ def _check_sweep(card, spec):
     return problems
 
 
-def quality_control(card, result):
-    """Check a model result against its declared outputs. Never raises."""
+def quality_control(card, result, spec=None):
+    """Check a model result against its declared outputs. Never raises.
+
+    With the run's spec, the card's physical expectations are checked too. Those checks are
+    advisory: reported, never counted against `passed`.
+    """
     checks = []
     outputs = card["outputs"]
     series = (result or {}).get("series") or {}
@@ -260,4 +404,11 @@ def quality_control(card, result):
              "detail": "axis has %d values, series lengths %s" % (len(axis["values"]), sorted(lengths))}
         )
 
-    return {"passed": all(c["passed"] for c in checks), "checks": checks}
+    try:
+        checks.extend(expectation_checks(card, spec, result))
+    except Exception:  # an advisory check must never break quality control
+        pass
+    return {
+        "passed": all(c["passed"] for c in checks if not c.get("advisory")),
+        "checks": checks,
+    }

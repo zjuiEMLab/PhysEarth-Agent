@@ -2,7 +2,7 @@
 
 Every model the agent can run. A model here is content you read, copy and edit — not
 library code. The machinery that loads and validates these lives in
-`src/physearth/models/`; nothing in this directory imports anything.
+`src/physearth/registry/`; nothing in this directory imports anything.
 
 ```
 bundled/           the six models that ship with the repository

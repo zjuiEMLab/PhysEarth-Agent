@@ -455,7 +455,7 @@ def call(name, arguments=None, session_id=None, switches=None):
         return problem
     session[_SWITCHES] = switches
     if (
-        name == "run_model"
+        name in ("run_model", "run_models")
         and _session_profile(session)["internal_approval"]
         and approval.required(session)
         and not session.get("research_required")

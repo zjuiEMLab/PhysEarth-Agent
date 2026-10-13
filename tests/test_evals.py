@@ -111,7 +111,7 @@ def test_basic_cases_keep_the_three_supported_live_prompts():
     cases = evals.basic_cases()
 
     assert len(cases) == 3
-    assert cases[0]["question"].startswith("Run SMRT to show how 37 GHz")
+    assert cases[0]["question"].startswith("Using SMRT, plot snow depth vs. brightness temperature")
     assert "soil moisture" in cases[1]["question"]
     assert "Do not use any tools" in cases[2]["question"]
     assert all(case["id"] != "basic-tvc-observation" for case in cases)

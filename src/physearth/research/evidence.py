@@ -404,6 +404,14 @@ def _semi_infinite_problems(session, parameter_mapping, reproduction_targets, ru
     return problems
 
 
+def _inside_typical(spec, value):
+    span = (spec.get("typical") or {}).get("range") if isinstance(spec.get("typical"), dict) else None
+    return (
+        isinstance(span, list) and len(span) == 2 and isinstance(value, (int, float))
+        and not isinstance(value, bool) and span[0] <= value <= span[1]
+    )
+
+
 def _unstated_value_problems(session, parameter_mapping, runs, reproduction_targets=None):
     """A value the paper did not state is the card's default, not an invented one.
 
@@ -441,6 +449,10 @@ def _unstated_value_problems(session, parameter_mapping, runs, reproduction_targ
         default = spec.get("default")
         value = item.get("mapped_value")
         unit = spec.get("unit") or ""
+        if not reproduction_targets and _inside_typical(spec, value):
+            # Outside a paper reproduction there is no stated value to miss. A value inside the
+            # span the card cites from the literature is a reasoned choice, not an invention.
+            continue
         if (
             claims.stands_in_for_semi_infinite(spec)
             and isinstance(value, (int, float)) and isinstance(default, (int, float))

@@ -995,7 +995,7 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     yield answer, events, state
                 elif (
                     (
-                        name == "run_model"
+                        name in ("run_model", "run_models")
                         and not session.get("research_required")
                         and approval.required(session)
                     )

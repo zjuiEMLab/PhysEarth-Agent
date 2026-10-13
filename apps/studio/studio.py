@@ -690,7 +690,17 @@ def review_click(box, action):
     """Advance a human gate and request an agent continuation only after final approval."""
     session = box if isinstance(box, dict) else None
     command = ""
-    if session and session.get("research"):
+    # A paused tool call (a run, or an analysis script) is decided first, in research mode too:
+    # once the plan is approved the review card is no longer what the button stands for, and
+    # sending the click to the plan review left an approved script waiting for ever.
+    paused = approval.pending(session) if session else None
+    if paused and action in ("primary", "satisfied_figures"):
+        decision = {"primary": "approve", "satisfied_figures": "reject"}[action]
+        if approval.decide(session, decision):
+            described = paused["description"]
+            verb = "Approved" if decision == "approve" else "Declined"
+            command = f"{verb} the run of {described['model']} as {described['shape']}."
+    elif session and session.get("research"):
         phase_before = session["research"].get("phase")
         result = research.review_action(session, action)
         # One plan approval should lead directly to the display-only preview.  The

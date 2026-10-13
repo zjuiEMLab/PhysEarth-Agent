@@ -171,13 +171,15 @@ REPRESENTATIVE_CASES = (
 
 BASIC_CASES = (
     (
-        "basic-smrt-density",
+        "basic-smrt-snow-temperature",
         "MODEL EXPERIMENT",
-        "Sweep snow density with SMRT",
-        "Run a registered snow microwave model and explain the simulated trend.",
-        "A 37 GHz brightness-temperature plot backed by an actual SMRT run.",
-        "Run SMRT to show how 37 GHz brightness temperature changes as snow density goes "
-        "from 100 to 700 kg/m3 for a 1 m layer, plot it, and explain the trend.",
+        "Sweep snow temperature with SMRT",
+        "Run a registered snow microwave model over snow depth at several snow temperatures, "
+        "for a radiometer and a radar, and explain the simulated trends.",
+        "Brightness temperature and backscatter against snow depth, one curve per snow "
+        "temperature, backed by actual SMRT runs.",
+        "Using SMRT, plot snow depth vs. brightness temperature and backscatter, sweeping "
+        "snow temperature.",
     ),
     (
         "basic-lband-moisture",
