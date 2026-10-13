@@ -1994,6 +1994,41 @@ def stream(question, history=None, model=None, session=None, switches=None):
                     events.append(
                         _event("harness_warning", rule="report_numbers", detail=detail)
                     )
+        # A citation is checked by whether the section was opened. This checks what it says:
+        # a delivered report wrote "Section 3.2 states ... up to 3.747" where the section says
+        # 3.5, and the 3.747 was a coordinate on the agent's own stickiness sweep.
+        if session.get("research_required") and session.get("research_report_prompt_sent"):
+            misattributed = research.misattributed_numbers(session, answer)
+            if misattributed and review_attempts.get("report_paper_numbers", 0) < 1:
+                review_attempts["report_paper_numbers"] = 1
+                session_state.bump(state, "interventions")
+                events.append(
+                    _event(
+                        "harness_block",
+                        rule="report_paper_numbers",
+                        detail=misattributed[0].get("context") or "",
+                        numbers=[item["number"] for item in misattributed],
+                        sections=[item["section"] for item in misattributed],
+                        intervention=1,
+                    )
+                )
+                messages.append({"role": "assistant", "content": completion.content or ""})
+                messages.append({
+                    "role": "user",
+                    "content": research.misattributed_numbers_correction(misattributed),
+                })
+                segments = []
+                answer = ""
+                yield answer, events, state
+                continue
+            if misattributed:
+                detail = research.misattributed_numbers_summary(misattributed)
+                noted = session.setdefault("report_warnings", [])
+                if detail not in noted:
+                    noted.append(detail)
+                    events.append(
+                        _event("harness_warning", rule="report_paper_numbers", detail=detail)
+                    )
         if (
             session.get("research_required")
             and research.lacks_narrative(session, answer)

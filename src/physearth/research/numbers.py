@@ -62,26 +62,68 @@ def _research_ids(session):
 
 
 def known_values(session):
-    """Every number the session's records hold, or that its own declarations state.
+    """Every number the session's records hold, or that its own declarations state."""
+    produced, configured = _sources(session)
+    return produced + configured
 
-    Three sources, in the order a report draws on them: what the runs produced or were given,
-    what the figures' own comparisons and checks measured, and what the registered model
-    cards document. A number from the paper is handled by the sentence it appears in.
+
+def _sources(session):
+    """(produced, configured): what the runs and figures gave, and what they were given.
+
+    The distinction is the point. A produced value is a measurement the report may round; a
+    configured value is what a run was handed, and a report that writes it differently is
+    describing a different run. Matching both with a rounding tolerance made the check nearly
+    vacuous: with thousands of recorded numbers, a two-decimal claim finds a neighbour
+    somewhere. A report's "3.226" in a run's place was accepted because 3.2263157894736847 is
+    a coordinate on its own stickiness sweep, and "1.66" because 1.6631578947368424 is
+    another -- neither of them the figure's 3.280 and 1.658.
     """
+    session = session if isinstance(session, dict) else {}
     project_id, research_id = _research_ids(session)
-    values = []
+    produced = []
+    configured = []
     for record in artifacts.recorded_runs(project_id, research_id):
-        for key in ("spec", "axis", "series", "points", "diagnostics", "series_summary"):
-            _walk(record.get(key), values)
+        for key in ("series", "points", "diagnostics", "series_summary"):
+            _walk(record.get(key), produced)
+        for key in ("spec", "axis"):
+            _walk(record.get(key), configured)
     for record in artifacts.recorded_figures(project_id, research_id):
-        for key in ("series", "comparisons", "quality_review", "provenance", "preview"):
-            _walk(record.get(key), values)
+        for key in ("series", "comparisons", "quality_review", "preview"):
+            _walk(record.get(key), produced)
+        _walk(record.get("provenance"), configured)
+    # A figure of a computed quantity draws a saved script result, and the figure record
+    # keeps only the handle. So the numbers on the figure were not in this check at all:
+    # a report that quoted the eight scaling factors its own figure showed was refused for
+    # four of them, while two wrong ones passed by coincidence. Read what the figure drew.
+    _walk(_drawn_values(session), produced)
     try:
-        cards = registry.all_models(session if isinstance(session, dict) else None)
+        cards = registry.all_models(session)
     except Exception:  # a registry that cannot be read is not a reason to skip the check
         cards = {}
     for model in cards.values():
-        _walk(getattr(model, "card", None) or {}, values)
+        _walk(getattr(model, "card", None) or {}, configured)
+    return produced, configured
+
+
+def _drawn_values(session):
+    """The arrays behind the figure handles this session holds, as numbers."""
+    from physearth.harness import results
+
+    owner = session.get("id")
+    handles = []
+    for figure in session.get("figures") or ():
+        for item in figure.get("series") or ():
+            if isinstance(item, dict) and item.get("handle"):
+                handles.append(item["handle"])
+    for record in session.get("analysis_runs") or ():
+        for item in record.get("saved_results") or ():
+            if isinstance(item, dict) and item.get("handle"):
+                handles.append(item["handle"])
+    values = []
+    for handle in dict.fromkeys(handles):
+        payload = results.get(handle, owner) or {}
+        for key in ("series", "axis", "points", "units"):
+            _walk(payload.get(key), values)
     return values
 
 
@@ -96,6 +138,22 @@ def _matches(literal, values):
         for scale in _UNIT_SCALES:
             scaled = value * scale
             if abs(scaled - wanted) <= tolerance:
+                return True
+    return False
+
+
+def _stated(literal, values):
+    """Whether a configuration value is this number, as the record holds it.
+
+    A produced value may be rounded by the report; a configured one may not, because writing
+    it differently describes a different run. Only the unit conversions a reader makes are
+    allowed, since 100 um and 1e-4 m are the same length however they are written.
+    """
+    wanted = float(literal)
+    tolerance = abs(wanted) * 1e-9 + 1e-12
+    for value in values:
+        for scale in _UNIT_SCALES:
+            if abs(value * scale - wanted) <= tolerance:
                 return True
     return False
 
@@ -119,9 +177,10 @@ def unsupported(session, answer):
     Returns [{"number", "context", "recorded"}], empty when there is nothing to say or
     nothing recorded to check against.
     """
-    values = known_values(session)
-    if not values:
+    produced, configured = _sources(session)
+    if not produced and not configured:
         return []
+    values = produced + configured
     findings = []
     seen = set()
     for raw in re.split(r"(?<=[.!?。！？])\s+|\n+", str(answer or "")):
@@ -137,7 +196,9 @@ def unsupported(session, answer):
             continue  # a sentence about the paper is not a sentence about the runs
         for match in _MEASURED.finditer(sentence):
             literal = match.group(1)
-            if _YEAR.match(literal) or _matches(literal, values):
+            if _YEAR.match(literal):
+                continue
+            if _matches(literal, produced) or _stated(literal, configured):
                 continue
             if _IDENTIFIER.search(sentence[: match.start()]):
                 continue
@@ -189,4 +250,111 @@ def summary(findings):
     return (
         "The report states numbers no recorded run or figure accounts for: %s. Quote the run's "
         "own value, and mark a value quoted from the paper as the paper's." % numbers
+    )
+
+
+# A number the report writes as the paper's, in a sentence that cites the paper, has to be a
+# number that section states.
+_CITATION = re.compile(r"\[([a-z0-9-]+)#([A-Za-z0-9_.-]+)\]")
+# The paper has to be the subject of the claim, and the claim has to be next to the number:
+# "Our curve gives 3.28, above the 2.1 the paper reports" attributes the second number, not
+# the first, and a bare verb is not an attribution at all.
+_ATTRIBUTION = re.compile(
+    r"(?:the\s+paper|the\s+publication|the\s+article|the\s+study|论文|文献|原文|"
+    r"section\s*[\d.]+|§\s*[\d.]+)[^.;!?]{0,60}?"
+    r"(?:\bstate[sd]?|\breport(?:s|ed)?|\bgive[s]?|\bgave|\bpublish(?:es|ed)|"
+    r"\bequivalent\s+to|指出|表明|报道|报告|给出|相当于|对应)",
+    re.I,
+)
+
+
+def _section_numbers(key):
+    """Every number the cited section text writes, or None when it cannot be read."""
+    slug, _, section_id = key.partition("#")
+    try:
+        from physearth.corpus import knowledge
+    except ImportError:
+        return None
+    section = knowledge.read_section(slug, section_id)
+    if not section:
+        return None
+    return [
+        float(match.group(0))
+        for match in re.finditer(r"-?\d+(?:\.\d+)?", str(section.get("text") or ""))
+    ]
+
+
+def misattributed(session, answer):
+    """Numbers written as the paper's that the section they cite does not state.
+
+    A delivered report said Section 3.2 "states that higher scaling factors (up to 3.747)
+    correspond to lower stickiness values approaching 0.1" [smrt-v1#09]. The section says
+    3.5. The 3.747 is not a scaling factor at all: it is a coordinate on the stickiness sweep
+    of the agent's own run, read out of a tool result and written into the paper's mouth. The
+    sentence passed every check there was, because a citation was verified by whether the
+    section had been opened, never by what it says.
+
+    Returns [{"number", "section", "context"}], empty when there is nothing to check.
+    """
+    findings = []
+    seen = set()
+    for raw in re.split(r"(?<=[.!?。！？])\s+|\n+", str(answer or "")):
+        if not raw.strip():
+            continue
+        keys = ["%s#%s" % pair for pair in _CITATION.findall(raw)]
+        if not keys:
+            continue
+        stated = []
+        readable = False
+        for key in dict.fromkeys(keys):
+            numbers = _section_numbers(key)
+            if numbers is None:
+                continue
+            readable = True
+            stated.extend(numbers)
+        if not readable:
+            continue  # a section this installation cannot read is not a section to police
+        for match in _MEASURED.finditer(raw):
+            literal = match.group(1)
+            if _YEAR.match(literal) or _IDENTIFIER.search(raw[: match.start()]):
+                continue
+            before = raw[max(0, match.start() - 80): match.start()]
+            if not _ATTRIBUTION.search(before):
+                continue  # the number is the run's, not the paper's; `unsupported` owns it
+            if _matches(literal, stated):
+                continue
+            key = (literal, raw.strip()[:80])
+            if key in seen:
+                continue
+            seen.add(key)
+            findings.append({
+                "number": literal,
+                "section": ", ".join(keys),
+                "context": " ".join(raw.split())[:220],
+            })
+    return findings
+
+
+def misattributed_correction(findings):
+    """What the agent is told when the paper is made to say something it does not."""
+    lines = [
+        "- %s is written as the paper's in a sentence citing %s, and that section does not "
+        "state it. The sentence: %s" % (item["number"], item["section"], item["context"])
+        for item in findings[:4]
+    ]
+    return (
+        "These numbers are attributed to the paper, but the section cited does not state "
+        "them:\n%s\n"
+        "Correct the report: quote the number the cited section actually states, or say the "
+        "number is your own reading of a figure rather than a statement of the paper. A "
+        "number that came from one of your own runs or a sweep is not the paper's, and saying "
+        "the paper states it is worse than not quoting the paper at all." % "\n".join(lines)
+    )
+
+
+def misattributed_summary(findings):
+    numbers = ", ".join(sorted({item["number"] for item in findings}))
+    return (
+        "The report attributes numbers to the paper that the cited section does not state: %s."
+        % numbers
     )

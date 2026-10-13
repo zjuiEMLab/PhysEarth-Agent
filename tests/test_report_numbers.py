@@ -158,3 +158,74 @@ def test_the_check_reads_the_recorded_parameters_not_only_the_outputs(recorded):
     """A run's own inputs are its numbers too, so a report may quote them."""
     assert numbers.unsupported(recorded, "The layer is 300.0 kg m-3 at 265.0 K.") == []
     assert numbers.unsupported(recorded, "The layer is 900.0 kg m-3 at 265.0 K.") != []
+
+
+# ── a figure's own values are what a report quotes, and the paper is not made to say them ──
+def test_the_values_a_figure_drew_are_accounted_for(recorded):
+    """The figure of a computed quantity draws a saved result; its numbers are known.
+
+    A report that quoted the eight scaling factors its own figure showed was refused for
+    four of them, because the figure record kept only the handle and the check never read
+    what the figure drew -- while two wrong numbers passed by coincidence with a sweep
+    coordinate. The report here quotes what the figure drew, and one number it did not.
+    """
+    from physearth.harness import results
+
+    values = [3.9633, 3.2797, 2.8845, 2.5325, 2.2110, 1.9054, 1.6584, 1.4588]
+    handle = results.put({
+        "model": "analysis_script", "version": "abc",
+        "spec": {"script_sha256": "abc", "name": "scaling_factor"},
+        "axis": {"name": "stickiness", "values": [0.08, 0.1, 0.12, 0.15, 0.2, 0.3, 0.5, 1.0]},
+        "series": {"scaling_factor": values}, "points": [], "units": {},
+    }, recorded["id"])
+    recorded["figures"] = [{
+        "figure_number": 1,
+        "series": [{"handle": handle, "x": "stickiness", "y": "scaling_factor"}],
+    }]
+    report = (
+        "The scaling factors are 3.96 at stickiness 0.08 and 1.46 at stickiness 1.0; the "
+        "curve passes through 2.53, 2.21 and 1.91 on the way down."
+    )
+    assert numbers.unsupported(recorded, report) == []
+
+    wrong = "The scaling factors are 3.226 at stickiness 0.1 and 3.28 at stickiness 0.12."
+    # 3.226 is not the figure's 3.2797; it only looked accounted for because it is a
+    # coordinate on the sweep. A bare "3" is not one of the measured numbers this reads.
+    assert [item["number"] for item in numbers.unsupported(recorded, wrong)] == ["3.226"]
+
+
+def test_a_configured_value_is_not_rounded_into_a_result(recorded):
+    """3.2263 is a coordinate on a run's own sweep, not the 3.226 a report claims it measured."""
+    run = {
+        "handle": "res_sweep", "model": "smrt", "version": "1.5.1",
+        "spec": {"frequency_ghz": 37.0},
+        "axis": {"name": "stickiness", "values": [0.1, 3.2263157894736847, 1.6631578947368424]},
+        "series": {"tb_v": [230.0, 261.1, 261.6]}, "points": [], "diagnostics": {},
+    }
+    artifacts.persist_run(PROJECT, PROJECT, "res_sweep", run)
+    report = "The fitted scaling factor is 3.226 at the first point and 1.66 at the last."
+    assert [item["number"] for item in numbers.unsupported(recorded, report)] == ["3.226", "1.66"]
+
+
+def test_a_number_the_paper_is_made_to_say_is_refused():
+    """The section cited has to state the number, not just have been opened."""
+    session = {"id": "ses_paper_numbers", "research": {"research_id": "ses_paper_numbers"}}
+    report = (
+        "This reproduces the trend in SMRT v1.0 Section 3.2 [smrt-v1#09], which states that "
+        "higher scaling factors (up to 3.747) correspond to lower stickiness values "
+        "approaching 0.1."
+    )
+    findings = numbers.misattributed(session, report)
+    assert [item["number"] for item in findings] == ["3.747"]
+    assert "smrt-v1#09" in findings[0]["section"]
+
+    # The section's own numbers are what a reproduction may quote.
+    honest = (
+        "The paper reports a grain size scaling factor of 2.1 for a stickiness of around 0.13 "
+        "[smrt-v1#09], and up to 3.5 for stickiness approaching 0.1."
+    )
+    assert numbers.misattributed(session, honest) == []
+
+    # A run's own number in a sentence that happens to cite the paper is not the paper's.
+    run_claim = "Our curve gives 3.28 at 0.1, above the 2.1 the paper reports [smrt-v1#09]."
+    assert numbers.misattributed(session, run_claim) == []
