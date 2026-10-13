@@ -17,7 +17,34 @@ half), which is exactly how the two working external plugins on this machine (`d
 | Switch + settings | 设置 → 插件 → **PhysEarth Geo-AI** | one click enables/disables the whole surface |
 | Tools | `mcp__geoai__*` via the harness' own MCP client row | `run_model`, `research_plan`, `read_literature`, … with validation, approval gate and QC behind them |
 | Prompt rules | host half, `ctx.systemPrompt.section()` | the project's own citation, evidence-tier and workflow rules, injected whole; numbers come from runs, citations resolve only against evidence the session gathered |
+| Figures | `mcp__geoai__*` results carry the drawn PNG as an MCP image block | one per figure the session has drawn, previews included; the host renders it, so the plot is in the conversation and not only a path in a JSON blob |
 | Restyle | 60 host semantic tokens + this plugin's own stylesheet | dark Geo-AI surface, ice/amber/deep-blue accent, Fira stack for numbers, tabular figures, 44px touch targets |
+
+### Figures need the model to declare image input
+
+A host renders an image a tool returns only when the model it is talking to declares image input;
+otherwise the harness replaces it with `[image unavailable: … model "…" does not declare image
+input]`. The models this plugin's demo used are reached through `llm-pi-ai`, whose model entries
+take the declaration directly:
+
+```yaml
+# $DSH_HOME/settings.yaml
+llm-pi-ai:
+  providers:
+    aliyun:
+      models:
+        - id: qwen3.8-max
+          input: [text, image]
+```
+
+That is a fact about the *model*, not about this plugin, which is why the plugin does not write it:
+a model that cannot read a picture should not be told it can. `qwen3.8-max` does accept images —
+verified against the provider directly — it simply had no declaration in this catalogue.
+
+Both halves are needed and they fail differently: without the declaration the harness silently
+replaces the figure with a text line, and without the plugin sending an image block at all the
+figure never leaves Python. The first failure is visible in the transcript; the second is visible
+only as a chart that is missing.
 
 ## What gets injected into the system prompt
 
