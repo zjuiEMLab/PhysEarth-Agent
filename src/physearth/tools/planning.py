@@ -49,6 +49,7 @@ def research_plan(
     outputs=None,
     runs=None,
     charts=None,
+    derived=None,
     success_criteria=None,
     assumptions=None,
     limitations=None,
@@ -268,6 +269,7 @@ def research_plan(
             "outputs": list(outputs or []),
             "runs": list(runs or []),
             "charts": list(charts or []),
+            "derived": list(derived or []),
             "success_criteria": list(success_criteria or []),
             "assumptions": list(assumptions or []),
             "limitations": list(limitations or []),
@@ -300,6 +302,7 @@ def research_plan(
             selected_models=draft.get("selected_models"),
             parameter_mapping=draft.get("parameter_mapping"),
             outputs=draft.get("outputs"),
+            derived=draft.get("derived"),
         )
         if _session.get("research"):
             _session["research"]["plan"]["resource_gate"] = gate
@@ -327,6 +330,7 @@ def research_plan(
         "outputs": list(outputs or []),
         "runs": list(runs or []),
             "charts": list(charts or []),
+            "derived": list(derived or []),
             "success_criteria": list(success_criteria or []),
             "assumptions": list(assumptions or []),
             "limitations": list(limitations or []),
@@ -348,6 +352,7 @@ def research_plan(
             selected_models=selected_models,
             parameter_mapping=parameter_mapping,
             outputs=outputs,
+            derived=derived,
         )
         if result.get("status") in ("success", "needs_input") and _session.get("research"):
             if supplemental_metadata:

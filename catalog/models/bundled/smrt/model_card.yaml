@@ -136,6 +136,7 @@ parameters:
     type: number
     unit: m
     description: Sphere radius, used by the sphere-based microstructure models.
+    read_when: {microstructure_model: [independent_sphere, sticky_hard_spheres, non_sticky_hard_spheres]}
     minimum: 1.0e-6
     maximum: 5.0e-3
     default: 0.0002
@@ -160,6 +161,7 @@ parameters:
     maximum: 1000.0
     default: 0.2
     required: false
+    read_when: {microstructure_model: [sticky_hard_spheres]}
   dort_streams:
     type: integer
     unit: count

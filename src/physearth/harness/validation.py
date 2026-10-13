@@ -73,10 +73,68 @@ def _coerce(name, spec, value, problems):
     return str(value)
 
 
+def read_by(param, arguments):
+    """Whether the configuration in `arguments` is one this parameter is read by.
+
+    A card declares `read_when` for a parameter only some configurations use: SMRT reads
+    `stickiness` for sticky hard spheres, `radius_m` for the sphere microstructures, and
+    nothing else. Without this, a value SMRT never reads was still range-checked, and three
+    non-sticky runs in a Figure 7 plan were refused for carrying `stickiness = 0.0` -- a
+    number that is out of the declared 0.05..1000 range and irrelevant to the run.
+    """
+    conditions = (param or {}).get("read_when")
+    if not conditions:
+        return True
+    return conditions_hold(dict(arguments or {}), conditions)
+
+
+def _droppable(param, value):
+    """Whether an unread value is worth dropping rather than carrying.
+
+    The card's own default is not a choice: `resolve` fills it for every run, a plan stores
+    the filled spec, and re-resolving it at run time has to produce the same spec or the run
+    stops matching the plan it was approved from. A value the caller actually chose is the
+    one that gets dropped, recorded, and left out.
+    """
+    if "default" not in param or param.get("default") is None:
+        return True
+    default = param.get("default")
+    if isinstance(value, bool) or isinstance(default, bool):
+        return value is not default
+    if isinstance(value, (int, float)) and isinstance(default, (int, float)):
+        return abs(float(value) - float(default)) > 1e-12 * max(1.0, abs(float(default)))
+    return str(value).strip() != str(default).strip()
+
+
+def unread(card, arguments):
+    """The parameters this configuration does not read, with why, for the repair record."""
+    declared = (card or {}).get("parameters") or {}
+    dropped = []
+    for name, param in declared.items():
+        if name not in (arguments or {}) or arguments[name] is None:
+            continue
+        if read_by(param, arguments) or not _droppable(param, arguments[name]):
+            continue
+        what = ", ".join(
+            "%s = %s" % (key, _describe(test))
+            for key, test in ((param.get("read_when") or {}).items())
+        )
+        dropped.append({
+            "name": name,
+            "value": arguments[name],
+            "read_when": what,
+        })
+    return dropped
+
+
 def resolve(card, arguments, enforce=True):
     """Fill defaults, coerce types, and check ranges, enums and combinations.
 
     Returns (spec, problems). The spec is only usable when problems is empty.
+
+    A parameter this configuration does not read is dropped from the spec rather than
+    checked: the adapter never passes it on, so its range is not a physical claim about
+    this run. `unread()` reports what was dropped, for the caller to record as a repair.
 
     With `enforce` false a value that fails a range or enum check is written into the
     spec anyway and the problem is still reported. That is the harness ablation: the
@@ -96,6 +154,13 @@ def resolve(card, arguments, enforce=True):
             )
 
     for name, param in declared.items():
+        if (
+            name in arguments
+            and arguments[name] is not None
+            and not read_by(param, arguments)
+            and _droppable(param, arguments[name])
+        ):
+            continue
         required = param.get("required", True)
         if name in arguments and arguments[name] is not None:
             value = _coerce(name, param, arguments[name], problems)

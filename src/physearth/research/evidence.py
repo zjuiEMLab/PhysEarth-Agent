@@ -390,16 +390,22 @@ def _semi_infinite_problems(session, parameter_mapping, reproduction_targets, ru
         source = source or claims.semi_infinite_stated(session, figures)
         if not source:
             return []
+        at_least = claims.STAND_IN_RATIO * default
         problems.append({
             "field": "parameter_mapping[%d].mapped_value" % index,
             "physical": True,
             "source": source,
             "actual": value,
-            "expected": "a value past the depth where the result stops changing, as a stand-in for the semi-infinite medium %s states" % source,
+            "expected": "a value past the depth where the result stops changing (%s %s or more), "
+            "as a stand-in for the semi-infinite medium %s states"
+            % (("%g" % at_least), (spec.get("unit") or "").strip(), source),
             "repair": "%s states a semi-infinite medium, and %s = %s is not one: the model card says a "
-            "value past the depth where the result stops changing stands in for it. Set %s to such a value in the runs and "
-            "map it as model_assumption with evidence_ref %s, saying in the rationale that it is a "
-            "stand-in." % (source, name, value, name, source),
+            "value past the depth where the result stops changing stands in for it, which is %s %s or "
+            "more for this model. Set %s to such a value in the runs and "
+            "map it as model_assumption%s, saying in the rationale that it is a "
+            "stand-in. Do not use the card default %.6g here: it is too thin for this medium."
+            % (source, name, value, ("%g" % at_least), (spec.get("unit") or "").strip(), name,
+               (" with evidence_ref %s" % source) if source else "", default),
         })
     return problems
 
@@ -453,28 +459,36 @@ def _unstated_value_problems(session, parameter_mapping, runs, reproduction_targ
             # Outside a paper reproduction there is no stated value to miss. A value inside the
             # span the card cites from the literature is a reasoned choice, not an invention.
             continue
-        if (
-            claims.stands_in_for_semi_infinite(spec)
-            and isinstance(value, (int, float)) and isinstance(default, (int, float))
-            and value >= claims.STAND_IN_RATIO * default
-        ):
+        if claims.stands_in_for_semi_infinite(spec):
+            # The card says a large value of this parameter stands in for a semi-infinite
+            # medium, so its value is decided by depth convergence, not by "the default".
+            # Demanding the card's default here contradicted the rule that demands a value
+            # past that depth, and a Figure 7 plan was refused five times between the two:
+            # 1.0 m was told to become a stand-in, and 2.0 m was told to become the default.
+            # So this parameter is left to `_semi_infinite_problems`, which owns it -- but the
+            # section it cites still has to have been read, which is this function's job.
             figures = claims.target_figures(reproduction_targets)
             if claims.semi_infinite_stated(session, figures):
-                continue  # a thick layer standing in for the medium the paper states
-            unopened = claims.semi_infinite_unopened(session, figures)
-            if unopened:
-                key, sentence = unopened
-                slug, _, section_id = key.partition("#")
-                problems.append({
-                    "field": "parameter_mapping[%d]" % index,
-                    "source": key,
-                    "expected": "the section that states the medium read before %s is assumed" % name,
-                    "repair": "%s = %s stands in for a semi-infinite medium, and %s, which you have not "
-                    "opened, says: \"%s\". Call read_literature with slug=%s and section_id=%s first, "
-                    "then map %s as model_assumption with evidence_ref %s and say it is a stand-in."
-                    % (name, value, key, sentence, slug, section_id, name, key),
-                })
                 continue
+            if isinstance(value, (int, float)) and isinstance(default, (int, float)) and (
+                value >= claims.STAND_IN_RATIO * default
+            ):
+                unopened = claims.semi_infinite_unopened(session, figures)
+                if unopened:
+                    key, sentence = unopened
+                    slug, _, section_id = key.partition("#")
+                    problems.append({
+                        "field": "parameter_mapping[%d]" % index,
+                        "source": key,
+                        "expected": "the section that states the medium read before %s is assumed" % name,
+                        "repair": "%s = %s stands in for a semi-infinite medium, and %s, which you have not "
+                        "opened, says: \"%s\". Call read_literature with slug=%s and section_id=%s first, "
+                        "then map %s as model_assumption with evidence_ref %s and say it is a stand-in."
+                        % (name, value, key, sentence, slug, section_id, name, key),
+                    })
+            # Nothing in the paper states the medium this value stands in for, so it is an
+            # assumption like any other and the rule below decides it. That is the case the
+            # depth rule cannot judge, and refusing to state it is the honest answer.
         numbers = [number for number in (value, default) if number is not None]
         for key, sentence in _unopened_sections_naming(session, unit, numbers):
             slug, _, section_id = key.partition("#")

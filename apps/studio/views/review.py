@@ -281,6 +281,26 @@ def _structured_approval_bar(session, project, research):
         )
         if decisions else ""
     )
+    derived = [item for item in plan.get("derived") or [] if isinstance(item, dict)]
+    derived_html = (
+        "<div class='approve__note'><b>Computed by a script, not by a run:</b> %s. "
+        "The plan's runs are read by the script, which the person approves before it runs; "
+        "the figure that plots these exists only after that step.</div>"
+        % _e(
+            "; ".join(
+                "%s (%s, from %s%s)%s"
+                % (
+                    item.get("label") or item.get("id"),
+                    item.get("operation"),
+                    ", ".join(item.get("from_runs") or []) or "no runs named",
+                    ", %s" % item.get("unit") if item.get("unit") else "",
+                    " -- %s" % item.get("method") if item.get("method") else "",
+                )
+                for item in derived
+            )
+        )
+        if derived else ""
+    )
     export = project.get("plan_export") or {}
     links = (
         "<div class='plan-downloads'><a href='%s' target='_blank' rel='noopener'>Open the plan</a>"
@@ -319,13 +339,14 @@ def _structured_approval_bar(session, project, research):
         "<div class='approve__head'>Research plan <b>v%03d</b> · %s</div>"
         "<div class='research-card__facts'><div><b>Question.</b> %s</div>"
         "<div><b>Runs.</b> %s</div><div><b>Figures.</b> %s</div></div>"
-        "%s%s%s%s%s%s</div></div>"
+        "%s%s%s%s%s%s%s</div></div>"
         % (
             _e(phase), len(project.get("selected_charts") or []), len(plan.get("runs") or []), len(charts),
             version, _e(phase_labels.get(phase, phase)),
             _e(plan.get("question") or project.get("question") or ""), _e(models), _e(figures),
             "",  # what changed is the reply above the card, and on the plan page
-            decide_html, _repairs_html(plan), _chat_commands_html(phase), links, chart_buttons,
+            decide_html, derived_html, _repairs_html(plan), _chat_commands_html(phase), links,
+            chart_buttons,
         )
     )
 

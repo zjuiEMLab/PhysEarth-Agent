@@ -78,6 +78,7 @@ def protocol_document(project):
         "assumptions": list(plan.get("assumptions") or []),
         "runs": list(plan.get("runs") or []),
         "charts": list(plan.get("charts") or []),
+        "derived": list(plan.get("derived") or []),
         "quantities": list(plan.get("quantities") or []),
         "controls": list(plan.get("controls") or []),
         "metrics": list(plan.get("metrics") or []),

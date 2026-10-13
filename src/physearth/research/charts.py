@@ -160,14 +160,35 @@ def _repair_required_companion_outputs(question, charts, runs):
     return repairs
 
 
-def _validate_chart_runs(charts, runs):
+def scripted_y_names(chart, plan):
+    """The chart's y names that a scripted step produces, not a run."""
+    known = _derived_steps(plan)
+    return [name for name in _chart_y_names(chart) if name in known]
+
+
+def _derived_steps(plan):
+    return {
+        str(item.get("id")): item
+        for item in (plan or {}).get("derived") or ()
+        if isinstance(item, dict) and item.get("id")
+    }
+
+
+def _validate_chart_runs(charts, runs, plan=None):
     """Validate figure producibility without confusing computation with presentation.
 
     Main/sensitivity/robustness runs carry scientific curves and must contribute to a
     required figure. A baseline may instead provide a scalar inversion target, and a
     diagnostic may only check solver convergence or numerical stability. Those auxiliary
     runs remain mandatory in ``execution_gaps`` but need not share a main plot's sweep axis.
+
+    A y that names a declared derived quantity is produced by the scripted step, not by a
+    run, so its chart is checked against the runs that step reads instead: a chart of a
+    computed quantity over an axis no run sweeps is still unproducible. Without this, a
+    figure whose y is solved for could not be planned at all -- "no planned run produces
+    scaling_factor over x=stickiness", five times, for a figure that is exactly that.
     """
+    steps = _derived_steps(plan)
     problems = []
     run_ids = {run.get("id") for run in runs}
     for chart in charts:
@@ -177,6 +198,37 @@ def _validate_chart_runs(charts, runs):
                 "%s names runs that are not planned: %s; use run ids from the plan's runs"
                 % (chart["label"], ", ".join(unknown))
             )
+        scripted = scripted_y_names(chart, plan)
+        if scripted and len(scripted) != len(_chart_y_names(chart)):
+            problems.append(
+                "%s mixes the computed quantity %s with model outputs; give the computed "
+                "quantity its own chart" % (chart["label"], ", ".join(scripted))
+            )
+            continue
+        if scripted:
+            from_runs = {
+                str(run_id)
+                for name in scripted
+                for run_id in (steps.get(name) or {}).get("from_runs") or ()
+            }
+            plotted = set(chart.get("runs") or from_runs)
+            candidates = [run for run in runs if run.get("id") in (plotted & from_runs)]
+            swept = {
+                str((run.get("parameters") or {}).get("sweep_parameter")) for run in candidates
+            }
+            if chart.get("x") != "index" and chart["x"] not in swept:
+                problems.append(
+                    "%s plots the computed quantity %s over x=%s, but the runs it is computed "
+                    "from (%s) do not sweep %s"
+                    % (
+                        chart["label"], ", ".join(scripted), chart["x"],
+                        ", ".join(sorted(from_runs)) or "none named", chart["x"],
+                    )
+                )
+            # How many series a computed quantity is drawn as is the script's decision, and
+            # its inputs are not its outputs: ten runs can yield one curve per density. The
+            # renderer still refuses more than it can draw, from the data it is given.
+            continue
         units = set()
         series = 0
         for y_name in _chart_y_names(chart):
@@ -206,15 +258,25 @@ def _validate_chart_runs(charts, runs):
                 "split it into separate charts, or plot fewer outputs"
                 % (chart["label"], series, plotting.MAX_SERIES)
             )
+    def feeds(run_to_check, chart):
+        """A run a scripted step reads feeds that step's chart, without producing its y."""
+        if _run_produces_chart(run_to_check, chart):
+            return True
+        names = scripted_y_names(chart, plan)
+        return any(
+            str(run_to_check.get("id")) in (steps.get(name) or {}).get("from_runs") or ()
+            for name in names
+        )
+
     for run in runs:
         stage = str(run.get("stage") or "main").strip().lower()
         auxiliary = stage in ("baseline", "diagnostic")
-        if not any(_run_produces_chart(run, chart) for chart in charts):
+        if not any(feeds(run, chart) for chart in charts):
             if auxiliary:
                 continue
             problems.append("%s contributes to none of the proposed charts" % run["label"])
         elif not any(
-            chart.get("required", True) and _run_produces_chart(run, chart)
+            chart.get("required", True) and feeds(run, chart)
             for chart in charts
         ):
             if auxiliary:

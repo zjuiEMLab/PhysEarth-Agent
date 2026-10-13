@@ -62,6 +62,12 @@ def _problem_line(item, limit=220):
         allowed = item.get("allowed_values")
         if isinstance(allowed, list) and allowed and len(allowed) <= 8:
             text += " (allowed: %s)" % ", ".join(str(value) for value in allowed)
+        # The repair is the actionable half. A reader was shown "expected: the card default
+        # 1.0 m" for a parameter whose actual requirement was a value past the convergence
+        # depth, and had nothing to act on.
+        repair = str(item.get("repair") or "").strip()
+        if repair and repair not in text:
+            text += " Fix: %s" % repair
     else:
         text = str(item)
     text = " ".join(text.split())
@@ -75,7 +81,7 @@ def _readable_stop(name, count, result):
     JSON. The reader gets what is still unresolved, in sentences, and what they can do.
     """
     problems = [
-        _problem_line(item) for item in ((result.get("data") or {}).get("problems") or ())
+        _problem_line(item, 320) for item in ((result.get("data") or {}).get("problems") or ())
     ]
     problems = [item for item in problems if item]
     if not problems:

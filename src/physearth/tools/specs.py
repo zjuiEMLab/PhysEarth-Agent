@@ -770,6 +770,42 @@ RESEARCH_PLAN_SPEC = {
                         "required": ["id", "label", "x", "y"],
                     },
                 },
+                "derived": {
+                    "type": "array",
+                    "description": (
+                        "Quantities the runs cannot output and a script computes from them: a "
+                        "value solved for, a quantity derived from several runs. A chart may "
+                        "plot one as its y; that figure exists only after the script runs, and "
+                        "the review says so. Omit this when every plotted quantity is a model "
+                        "output."
+                    ),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string", "description": "Name the chart plots it by."},
+                            "label": {"type": "string"},
+                            "unit": {"type": "string"},
+                            "operation": {
+                                "type": "string",
+                                "description": (
+                                    "The step with no registered tool, named as the capability "
+                                    "check named it: solve_for_parameter, derive_quantity or "
+                                    "fit_parameters."
+                                ),
+                            },
+                            "from_runs": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Planned run ids the script reads.",
+                            },
+                            "method": {
+                                "type": "string",
+                                "description": "How the script computes it, in one sentence.",
+                            },
+                        },
+                        "required": ["id", "label", "operation", "from_runs"],
+                    },
+                },
                 "success_criteria": {"type": "array", "items": {"type": "string"}},
                 "quantities": {"type": "array", "items": {"type": "string"}},
                 "controls": {"type": "array", "items": {"type": "string"}},

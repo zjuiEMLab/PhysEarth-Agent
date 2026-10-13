@@ -135,6 +135,11 @@ def report_generation_prompt(session):
             "12. Quote every configuration value exactly as the ledger records it; do not round "
             "it or substitute a nominal value. A parameter-source table built from the ledger is "
             "appended to the report automatically, so do not reproduce the ledger row by row.",
+            "14. Answer every explicit request in the question, not only its first clause: a "
+            "question that asks for a comparison, a list of what could and could not be run, and a "
+            "check against a quantity the paper reports has three answers. Say expressly which one "
+            "you could not make and why. A claim attributed to the paper must be a statement the "
+            "paper makes; a pattern you read off its figure is your reading, and is worded as one.",
             "13. When a sentence states a value as a run's own, quote the number the run returned, "
             "at the precision you were given: a run's value is never adjusted towards the paper's. "
             "Quote a value from the paper beside the run's, marked as the paper's in brackets. A "

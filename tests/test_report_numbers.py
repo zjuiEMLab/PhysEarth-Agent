@@ -48,10 +48,24 @@ def recorded(monkeypatch, tmp_path):
         "points": [],
         "diagnostics": {},
     }
+    # The same session recorded both IBA variants and both polarizations: a report is only
+    # checked against what its own runs hold, so the fixture holds what the real one did.
+    original = json.loads(json.dumps(run))
+    original["handle"] = "res_original"
+    original["spec"]["electromagnetic_model"] = "iba_original"
+    original["series"] = {
+        "ks_per_m": [0.20570654743561653],
+        "ka_per_m": [0.30888501185354406],
+        "effective_permittivity": [1.5238598740331406],
+    }
+    artifacts.persist_run(PROJECT, PROJECT, "res_original", original)
     artifacts.persist_run(PROJECT, PROJECT, "res_default", run)
     artifacts.persist_figure(PROJECT, PROJECT, 1, {
         "figure_number": 1,
-        "comparisons": [{"quantity": "tb_v", "bias": 1.2639, "rmse": 1.2644, "r": 0.9999}],
+        "comparisons": [
+            {"quantity": "tb_v", "bias": 1.2639, "rmse": 1.2644, "r": 0.9999},
+            {"quantity": "tb_h", "bias": 1.3752, "rmse": 1.3758, "r": 0.9999},
+        ],
     })
     return {"id": PROJECT, "research": {"research_id": PROJECT}}
 
@@ -98,12 +112,12 @@ def test_identifiers_and_rounding_are_not_measurements(recorded):
     assert numbers.unsupported(recorded, report) == []
 
 
-def test_nothing_recorded_means_nothing_to_check(monkeypatch, tmp_path):
+def test_a_run_value_is_refused_when_no_run_is_recorded(monkeypatch, tmp_path):
+    """Nothing recorded cannot account for a number stated as a run's own."""
     monkeypatch.setenv("PHYSEARTH_STATE_DIR", str(tmp_path))
     empty = {"id": "ses_nothing_recorded", "research": {"research_id": "ses_nothing_recorded"}}
-    # A registry card's own numbers are known, so only a run claim can fail; with no runs
-    # recorded there is no run claim to check.
-    assert numbers.unsupported(empty, "ka = 0.3426 m-1") == []
+    findings = numbers.unsupported(empty, "The run returned ka = 0.3426 m-1.")
+    assert [item["number"] for item in findings] == ["0.3426"]
 
 
 def test_the_correction_names_the_number_and_the_recorded_value(recorded):

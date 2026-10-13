@@ -20,6 +20,7 @@ from physearth.research.mapping import _is_paper_context_problem, _repair_item, 
 from physearth.research.metadata import _repair_reproduction_metadata
 from physearth.research.normalise import (
     _clean_charts,
+    _clean_derived,
     _clean_literature_evidence,
     _clean_outputs,
     _clean_parameter_mapping,
@@ -165,6 +166,7 @@ def propose(
     selected_models=None,
     parameter_mapping=None,
     outputs=None,
+    derived=None,
 ):
     """Store an LLM-authored proposal; never infer one from a question template."""
     question = str(question or "").strip()
@@ -173,6 +175,22 @@ def propose(
     steps = _clean_list(steps)
     charts = _clean_charts(charts)
     runs, run_problems, run_repairs, parameter_resolution, run_problem_details = _clean_runs(runs)
+    derived, derived_problems = _clean_derived(derived, runs)
+    if derived_problems:
+        refuse(
+            "The proposed derived quantities are invalid: %s" % "; ".join(derived_problems),
+            {
+                "error_code": "derived_quantity_invalid",
+                "problems": derived_problems,
+                "repair_hints": [
+                    "A derived quantity is a value the runs cannot output, computed from them "
+                    "by a script: name the planned runs it is computed from, the step with no "
+                    "tool (solve_for_parameter, derive_quantity, fit_parameters), and how the "
+                    "script computes it. Then give a chart that plots it: its x must be an "
+                    "axis those runs sweep."
+                ],
+            },
+        )
     quantities = _clean_list(quantities, 12)
     controls = _clean_list(controls, 12)
     metrics = _clean_list(metrics, 12)
@@ -432,7 +450,16 @@ def propose(
                 ],
             },
         )
-    chart_problems = _validate_chart_runs(charts, runs)
+    chart_problems = _validate_chart_runs(charts, runs, {"derived": derived})
+    if any("no planned run produces" in problem for problem in chart_problems):
+        # A quantity no run outputs is not necessarily unplottable: it may be one a script
+        # computes from the runs. Saying only "no planned run produces it" left the model
+        # changing axes five times, when the answer was to declare the step.
+        chart_problems = list(chart_problems) + [
+            "if a plotted quantity is one the runs cannot output (a value solved for, a "
+            "quantity derived from several runs), declare it under `derived` with the step "
+            "that has no tool, the runs it is computed from, and how; then the chart plots it"
+        ]
     if chart_problems:
         candidate_axes = sorted(
             {
@@ -484,6 +511,7 @@ def propose(
         "outputs": outputs,
         "runs": runs,
         "charts": charts,
+        "derived": derived,
         "quantities": quantities,
         "controls": controls,
         "metrics": metrics,

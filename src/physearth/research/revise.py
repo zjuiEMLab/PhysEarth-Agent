@@ -244,7 +244,9 @@ def revise(session, changes=None, note=""):
         if wanted not in [run["id"] for run in plan.get("runs") or []]:
             raise ValueError("baseline_run_id must name a planned run")
         plan["baseline_run_id"] = wanted
-    chart_problems = _validate_chart_runs(plan.get("charts") or [], plan.get("runs") or [])
+    chart_problems = _validate_chart_runs(
+        plan.get("charts") or [], plan.get("runs") or [], plan
+    )
     if chart_problems:
         raise ValueError(
             "The revised chart cannot be produced by the planned runs: %s"

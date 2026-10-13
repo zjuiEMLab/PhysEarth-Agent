@@ -276,12 +276,28 @@ def build(plan):
         for column in group["columns"]:
             if column["tag"] in DECIDE:
                 decisions.append({"model": group["model"], "value": "varies by run", **column, "note": ""})
+    derived = [item for item in plan.get("derived") or () if isinstance(item, dict)]
+    derived_ids = {str(item.get("id")) for item in derived}
     return {
         "groups": groups,
         "decisions": decisions,
+        # A computed quantity is not a run's output, and the sheet says which step computes
+        # it and from which runs, so a reviewer approves the script and the figure together.
+        "derived": [
+            {
+                "id": item.get("id"),
+                "label": item.get("label"),
+                "unit": item.get("unit") or "",
+                "operation": item.get("operation"),
+                "from_runs": list(item.get("from_runs") or []),
+                "method": item.get("method") or "",
+            }
+            for item in derived
+        ],
         "charts": [
             {"id": c.get("id"), "label": c.get("label"), "x": c.get("x"), "ys": c.get("ys") or [c.get("y")],
              "required": c.get("required", True),
+             "scripted": bool({str(y) for y in (c.get("ys") or [c.get("y")])} & derived_ids),
              "runs": [r["id"] for g in groups for r in g["runs"] if c.get("id") in r["feeds"]]}
             for c in charts
         ],

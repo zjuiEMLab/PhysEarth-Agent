@@ -200,6 +200,36 @@ def plot_planned_chart(chart_id, action="render", _owner=None, _session=None):
             "citations": [], "qc": None, "ui": None,
             "error": "unknown planned chart_id",
         }
+    # A chart of a quantity the runs cannot output is drawn from the scripted step's saved
+    # array, not from model runs: saying so here, with the step named, is one tool call,
+    # where "chart has no successful compatible planned runs yet" was a dead end.
+    derived = research.planned_chart_derived(_session, chart_id)
+    if derived:
+        steps = "; ".join(
+            "%s: %s (%s), computed by a script from runs %s%s"
+            % (
+                item.get("id"), item.get("label"), item.get("operation"),
+                ", ".join(item.get("from_runs") or []) or "none named",
+                " (%s)" % item.get("method") if item.get("method") else "",
+            )
+            for item in derived
+        )
+        return {
+            "status": "needs_input",
+            "summary": (
+                "Chart %s plots a computed quantity, not a model output: %s. No run produces it. "
+                "Compute it first with run_analysis_script (the person approves the code), saving "
+                "it under its declared name, then draw the figure from that handle with plot_chart."
+                % (chart_id, steps)
+            ),
+            "data": {
+                "chart_id": chart_id,
+                "derived": derived,
+                "next_step": "run_analysis_script",
+            },
+            "citations": [], "qc": None, "ui": None,
+            "error": "chart plots a computed quantity",
+        }
     # A chart drawn before its runs exist is a wrong chart. The loop-level gate already
     # catches it, but a whole round trip later: the agent plotted four of six runs, the
     # gate blocked, the two missing runs were forced, and the chart was drawn twice more.

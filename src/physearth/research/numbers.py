@@ -122,17 +122,31 @@ def unsupported(session, answer):
     values = known_values(session)
     if not values:
         return []
-    text = _PAPER_BRACKET.sub(" ", str(answer or ""))
     findings = []
     seen = set()
-    for sentence in re.split(r"(?<=[.!?。！？])\s+|\n+", text):
-        if not sentence.strip() or _PAPER_SENTENCE.search(sentence):
+    for raw in re.split(r"(?<=[.!?。！？])\s+|\n+", str(answer or "")):
+        if not raw.strip():
             continue
+        # A bracket that names the paper marks the number inside it as the paper's. It does
+        # not mark the rest of the sentence: "ka = 0.3426 m-1 (paper: 0.3426 m-1)" states the
+        # run's value outside the bracket and the paper's inside it, and reading the whole
+        # sentence as the paper's would have missed the very mismatch this check exists for.
+        paper_spans = [(item.start(), item.end()) for item in _PAPER_BRACKET.finditer(raw)]
+        sentence = _PAPER_BRACKET.sub(" ", raw)
+        if _PAPER_SENTENCE.search(sentence):
+            continue  # a sentence about the paper is not a sentence about the runs
         for match in _MEASURED.finditer(sentence):
             literal = match.group(1)
             if _YEAR.match(literal) or _matches(literal, values):
                 continue
             if _IDENTIFIER.search(sentence[: match.start()]):
+                continue
+            # "SMART reports ka (see the publication, 2018) as 0.3426": the marker sits in
+            # the bracket between the claim and the number, and still attributes it.
+            before = raw[max(0, match.start() - 60): match.start()]
+            if _PAPER_SENTENCE.search(before) or any(
+                start <= match.start() < end for start, end in paper_spans
+            ):
                 continue
             key = (literal, sentence.strip()[:80])
             if key in seen:

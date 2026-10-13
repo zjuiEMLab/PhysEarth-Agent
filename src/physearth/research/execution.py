@@ -5,6 +5,7 @@ from physearth.research.charts import (
     _figure_has_series,
     _figure_satisfies,
     _run_produces_chart,
+    scripted_y_names,
 )
 
 
@@ -76,7 +77,43 @@ def execution_gaps(session):
     missing_charts = []
     unreviewed_charts = []
     failed_reviews = []
+    scripted_requirements = []
     for chart in selected_charts:
+        # A chart of a computed quantity is not drawn from a run: the scripted step computes
+        # it after the runs, saves it under its own name, and the figure is drawn from that.
+        # Waiting for a run to produce it -- which no run can -- left such a figure
+        # permanently "missing or incomplete".
+        names = scripted_y_names(chart, project.get("plan") or {})
+        if names:
+            steps = [
+                step for step in (project.get("plan") or {}).get("derived") or ()
+                if isinstance(step, dict) and str(step.get("id")) in names
+            ]
+            requirement = {"chart": chart, "derived": steps, "series": []}
+            scripted_requirements.append(requirement)
+            matching = next(
+                (
+                    figure for figure in figures
+                    if any(
+                        str(item.get("y")) in names and item.get("x") == chart.get("x")
+                        for item in figure.get("series") or []
+                    )
+                ),
+                None,
+            )
+            chart_requirements.append(requirement)
+            if matching is None:
+                missing_charts.append(requirement)
+            elif matching.get("planned_chart_id"):
+                review = matching.get("quality_review") or {}
+                if not review.get("reviewed"):
+                    unreviewed_charts.append(requirement)
+                elif not review.get("passed"):
+                    failed_reviews.append({
+                        "requirement": requirement,
+                        "issues": review.get("issues") or ["unspecified figure-quality failure"],
+                    })
+            continue
         expected = []
         for item in matched_runs:
             for y_name in _chart_y_names(chart):
@@ -117,6 +154,10 @@ def execution_gaps(session):
                         "issues": review.get("issues") or ["unspecified figure-quality failure"],
                     }
                 )
+    missing_derived = [
+        requirement for requirement in scripted_requirements
+        if requirement in missing_charts
+    ]
     first_missing = missing_charts[0] if missing_charts else None
     focus = first_missing or (chart_requirements[0] if chart_requirements else {"chart": {}, "series": []})
     expected_series = focus["series"]
@@ -128,6 +169,21 @@ def execution_gaps(session):
     figure_problem = ""
     if not selected_charts:
         figure_problem = "The workflow cannot complete before a planned chart package is selected."
+    elif missing_derived and len(missing_derived) == len(missing_charts):
+        figure_problem = (
+            "The workflow cannot complete before the scripted step(s) compute: %s. Run "
+            "run_analysis_script (the person approves the code), save each quantity under the "
+            "name the plan declared, then draw the figure from that handle with plot_chart."
+            % "; ".join(
+                "%s (%s, from runs %s)"
+                % (
+                    step.get("label") or step.get("id"), step.get("operation"),
+                    ", ".join(step.get("from_runs") or []) or "none named",
+                )
+                for requirement in missing_derived
+                for step in requirement.get("derived") or ()
+            )
+        )
     elif not figures:
         figure_problem = "The workflow cannot complete before actual model outputs are plotted."
     elif missing_charts:
@@ -201,6 +257,8 @@ def execution_gaps(session):
         "selected_chart": focus["chart"],
         "selected_charts": selected_charts,
         "chart_requirements": chart_requirements,
+        "scripted_charts": scripted_requirements,
+        "missing_derived": missing_derived,
         "missing_chart_ids": [item["chart"].get("id") for item in missing_charts],
         "unreviewed_chart_ids": [item["chart"].get("id") for item in unreviewed_charts],
         "failed_figure_reviews": failed_reviews,
@@ -216,6 +274,14 @@ def planned_chart_series(session, chart_id):
         if requirement["chart"].get("id") == str(chart_id or "").strip():
             return requirement
     return None
+
+
+def planned_chart_derived(session, chart_id):
+    """The scripted steps a selected chart plots, or [] when a run draws it."""
+    for requirement in execution_gaps(session).get("scripted_charts") or []:
+        if requirement["chart"].get("id") == str(chart_id or "").strip():
+            return requirement.get("derived") or []
+    return []
 
 
 def planned_chart_ids(session, missing_only=False):

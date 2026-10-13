@@ -86,6 +86,7 @@ from physearth.research.execution import (
     planned_run_problem,
     target_ids_for_chart,
     target_ids_for_run,
+    planned_chart_derived,
 )
 from physearth.research.mapping import (
     _expected_mapping_inputs,

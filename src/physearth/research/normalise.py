@@ -4,6 +4,7 @@ import re
 
 from physearth import registry
 from physearth.harness import validation
+from physearth.research import operations
 from physearth.research.common import _clean_list
 
 
@@ -319,6 +320,68 @@ def _clean_charts(charts):
     return cleaned[:8]
 
 
+def _clean_derived(derived, runs):
+    """Quantities the runs cannot output, which a script computes from them.
+
+    A figure can ask for something no model outputs: the grain-size scaling factor that
+    makes two microstructures agree, the value at which two curves cross. The plan had no
+    way to say so, so a chart of such a quantity was refused as unproducible however it was
+    written -- and a reproduction of a figure that is exactly that died after five refusals
+    with "no planned run produces scaling_factor over x=stickiness". Declaring the step
+    here makes the chart plannable, and states before approval that a script produces it.
+
+    The `operation` must be a step this workflow knows and no registered tool provides.
+    A quantity a tool computes is not derived; naming a tool's step hides the work.
+    """
+    run_ids = [str(run.get("id") or "") for run in runs or [] if isinstance(run, dict)]
+    cleaned, problems = [], []
+    for index, item in enumerate(derived or []):
+        if not isinstance(item, dict):
+            problems.append("derived step %d is not an object" % (index + 1))
+            continue
+        identifier = str(item.get("id") or "derived_%d" % (index + 1)).strip()
+        label = str(item.get("label") or "").strip()
+        operation = str(item.get("operation") or "").strip()
+        from_runs = [str(name).strip() for name in item.get("from_runs") or [] if str(name).strip()]
+        if not label:
+            problems.append("derived step %r has no label" % identifier)
+            continue
+        if not from_runs:
+            problems.append("%s does not say which planned runs it is computed from" % identifier)
+            continue
+        unplanned = [name for name in from_runs if name not in run_ids]
+        if unplanned:
+            problems.append(
+                "%s is computed from runs that are not planned: %s; use run ids from the plan's "
+                "runs" % (identifier, ", ".join(unplanned))
+            )
+            continue
+        available, missing, unknown = operations.resolve([operation])
+        if available:
+            problems.append(
+                "%s names %s, which a registered tool computes; a derived step is for a quantity "
+                "no tool computes" % (identifier, ", ".join(available))
+            )
+            continue
+        if unknown or not missing:
+            problems.append(
+                "%s names the step %r, which is not a step of this workflow. Known steps: %s"
+                % (identifier, operation, operations.vocabulary())
+            )
+            continue
+        cleaned.append({
+            "id": identifier,
+            "label": label,
+            "unit": str(item.get("unit") or "").strip(),
+            "operation": missing[0]["id"],
+            "from_runs": from_runs,
+            "method": str(item.get("method") or "").strip(),
+        })
+    if len({item["id"] for item in cleaned}) != len(cleaned):
+        problems.append("derived steps must have distinct ids")
+    return cleaned[:6], problems
+
+
 def _repair_sweep_bounds(model, parameters, card):
     """Leave sweep bounds unchanged so the registered validator can reject invalid input.
 
@@ -418,6 +481,22 @@ def _clean_runs(runs):
                 problem_details.append(detail)
             continue
         run_id = str(run.get("id") or "run_%d" % (index + 1)).strip()
+        # A value this configuration does not read is dropped, and the drop is recorded
+        # here: the plan then runs, and the review card says what was set aside and why,
+        # instead of a plan being refused for a parameter that never reaches the model.
+        for dropped in validation.unread(entry.card, requested_parameters):
+            repairs.append({
+                "run_id": run_id,
+                "field": "parameters.%s" % dropped["name"],
+                "from": dropped["value"],
+                "to": None,
+                "reason": "%s is not read by %s (%s); the run's %s decides this"
+                % (
+                    dropped["name"], model, dropped["read_when"] or "this configuration",
+                    "microstructure",
+                ),
+                "source": "registered_model_declaration",
+            })
         defaulted_parameters = sorted(set(resolved) - set(requested_parameters))
         resolutions.append(
             {
