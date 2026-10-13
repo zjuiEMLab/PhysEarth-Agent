@@ -77,6 +77,53 @@ def _near_registered(name, session=None):
 
 _PARENTHETICAL = re.compile(r"\([^)]*\)")
 _VERSION = re.compile(r"(?:^|[\s@])(?:v|version\s*)?(\d+(?:\.\d+)+|\d+(?=\s*$))\s*$", re.I)
+# A version written where the name does not end: "SMRT v1.0 with Rayleigh theory". The
+# trailing form is matched above; this one is about the same claim -- which release of the
+# named model the source describes -- made in the middle of a sentence.
+_INLINE_VERSION = re.compile(r"\b(?:v|version\s*)(\d+(?:\.\d+)*)\b|\b(\d+\.\d+(?:\.\d+)*)\b", re.I)
+
+
+def _asked_version(name):
+    """The version a name asks for, wherever in the name it writes it."""
+    text = _PARENTHETICAL.sub(" ", str(name or ""))
+    match = _VERSION.search(text) or _INLINE_VERSION.search(text)
+    if not match:
+        return None
+    return next((group for group in match.groups() if group), None)
+
+
+def _record_version_note(resolution, note):
+    """Add the version note to a resolution without dropping a stronger stated basis.
+
+    A matching DOI, established from the opened paper and the model card, says how the
+    identity was decided and is not replaced by a version read off the spelling. The
+    version difference is still a fact about the name, so it is recorded beside it.
+    """
+    stated = resolution.get("match_basis")
+    resolution.update(note)
+    if stated and stated != note["match_basis"]:
+        resolution["match_basis"] = "%s; %s" % (stated, note["match_basis"])
+
+
+def _version_note(entry, asked_version):
+    """What to say when the asked name is not the registered spelling, version first.
+
+    Reported, never enforced: the registry has one declared release of each model, and a
+    paper describing another release is a difference a reader needs to see rather than a
+    reason to call the model unavailable.
+    """
+    registered_version = str(entry.card.get("version") or "")
+    return {
+        "match_basis": (
+            "same model; the source describes version %s and the registry "
+            "runs %s, so small numerical differences are possible"
+            % (asked_version, registered_version)
+            if asked_version and asked_version != registered_version
+            else "same model, named with a version or a note"
+        ),
+        "asked_version": asked_version,
+        "registered_version": registered_version,
+    }
 
 
 def _qualified(name):
@@ -303,23 +350,20 @@ def _capability_check_one(
                     qualified[0], session
                 )
                 if entry is not None:
-                    registered_version = str(entry.card.get("version") or "")
-                    asked_version = qualified[1]
-                    version_note = {
-                        "match_basis": (
-                            "same model; the source describes version %s and the registry "
-                            "runs %s, so small numerical differences are possible"
-                            % (asked_version, registered_version)
-                            if asked_version and asked_version != registered_version
-                            else "same model, named with a version or a note"
-                        ),
-                        "asked_version": asked_version,
-                        "registered_version": registered_version,
-                    }
+                    version_note = _version_note(entry, qualified[1])
         if entry is None:
             evidence_resolution = _resolve_from_paper_evidence(name, session, targets)
             if evidence_resolution:
                 entry, canonical, configuration, options = evidence_resolution[:4]
+        if entry is not None and version_note is None:
+            # The note belongs to the name, not to whichever route resolved it. "SMRT v1.0
+            # with Rayleigh theory" is now resolved through its formulation, and the paper
+            # is still describing a release the registry does not run; staying silent
+            # about that because the resolution happened to succeed would hide exactly the
+            # difference this note exists to state.
+            asked_version = _asked_version(name)
+            if asked_version:
+                version_note = _version_note(entry, asked_version)
         if entry is None:
             # Say when a name is merely close to something registered. `DMRT-QMS` and
             # `DMRT-ML` are separate packages and belong in the unavailable list, but a
@@ -354,7 +398,7 @@ def _capability_check_one(
             if evidence_resolution:
                 resolution.update(evidence_resolution[-1])
             if version_note:
-                resolution.update(version_note)
+                _record_version_note(resolution, version_note)
             resolved_names.append(resolution)
         card = entry.card
         model_key = "%s@%s" % (entry.name, card.get("version", "1.0"))

@@ -311,7 +311,13 @@ def _card_vocabulary(card):
 
 # Qualifiers a legend adds to a model's own name ("SMRT IBA default"). They describe a
 # configuration; they never name another model, so they cannot make a name foreign.
-_QUALIFIER_WORDS = {"default", "version", "model", "standard", "current", "new", "old", "the", "with", "and", "v"}
+_QUALIFIER_WORDS = {
+    "default", "version", "model", "models", "standard", "current", "new", "old", "the",
+    "with", "and", "v",
+    # Grammar around a configuration named in a sentence: "SMRT IBA theory". These say
+    # what kind of thing is being named, never which model it is.
+    "theory", "approach", "formulation", "scheme", "method", "variant",
+}
 
 
 def _unexplained_words(name, card):
@@ -322,6 +328,113 @@ def _unexplained_words(name, card):
         if w and not w.isdigit() and w not in _QUALIFIER_WORDS
     ]
     return [w for w in words if not any(w in known for known in vocabulary)]
+
+
+# A configuration named in a sentence rather than in a legend. The connector is the only
+# place the model's name ends and the account of how it was run begins.
+_FORMULATION_CONNECTOR = re.compile(
+    r"\s+(?:with|using|under|based\s+on|configured\s+with|run\s+with|run\s+using)\s+", re.I
+)
+# The noun that closes such a phrase. It names the kind of thing, not the thing.
+_FORMULATION_NOUNS = frozenset({
+    "theory", "model", "models", "approach", "formulation", "scheme", "method", "solver",
+    "variant", "version", "mode", "option", "options",
+})
+# A version written between the model and the connector: "SMRT v1.0 with Rayleigh theory".
+_INLINE_VERSION = re.compile(r"\bv(?:ersion)?[\s.]*\d+(?:\.\d+)*", re.I)
+
+
+def _without_formulation_nouns(name):
+    """The name with the noun that closes a formulation phrase taken off."""
+    return " ".join(
+        word for word in re.split(r"\s+", str(name or "").strip())
+        if word and word.strip("()[]").lower() not in _FORMULATION_NOUNS
+    )
+
+
+def _formulation_phrase(name):
+    """`<model> [vX] with <formulation> [theory]` split into (head, formulation), else None.
+
+    A paper writes the configuration the way a person would say it: "SMRT v1.0 with
+    Rayleigh theory", not "SMRT (Rayleigh)". The connector and the closing noun are
+    grammar -- they say the model was run a particular way, and they never name a
+    different model. Left to the vocabulary guard they read as words the card does not
+    know, which turned every such reference into an unregistered model.
+    """
+    text = str(name or "").strip()
+    match = _FORMULATION_CONNECTOR.search(text)
+    if not match:
+        return None
+    head = text[: match.start()].strip()
+    formulation = _without_formulation_nouns(text[match.end():])
+    if not head or not formulation:
+        return None
+    return head, formulation
+
+
+def _declared_values(card, phrase):
+    """The values of `card` a formulation phrase names, the best spelling tier only.
+
+    A paper's formulation is written in the card's own vocabulary, though not always in
+    full: "DMRT QCA-CP" is the theory half of the declared `dmrt_qcacp_shortrange`. The
+    tiers keep that narrow -- an exact match wins over a prefix, a prefix over a value the
+    phrase contains, and containment over a phrase the value spans. So "IBA" chooses `iba`
+    and never `iba_original`, and a phrase matching nothing declared matches nothing.
+    """
+    key = _spelling_key(phrase)
+    if not key:
+        return []
+    exact, prefixed, contained, spanned = [], [], [], []
+    for parameter, spec in (card.get("parameters") or {}).items():
+        for value in (spec or {}).get("enum") or ():
+            value_key = _spelling_key(value)
+            if not value_key:
+                continue
+            if value_key == key:
+                exact.append((parameter, value))
+            elif value_key.startswith(key):
+                prefixed.append((parameter, value))
+            elif key in value_key:
+                contained.append((parameter, value))
+            elif value_key in key:
+                spanned.append((parameter, value))
+    return next((tier for tier in (exact, prefixed, contained, spanned) if tier), [])
+
+
+def _configuration_from_hits(candidate, registered, hits):
+    """Turn matched (parameter, value) pairs into a configuration, or into the options.
+
+    One value per parameter is a configuration, however many parameters it names. Two
+    values for the same parameter is a choice the name did not make, and comes back as the
+    options so the plan can pin one.
+
+    The longer value wins only when it is the shorter one written out: a legend naming
+    `non_sticky_hard_spheres` spells `sticky_hard_spheres` too, and means the longer one.
+    When neither matched value contains the other -- "QCA" against dmrt_qca_shortrange and
+    dmrt_qcacp_shortrange -- the name did not choose, and taking the longer one would be a
+    guess recorded as a configuration.
+    """
+    by_parameter = {}
+    for parameter, value in hits:
+        by_parameter.setdefault(parameter, []).append(value)
+    for parameter, values in list(by_parameter.items()):
+        keys = [_spelling_key(value) for value in values]
+        longest = max(keys, key=len)
+        nested = all(
+            key == longest or key in longest for key in keys
+        )
+        if nested:
+            by_parameter[parameter] = [
+                value for value, key in zip(values, keys) if key == longest
+            ]
+    if all(len(values) == 1 for values in by_parameter.values()):
+        return candidate, registered, {p: v[0] for p, v in by_parameter.items()}, []
+    if len(by_parameter) == 1:
+        parameter, values = next(iter(by_parameter.items()))
+        return candidate, registered, {}, [{parameter: value} for value in values]
+    return candidate, registered, {}, [
+        {parameter: value} for parameter, values in by_parameter.items() for value in values
+    ]
 
 
 def resolve_configuration(name, session=None):
@@ -351,10 +464,30 @@ def resolve_configuration(name, session=None):
     A remainder matching nothing declared still resolves to nothing: a name that merely
     starts like a registered model is not that model. The one other remainder it accepts
     is the card's own declared version.
+
+    A configuration can also be named in a sentence rather than in a legend -- "SMRT v1.0
+    with Rayleigh theory", "SMRT with DMRT QCA-CP theory". The model's name is the part
+    before the connector and has to resolve on its own, so "MEMLS with IBA theory" is still
+    another model; the formulation after it is matched in the card's declared values, with
+    a version written in between reported by the caller, not used to accept or reject.
     """
     model, canonical = resolve(name, session)
     if model is not None:
         return model, canonical, {}, []
+    phrase = _formulation_phrase(name)
+    if phrase:
+        head, formulation = phrase
+        head_entry, head_canonical = resolve(head, session)
+        if head_entry is None:
+            # "<model> v1.0 with <formulation>": the version sits between the two. Taking
+            # it out only to ask whether the name resolves, never to decide the version.
+            without_version = _INLINE_VERSION.sub(" ", head).strip()
+            if without_version and without_version != head:
+                head_entry, head_canonical = resolve(without_version, session)
+        if head_entry is not None:
+            chosen = _declared_values(head_entry.card, formulation)
+            if chosen:
+                return _configuration_from_hits(head_entry, head_canonical, chosen)
     key = _spelling_key(name)
     if not key:
         return None, None, {}, []
@@ -398,24 +531,32 @@ def resolve_configuration(name, session=None):
     # offering the same formulation makes a bare name genuinely ambiguous, and a name no
     # card declares -- DMRT-ML, DMRT-QMS -- still resolves to nothing, which is the whole
     # point of the check.
-    bare = []
-    for registered, candidate in sorted(all_models(session).items()):
-        exact, contained, spanned = [], [], []
-        for parameter, spec in (candidate.card.get("parameters") or {}).items():
-            for value in (spec or {}).get("enum") or ():
-                value_key = _spelling_key(value)
-                if not value_key:
-                    continue
-                if value_key == key:
-                    exact.append((registered, candidate, parameter, value))
-                elif key in value_key:
-                    contained.append((registered, candidate, parameter, value))
-                elif value_key in key:
-                    # The name contains the declared value rather than the other way
-                    # round: a legend writes "Non-sticky hard spheres (DMRT QCA-CP)",
-                    # which is a microstructure and a theory in one string.
-                    spanned.append((registered, candidate, parameter, value))
-        bare.extend(exact or contained or spanned)
+    def bare_hits(spelled):
+        found = []
+        for registered, candidate in sorted(all_models(session).items()):
+            exact, contained, spanned = [], [], []
+            for parameter, spec in (candidate.card.get("parameters") or {}).items():
+                for value in (spec or {}).get("enum") or ():
+                    value_key = _spelling_key(value)
+                    if not value_key:
+                        continue
+                    if value_key == spelled:
+                        exact.append((registered, candidate, parameter, value))
+                    elif spelled and spelled in value_key:
+                        contained.append((registered, candidate, parameter, value))
+                    elif spelled and value_key in spelled:
+                        # The name contains the declared value rather than the other way
+                        # round: a legend writes "Non-sticky hard spheres (DMRT QCA-CP)",
+                        # which is a microstructure and a theory in one string.
+                        spanned.append((registered, candidate, parameter, value))
+            found.extend(exact or contained or spanned)
+        return found
+
+    bare = bare_hits(key)
+    if not bare:
+        # The same name with the noun that closes it taken off: a legend entry is allowed
+        # to say "DMRT QCA-CP theory" where the card declares dmrt_qcacp_shortrange.
+        bare = bare_hits(_spelling_key(_without_formulation_nouns(name)))
     if len({item[0] for item in bare}) != 1:
         return None, None, {}, []
     # Every word of a bare name has to mean something to the card that matched it. A legend
@@ -429,28 +570,9 @@ def resolve_configuration(name, session=None):
     exact_hits = [item for item in bare if _spelling_key(item[3]) == key]
     hits = exact_hits or bare
     registered, candidate = hits[0][0], hits[0][1]
-
-    # One value per parameter is a configuration, however many parameters it names. Two
-    # values for the same parameter is a choice the name did not make.
-    by_parameter = {}
-    for _r, _c, parameter, value in hits:
-        by_parameter.setdefault(parameter, []).append(value)
-    # The most specific declared value wins. `sticky_hard_spheres` is a substring of
-    # `non_sticky_hard_spheres`, so a legend naming the latter matched both; the longer
-    # one is the one the name actually spells.
-    for parameter, values in list(by_parameter.items()):
-        longest = max(len(_spelling_key(value)) for value in values)
-        by_parameter[parameter] = [
-            value for value in values if len(_spelling_key(value)) == longest
-        ]
-    if all(len(values) == 1 for values in by_parameter.values()):
-        return candidate, registered, {p: v[0] for p, v in by_parameter.items()}, []
-    if len(by_parameter) == 1:
-        parameter, values = next(iter(by_parameter.items()))
-        return candidate, registered, {}, [{parameter: value} for value in values]
-    return candidate, registered, {}, [
-        {parameter: value} for parameter, values in by_parameter.items() for value in values
-    ]
+    return _configuration_from_hits(
+        candidate, registered, [(item[2], item[3]) for item in hits]
+    )
 
 
 def names(runnable_only=False, session=None):
