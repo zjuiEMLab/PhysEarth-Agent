@@ -1,5 +1,7 @@
 """What a plan still owes: gaps, and the runs and charts it named."""
 
+from physearth.harness import results
+
 from physearth.research.charts import (
     _chart_y_names,
     _figure_has_series,
@@ -7,6 +9,41 @@ from physearth.research.charts import (
     _run_produces_chart,
     scripted_y_names,
 )
+
+
+def scripted_series(session, requirement):
+    """The saved script results that carry a chart's computed quantities.
+
+    The step saves each quantity as a named result with its own axis, and the chart then
+    draws it from that handle like any other series. Until this existed, a scripted chart
+    had no series at all: `plot_planned_chart` refused it, the figure gate asked for it
+    again, and three refusals stopped the turn -- with the script's result sitting in the
+    store the whole time.
+    """
+    names = {str(step.get("id")) for step in requirement.get("derived") or ()}
+    if not names:
+        return []
+    chart = requirement.get("chart") or {}
+    owner = (session or {}).get("id")
+    series = []
+    for record in (session or {}).get("analysis_runs") or ():
+        for item in record.get("saved_results") or ():
+            name = str(item.get("name") or "")
+            handle = item.get("handle")
+            if name not in names or not handle:
+                continue
+            payload = results.get(handle, owner) or {}
+            axis = str((payload.get("axis") or {}).get("name") or "")
+            for y_name in (payload.get("series") or {}):
+                series.append({
+                    "run_id": name,
+                    "label": "%s · %s" % (chart.get("label") or name, y_name),
+                    "handle": handle,
+                    "x": axis or chart.get("x"),
+                    "y": y_name,
+                    "scripted": True,
+                })
+    return series
 
 
 def execution_gaps(session):
@@ -91,6 +128,7 @@ def execution_gaps(session):
             ]
             requirement = {"chart": chart, "derived": steps, "series": []}
             scripted_requirements.append(requirement)
+            requirement["series"] = scripted_series(session, requirement)
             matching = next(
                 (
                     figure for figure in figures
@@ -156,7 +194,7 @@ def execution_gaps(session):
                 )
     missing_derived = [
         requirement for requirement in scripted_requirements
-        if requirement in missing_charts
+        if requirement in missing_charts and not requirement.get("series")
     ]
     first_missing = missing_charts[0] if missing_charts else None
     focus = first_missing or (chart_requirements[0] if chart_requirements else {"chart": {}, "series": []})
@@ -185,7 +223,14 @@ def execution_gaps(session):
             )
         )
     elif not figures:
-        figure_problem = "The workflow cannot complete before actual model outputs are plotted."
+        ready = [item for item in scripted_requirements if item.get("series")]
+        figure_problem = (
+            "The workflow cannot complete before the planned figure is drawn from the saved "
+            "script result: %s. Call plot_planned_chart for it."
+            % ", ".join(item["chart"].get("id") for item in ready)
+            if ready
+            else "The workflow cannot complete before actual model outputs are plotted."
+        )
     elif missing_charts:
         figure_problem = (
             "Required planned chart(s) are missing or incomplete: %s."

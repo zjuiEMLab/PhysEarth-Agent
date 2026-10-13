@@ -282,3 +282,71 @@ def test_an_invalid_derived_step_is_refused_rather_than_crashing():
     assert result["status"] == "terminal_error"
     assert result["data"]["error_code"] == "derived_quantity_invalid"
     assert any("registered tool computes" in str(item) for item in result["data"]["problems"])
+
+
+def test_the_script_result_is_what_the_planned_chart_draws():
+    """A figure of a computed quantity is drawn from the script's saved result.
+
+    Without this the chart had no series at all: `plot_planned_chart` refused it, the figure
+    gate asked for it again, and three refusals stopped the turn -- while the script's result
+    sat in the store the whole time.
+    """
+    from physearth.harness import approval, results
+
+    box = session_state.new_session("m")
+    plan = _fig7_plan()
+    box["research_required"] = True
+    box["research"] = {
+        "plan": plan, "phase": "approved", "selected_charts": ["fig07"],
+        "research_id": box["id"],
+    }
+    approval.set_mode(box, approval.ALWAYS)
+
+    # Before the script: no series, the step is named as what is missing.
+    assert execution.scripted_series(box, {"chart": plan["charts"][0],
+                                           "derived": plan["derived"]}) == []
+    gaps = execution.execution_gaps(box)
+    assert [item["chart"]["id"] for item in gaps["missing_derived"]] == ["fig07"]
+    result = tools.call("plot_planned_chart", {"chart_id": "fig07"}, owner=box["id"], session=box)
+    assert result["status"] == "needs_input" and "run_analysis_script" in result["summary"]
+
+    # The script saves the quantity under the name the plan declared.
+    handle = results.put({
+        "model": "analysis_script", "version": "abc123",
+        "spec": {"script_sha256": "abc123", "name": "scaling_factor", "note": ""},
+        "axis": {"name": "stickiness", "values": [0.08, 0.2, 1.0]},
+        "series": {"scaling_factor": [1.05, 1.25, 2.30]},
+        "points": [], "units": {"scaling_factor": "none"}, "diagnostics": {},
+    }, box["id"])
+    box["analysis_runs"] = [{
+        "sha256": "abc123", "saved": ["scaling_factor"],
+        "saved_results": [{"name": "scaling_factor", "handle": handle, "points": 3}],
+    }]
+
+    series = execution.scripted_series(box, {"chart": plan["charts"][0], "derived": plan["derived"]})
+    assert [item["y"] for item in series] == ["scaling_factor"]
+    assert series[0]["handle"] == handle and series[0]["x"] == "stickiness"
+    assert execution.planned_chart_series(box, "fig07")["series"] == series
+    # The step is no longer missing; the figure is.
+    gaps = execution.execution_gaps(box)
+    assert gaps["missing_derived"] == []
+    assert "drawn from the saved script result" in gaps["figure_problem"]
+
+
+def test_a_saved_result_under_another_name_is_not_the_declared_quantity():
+    """Matching is by the name the plan declared, not by any saved result."""
+    from physearth.harness import results
+
+    box = session_state.new_session("m")
+    plan = _fig7_plan()
+    box["research"] = {"plan": plan, "phase": "approved",
+                       "selected_charts": ["fig07"], "research_id": box["id"]}
+    handle = results.put({
+        "model": "analysis_script", "version": "abc",
+        "spec": {}, "axis": {"name": "stickiness", "values": [1.0, 2.0]},
+        "series": {"something_else": [1.0, 2.0]}, "points": [], "units": {},
+    }, box["id"])
+    box["analysis_runs"] = [{"saved": ["something_else"],
+                             "saved_results": [{"name": "something_else", "handle": handle}]}]
+    assert execution.scripted_series(box, {"chart": plan["charts"][0],
+                                           "derived": plan["derived"]}) == []

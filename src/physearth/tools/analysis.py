@@ -329,6 +329,9 @@ def run_analysis_script(code, requirements=None, purpose="", _owner=None, _switc
     record = {
         "sha256": digest, "purpose": str(purpose or "")[:300], "code": code,
         "model_runs": model_runs, "saved": [item["name"] for item in saved],
+        # The names, and the handle each one was stored under: a planned figure of a computed
+        # quantity is drawn from that handle afterwards, so the pairing has to be kept.
+        "saved_results": [dict(item) for item in saved],
         "installed": installed, "elapsed_s": elapsed, "error": error,
     }
     if _session is not None:

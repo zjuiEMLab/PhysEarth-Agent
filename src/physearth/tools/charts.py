@@ -204,7 +204,7 @@ def plot_planned_chart(chart_id, action="render", _owner=None, _session=None):
     # array, not from model runs: saying so here, with the step named, is one tool call,
     # where "chart has no successful compatible planned runs yet" was a dead end.
     derived = research.planned_chart_derived(_session, chart_id)
-    if derived:
+    if derived and not requirement.get("series"):
         steps = "; ".join(
             "%s: %s (%s), computed by a script from runs %s%s"
             % (
@@ -219,7 +219,7 @@ def plot_planned_chart(chart_id, action="render", _owner=None, _session=None):
             "summary": (
                 "Chart %s plots a computed quantity, not a model output: %s. No run produces it. "
                 "Compute it first with run_analysis_script (the person approves the code), saving "
-                "it under its declared name, then draw the figure from that handle with plot_chart."
+                "it under its declared name; this chart then draws it from that saved result."
                 % (chart_id, steps)
             ),
             "data": {
